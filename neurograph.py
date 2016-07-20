@@ -6,7 +6,7 @@ datasets are extensible and GZIP compression was applied.
 
 Layer-Section-Node connectivity has the following format:
 
-src dest layer section node
+src dest weight layer section node
 
 '''
 
@@ -23,7 +23,6 @@ def cli():
 @click.argument("groupname", type=str, default="lsn")
 @click.argument("inputfile", type=click.Path(exists=True))
 @click.argument("outputfile", type=click.Path())
-@click.option("--order",  type=str, default='ccs')
 @click.option('--ccs', 'order', flag_value='ccs', default=True)
 @click.option('--crs', 'order', flag_value='crs')
 @click.option("--colsep", type=str, default=' ')
