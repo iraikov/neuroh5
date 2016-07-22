@@ -101,7 +101,7 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
                 # if this dataset already contains some data, then
                 # calculate the offset and shift the new colptr by
                 # that offset.
-                row_idx_offset = len(dset[:])
+                row_idx_offset = dset.shape[0]
                 dset = h5_concat_dataset(dset, np.asarray(row_idx))
 
                 dset = h5_get_dataset(g1, "col_ptr", maxshape=(None,),
@@ -168,7 +168,7 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
                     
                     dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32)
                     dset = h5_concat_dataset(dset, np.asarray(col_idx))
-                    col_idx_offset = len(dset[:])
+                    col_idx_offset = dset.shape[0]
 
                     dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32)
                     dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
