@@ -31,7 +31,9 @@ def h5_get_dataset (g, dsetname, **kwargs):
 
 def h5_concat_dataset(dset, data):
     dsize = dset.shape[0]
+    print 'dsize = ', dsize
     newshape = (dsize+len(data),)
+    print 'newshape = ', newshape
     dset.resize(newshape)
     dset[dsize:] = data
     return dset
@@ -59,11 +61,7 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
 
         if order=='ccs':
 
-            if col_old == 0:
-                col_ptr    = [0]
-            else: 
-                col_ptr    = []
-
+            col_ptr    = [0]
             row_idx    = []
             syn_weight = []
             layer      = []
@@ -83,8 +81,7 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
                 layer.append(int(a[3]))
                 seg_idx.append(int(a[4])-1)
                 node_idx.append(int(a[5])-1)
-                
-            col_ptr.append(len(syn_weight))
+
             col_old = col_old + 1
 
             with h5py.File(outputfile, "a", libver="latest") as h5:
@@ -136,11 +133,7 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
             row_old = 0
             for inputfile in inputfiles:
 
-                if row_old == 0:
-                    row_ptr    = [0]
-                else: 
-                    row_ptr    = []
-
+                row_ptr    = [0]
                 col_idx    = []
                 syn_weight = []
                 layer      = []
@@ -159,7 +152,6 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
                     seg_idx.append(int(a[4])-1)
                     node_idx.append(int(a[5])-1)
                 
-                row_ptr.append(len(syn_weight))
                 row_old = row_old + 1
 
                 with h5py.File(outputfile, "a", libver="latest") as h5:
