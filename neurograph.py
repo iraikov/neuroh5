@@ -295,3 +295,119 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep):
                     
 
             
+
+@cli.command(name="import-longtrans")
+@click.argument("groupname", type=str, default="longtrans")
+@click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
+@click.argument("outputfile", type=click.Path())
+@click.option('--ccs', 'order', flag_value='ccs', default=True)
+@click.option('--crs', 'order', flag_value='crs')
+@click.option("--colsep", type=str, default=' ')
+def import_longtrans(inputfiles, outputfile, groupname, order, colsep):
+
+    col_old = 0
+    for inputfile in inputfiles:
+
+        click.echo("Importing file: %s\n" % inputfile) 
+        f = open(inputfile)
+        lines = f.readlines()
+        f.close()
+
+        if order=='ccs':
+
+            col_ptr    = [0]
+            row_idx    = []
+            longdist   = []
+            transdist  = []
+        
+            # read and parse line-by-line
+
+            for l in lines:
+                a = l.split(colsep)
+                col = int(a[1])-1
+                while col_old < col:
+                    col_ptr.append(len(longdist))
+                    col_old = col_old + 1
+                row_idx.append(int(a[0])-1)
+                longdist.append(float(a[2]))
+                transdist.append(float(a[3]))
+
+            col_old = col_old + 1
+
+            with h5py.File(outputfile, "a", libver="latest") as h5:
+
+                g1 = h5_get_group (h5, groupname)
+
+                # maxshape=(None,) makes a dataset dimension unlimited.
+                # compression=6 applies GZIP compression level 6
+                # h5py picks a chunk size for us, but we could also set
+                # that manually
+
+                dset = h5_get_dataset(g1, "row_idx", maxshape=(None,),
+                                      dtype=np.uint32, compression=6)
+                # if this dataset already contains some data, then
+                # calculate the offset and shift the new colptr by
+                # that offset.
+                row_idx_offset = dset.shape[0]
+                dset = h5_concat_dataset(dset, np.asarray(row_idx))
+
+                dset = h5_get_dataset(g1, "col_ptr", maxshape=(None,),
+                                      dtype=np.uint32, compression=6)
+                dset = h5_concat_dataset(dset, np.asarray(col_ptr)+row_idx_offset)
+                
+                # for floating point numbers, it's usally beneficial to apply the
+                # bit-shuffle filter before compressing with GZIP
+                dset = h5_get_dataset(g1, "Longitudinal Distance", 
+                                      maxshape=(None,), dtype=np.float32,
+                                      compression=6, shuffle=True)
+                dset = h5_concat_dataset(dset, np.asarray(longdist))
+
+                dset = h5_get_dataset(g1, "Transverse Distance", 
+                                      maxshape=(None,), dtype=np.float32,
+                                      compression=6, shuffle=True)
+                dset = h5_concat_dataset(dset, np.asarray(transdist))
+                
+
+        elif order=='crs':
+
+            row_old = 0
+            for inputfile in inputfiles:
+
+                row_ptr    = [0]
+                col_idx    = []
+                longdist   = []
+                transdist  = []
+                
+                for l in lines:
+                    a = l.split(colsep)
+                    row = int(a[0])-1
+                    while row_old < row:
+                        row_ptr.append(len(longdist))
+                        row_old = row_old + 1
+                    col_idx.append(int(a[1])-1)
+                    longdist.append(float(a[2]))
+                    transdist.append(float(a[3]))
+                
+                row_old = row_old + 1
+
+                with h5py.File(outputfile, "a", libver="latest") as h5:
+
+                    g1 = h5_get_group (h5, groupname)
+                    
+                    dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32)
+                    dset = h5_concat_dataset(dset, np.asarray(col_idx))
+                    col_idx_offset = dset.shape[0]
+
+                    dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32)
+                    dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
+                    
+                    dset = h5_get_dataset(g1, "Longitudinal Distance", 
+                                          dtype=np.float32)
+                    dset = h5_concat_dataset(dset, np.asarray(longdist))
+
+                    dset = h5_get_dataset(g1, "Transverse Distance", 
+                                          dtype=np.float32)
+                    dset = h5_concat_dataset(dset, np.asarray(transdist))
+                    
+
+            
