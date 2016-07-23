@@ -222,7 +222,7 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep):
                 a = l.split(colsep)
                 col = int(a[1])-1
                 while col_old < col:
-                    col_ptr.append(len(syn_weight))
+                    col_ptr.append(len(dist))
                     col_old = col_old + 1
                 row_idx.append(int(a[0])-1)
                 dist.append(float(a[2]))
@@ -255,7 +255,7 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep):
                 dset = h5_get_dataset(g1, "Distance", 
                                       maxshape=(None,), dtype=np.float32,
                                       compression=6, shuffle=True)
-                dset = h5_concat_dataset(dset, np.asarray(syn_weight))
+                dset = h5_concat_dataset(dset, np.asarray(dist))
                 
 
         elif order=='crs':
@@ -271,7 +271,7 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep):
                     a = l.split(colsep)
                     row = int(a[0])-1
                     while row_old < row:
-                        row_ptr.append(len(syn_weight))
+                        row_ptr.append(len(dist))
                         row_old = row_old + 1
                     col_idx.append(int(a[1])-1)
                     dist.append(float(a[2]))
@@ -291,7 +291,7 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep):
                     
                     dset = h5_get_dataset(g1, "Distance", 
                                           dtype=np.float32)
-                    dset = h5_concat_dataset(dset, np.asarray(syn_weight))
+                    dset = h5_concat_dataset(dset, np.asarray(dist))
                     
 
             
