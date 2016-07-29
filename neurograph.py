@@ -62,6 +62,8 @@ def cli():
 def import_lsn(inputfiles, outputfile, groupname, order, colsep):
 
     col_old = 0
+    row_old = 0
+
     for inputfile in inputfiles:
 
         click.echo("Importing file: %s\n" % inputfile) 
@@ -103,94 +105,95 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
                 # h5py picks a chunk size for us, but we could also set
                 # that manually
 
-                dset = h5_get_dataset(g1, "row_idx", maxshape=(None,),
-                                      dtype=np.uint32, compression=6)
+                dset = h5_get_dataset(g1, "row_idx", dtype=np.uint32, 
+                                      maxshape=(None,), compression=6)
                 # if this dataset already contains some data, then
                 # calculate the offset and shift the new colptr by
                 # that offset.
                 row_idx_offset = dset.shape[0]
                 dset = h5_concat_dataset(dset, np.asarray(row_idx))
 
-                dset = h5_get_dataset(g1, "col_ptr", maxshape=(None,),
-                                      dtype=np.uint32, compression=6)
+                dset = h5_get_dataset(g1, "col_ptr", dtype=np.uint32, 
+                                      maxshape=(None,), compression=6)
                 dset = h5_concat_dataset(dset, np.asarray(col_ptr)+row_idx_offset)
                 
                 # for floating point numbers, it's usally beneficial to apply the
                 # bit-shuffle filter before compressing with GZIP
-                dset = h5_get_dataset(g1, "Synaptic weight", 
-                                      maxshape=(None,), dtype=np.float32,
-                                      compression=6, shuffle=True)
+                dset = h5_get_dataset(g1, "Synaptic weight", dtype=np.float32,
+                                      maxshape=(None,), compression=6, shuffle=True)
                 dset = h5_concat_dataset(dset, np.asarray(syn_weight))
                 
                 # create an HDF5 enumerated type for the layer information
                 mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
                            "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
                 dt = h5py.special_dtype(enum=(np.uint8, mapping))
-                dset = h5_get_dataset(g1, "Layer", maxshape=(None,),
-                                         dtype=dt, compression=6)
+                dset = h5_get_dataset(g1, "Layer", dtype=dt, 
+                                      maxshape=(None,), compression=6)
                 dset = h5_concat_dataset(dset, np.asarray(layer))
                 
-                dset = h5_get_dataset(g1, "seg_idx", maxshape=(None,),
-                                      dtype=np.uint16, compression=6)
+                dset = h5_get_dataset(g1, "seg_idx", dtype=np.uint16, 
+                                      maxshape=(None,), compression=6)
                 dset = h5_concat_dataset(dset, np.asarray(seg_idx))
                 
-                dset = h5_get_dataset(g1, "node_idx", maxshape=(None,),
-                                      dtype=np.uint16, compression=6)
+                dset = h5_get_dataset(g1, "node_idx", dtype=np.uint16, 
+                                      maxshape=(None,), compression=6)
                 dset = h5_concat_dataset(dset, np.asarray(node_idx))
 
         elif order=='crs':
 
-            row_old = 0
-            for inputfile in inputfiles:
-
-                row_ptr    = [0]
-                col_idx    = []
-                syn_weight = []
-                layer      = []
-                seg_idx    = []
-                node_idx   = []
+            row_ptr    = [0]
+            col_idx    = []
+            syn_weight = []
+            layer      = []
+            seg_idx    = []
+            node_idx   = []
                 
-                for l in lines:
-                    a = l.split(colsep)
-                    row = int(a[0])-1
-                    while row_old < row:
-                        row_ptr.append(len(syn_weight))
-                        row_old = row_old + 1
-                    col_idx.append(int(a[1])-1)
-                    syn_weight.append(float(a[2]))
-                    layer.append(int(a[3]))
-                    seg_idx.append(int(a[4])-1)
-                    node_idx.append(int(a[5])-1)
+            for l in lines:
+                a = l.split(colsep)
+                row = int(a[0])-1
+                while row_old < row:
+                    row_ptr.append(len(syn_weight))
+                    row_old = row_old + 1
+                col_idx.append(int(a[1])-1)
+                syn_weight.append(float(a[2]))
+                layer.append(int(a[3]))
+                seg_idx.append(int(a[4])-1)
+                node_idx.append(int(a[5])-1)
                 
-                row_old = row_old + 1
+            row_old = row_old + 1
 
-                with h5py.File(outputfile, "a", libver="latest") as h5:
+            with h5py.File(outputfile, "a", libver="latest") as h5:
 
-                    g1 = h5_get_group (h5, groupname)
+                g1 = h5_get_group (h5, groupname)
+                
+                dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32,
+                                      maxshape=(None,), compression=6)
+                dset = h5_concat_dataset(dset, np.asarray(col_idx))
+                col_idx_offset = dset.shape[0]
+
+                dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32,
+                                      maxshape=(None,), compression=6)
+                dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
                     
-                    dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32)
-                    dset = h5_concat_dataset(dset, np.asarray(col_idx))
-                    col_idx_offset = dset.shape[0]
-
-                    dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32)
-                    dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
+                dset = h5_get_dataset(g1, "Synaptic weight", dtype=np.float32,
+                                      maxshape=(None,), compression=6)
+                dset = h5_concat_dataset(dset, np.asarray(syn_weight))
                     
-                    dset = h5_get_dataset(g1, "Synaptic weight", 
-                                          dtype=np.float32)
-                    dset = h5_concat_dataset(dset, np.asarray(syn_weight))
-                    
-                    # create an HDF5 enumerated type for the layer information
-                    mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
-                               "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
-                    dt = h5py.special_dtype(enum=(np.uint8, mapping))
-                    dset = h5_get_dataset(g1, "Layer", dtype=dt)
-                    dset = h5_concat_dataset(dset, np.asarray(layer))
+                # create an HDF5 enumerated type for the layer information
+                mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                           "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+                dt = h5py.special_dtype(enum=(np.uint8, mapping))
+                dset = h5_get_dataset(g1, "Layer", dtype=dt, 
+                                      maxshape=(None,), compression=6)
+                dset = h5_concat_dataset(dset, np.asarray(layer))
                 
-                    dset = h5_get_dataset(g1, "seg_idx", dtype=np.uint16)
-                    dset = h5_concat_dataset(dset, np.asarray(seg_idx))
+                dset = h5_get_dataset(g1, "seg_idx", dtype=np.uint16,
+                                      maxshape=(None,), compression=6)
+                dset = h5_concat_dataset(dset, np.asarray(seg_idx))
                 
-                    dset = h5_get_dataset(g1, "node_idx", dtype=np.uint16)
-                    dset = h5_concat_dataset(dset, np.asarray(node_idx))
+                dset = h5_get_dataset(g1, "node_idx", dtype=np.uint16,
+                                      maxshape=(None,), compression=6)
+                dset = h5_concat_dataset(dset, np.asarray(node_idx))
 
 
 @cli.command(name="import-dist")
@@ -203,6 +206,7 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep):
 def import_dist(inputfiles, outputfile, groupname, order, colsep):
 
     col_old = 0
+    row_old = 0
     for inputfile in inputfiles:
 
         click.echo("Importing file: %s\n" % inputfile) 
@@ -260,38 +264,35 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep):
 
         elif order=='crs':
 
-            row_old = 0
-            for inputfile in inputfiles:
-
-                row_ptr    = [0]
-                col_idx    = []
-                dist       = []
+            row_ptr    = [0]
+            col_idx    = []
+            dist       = []
                 
-                for l in lines:
-                    a = l.split(colsep)
-                    row = int(a[0])-1
-                    while row_old < row:
-                        row_ptr.append(len(dist))
-                        row_old = row_old + 1
-                    col_idx.append(int(a[1])-1)
-                    dist.append(float(a[2]))
+            for l in lines:
+                a = l.split(colsep)
+                row = int(a[0])-1
+                while row_old < row:
+                    row_ptr.append(len(dist))
+                    row_old = row_old + 1
+                col_idx.append(int(a[1])-1)
+                dist.append(float(a[2]))
                 
-                row_old = row_old + 1
+            row_old = row_old + 1
 
-                with h5py.File(outputfile, "a", libver="latest") as h5:
+            with h5py.File(outputfile, "a", libver="latest") as h5:
 
-                    g1 = h5_get_group (h5, groupname)
-                    
-                    dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32)
-                    dset = h5_concat_dataset(dset, np.asarray(col_idx))
-                    col_idx_offset = dset.shape[0]
-
-                    dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32)
-                    dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
-                    
-                    dset = h5_get_dataset(g1, "Distance", 
-                                          dtype=np.float32)
-                    dset = h5_concat_dataset(dset, np.asarray(dist))
+                g1 = h5_get_group (h5, groupname)
+                
+                dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32)
+                dset = h5_concat_dataset(dset, np.asarray(col_idx))
+                col_idx_offset = dset.shape[0]
+                
+                dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32)
+                dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
+                
+                dset = h5_get_dataset(g1, "Distance", 
+                                      dtype=np.float32)
+                dset = h5_concat_dataset(dset, np.asarray(dist))
                     
 
             
