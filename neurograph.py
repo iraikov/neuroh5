@@ -429,7 +429,7 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
 @click.option('--crs', 'order', flag_value='crs')
 @click.option("--colsep", type=str, default=' ')
 @click.option("--bufsize", type=int, default=100000)
-def import_dist(inputfiles, outputfile, groupname, order, colsep, bufsize):
+def import_ltdist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
     col_old = 0
     row_old = 0
@@ -448,3 +448,119 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
         f.close()
 
+
+@cli.command(name="mask-range")
+@click.argument("maskname", type=str)
+@click.argument("inputfile", type=click.Path(exists=True))
+@click.argument("outputfile", type=click.Path())
+@click.argument("arange", type=(int,int))
+def mask_range(maskname, inputfile, outputfile, arange):
+            
+    arange = np.arange(arange[0],arange[1])
+    with h5py.File(outputfile, "a", libver="latest") as h5out:
+        g2 = h5_get_group (h5out, "Mask")
+        dset = h5_get_dataset(g2, maskname, dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+
+        dset.resize(arange.shape)
+        dset[:] = arange
+
+
+@cli.command(name="mask-col")
+@click.argument("maskname", type=str)
+@click.argument("groupname", type=str)
+@click.argument("inputfile", type=click.Path(exists=True))
+@click.argument("outputfile", type=click.Path())
+@click.option("--postrange", type=(int,int), default=None)
+def mask_col(maskname, groupname, inputfile, outputfile, postrange):
+
+    with h5py.File(inputfile, "r", libver="latest") as h5:
+                
+        g1 = h5[groupname]
+            
+        col_ptr = g1["col_ptr"]
+        row_idx = g1["row_idx"]
+
+        col_final = col_ptr.shape[0]-1
+        col_intervals = []
+        col_range     = np.arange(postrange[0],postrange[1])
+        for col in col_range:
+            col_start = col_ptr[col]
+            if col == col_final:
+                col_end   = row_idx.shape[0]-1
+            else:
+                col_end   = col_ptr[col+1]-1
+            col_intervals.append((col_start,col_end))
+            
+        row_idx_list = []
+        for col_int in col_intervals:
+            row_idx_list.append(row_idx[col_int[0]:col_int[1]])
+
+        row_idx_data = np.unique(np.concatenate(row_idx_list))
+            
+    with h5py.File(outputfile, "a", libver="latest") as h5out:
+        g2 = h5_get_group (h5out, "Mask")
+        dset = h5_get_dataset(g2, maskname, dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+
+        print 'row_idx_data = ', row_idx_data
+        print 'row_idx_data.shape = ', row_idx_data.shape
+        dset.resize(row_idx_data.shape)
+        dset[:] = row_idx_data
+
+
+@cli.command(name="export-ltdist")
+@click.argument("groupname", type=str, default="ltdist")
+@click.argument("inputfile", type=click.Path(exists=True))
+@click.argument("outputfile", type=click.Path())
+@click.option("--mask-file", type=click.Path(exists=True))
+@click.option("--premask", type=str, default=None)
+@click.option("--postmask", type=str, default=None)
+def export_ltdist(groupname, inputfile, outputfile, mask_file, premask, postmask):
+
+    with h5py.File(inputfile, "r", libver="latest") as h5:
+                
+        g1 = h5[groupname]
+            
+        col_ptr   = g1["col_ptr"]
+        row_idx   = g1["row_idx"]
+        longdist  = g1["Longitudinal Distance"]
+        transdist = g1["Transverse Distance"]
+
+        col_final = col_ptr.shape[0]-1
+        if postmask is not None:
+            with h5py.File(mask_file, "r", libver="latest") as h5mask:
+                g2 = h5mask["Mask"]
+                col_range = (g2[postmask])[:]
+        else:
+            col_range = np.arange(0,col_ptr.shape[0])
+
+        if premask is not None:
+            with h5py.File(mask_file, "r", libver="latest") as h5mask:
+                g2 = h5mask["Mask"]
+                row_range = (g2[premask])[:]
+        else:
+            row_range = None
+
+        for col in col_range:
+
+            col_start = col_ptr[col]
+            if col == col_final:
+                col_end   = row_idx.shape[0]-1
+            else:
+                col_end   = col_ptr[col+1]-1
+            
+            rows       = row_idx[col_start:col_end]
+            longdist1  = longdist[col_start:col_end]
+            transdist1 = transdist[col_start:col_end]
+
+            if row_range is not None:
+                row_inds = np.where(np.in1d(rows, row_range))[0]
+            else:
+                row_inds = np.arange(0,len(rows))
+
+            f1=open(outputfile, 'a+')
+            for row_index in row_inds:
+                f1.write ('%d %d %f %f\n' % (col,rows[row_index],longdist[row_index],transdist[row_index]))
+
+        
