@@ -40,7 +40,7 @@ import numpy as np
 
 with h5py.File("crs.h5","w", libver="latest") as h5:
 
-    dset = h5.create_dataset("row_ptr", (len(row_ptr),), dtype=np.uint32)
+    dset = h5.create_dataset("row_ptr", (len(row_ptr),), dtype=np.uint64)
     dset[:] = np.asarray(row_ptr)
 
     dset = h5.create_dataset("col_idx", (len(col_idx),), dtype=np.uint32)
