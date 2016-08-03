@@ -52,6 +52,41 @@ def h5_concat_dataset(dset, data):
 def cli():
     return
 
+
+def write_final_size_ccs(groupname,outputfile):
+
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+
+        g1 = h5_get_group (h5, groupname)
+        col_ptr_dset = h5_get_dataset(g1, "col_ptr", dtype=np.uint64, 
+                                      maxshape=(None,), compression=6)
+        col_ptr_dsize = col_ptr_dset.shape[0]
+        row_idx_dset = h5_get_dataset(g1, "row_idx", dtype=np.uint32, 
+                                      maxshape=(None,), compression=6)
+        row_idx_dsize = row_idx_dset.shape[0]
+        newshape = (col_ptr_dsize+1,)
+        col_ptr_dset.resize(newshape)
+        col_ptr_dset[col_ptr_dsize] = row_idx_dsize
+        return col_ptr_dset
+
+
+def write_final_size_crs(groupname,outputfile):
+
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+
+        g1 = h5_get_group (h5, groupname)
+        row_ptr_dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64, 
+                                      maxshape=(None,), compression=6)
+        row_ptr_dsize = row_ptr_dset.shape[0]
+        col_idx_dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32, 
+                                      maxshape=(None,), compression=6)
+        col_idx_dsize = col_idx_dset.shape[0]
+        newshape = (row_ptr_dsize+1,)
+        row_ptr_dset.resize(newshape)
+        row_ptr_dset[row_ptr_dsize] = col_idx_dsize
+        return row_ptr_dset
+
+
 def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
 
     col_ptr    = [0]
@@ -74,7 +109,7 @@ def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         layer.append(int(a[3]))
         seg_idx.append(int(a[4])-1)
         node_idx.append(int(a[5])-1)
-
+        
     col_old = col_old + 1
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
@@ -94,7 +129,7 @@ def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         row_idx_offset = dset.shape[0]
         dset = h5_concat_dataset(dset, np.asarray(row_idx))
         
-        dset = h5_get_dataset(g1, "col_ptr", dtype=np.uint32, 
+        dset = h5_get_dataset(g1, "col_ptr", dtype=np.uint64, 
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(col_ptr)+row_idx_offset)
         
@@ -154,7 +189,7 @@ def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
         dset = h5_concat_dataset(dset, np.asarray(col_idx))
         col_idx_offset = dset.shape[0]
         
-        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32,
+        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64,
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
         
@@ -209,6 +244,11 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
         f.close()
 
+    if order=='ccs':
+        write_final_size_ccs (groupname, outputfile)
+    elif order=='crs':
+        write_final_size_crs (groupname, outputfile)
+
 
 
 def import_dist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
@@ -228,7 +268,7 @@ def import_dist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         row_idx.append(int(a[0])-1)
         dist.append(float(a[2]))
 
-        col_old = col_old + 1
+    col_old = col_old + 1
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
         
@@ -248,7 +288,7 @@ def import_dist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         dset = h5_concat_dataset(dset, np.asarray(row_idx))
         
         dset = h5_get_dataset(g1, "col_ptr", maxshape=(None,),
-                              dtype=np.uint32, compression=6)
+                              dtype=np.uint64, compression=6)
         dset = h5_concat_dataset(dset, np.asarray(col_ptr)+row_idx_offset)
         
         # for floating point numbers, it's usally beneficial to apply the
@@ -276,7 +316,7 @@ def import_dist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         col_idx.append(int(a[1])-1)
         dist.append(float(a[2]))
                 
-        row_old = row_old + 1
+    row_old = row_old + 1
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
         
@@ -286,7 +326,7 @@ def import_dist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         dset = h5_concat_dataset(dset, np.asarray(col_idx))
         col_idx_offset = dset.shape[0]
         
-        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32)
+        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64)
         dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
         
         dset = h5_get_dataset(g1, "Distance", 
@@ -322,6 +362,11 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep, bufsize):
             lines = f.readlines(bufsize)
 
         f.close()
+
+    if order=='ccs':
+        write_final_size_ccs (groupname, outputfile)
+    elif order=='crs':
+        write_final_size_crs (groupname, outputfile)
 
 
 
@@ -364,7 +409,7 @@ def import_ltdist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         dset = h5_concat_dataset(dset, np.asarray(row_idx))
         
         dset = h5_get_dataset(g1, "col_ptr", maxshape=(None,),
-                              dtype=np.uint32, compression=6)
+                              dtype=np.uint64, compression=6)
         dset = h5_concat_dataset(dset, np.asarray(col_ptr)+row_idx_offset)
         
         # for floating point numbers, it's usally beneficial to apply the
@@ -408,7 +453,7 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         dset = h5_concat_dataset(dset, np.asarray(col_idx))
         col_idx_offset = dset.shape[0]
         
-        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint32)
+        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64)
         dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
         
         dset = h5_get_dataset(g1, "Longitudinal Distance", 
@@ -448,6 +493,11 @@ def import_ltdist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
         f.close()
 
+    if order=='ccs':
+        write_final_size_ccs (groupname, outputfile)
+    elif order=='crs':
+        write_final_size_crs (groupname, outputfile)
+
 
 @cli.command(name="mask-range")
 @click.argument("maskname", type=str)
@@ -481,15 +531,11 @@ def mask_col(maskname, groupname, inputfile, outputfile, postrange):
         col_ptr = g1["col_ptr"]
         row_idx = g1["row_idx"]
 
-        col_final = col_ptr.shape[0]-1
         col_intervals = []
         col_range     = np.arange(postrange[0],postrange[1])
         for col in col_range:
             col_start = col_ptr[col]
-            if col == col_final:
-                col_end   = row_idx.shape[0]-1
-            else:
-                col_end   = col_ptr[col+1]-1
+            col_end   = col_ptr[col+1]-1
             col_intervals.append((col_start,col_end))
             
         row_idx_list = []
@@ -527,7 +573,6 @@ def export_ltdist(groupname, inputfile, outputfile, mask_file, premask, postmask
         longdist  = g1["Longitudinal Distance"]
         transdist = g1["Transverse Distance"]
 
-        col_final = col_ptr.shape[0]-1
         if postmask is not None:
             with h5py.File(mask_file, "r", libver="latest") as h5mask:
                 g2 = h5mask["Mask"]
@@ -545,10 +590,7 @@ def export_ltdist(groupname, inputfile, outputfile, mask_file, premask, postmask
         for col in col_range:
 
             col_start = col_ptr[col]
-            if col == col_final:
-                col_end   = row_idx.shape[0]-1
-            else:
-                col_end   = col_ptr[col+1]-1
+            col_end   = col_ptr[col+1]-1
             
             rows       = row_idx[col_start:col_end]
             longdist1  = longdist[col_start:col_end]
@@ -562,5 +604,21 @@ def export_ltdist(groupname, inputfile, outputfile, mask_file, premask, postmask
             f1=open(outputfile, 'a+')
             for row_index in row_inds:
                 f1.write ('%d %d %f %f\n' % (col,rows[row_index],longdist[row_index],transdist[row_index]))
+
+        
+
+@cli.command(name="export-mask")
+@click.argument("maskfile", type=click.Path(exists=True))
+@click.argument("maskname", type=str)
+@click.argument("outputfile", type=click.Path())
+def export_mask(maskfile, maskname, outputfile):
+
+    with h5py.File(maskfile, "r", libver="latest") as h5mask:
+        g1 = h5mask["Mask"]
+        maskset = g1[maskname]
+        
+        f1=open(outputfile, 'a+')
+        for index in maskset:
+            f1.write ('%d\n' % index)
 
         
