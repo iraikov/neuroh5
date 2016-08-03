@@ -34,8 +34,8 @@ vector<NODE_IDX_T>& col_idx
   herr_t ierr = 0;
 
   int rank, size;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
+  assert(MPI_Comm_size(comm, &size) >= 0);
+  assert(MPI_Comm_rank(comm, &rank) >= 0);
 
   /***************************************************************************
    * MPI rank 0 reads and broadcasts the number of nodes
@@ -86,7 +86,10 @@ vector<NODE_IDX_T>& col_idx
   assert(ierr >= 0);
 
   // open the file (independent I/O)
-  hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  assert(fapl >= 0);
+  assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+  hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
   assert(file >= 0);
   hid_t dset = H5Dopen2(file, ROW_PTR_H5_PATH, H5P_DEFAULT);
   assert(dset >= 0);
