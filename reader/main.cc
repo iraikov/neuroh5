@@ -68,9 +68,10 @@ vector<NODE_IDX_T>& col_idx
    ***************************************************************************/
 
   // determine my block of row_ptr
-  hsize_t start = (hsize_t) rank*num_nodes/size;
+  hsize_t ppcount = (hsize_t) num_nodes/size;
+  hsize_t start = (hsize_t) rank*ppcount;
   base = (NODE_IDX_T) start;
-  hsize_t stop = (hsize_t) (rank+1)*num_nodes/size + 1;
+  hsize_t stop = (hsize_t) (rank+1)*ppcount + 1;
   // patch the last rank
   if (rank == size-1) { stop = (hsize_t) num_nodes+1; }
 
@@ -109,6 +110,7 @@ vector<NODE_IDX_T>& col_idx
   assert(H5Sclose(mspace) >= 0);
 
   // rebase the row_ptr array to local offsets
+  // REBASE is going to be the start offset for the hyperslab
   ROW_PTR_T rebase = row_ptr[0];
   for (size_t i = 0; i < row_ptr.size(); ++i)
   {
@@ -120,9 +122,8 @@ vector<NODE_IDX_T>& col_idx
    ***************************************************************************/
 
   // determine my read block of col_idx
-  start = (hsize_t) row_ptr.front();
-  stop = (hsize_t) row_ptr.back();
-  block = stop - start;
+  block = (hsize_t)(row_ptr.back() - row_ptr.front());
+  start = (hsize_t)rebase;
 
   // allocate buffer and memory dataspace
   col_idx.resize(block);
