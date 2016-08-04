@@ -35,8 +35,8 @@ vector<NODE_IDX_T>& col_idx
   herr_t ierr = 0;
 
   int rank, size;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
+  assert(MPI_Comm_size(comm, &size) >= 0);
+  assert(MPI_Comm_rank(comm, &rank) >= 0);
 
   /***************************************************************************
    * MPI rank 0 reads and broadcasts the number of nodes
@@ -69,9 +69,10 @@ vector<NODE_IDX_T>& col_idx
    ***************************************************************************/
 
   // determine my block of row_ptr
-  hsize_t start = (hsize_t) rank*num_nodes/size;
+  hsize_t ppcount = (hsize_t) num_nodes/size;
+  hsize_t start = (hsize_t) rank*ppcount;
   base = (NODE_IDX_T) start;
-  hsize_t stop = (hsize_t) (rank+1)*num_nodes/size + 1;
+  hsize_t stop = (hsize_t) (rank+1)*ppcount + 1;
   // patch the last rank
   if (rank == size-1) { stop = (hsize_t) num_nodes+1; }
 
@@ -87,7 +88,10 @@ vector<NODE_IDX_T>& col_idx
   assert(ierr >= 0);
 
   // open the file (independent I/O)
-  hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  assert(fapl >= 0);
+  assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+  hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
   assert(file >= 0);
   hid_t dset = H5Dopen2(file, ROW_PTR_H5_PATH, H5P_DEFAULT);
   assert(dset >= 0);
@@ -107,6 +111,7 @@ vector<NODE_IDX_T>& col_idx
   assert(H5Sclose(mspace) >= 0);
 
   // rebase the row_ptr array to local offsets
+  // REBASE is going to be the start offset for the hyperslab
   ROW_PTR_T rebase = row_ptr[0];
   for (size_t i = 0; i < row_ptr.size(); ++i)
   {
@@ -118,9 +123,8 @@ vector<NODE_IDX_T>& col_idx
    ***************************************************************************/
 
   // determine my read block of col_idx
-  start = (hsize_t) row_ptr.front();
-  stop = (hsize_t) row_ptr.back();
-  block = stop - start;
+  block = (hsize_t)(row_ptr.back() - row_ptr.front());
+  start = (hsize_t)rebase;
 
   // allocate buffer and memory dataspace
   col_idx.resize(block);
