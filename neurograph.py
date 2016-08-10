@@ -356,9 +356,9 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
         while lines:
             if order=='ccs':
-                col_old = import_lsn_lines_ccs (lines, colsep, col_old, groupname, outputfile)
+                col_old = import_dist_lines_ccs (lines, colsep, col_old, groupname, outputfile)
             elif order=='crs':
-                row_old = import_lsn_lines_crs (lines, colsep, row_old, groupname, outputfile)
+                row_old = import_dist_lines_crs (lines, colsep, row_old, groupname, outputfile)
             lines = f.readlines(bufsize)
 
         f.close()
