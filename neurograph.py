@@ -194,7 +194,8 @@ def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
         dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
         
         dset = h5_get_dataset(g1, "Synaptic weight", dtype=np.float32,
-                              maxshape=(None,), compression=6)
+                              maxshape=(None,), compression=6,
+                              shuffle=True)
         dset = h5_concat_dataset(dset, np.asarray(syn_weight))
         
         # create an HDF5 enumerated type for the layer information
@@ -322,15 +323,18 @@ def import_dist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         g1 = h5_get_group (h5, groupname)
         
-        dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32)
+        dset = h5_get_dataset(g1, "col_idx", maxshape=(None,),
+                              dtype=np.uint32, compression=6)
         dset = h5_concat_dataset(dset, np.asarray(col_idx))
         col_idx_offset = dset.shape[0]
         
-        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64)
+        dset = h5_get_dataset(g1, "row_ptr", maxshape=(None,), 
+                              dtype=np.uint64, compression=6)
         dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
         
-        dset = h5_get_dataset(g1, "Distance", 
-                              dtype=np.float32)
+        dset = h5_get_dataset(g1, "Distance",maxshape=(None,), 
+                              dtype=np.float32,
+                              compression=6, shuffle=True)
         dset = h5_concat_dataset(dset, np.asarray(dist))
 
     return row_old
@@ -449,18 +453,22 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         g1 = h5_get_group (h5, groupname)
         
-        dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32)
+        dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32,
+                              maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(col_idx))
         col_idx_offset = dset.shape[0]
         
-        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64)
+        dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64,
+                              maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
         
         dset = h5_get_dataset(g1, "Longitudinal Distance", 
-                              dtype=np.float32)
+                              dtype=np.float32, shuffle=True,
+                              maxshape=(None,), compression=6))
         dset = h5_concat_dataset(dset, np.asarray(ldist))
         dset = h5_get_dataset(g1, "Transverse Distance", 
-                              dtype=np.float32)
+                              dtype=np.float32, shuffle=True,
+                              maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(tdist))
 
     return row_old
