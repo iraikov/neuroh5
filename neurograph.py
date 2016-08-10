@@ -464,7 +464,7 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "Longitudinal Distance", 
                               dtype=np.float32, shuffle=True,
-                              maxshape=(None,), compression=6))
+                              maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(ldist))
         dset = h5_get_dataset(g1, "Transverse Distance", 
                               dtype=np.float32, shuffle=True,
