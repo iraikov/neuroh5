@@ -78,6 +78,9 @@ int main(int argc, char** argv)
   set< pair<pop_t, pop_t> > pop_pairs;
   assert(read_population_combos(MPI_COMM_WORLD, FNAME, pop_pairs) >= 0);
 
+  vector<pop_range_t> pop_ranges;
+  assert(read_population_ranges(MPI_COMM_WORLD, FNAME, pop_ranges) >= 0);
+
   // create the partitioner input
 
   vector<NODE_IDX_T> edge_list;
