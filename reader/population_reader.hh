@@ -5,6 +5,7 @@
 
 #include <map>
 #include <set>
+#include <map>
 #include <vector>
 
 #include "hdf5.h"
@@ -18,9 +19,18 @@ std::set< std::pair<pop_t,pop_t> >&  pop_pairs
 
 extern herr_t read_population_ranges
 (
-MPI_Comm                   comm,
-const char*                fname, 
-std::vector<pop_range_t>&  pop_ranges
+MPI_Comm                                          comm,
+const char*                                       fname, 
+std::map<NODE_IDX_T, std::pair<uint32_t,pop_t> >& pop_ranges
+);
+
+extern bool validate_edge_list
+(
+  const NODE_IDX_T&                                      base,
+  const std::vector<ROW_PTR_T>&                          row_ptr,
+  const std::vector<NODE_IDX_T>&                         col_idx,
+  const std::map<NODE_IDX_T,std::pair<uint32_t,pop_t> >& pop_ranges,
+  const std::set< std::pair<pop_t,pop_t> >&              pop_pairs
 );
 
 #endif

@@ -98,9 +98,9 @@ set< pair<pop_t,pop_t> >&  pop_pairs
 
 herr_t read_population_ranges
 (
-MPI_Comm              comm,
-const char*           fname, 
-vector<pop_range_t>&  pop_ranges
+MPI_Comm                                comm,
+const char*                             fname, 
+map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges
 )
 {
   herr_t ierr = 0;
@@ -159,5 +159,64 @@ vector<pop_range_t>&  pop_ranges
   assert(MPI_Bcast(&v[0], (int)num_ranges*sizeof(pop_range_t), MPI_BYTE, 0,
                    comm) >= 0);
 
+  for(size_t i = 0; i < v.size(); ++i)
+  {
+      pop_ranges.insert(make_pair(v[i].start, make_pair(v[i].count, v[i].pop)));
+  }
+
   return ierr;
 }
+
+/*****************************************************************************
+ * Validate edge populations
+ *****************************************************************************/
+
+typedef map<NODE_IDX_T,pair<uint32_t,pop_t> >::const_iterator pop_range_iter_t;
+
+bool validate_edge_list
+(
+  const NODE_IDX_T&                            base,
+  const vector<ROW_PTR_T>&                     row_ptr,
+  const vector<NODE_IDX_T>&                    col_idx,
+  const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
+  const set< pair<pop_t, pop_t> >&             pop_pairs
+)
+{
+  bool result = false;
+
+  NODE_IDX_T row, col;
+
+  pop_range_iter_t riter, citer;
+
+  pair<pop_t,pop_t> pp;
+
+  // loop over all edges, look up the node populations, and validate the pairs
+
+  for (size_t i = 0; i < row_ptr.size(); ++i)
+  {
+    row = base + (NODE_IDX_T)i;
+    riter = pop_ranges.lower_bound(row);
+    if (riter == pop_ranges.end()) { return false; }
+    pp.first = riter->second.second;
+
+    if (i < row_ptr.size()-1)
+    {
+      size_t low = row_ptr[i], high = row_ptr[i+1];
+      for (size_t j = low; j < high; ++j)
+      {
+        col = col_idx[j];
+        citer = pop_ranges.lower_bound(col);
+        if (citer == pop_ranges.end()) { return false; }
+        pp.second = citer->second.second;
+
+        // check if the population combo is valid
+        result = (pop_pairs.find(pp) != pop_pairs.end());
+
+        if (!result) { return false; }
+      }
+    }
+  }
+
+  return result;
+}
+

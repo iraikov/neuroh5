@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cstdio>
 #include <iostream>
+#include <map>
 #include <set>
 #include <vector>
 
@@ -78,8 +79,12 @@ int main(int argc, char** argv)
   set< pair<pop_t, pop_t> > pop_pairs;
   assert(read_population_combos(MPI_COMM_WORLD, FNAME, pop_pairs) >= 0);
 
-  vector<pop_range_t> pop_ranges;
+  map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
   assert(read_population_ranges(MPI_COMM_WORLD, FNAME, pop_ranges) >= 0);
+
+  // validate the edges
+
+  assert(validate_edge_list(base, row_ptr, col_idx, pop_ranges, pop_pairs) == true);
 
   // create the partitioner input
 
