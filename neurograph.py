@@ -191,7 +191,7 @@ def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64,
                               maxshape=(None,), compression=6)
-        dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
+        dset = h5_concat_dataset(dset, np.asarray(row_ptr))
         
         dset = h5_get_dataset(g1, "Synaptic weight", dtype=np.float32,
                               maxshape=(None,), compression=6,
@@ -330,7 +330,7 @@ def import_dist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "row_ptr", maxshape=(None,), 
                               dtype=np.uint64, compression=6)
-        dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
+        dset = h5_concat_dataset(dset, np.asarray(row_ptr))
         
         dset = h5_get_dataset(g1, "Distance",maxshape=(None,), 
                               dtype=np.float32,
@@ -352,6 +352,7 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
     col_old = 0
     row_old = 0
+
     for inputfile in inputfiles:
 
         click.echo("Importing file: %s\n" % inputfile) 
@@ -460,7 +461,7 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64,
                               maxshape=(None,), compression=6)
-        dset = h5_concat_dataset(dset, np.asarray(row_ptr)+col_idx_offset)
+        dset = h5_concat_dataset(dset, np.asarray(row_ptr))
         
         dset = h5_get_dataset(g1, "Longitudinal Distance", 
                               dtype=np.float32, shuffle=True,
@@ -486,6 +487,7 @@ def import_ltdist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
     col_old = 0
     row_old = 0
+
     for inputfile in inputfiles:
 
         click.echo("Importing file: %s\n" % inputfile) 
