@@ -3,13 +3,16 @@
 #include "ngh5types.h"
 
 #include "crs_graph_reader.hh"
+#include "population_reader.hh"
 
 #include "hdf5.h"
 
 #include <cassert>
 #include <cstdio>
 #include <iostream>
+#include <set>
 #include <vector>
+
 #include <mpi.h>
 
 using namespace std;
@@ -63,12 +66,17 @@ int main(int argc, char** argv)
 
   // parse arguments
 
-  // read the file
+  // read the graph
 
   NODE_IDX_T base;
   vector<ROW_PTR_T> row_ptr;
   vector<NODE_IDX_T> col_idx;
   assert(read_crs_graph(MPI_COMM_WORLD, FNAME, base, row_ptr, col_idx) >= 0);
+ 
+  // read the population info
+
+  set< pair<pop_t, pop_t> > pop_pairs;
+  assert(read_population_combos(MPI_COMM_WORLD, FNAME, pop_pairs) >= 0);
 
   // create the partitioner input
 
