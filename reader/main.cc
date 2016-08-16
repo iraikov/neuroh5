@@ -1,6 +1,6 @@
 
 #include "ngh5paths.h"
-#include "ngh5types.h"
+#include "ngh5types.hh"
 
 #include "crs_graph_reader.hh"
 #include "population_reader.hh"
@@ -24,28 +24,28 @@ using namespace std;
 
 int create_edge_list
 (
-  const NODE_IDX_T&         base,
-  const vector<ROW_PTR_T>&  row_ptr,
-  const vector<NODE_IDX_T>& col_idx,
-  vector<NODE_IDX_T>&       edge_list
-)
+ const NODE_IDX_T&         base,
+ const vector<ROW_PTR_T>&  row_ptr,
+ const vector<NODE_IDX_T>& col_idx,
+ vector<NODE_IDX_T>&       edge_list
+ )
 {
   int ierr = 0;
 
   for (size_t i = 0; i < row_ptr.size(); ++i)
-  {
-    NODE_IDX_T row = base + (NODE_IDX_T)i;
-    if (i < row_ptr.size()-1)
     {
-      size_t low = row_ptr[i], high = row_ptr[i+1];
-      for (size_t j = low; j < high; ++j)
-      {
-        NODE_IDX_T col = col_idx[j];
-        edge_list.push_back(row);
-        edge_list.push_back(col);
-      }
+      NODE_IDX_T row = base + (NODE_IDX_T)i;
+      if (i < row_ptr.size()-1)
+	{
+	  size_t low = row_ptr[i], high = row_ptr[i+1];
+	  for (size_t j = low; j < high; ++j)
+	    {
+	      NODE_IDX_T col = col_idx[j];
+	      edge_list.push_back(row);
+	      edge_list.push_back(col);
+	    }
+	}
     }
-  }
 
   return ierr;
 }

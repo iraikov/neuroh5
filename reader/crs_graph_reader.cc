@@ -14,12 +14,12 @@ using namespace std;
 
 herr_t read_crs_graph
 (
-MPI_Comm            comm,
-const char*         fname, 
-NODE_IDX_T&         base,
-vector<ROW_PTR_T>&  row_ptr,
-vector<NODE_IDX_T>& col_idx
-)
+ MPI_Comm            comm,
+ const char*         fname, 
+ NODE_IDX_T&         base,
+ vector<ROW_PTR_T>&  row_ptr,
+ vector<NODE_IDX_T>& col_idx
+ )
 {
   herr_t ierr = 0;
 
@@ -35,7 +35,7 @@ vector<NODE_IDX_T>& col_idx
 
   // process 0 reads the size of row_ptr (= num_nodes+1)
   if (rank == 0)
-  {
+    {
       hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
@@ -49,7 +49,7 @@ vector<NODE_IDX_T>& col_idx
       assert(H5Sclose(fspace) >= 0);
       assert(H5Dclose(dset) >= 0);
       assert(H5Fclose(file) >= 0);
-  }
+    }
 
   assert(MPI_Bcast(&num_nodes, 1, MPI_UINT64_T, 0, comm) >= 0);
 
@@ -103,9 +103,9 @@ vector<NODE_IDX_T>& col_idx
   // REBASE is going to be the start offset for the hyperslab
   ROW_PTR_T rebase = row_ptr[0];
   for (size_t i = 0; i < row_ptr.size(); ++i)
-  {
-    row_ptr[i] -= rebase;
-  }
+    {
+      row_ptr[i] -= rebase;
+    }
 
   /***************************************************************************
    * read COL_IDX
