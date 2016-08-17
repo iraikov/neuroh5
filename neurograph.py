@@ -1,8 +1,8 @@
 '''
-This script reads a text file with connectivity
-and creates a CCS or CRS representation of in an HDF5 file. We assume that
-the entries are sorted first by column index and then by row index The
-datasets are extensible and GZIP compression was applied.
+This script reads a text file with connectivity and creates a CCS or
+CRS representation of in an HDF5 file. We assume that the entries are
+sorted first by column index and then by row index The datasets are
+extensible and GZIP compression was applied.
 
 Supported types of connectivity:
 
@@ -25,7 +25,10 @@ import numpy as np
 import sys, os
 import click
 
+connectivity_prefix = 'Connectivity'
+
 def h5_get_group (h, groupname):
+    print 'groupname = ', groupname
     if groupname in h.keys():
         g = h[groupname]
     else:
@@ -57,7 +60,8 @@ def write_final_size_ccs(groupname,outputfile):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        g1 = h5_get_group (h5, groupname)
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
         col_ptr_dset = h5_get_dataset(g1, "col_ptr", dtype=np.uint64, 
                                       maxshape=(None,), compression=6)
         col_ptr_dsize = col_ptr_dset.shape[0]
@@ -74,7 +78,8 @@ def write_final_size_crs(groupname,outputfile):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        g1 = h5_get_group (h5, groupname)
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
         row_ptr_dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64, 
                                       maxshape=(None,), compression=6)
         row_ptr_dsize = row_ptr_dset.shape[0]
@@ -87,9 +92,10 @@ def write_final_size_crs(groupname,outputfile):
         return row_ptr_dset
 
 
-def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
+def import_lsn_lines_ccs (lines,colsep,groupname,outputfile):
 
     col_ptr    = [0]
+    col_idx    = []
     row_idx    = []
     syn_weight = []
     layer      = []
@@ -98,23 +104,29 @@ def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         
     # read and parse line-by-line
 
+    col_min = 0
+    col_old = -1
     for l in lines:
         a = l.split(colsep)
         col = int(a[1])-1
-        while col_old < col:
-            col_ptr.append(len(syn_weight))
-            col_old = col_old + 1
+        col_min = max(col_min,col)
+        if col_old < 0: 
+            col_old = col
+        else:
+            while col_old < col:
+                col_old = col_old + 1
+                col_ptr.append(len(row_idx))
         row_idx.append(int(a[0])-1)
         syn_weight.append(float(a[2]))
         layer.append(int(a[3]))
         seg_idx.append(int(a[4])-1)
         node_idx.append(int(a[5])-1)
         
-    col_old = col_old + 1
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        g1 = h5_get_group (h5, groupname)
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
 
         # maxshape=(None,) makes a dataset dimension unlimited.
         # compression=6 applies GZIP compression level 6
@@ -131,7 +143,16 @@ def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "col_ptr", dtype=np.uint64, 
                               maxshape=(None,), compression=6)
+        col_ptr_offset = dset.shape[0]
         dset = h5_concat_dataset(dset, np.asarray(col_ptr)+row_idx_offset)
+
+        dset = h5_get_dataset(g1, "block_ptr", dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray([col_ptr_offset]))
+
+        dset = h5_get_dataset(g1, "col_start", dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray([col_min]))
         
         # for floating point numbers, it's usally beneficial to apply the
         # bit-shuffle filter before compressing with GZIP
@@ -143,6 +164,7 @@ def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
                    "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
         dt = h5py.special_dtype(enum=(np.uint8, mapping))
+
         dset = h5_get_dataset(g1, "Layer", dtype=dt, 
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(layer))
@@ -155,9 +177,8 @@ def import_lsn_lines_ccs (lines,colsep,col_old,groupname,outputfile):
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(node_idx))
 
-    return col_old
 
-def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
+def import_lsn_lines_crs (lines,colsep,groupname,outputfile):
 
     row_ptr    = [0]
     col_idx    = []
@@ -165,25 +186,30 @@ def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
     layer      = []
     seg_idx    = []
     node_idx   = []
-    
+
+    row_min = 0
+    row_old = -1
     for l in lines:
         a = l.split(colsep)
         row = int(a[0])-1
-        while row_old < row:
-            row_ptr.append(len(syn_weight))
-            row_old = row_old + 1
+        row_min = max(row, row_min)
+        if row_old < 0:
+            row_old = row
+        else:
+            while row_old < row:
+                row_old = row_old + 1
+                row_ptr.append(len(col_idx))
         col_idx.append(int(a[1])-1)
         syn_weight.append(float(a[2]))
         layer.append(int(a[3]))
         seg_idx.append(int(a[4])-1)
         node_idx.append(int(a[5])-1)
                 
-    row_old = row_old + 1
-
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        g1 = h5_get_group (h5, groupname)
-        
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
+
         dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32,
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(col_idx))
@@ -191,7 +217,16 @@ def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64,
                               maxshape=(None,), compression=6)
+        row_ptr_offset = dset.shape[0]
         dset = h5_concat_dataset(dset, np.asarray(row_ptr))
+
+        dset = h5_get_dataset(g1, "block_ptr", dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray([row_ptr_offset]))
+
+        dset = h5_get_dataset(g1, "row_start", dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray([row_min]))
         
         dset = h5_get_dataset(g1, "Synaptic weight", dtype=np.float32,
                               maxshape=(None,), compression=6,
@@ -214,7 +249,6 @@ def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(node_idx))
 
-    return row_old
 
 
 @cli.command(name="import-lsn")
@@ -227,9 +261,25 @@ def import_lsn_lines_crs (lines,colsep,row_old,groupname,outputfile):
 @click.option("--bufsize", type=int, default=100000)
 def import_lsn(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
-    col_old = 0
-    row_old = 0
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+        # create an HDF5 enumerated type for the layer information
+        mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                   "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+        dt = h5py.special_dtype(enum=(np.uint8, mapping))
+        h5["/H5Types/Layer tags"] = dt
 
+        # create an HDF5 enumerated type for the population label
+        mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                    "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+        dt = h5py.special_dtype(enum=(np.uint16, mapping))
+        h5["/H5Types/Population labels"] = dt
+        
+        # create an HDF5 compound type for valid combinations of
+        # population labels
+        dt = np.dtype([("Source", h5["/H5Types/Population labels"].dtype),
+                       ("Destination", h5["/H5Types/Population labels"].dtype)])
+        h5["/H5Types/Population projections"] = dt
+        
     for inputfile in inputfiles:
 
         click.echo("Importing file: %s\n" % inputfile) 
@@ -238,9 +288,9 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
         while lines:
             if order=='ccs':
-                col_old = import_lsn_lines_ccs(lines, colsep, col_old, groupname, outputfile)
+                import_lsn_lines_ccs(lines, colsep, groupname, outputfile)
             elif order=='crs':
-                row_old = import_lsn_lines_crs(lines, colsep, row_old, groupname, outputfile)
+                import_lsn_lines_crs(lines, colsep, groupname, outputfile)
             lines = f.readlines(bufsize)
 
         f.close()
@@ -273,8 +323,9 @@ def import_dist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
         
-        g1 = h5_get_group (h5, groupname)
-            
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
+
         # maxshape=(None,) makes a dataset dimension unlimited.
         # compression=6 applies GZIP compression level 6
         # h5py picks a chunk size for us, but we could also set
@@ -321,7 +372,8 @@ def import_dist_lines_crs (lines,colsep,row_old,groupname,outputfile):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
         
-        g1 = h5_get_group (h5, groupname)
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
         
         dset = h5_get_dataset(g1, "col_idx", maxshape=(None,),
                               dtype=np.uint32, compression=6)
@@ -398,8 +450,9 @@ def import_ltdist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
                 
-        g1 = h5_get_group (h5, groupname)
-        
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
+
         # maxshape=(None,) makes a dataset dimension unlimited.
         # compression=6 applies GZIP compression level 6
         # h5py picks a chunk size for us, but we could also set
@@ -452,8 +505,9 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
     
     with h5py.File(outputfile, "a", libver="latest") as h5:
         
-        g1 = h5_get_group (h5, groupname)
-        
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
+
         dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32,
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(col_idx))
@@ -507,6 +561,71 @@ def import_ltdist(inputfiles, outputfile, groupname, order, colsep, bufsize):
         write_final_size_ccs (groupname, outputfile)
     elif order=='crs':
         write_final_size_crs (groupname, outputfile)
+
+
+@cli.command(name="import-globals")
+@click.argument("outputfile", type=click.Path())
+def import_globals(populationfile, connectivityfile, outputfile):
+
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+
+        # create an HDF5 enumerated type for the layer information
+        mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                   "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+        dt = h5py.special_dtype(enum=(np.uint8, mapping))
+        h5["/H5Types/Layer tags"] = dt
+
+        # create an HDF5 enumerated type for the population label
+        mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                    "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+        dt = h5py.special_dtype(enum=(np.uint16, mapping))
+        h5["/H5Types/Population labels"] = dt
+        
+        # create an HDF5 compound type for valid combinations of
+        # population labels
+        dt = np.dtype([("Source", h5["/H5Types/Population labels"].dtype),
+                       ("Destination", h5["/H5Types/Population labels"].dtype)])
+        h5["/H5Types/Population projections"] = dt
+
+        f = open(connectivityfile)
+        lines = f.readlines()
+        
+        dset = h5.create_dataset("Valid population projections", (len(lines),),
+                                 dtype=dt)
+        a = np.zeros(len(lines), dtype=dt)
+        idx = 0
+        for l in lines:
+            src, dst = l.split()
+            a[idx]["Source"] = int(src)
+            a[idx]["Destination"] = int(dst)
+            idx += 1
+
+        dset[:] = a
+
+        f.close()
+        
+        # create an HDF5 compound type for population ranges
+        dt = np.dtype([("Start", np.uint64), ("Count", np.uint32),
+                       ("Population", h5["/H5Types/Population labels"].dtype)])
+        h5["/H5Types/Population range"] = dt
+        
+        f = open(populationfile)
+        lines = f.readlines()
+        
+        dset = h5.create_dataset("Populations", (len(lines),), dtype=dt)
+        a = np.zeros(len(lines), dtype=dt)
+        idx = 0
+        for l in lines:
+            start, count, pop = l.split()
+            a[idx]["Start"] = int(start)
+            a[idx]["Count"] = int(count)
+            a[idx]["Population"] = int(pop)
+            idx += 1
+
+        dset[:] = a
+
+        f.close()
+        
 
 
 @cli.command(name="mask-range")
