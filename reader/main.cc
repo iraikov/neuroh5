@@ -92,7 +92,7 @@ int main(int argc, char** argv)
   assert(create_edge_list(base, row_ptr, col_idx, edge_list) >= 0);
   assert(edge_list.size()%2 == 0);
 
-  // partition the graph
+  
 
   
   MPI_Finalize();

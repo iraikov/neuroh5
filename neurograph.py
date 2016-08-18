@@ -28,7 +28,6 @@ import click
 connectivity_prefix = 'Connectivity'
 
 def h5_get_group (h, groupname):
-    print 'groupname = ', groupname
     if groupname in h.keys():
         g = h[groupname]
     else:
@@ -44,9 +43,9 @@ def h5_get_dataset (g, dsetname, **kwargs):
 
 def h5_concat_dataset(dset, data):
     dsize = dset.shape[0]
-    print 'dsize = ', dsize
+    #print 'dsize = ', dsize
     newshape = (dsize+len(data),)
-    print 'newshape = ', newshape
+    #print 'newshape = ', newshape
     dset.resize(newshape)
     dset[dsize:] = data
     return dset
@@ -56,21 +55,41 @@ def cli():
     return
 
 
+def write_population_ids(source,dest,groupname,outputfile):
+
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+
+        g = h5_get_group (h5, connectivity_prefix)
+        g1 = h5_get_group (g, groupname)
+        dset = h5_get_dataset(g1, "source", dtype=np.uint32, maxshape=(1,))
+        dset.resize((1,))
+        dset[0] = source
+        dset = h5_get_dataset(g1, "dest", dtype=np.uint32, maxshape=(1,))
+        dset.resize((1,))
+        dset[0] = dest
+
+
 def write_final_size_ccs(groupname,outputfile):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
         g = h5_get_group (h5, connectivity_prefix)
         g1 = h5_get_group (g, groupname)
-        col_ptr_dset = h5_get_dataset(g1, "col_ptr", dtype=np.uint64, 
-                                      maxshape=(None,), compression=6)
+
+        col_ptr_dset = h5_get_dataset(g1, "col_ptr")
         col_ptr_dsize = col_ptr_dset.shape[0]
-        row_idx_dset = h5_get_dataset(g1, "row_idx", dtype=np.uint32, 
-                                      maxshape=(None,), compression=6)
+        row_idx_dset = h5_get_dataset(g1, "row_idx")
         row_idx_dsize = row_idx_dset.shape[0]
         newshape = (col_ptr_dsize+1,)
         col_ptr_dset.resize(newshape)
         col_ptr_dset[col_ptr_dsize] = row_idx_dsize
+
+        block_ptr_dset = h5_get_dataset(g1, "block_ptr")
+        block_ptr_dsize = block_ptr_dset.shape[0]
+        newshape = (block_ptr_dsize+1,)
+        block_ptr_dset.resize(newshape)
+        block_ptr_dset[block_ptr_dsize] = col_ptr_dsize
+
         return col_ptr_dset
 
 
@@ -80,19 +99,25 @@ def write_final_size_crs(groupname,outputfile):
 
         g = h5_get_group (h5, connectivity_prefix)
         g1 = h5_get_group (g, groupname)
-        row_ptr_dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64, 
-                                      maxshape=(None,), compression=6)
+        row_ptr_dset = h5_get_dataset(g1, "row_ptr")
         row_ptr_dsize = row_ptr_dset.shape[0]
-        col_idx_dset = h5_get_dataset(g1, "col_idx", dtype=np.uint32, 
-                                      maxshape=(None,), compression=6)
+
+        col_idx_dset = h5_get_dataset(g1, "col_idx")
         col_idx_dsize = col_idx_dset.shape[0]
         newshape = (row_ptr_dsize+1,)
         row_ptr_dset.resize(newshape)
         row_ptr_dset[row_ptr_dsize] = col_idx_dsize
+
+        block_ptr_dset = h5_get_dataset(g1, "block_ptr")
+        block_ptr_dsize = block_ptr_dset.shape[0]
+        newshape = (block_ptr_dsize+1,)
+        block_ptr_dset.resize(newshape)
+        block_ptr_dset[block_ptr_dsize] = row_ptr_dsize
+
         return row_ptr_dset
 
 
-def import_lsn_lines_ccs (lines,colsep,groupname,outputfile):
+def import_lsn_lines_ccs (lines,source_base,dest_base,colsep,groupname,outputfile):
 
     col_ptr    = [0]
     col_idx    = []
@@ -108,7 +133,8 @@ def import_lsn_lines_ccs (lines,colsep,groupname,outputfile):
     col_old = -1
     for l in lines:
         a = l.split(colsep)
-        col = int(a[1])-1
+        row = int(a[0])-1-source_base
+        col = int(a[1])-1-dest_base
         col_min = max(col_min,col)
         if col_old < 0: 
             col_old = col
@@ -116,7 +142,7 @@ def import_lsn_lines_ccs (lines,colsep,groupname,outputfile):
             while col_old < col:
                 col_old = col_old + 1
                 col_ptr.append(len(row_idx))
-        row_idx.append(int(a[0])-1)
+        row_idx.append(row)
         syn_weight.append(float(a[2]))
         layer.append(int(a[3]))
         seg_idx.append(int(a[4])-1)
@@ -178,7 +204,7 @@ def import_lsn_lines_ccs (lines,colsep,groupname,outputfile):
         dset = h5_concat_dataset(dset, np.asarray(node_idx))
 
 
-def import_lsn_lines_crs (lines,colsep,groupname,outputfile):
+def import_lsn_lines_crs (lines,source_base,dest_base,colsep,groupname,outputfile):
 
     row_ptr    = [0]
     col_idx    = []
@@ -191,7 +217,8 @@ def import_lsn_lines_crs (lines,colsep,groupname,outputfile):
     row_old = -1
     for l in lines:
         a = l.split(colsep)
-        row = int(a[0])-1
+        col = int(a[1])-1-dest_base
+        row = int(a[0])-1-source_base
         row_min = max(row, row_min)
         if row_old < 0:
             row_old = row
@@ -199,7 +226,7 @@ def import_lsn_lines_crs (lines,colsep,groupname,outputfile):
             while row_old < row:
                 row_old = row_old + 1
                 row_ptr.append(len(col_idx))
-        col_idx.append(int(a[1])-1)
+        col_idx.append(col)
         syn_weight.append(float(a[2]))
         layer.append(int(a[3]))
         seg_idx.append(int(a[4])-1)
@@ -252,33 +279,57 @@ def import_lsn_lines_crs (lines,colsep,groupname,outputfile):
 
 
 @cli.command(name="import-lsn")
+@click.argument("source", type=int)
+@click.argument("dest", type=int)
 @click.argument("groupname", type=str, default="lsn")
 @click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
 @click.argument("outputfile", type=click.Path())
 @click.option('--ccs', 'order', flag_value='ccs', default=True)
 @click.option('--crs', 'order', flag_value='crs')
+@click.option('--relative-source', 'indextype_src', flag_value='rel', default=True)
+@click.option('--absolute-source', 'indextype_src', flag_value='abs')
+@click.option('--relative-dest', 'indextype_dest', flag_value='rel', default=True)
+@click.option('--absolute-dest', 'indextype_dest', flag_value='abs')
 @click.option("--colsep", type=str, default=' ')
 @click.option("--bufsize", type=int, default=100000)
-def import_lsn(inputfiles, outputfile, groupname, order, colsep, bufsize):
+def import_lsn(inputfiles, outputfile, source, dest, groupname, order, indextype_src, indextype_dest, colsep, bufsize):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
-        # create an HDF5 enumerated type for the layer information
-        mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
-                   "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
-        dt = h5py.special_dtype(enum=(np.uint8, mapping))
-        h5["/H5Types/Layer tags"] = dt
+        if not ('H5Types' in h5.keys()):
+            # create an HDF5 enumerated type for the layer information
+            mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                       "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+            dt = h5py.special_dtype(enum=(np.uint8, mapping))
+            h5["/H5Types/Layer tags"] = dt
+            
+            # create an HDF5 enumerated type for the population label
+            mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                        "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+            dt = h5py.special_dtype(enum=(np.uint16, mapping))
+            h5["/H5Types/Population labels"] = dt
+            
+            # create an HDF5 compound type for valid combinations of
+            # population labels
+            dt = np.dtype([("Source", h5["/H5Types/Population labels"].dtype),
+                           ("Destination", h5["/H5Types/Population labels"].dtype)])
+            h5["/H5Types/Population projections"] = dt
 
-        # create an HDF5 enumerated type for the population label
-        mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
-                    "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
-        dt = h5py.special_dtype(enum=(np.uint16, mapping))
-        h5["/H5Types/Population labels"] = dt
-        
-        # create an HDF5 compound type for valid combinations of
-        # population labels
-        dt = np.dtype([("Source", h5["/H5Types/Population labels"].dtype),
-                       ("Destination", h5["/H5Types/Population labels"].dtype)])
-        h5["/H5Types/Population projections"] = dt
+        g = h5_get_group(h5, 'H5Types')
+        dset = h5_get_dataset(g, "Populations")
+        popdefs = {}
+        for p in dset[:]:
+            popdefs[p[2]] = (p[0], p[1])
+
+    if indextype_src == 'rel':
+        source_base = 0
+    else:
+        source_base = int((popdefs[source])[0])
+    if indextype_dest == 'rel':
+        dest_base = 0
+    else:
+        dest_base = int((popdefs[dest])[0])
+
+    write_population_ids (source, dest, groupname, outputfile)
         
     for inputfile in inputfiles:
 
@@ -288,9 +339,9 @@ def import_lsn(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
         while lines:
             if order=='ccs':
-                import_lsn_lines_ccs(lines, colsep, groupname, outputfile)
+                import_lsn_lines_ccs(lines, source_base, dest_base, colsep, groupname, outputfile)
             elif order=='crs':
-                import_lsn_lines_crs(lines, colsep, groupname, outputfile)
+                import_lsn_lines_crs(lines, source_base, dest_base, colsep, groupname, outputfile)
             lines = f.readlines(bufsize)
 
         f.close()
@@ -427,7 +478,7 @@ def import_dist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
 
 
-def import_ltdist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
+def import_ltdist_lines_ccs (lines,source_base,dest_base,colsep,groupname,outputfile):
 
     col_ptr    = [0]
     row_idx    = []
@@ -435,18 +486,23 @@ def import_ltdist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
     tdist      = []
             
     # read and parse line-by-line
-
+    col_min = 0
+    col_old = -1
     for l in lines:
         a = l.split(colsep)
-        col = int(a[1])-1
-        while col_old < col:
-            col_ptr.append(len(ldist))
-            col_old = col_old + 1
-        row_idx.append(int(a[0])-1)
+        row = int(a[0])-1-source_base 
+        col = int(a[1])-1-dest_base
+        col_min = max(col_min,col)
+        if col_old < 0: 
+            col_old = col
+        else:
+            while col_old < col:
+                col_old = col_old + 1
+                col_ptr.append(len(row_idx))
+        row_idx.append(row)
         ldist.append(float(a[2]))
         tdist.append(float(a[3]))
 
-    col_old = col_old + 1
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
                 
@@ -468,7 +524,12 @@ def import_ltdist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "col_ptr", maxshape=(None,),
                               dtype=np.uint64, compression=6)
+        col_ptr_offset = dset.shape[0]
         dset = h5_concat_dataset(dset, np.asarray(col_ptr)+row_idx_offset)
+
+        dset = h5_get_dataset(g1, "block_ptr", dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray([col_ptr_offset]))
         
         # for floating point numbers, it's usally beneficial to apply the
         # bit-shuffle filter before compressing with GZIP
@@ -481,28 +542,32 @@ def import_ltdist_lines_ccs (lines,colsep,col_old,groupname,outputfile):
                               compression=6, shuffle=True)
         dset = h5_concat_dataset(dset, np.asarray(tdist))
 
-    return col_old
-
                     
-def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
+def import_ltdist_lines_crs (lines,source_base,dest_base,colsep,groupname,outputfile):
 
     row_ptr    = [0]
     col_idx    = []
     ldist      = []
     tdist      = []
                 
+    row_min = 0
+    row_old = -1
     for l in lines:
         a = l.split(colsep)
-        row = int(a[0])-1
-        while row_old < row:
-            row_ptr.append(len(ldist))
-            row_old = row_old + 1
-        col_idx.append(int(a[1])-1)
+        col = int(a[1])-1-dest_base
+        row = int(a[0])-1-source_base
+        row_min = max(row, row_min)
+        if row_old < 0:
+            row_old = row
+        else:
+            while row_old < row:
+                row_old = row_old + 1
+                row_ptr.append(len(col_idx))
+        col_idx.append(col)
         ldist.append(float(a[2]))
         tdist.append(float(a[3]))
+
                 
-    row_old = row_old + 1
-    
     with h5py.File(outputfile, "a", libver="latest") as h5:
         
         g = h5_get_group (h5, connectivity_prefix)
@@ -515,7 +580,12 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
         
         dset = h5_get_dataset(g1, "row_ptr", dtype=np.uint64,
                               maxshape=(None,), compression=6)
+        row_ptr_offset = dset.shape[0]        
         dset = h5_concat_dataset(dset, np.asarray(row_ptr))
+
+        dset = h5_get_dataset(g1, "block_ptr", dtype=np.uint32, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray([row_ptr_offset]))
         
         dset = h5_get_dataset(g1, "Longitudinal Distance", 
                               dtype=np.float32, shuffle=True,
@@ -526,21 +596,59 @@ def import_ltdist_lines_crs (lines,colsep,row_old,groupname,outputfile):
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(tdist))
 
-    return row_old
-
 
 @cli.command(name="import-ltdist")
+@click.argument("source", type=int)
+@click.argument("dest", type=int)
 @click.argument("groupname", type=str, default="ltdist")
 @click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
 @click.argument("outputfile", type=click.Path())
 @click.option('--ccs', 'order', flag_value='ccs', default=True)
 @click.option('--crs', 'order', flag_value='crs')
+@click.option('--relative-source', 'indextype_src', flag_value='rel', default=True)
+@click.option('--absolute-source', 'indextype_src', flag_value='abs')
+@click.option('--relative-dest', 'indextype_dest', flag_value='rel', default=True)
+@click.option('--absolute-dest', 'indextype_dest', flag_value='abs')
 @click.option("--colsep", type=str, default=' ')
 @click.option("--bufsize", type=int, default=100000)
-def import_ltdist(inputfiles, outputfile, groupname, order, colsep, bufsize):
+def import_ltdist(inputfiles, outputfile, groupname, source, dest, order, indextype_src, indextype_dest, colsep, bufsize):
 
-    col_old = 0
-    row_old = 0
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+        if not ('H5Types' in h5.keys()):
+            # create an HDF5 enumerated type for the layer information
+            mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                       "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+            dt = h5py.special_dtype(enum=(np.uint8, mapping))
+            h5["/H5Types/Layer tags"] = dt
+            
+            # create an HDF5 enumerated type for the population label
+            mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                        "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+            dt = h5py.special_dtype(enum=(np.uint16, mapping))
+            h5["/H5Types/Population labels"] = dt
+            
+            # create an HDF5 compound type for valid combinations of
+            # population labels
+            dt = np.dtype([("Source", h5["/H5Types/Population labels"].dtype),
+                           ("Destination", h5["/H5Types/Population labels"].dtype)])
+            h5["/H5Types/Population projections"] = dt
+
+        g = h5_get_group(h5, 'H5Types')
+        dset = h5_get_dataset(g, "Populations")
+        popdefs = {}
+        for p in dset[:]:
+            popdefs[p[2]] = (p[0], p[1])
+
+    if indextype_src == 'rel':
+        source_base = 0
+    else:
+        source_base = int((popdefs[source])[0])
+    if indextype_dest == 'rel':
+        dest_base = 0
+    else:
+        dest_base = int((popdefs[dest])[0])
+
+    write_population_ids (source, dest, groupname, outputfile)
 
     for inputfile in inputfiles:
 
@@ -550,9 +658,9 @@ def import_ltdist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
         while lines:
             if order=='ccs':
-                col_old = import_ltdist_lines_ccs (lines, colsep, col_old, groupname, outputfile)
+                import_ltdist_lines_ccs (lines, source_base, dest_base, colsep, groupname, outputfile)
             elif order=='crs':
-                row_old = import_ltdist_lines_crs (lines, colsep, row_old, groupname, outputfile)
+                import_ltdist_lines_crs (lines, source_base, dest_base, colsep, groupname, outputfile)
             lines = f.readlines(bufsize)
 
         f.close()
@@ -564,38 +672,52 @@ def import_ltdist(inputfiles, outputfile, groupname, order, colsep, bufsize):
 
 
 @cli.command(name="import-globals")
+@click.argument("populationfile", type=click.Path(exists=True))
+@click.argument("connectivityfile", type=click.Path(exists=True))
 @click.argument("outputfile", type=click.Path())
-def import_globals(populationfile, connectivityfile, outputfile):
+@click.option("--colsep", type=str, default=' ')
+def import_globals(populationfile, connectivityfile, outputfile, colsep):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        # create an HDF5 enumerated type for the layer information
-        mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
-                   "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
-        dt = h5py.special_dtype(enum=(np.uint8, mapping))
-        h5["/H5Types/Layer tags"] = dt
+        if 'H5Types' in h5.keys():
+            dt = h5["/H5Types/Population projections"].dtype
+        else: 
 
-        # create an HDF5 enumerated type for the population label
-        mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
-                    "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
-        dt = h5py.special_dtype(enum=(np.uint16, mapping))
-        h5["/H5Types/Population labels"] = dt
+            # create an HDF5 enumerated type for the layer information
+            mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                       "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+            dt = h5py.special_dtype(enum=(np.uint8, mapping))
+            h5["/H5Types/Layer tags"] = dt
+
+            # create an HDF5 enumerated type for the population label
+            mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                        "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+            dt = h5py.special_dtype(enum=(np.uint16, mapping))
+            h5["/H5Types/Population labels"] = dt
         
-        # create an HDF5 compound type for valid combinations of
-        # population labels
-        dt = np.dtype([("Source", h5["/H5Types/Population labels"].dtype),
-                       ("Destination", h5["/H5Types/Population labels"].dtype)])
-        h5["/H5Types/Population projections"] = dt
+            # create an HDF5 compound type for valid combinations of
+            # population labels
+            dt = np.dtype([("Source", h5["/H5Types/Population labels"].dtype),
+                           ("Destination", h5["/H5Types/Population labels"].dtype)])
+            h5["/H5Types/Population projections"] = dt
 
+            dt = np.dtype([("Start", np.uint64), ("Count", np.uint32),
+                           ("Population", h5["/H5Types/Population labels"].dtype)])
+            h5["/H5Types/Population range"] = dt
+
+        g = h5_get_group (h5, 'H5Types')
         f = open(connectivityfile)
         lines = f.readlines()
         
-        dset = h5.create_dataset("Valid population projections", (len(lines),),
-                                 dtype=dt)
+        dt = h5["/H5Types/Population projections"]
+        dset = h5_get_dataset(g, "Valid population projections", 
+                              maxshape=(len(lines),), dtype=dt)
+        dset.resize((len(lines),))
         a = np.zeros(len(lines), dtype=dt)
         idx = 0
         for l in lines:
-            src, dst = l.split()
+            label, src, dst = l.split(colsep)
             a[idx]["Source"] = int(src)
             a[idx]["Destination"] = int(dst)
             idx += 1
@@ -605,18 +727,17 @@ def import_globals(populationfile, connectivityfile, outputfile):
         f.close()
         
         # create an HDF5 compound type for population ranges
-        dt = np.dtype([("Start", np.uint64), ("Count", np.uint32),
-                       ("Population", h5["/H5Types/Population labels"].dtype)])
-        h5["/H5Types/Population range"] = dt
+        dt = h5["/H5Types/Population range"].dtype
         
         f = open(populationfile)
         lines = f.readlines()
         
-        dset = h5.create_dataset("Populations", (len(lines),), dtype=dt)
+        dset = h5_get_dataset(g, "Populations", maxshape=(len(lines),), dtype=dt)
+        dset.resize((len(lines),))
         a = np.zeros(len(lines), dtype=dt)
         idx = 0
         for l in lines:
-            start, count, pop = l.split()
+            start, count, pop = l.split(colsep)
             a[idx]["Start"] = int(start)
             a[idx]["Count"] = int(count)
             a[idx]["Population"] = int(pop)
@@ -677,9 +798,6 @@ def mask_col(maskname, groupname, inputfile, outputfile, postrange):
         g2 = h5_get_group (h5out, "Mask")
         dset = h5_get_dataset(g2, maskname, dtype=np.uint32, 
                               maxshape=(None,), compression=6)
-
-        print 'row_idx_data = ', row_idx_data
-        print 'row_idx_data.shape = ', row_idx_data.shape
         dset.resize(row_idx_data.shape)
         dset[:] = row_idx_data
 
