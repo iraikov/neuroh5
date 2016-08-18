@@ -18,6 +18,7 @@ herr_t read_csc_graph
  const char*         fname, 
  NODE_IDX_T&         base,
  vector<BLOCK_PTR_T>&  block_ptr,
+ vector<NODE_IDX_T>& col_start,
  vector<COL_PTR_T>&  col_ptr,
  vector<NODE_IDX_T>& row_idx
  )
@@ -34,7 +35,7 @@ herr_t read_csc_graph
 
   uint64_t num_nodes;
 
-  // process 0 reads the size of col_ptr (= num_nodes+1)
+  // process 0 reads the size of block_ptr (= num_nodes+1)
   if (rank == 0)
     {
       hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -93,12 +94,11 @@ herr_t read_csc_graph
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
 
-  ierr = H5Dread(dset, BLOCK_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &row_ptr[0]);
+  ierr = H5Dread(dset, BLOCK_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &block_ptr[0]);
   assert(ierr >= 0);
 
   assert(H5Sclose(fspace) >= 0);
   assert(H5Dclose(dset) >= 0);
-  assert(H5Sclose(mspace) >= 0);
 
   // rebase the block_ptr array to local offsets
   // REBASE is going to be the start offset for the hyperslab
@@ -107,6 +107,28 @@ herr_t read_csc_graph
     {
       block_ptr[i] -= block_rebase;
     }
+
+  /***************************************************************************
+   * read COL_START
+   ***************************************************************************/
+  col_start.resize(block);
+  assert(col_start.size() > 0);
+
+  dset = H5Dopen2(file, COL_START_H5_PATH, H5P_DEFAULT);
+  assert(dset >= 0);
+
+  // make hyperslab selection
+  fspace = H5Dget_space(dset);
+  assert(fspace >= 0);
+  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
+  assert(ierr >= 0);
+
+  ierr = H5Dread(dset, COL_START_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &col_start[0]);
+  assert(ierr >= 0);
+
+  assert(H5Sclose(fspace) >= 0);
+  assert(H5Dclose(dset) >= 0);
+  assert(H5Sclose(mspace) >= 0);
 
   /***************************************************************************
    * read COL_PTR

@@ -13,6 +13,7 @@ extern herr_t read_csc_graph
  const char*              fname, 
  NODE_IDX_T&              base,     /* global index of the first node */
  std::vector<BLOCK_PTR_T>&  block_ptr,  
+ std::vector<NODE_IDX_T>& col_start,
  std::vector<COL_PTR_T>&  col_ptr,  /* one longer than owned nodes count */
  std::vector<NODE_IDX_T>& row_idx
  );
