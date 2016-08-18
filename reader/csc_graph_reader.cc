@@ -55,10 +55,10 @@ herr_t read_csc_graph
   assert(MPI_Bcast(&num_blocks, 1, MPI_UINT64_T, 0, comm) >= 0);
 
   /***************************************************************************
-   * read BLOCK_PTR and COL_PTR
+   * read BLOCK_PTR
    ***************************************************************************/
 
-  // determine my block of col_ptr
+  // determine my block of block_ptr
   hsize_t ppcount = (hsize_t) num_blocks/size;
   hsize_t start = (hsize_t) rank*ppcount;
   base = (NODE_IDX_T) start;
@@ -100,32 +100,32 @@ herr_t read_csc_graph
   assert(H5Dclose(dset) >= 0);
   assert(H5Sclose(mspace) >= 0);
 
-  // rebase the row_ptr array to local offsets
+  // rebase the block_ptr array to local offsets
   // REBASE is going to be the start offset for the hyperslab
-  BLOCK_PTR_T rebase = block_ptr[0];
+  BLOCK_PTR_T block_rebase = block_ptr[0];
   for (size_t i = 0; i < block_ptr.size(); ++i)
     {
-      block_ptr[i] -= rebase;
+      block_ptr[i] -= block_rebase;
     }
 
   /***************************************************************************
-   * read ROW_IDX
+   * read COL_PTR
    ***************************************************************************/
 
   // determine my read block of col_idx
-  block = (hsize_t)(row_ptr.back() - row_ptr.front());
-  start = (hsize_t)rebase;
+  block = (hsize_t)(block_ptr.back() - block_ptr.front());
+  start = (hsize_t)block_rebase;
 
   // allocate buffer and memory dataspace
-  col_idx.resize(block);
-  assert(col_idx.size() > 0);
+  col_ptr.resize(block);
+  assert(col_ptr.size() > 0);
 
   mspace = H5Screate_simple(1, &block, NULL);
   assert(mspace >= 0);
   ierr = H5Sselect_all(mspace);
   assert(ierr >= 0);
 
-  dset = H5Dopen2(file, COL_IDX_H5_PATH, H5P_DEFAULT);
+  dset = H5Dopen2(file, COL_PTR_H5_PATH, H5P_DEFAULT);
   assert(dset >= 0);
 
   // make hyperslab selection
@@ -134,7 +134,46 @@ herr_t read_csc_graph
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
 
-  ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T , mspace, fspace, H5P_DEFAULT, &col_idx[0]);
+  ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &col_ptr[0]);
+  assert(ierr >= 0);
+
+  assert(H5Sclose(fspace) >= 0);
+  assert(H5Dclose(dset) >= 0);
+  assert(H5Sclose(mspace) >= 0);
+
+  BLOCK_PTR_T col_rebase = col_ptr[0];
+  for (size_t i = 0; i < col_ptr.size(); ++i)
+    {
+      col_ptr[i] -= col_rebase;
+    }
+
+  /***************************************************************************
+   * read ROW_IDX
+   ***************************************************************************/
+
+  // determine my read block of col_idx
+  block = (hsize_t)(col_ptr.back() - col_ptr.front());
+  start = (hsize_t)col_rebase;
+
+  // allocate buffer and memory dataspace
+  row_idx.resize(block);
+  assert(row_idx.size() > 0);
+
+  mspace = H5Screate_simple(1, &block, NULL);
+  assert(mspace >= 0);
+  ierr = H5Sselect_all(mspace);
+  assert(ierr >= 0);
+
+  dset = H5Dopen2(file, ROW_IDX_H5_PATH, H5P_DEFAULT);
+  assert(dset >= 0);
+
+  // make hyperslab selection
+  fspace = H5Dget_space(dset);
+  assert(fspace >= 0);
+  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
+  assert(ierr >= 0);
+
+  ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &row_idx[0]);
   assert(ierr >= 0);
 
   assert(H5Sclose(fspace) >= 0);
