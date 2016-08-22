@@ -161,7 +161,7 @@ herr_t read_population_ranges
 /*****************************************************************************
  * Validate edge populations
  *****************************************************************************/
-
+/*
 bool validate_edge_list
 (
  const NODE_IDX_T&                base,
@@ -208,3 +208,4 @@ bool validate_edge_list
 
   return result;
 }
+*/

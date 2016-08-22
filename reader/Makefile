@@ -7,8 +7,8 @@ LDFLAGS		= -L$(HDF5_LIBDIR)
 
 all: reader
 
-reader: main.o crs_graph_reader.o population_reader.o
-	$(MPICXX) -o reader $(LDFLAGS) main.o crs_graph_reader.o population_reader.o -lhdf5
+reader: main.o dbs_graph_reader.o population_reader.o
+	$(MPICXX) -o reader $(LDFLAGS) main.o dbs_graph_reader.o population_reader.o -lhdf5
 
 .cc.o:
 	$(MPICXX) $(CFLAGS) -c $< -o $@

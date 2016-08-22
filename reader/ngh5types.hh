@@ -5,29 +5,23 @@
 
 #include "hdf5.h"
 
-// node index type
+// Block offset type
+typedef uint32_t DST_BLK_PTR_T;
 
+// DBS offset type
+typedef uint64_t DST_PTR_T;
+
+#define DST_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
+#define DST_PTR_H5_FILE_T   H5T_STD_U64LE
+
+#define DST_BLK_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
+#define DST_BLK_PTR_H5_FILE_T   H5T_STD_U64LE
+
+// DBS node index type
 typedef unsigned int NODE_IDX_T;
 
 #define NODE_IDX_H5_NATIVE_T H5T_NATIVE_UINT32
 #define NODE_IDX_H5_FILE_T   H5T_STD_U32LE
-
-// Block offset type
-typedef uint32_t COL_PTR_T;
-
-// CRS offset type
-
-typedef uint64_t ROW_PTR_T;
-
-#define ROW_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
-#define ROW_PTR_H5_FILE_T   H5T_STD_U64LE
-
-// CSC offset type
-
-typedef uint64_t COL_PTR_T;
-
-#define COL_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
-#define COL_PTR_H5_FILE_T   H5T_STD_U64LE
 
 // Population types
 

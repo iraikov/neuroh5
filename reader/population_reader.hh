@@ -24,6 +24,7 @@ extern herr_t read_population_ranges
  pop_range_map_t& pop_ranges
  );
 
+/*
 extern bool validate_edge_list
 (
  const NODE_IDX_T&                         base,
@@ -32,5 +33,6 @@ extern bool validate_edge_list
  const pop_range_map_t&                    pop_ranges,
  const std::set< std::pair<pop_t,pop_t> >& pop_pairs
  );
+*/
 
 #endif
