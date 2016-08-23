@@ -116,7 +116,7 @@ def write_final_size_dbs(groupname,outputfile):
         dst_blk_ptr_dsize = dst_blk_ptr_dset.shape[0]
         newshape = (dst_blk_ptr_dsize+1,)
         dst_blk_ptr_dset.resize(newshape)
-        dst_blk_ptr_dset[dst_blk_ptr_dsize] = dst_ptr_dsize
+        dst_blk_ptr_dset[dst_blk_ptr_dsize] = dst_ptr_dsize+1
 
         return dst_ptr_dset
 
