@@ -11,7 +11,7 @@ using namespace std;
 std::string ngh5_prj_path (const char *dsetname, const char *name) 
 {
   std::string result;
-  result = std::string("/Projections/") + dsetname + "/Connectivity/" + name;
+  result = std::string("/Projections/") + dsetname + name;
   return result;
 }
 
@@ -19,12 +19,15 @@ std::string ngh5_prj_path (const char *dsetname, const char *name)
  * Read the basic DBS graph structure
  *****************************************************************************/
 
-herr_t read_dbs_graph
+herr_t read_dbs_projection
 (
  MPI_Comm            comm,
  const char*         fname, 
  const char*         dsetname, 
+ const vector<pop_range_t> &pop_vector,
  NODE_IDX_T&         base,
+ NODE_IDX_T&         dst_start,
+ NODE_IDX_T&         src_start,
  vector<DST_BLK_PTR_T>&  dst_blk_ptr,
  vector<NODE_IDX_T>& dst_idx,
  vector<DST_PTR_T>&  dst_ptr,
@@ -40,29 +43,84 @@ herr_t read_dbs_graph
    * MPI rank 0 reads and broadcasts the number of nodes
    ***************************************************************************/
 
-  uint64_t num_blocks;
+  uint64_t num_blocks; 
   printf("rank = %d\n", rank);
   printf("size = %d\n", size);
 
-  // process 0 reads the size of dst_blk_ptr (= num_nodes+1)
+  // process 0 reads the size of dst_blk_ptr and the source and target populations
   if (rank == 0)
     {
-      hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+      uint16_t dst_pop, src_pop;
+      hid_t file, fspace, mspace, dset;
+      hsize_t one = 1;
+
+      file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
-      hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
-      hid_t fspace = H5Dget_space(dset);
+      fspace = H5Dget_space(dset);
       assert(fspace >= 0);
       num_blocks = (uint64_t) H5Sget_simple_extent_npoints(fspace) - 1;
       assert(num_blocks > 0);
 
       assert(H5Sclose(fspace) >= 0);
       assert(H5Dclose(dset) >= 0);
+
+      mspace = H5Screate_simple(1, &one, NULL);
+      assert(mspace >= 0);
+      ierr = H5Sselect_all(mspace);
+      assert(ierr >= 0);
+
+      dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_POP_H5_PATH).c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+  
+      //ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, NULL, NULL, &one, &one);
+      //assert(ierr >= 0);
+
+      ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_pop);
+      assert(ierr >= 0);
+
+      assert(H5Sclose(fspace) >= 0);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+
+      mspace = H5Screate_simple(1, &one, NULL);
+      assert(mspace >= 0);
+      ierr = H5Sselect_all(mspace);
+      assert(ierr >= 0);
+
+      dset = H5Dopen2(file, ngh5_prj_path(dsetname, SRC_POP_H5_PATH).c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+  
+      //ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, NULL, NULL, &one, &one);
+      //assert(ierr >= 0);
+
+      ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &src_pop);
+      assert(ierr >= 0);
+
+      assert(H5Sclose(fspace) >= 0);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
       assert(H5Fclose(file) >= 0);
+
+      printf("dst_pop = %u\n", dst_pop);
+      printf("src_pop = %u\n", src_pop);
+
+      dst_start = pop_vector[dst_pop].start;
+      src_start = pop_vector[src_pop].start;
     }
+
   printf("num_blocks = %lu\n", num_blocks);
+  printf("dst_start = %u\n", dst_start);
+  printf("src_start = %u\n", src_start);
 
   assert(MPI_Bcast(&num_blocks, 1, MPI_UINT64_T, 0, comm) >= 0);
+  assert(MPI_Bcast(&dst_start, 1, MPI_UINT32_T, 0, comm) >= 0);
+  assert(MPI_Bcast(&src_start, 1, MPI_UINT32_T, 0, comm) >= 0);
 
   /***************************************************************************
    * read BLOCK_PTR
@@ -109,8 +167,7 @@ herr_t read_dbs_graph
   
   printf("before select_hyperslab: start = %llu\n", start);
   printf("before select_hyperslab: block = %llu\n", block);
-  //ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
-  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &block, NULL);
+  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
   printf("after select_hyperslab: ierr = %d\n", ierr);
 
@@ -120,16 +177,17 @@ herr_t read_dbs_graph
 
   assert(H5Sclose(fspace) >= 0);
   assert(H5Dclose(dset) >= 0);
+  assert(H5Sclose(mspace) >= 0);
 
   // rebase the block_ptr array to local offsets
   // REBASE is going to be the start offset for the hyperslab
   DST_BLK_PTR_T block_rebase = dst_blk_ptr[0];
-  printf("block_rebase = %u\n", block_rebase);
+  printf("block_rebase = %lu\n", block_rebase);
   for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
     {
-      printf("before: dst_blk_ptr[%lu] = %u\n", i, dst_blk_ptr[i]);
+      printf("before: dst_blk_ptr[%lu] = %lu\n", i, dst_blk_ptr[i]);
       dst_blk_ptr[i] -= block_rebase;
-      printf("after: dst_blk_ptr[%lu] = %u\n", i, dst_blk_ptr[i]);
+      printf("after: dst_blk_ptr[%lu] = %lu\n", i, dst_blk_ptr[i]);
     }
 
   /***************************************************************************
@@ -137,14 +195,19 @@ herr_t read_dbs_graph
    ***************************************************************************/
 
   // determine my read block of dst_idx
-  block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-  start = (hsize_t)block_rebase;
+  block = block - 1;
   
   printf("block = %llu\n", block);
   printf("start = %llu\n", start);
 
   dst_idx.resize(block);
   assert(dst_idx.size() > 0);
+  printf("dst_idx.size() = %lu\n", dst_idx.size());
+
+  mspace = H5Screate_simple(1, &block, NULL);
+  assert(mspace >= 0);
+  ierr = H5Sselect_all(mspace);
+  assert(ierr >= 0);
 
   dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_IDX_H5_PATH).c_str(), H5P_DEFAULT);
   assert(dset >= 0);
@@ -154,13 +217,18 @@ herr_t read_dbs_graph
   assert(fspace >= 0);
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
+  ssize_t npoints = H5Sget_select_npoints (fspace);
+  printf("dst_idx: after select_hyperslab: npoints = %lu\n", npoints);
+  printf("dst_idx: block = %llu\n", block);
 
   ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_idx[0]);
   assert(ierr >= 0);
+  printf("dst_idx: after read\n");
 
   assert(H5Sclose(fspace) >= 0);
   assert(H5Dclose(dset) >= 0);
   assert(H5Sclose(mspace) >= 0);
+
 
   /***************************************************************************
    * read DST_PTR
@@ -170,9 +238,14 @@ herr_t read_dbs_graph
   block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
   start = (hsize_t)block_rebase;
 
+  printf("dst_ptr: block = %llu\n", block);
+  printf("dst_ptr: start = %llu\n", start);
+
   // allocate buffer and memory dataspace
   dst_ptr.resize(block);
   assert(dst_ptr.size() > 0);
+
+  printf("dst_ptr.size() = %lu\n", dst_ptr.size());
 
   mspace = H5Screate_simple(1, &block, NULL);
   assert(mspace >= 0);
@@ -188,7 +261,7 @@ herr_t read_dbs_graph
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
 
-  ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_ptr[0]);
+  ierr = H5Dread(dset, DST_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_ptr[0]);
   assert(ierr >= 0);
 
   assert(H5Sclose(fspace) >= 0);

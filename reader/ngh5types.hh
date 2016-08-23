@@ -6,7 +6,7 @@
 #include "hdf5.h"
 
 // Block offset type
-typedef uint32_t DST_BLK_PTR_T;
+typedef uint64_t DST_BLK_PTR_T;
 
 // DBS offset type
 typedef uint64_t DST_PTR_T;

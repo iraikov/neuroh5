@@ -9,6 +9,13 @@
 
 using namespace std;
 
+std::string ngh5_pop_path (const char *name) 
+{
+  std::string result;
+  result = std::string("/H5Types/") + name;
+  return result;
+}
+
 /*****************************************************************************
  * Read the valid population combinations
  *****************************************************************************/
@@ -38,7 +45,7 @@ herr_t read_population_combos
       file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
-      dset = H5Dopen2(file, POP_COMB_H5_PATH, H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_pop_path (POP_COMB_H5_PATH).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -95,7 +102,8 @@ herr_t read_population_ranges
 (
  MPI_Comm                                comm,
  const char*                             fname, 
- map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges
+ map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges,
+ vector<pop_range_t> &pop_vector
  )
 {
   herr_t ierr = 0;
@@ -116,7 +124,7 @@ herr_t read_population_ranges
       file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
-      dset = H5Dopen2(file, POP_RANGE_H5_PATH, H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_pop_path (POP_RANGE_H5_PATH).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -128,7 +136,7 @@ herr_t read_population_ranges
   assert(MPI_Bcast(&num_ranges, 1, MPI_UINT64_T, 0, comm) >= 0);
 
   // allocate buffers
-  vector<pop_range_t> v(num_ranges);
+  pop_vector.resize(num_ranges);
 
   // MPI rank 0 reads and broadcasts the population ranges
 
@@ -138,7 +146,7 @@ herr_t read_population_ranges
       assert(ftype >= 0);
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
 
-      assert(H5Dread(dset, mtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &v[0]) >= 0);
+      assert(H5Dread(dset, mtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &pop_vector[0]) >= 0);
 
       assert(H5Tclose(mtype) >= 0);
       assert(H5Tclose(ftype) >= 0);
@@ -147,12 +155,12 @@ herr_t read_population_ranges
       assert(H5Fclose(file) >= 0);
     }
 
-  assert(MPI_Bcast(&v[0], (int)num_ranges*sizeof(pop_range_t), MPI_BYTE, 0,
+  assert(MPI_Bcast(&pop_vector[0], (int)num_ranges*sizeof(pop_range_t), MPI_BYTE, 0,
                    comm) >= 0);
 
-  for(size_t i = 0; i < v.size(); ++i)
+  for(size_t i = 0; i < pop_vector.size(); ++i)
     {
-      pop_ranges.insert(make_pair(v[i].start, make_pair(v[i].count, v[i].pop)));
+      pop_ranges.insert(make_pair(pop_vector[i].start, make_pair(pop_vector[i].count, pop_vector[i].pop)));
     }
 
   return ierr;

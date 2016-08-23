@@ -21,7 +21,8 @@ extern herr_t read_population_ranges
 (
  MPI_Comm         comm,
  const char*      fname, 
- pop_range_map_t& pop_ranges
+ pop_range_map_t& pop_ranges,
+ std::vector<pop_range_t> &pop_vector
  );
 
 /*
