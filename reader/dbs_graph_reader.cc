@@ -80,6 +80,7 @@ herr_t read_dbs_graph
   printf("stop = %llu\n", stop);
 
   hsize_t block = stop - start;
+  printf("block = %llu\n", block);
 
   // allocate buffer and memory dataspace
   dst_blk_ptr.resize(block);
@@ -89,6 +90,8 @@ herr_t read_dbs_graph
   assert(mspace >= 0);
   ierr = H5Sselect_all(mspace);
   assert(ierr >= 0);
+
+  printf("after create_simple: block = %llu\n", block);
 
   // open the file (independent I/O)
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -106,9 +109,12 @@ herr_t read_dbs_graph
   
   printf("before select_hyperslab: start = %llu\n", start);
   printf("before select_hyperslab: block = %llu\n", block);
+  //ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &block, NULL);
   assert(ierr >= 0);
+  printf("after select_hyperslab: ierr = %d\n", ierr);
 
+  printf("dst_blk_ptr.size() = %lu\n", dst_blk_ptr.size());
   ierr = H5Dread(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_blk_ptr[0]);
   assert(ierr >= 0);
 
