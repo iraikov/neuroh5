@@ -37,19 +37,22 @@ int create_edge_list
 {
   int ierr = 0;
 
-  for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+  if (dst_blk_ptr.size() > 0) 
     {
-      size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
-      NODE_IDX_T dst_base = base + dst_idx[b];
-      for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
+      for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
         {
-          NODE_IDX_T dst = dst_base + ii + dst_start;
-          size_t low = dst_ptr[i], high = dst_ptr[i+1];
-          for (size_t j = low; j < high; ++j)
+          size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
+          NODE_IDX_T dst_base = base + dst_idx[b];
+          for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
             {
-              NODE_IDX_T src = src_idx[j] + src_start;
-              edge_list.push_back(src);
-              edge_list.push_back(dst);
+              NODE_IDX_T dst = dst_base + ii + dst_start;
+              size_t low = dst_ptr[i], high = dst_ptr[i+1];
+              for (size_t j = low; j < high; ++j)
+                {
+                  NODE_IDX_T src = src_idx[j] + src_start;
+                  edge_list.push_back(src);
+                  edge_list.push_back(dst);
+                }
             }
         }
     }
@@ -74,7 +77,7 @@ int main(int argc, char** argv)
 
   if (argc < 2) 
     {
-      printf ("Usage: reader <FILE> <DATASET>\n");
+      std::cout << "Usage: reader <FILE> <DATASET>" << std::endl;
       exit(1);
     }
 
@@ -97,14 +100,6 @@ int main(int argc, char** argv)
   vector<NODE_IDX_T> src_idx;
   assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], argv[2], pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
 
-  printf("dst_start = %u\n", dst_start);
-  printf("src_start = %u\n", src_start);
-  printf("dst_blk_ptr.size() = %lu\n", dst_blk_ptr.size());
-  printf("dst_blk_ptr.size() = %lu\n", dst_blk_ptr.size());
-  printf("dst_idx.size() = %lu\n", dst_idx.size());
-  printf("dst_ptr.size() = %lu\n", dst_ptr.size());
-  printf("src_idx.size() = %lu\n", src_idx.size());
-
   // validate the edges
 
   //assert(validate_edge_list(base, row_ptr, col_idx, pop_ranges, pop_pairs) == true);
@@ -113,14 +108,16 @@ int main(int argc, char** argv)
 
   vector<NODE_IDX_T> edge_list;
   assert(create_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, edge_list) >= 0);
-  assert(edge_list.size()%2 == 0);
 
-  for (size_t i = 0, k = 0; i < edge_list.size()-1; i+=2, k++)
+  if (edge_list.size() > 0) 
     {
-      printf("%lu %u %u\n", k, edge_list[i], edge_list[i+1]);
+      assert(edge_list.size()%2 == 0);
+      for (size_t i = 0, k = 0; i < edge_list.size()-1; i+=2, k++)
+        {
+          std::cout << k << " " << edge_list[i] << " " << edge_list[i+1] << std::endl;
+        }
     }
-  
-  printf("rank %d done\n", rank);
+  MPI_Barrier(MPI_COMM_WORLD);
   //MPI_Finalize();
   return 0;
 }

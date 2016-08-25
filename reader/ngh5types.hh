@@ -2,8 +2,11 @@
 #define NGH5TYPES_HH
 
 #include <map>
+#include <iostream>
+#include <utility>
 
 #include "hdf5.h"
+
 
 // Block offset type
 typedef uint64_t DST_BLK_PTR_T;
@@ -47,5 +50,6 @@ pop_range_t;
 typedef std::map<NODE_IDX_T,std::pair<uint32_t,pop_t> > pop_range_map_t;
 
 typedef pop_range_map_t::const_iterator pop_range_iter_t;
+
 
 #endif

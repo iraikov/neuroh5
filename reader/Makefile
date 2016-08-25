@@ -1,7 +1,7 @@
 HDF5_INCDIR	= $(HOME)/.local/include
 HDF5_LIBDIR	= $(HOME)/.local/lib
 
-MPICXX		= mpicxx
+MPICXX		= mpicxx -std=c++11
 CFLAGS		= -Wall -I$(HDF5_INCDIR)
 LDFLAGS		= -L$(HDF5_LIBDIR)
 
