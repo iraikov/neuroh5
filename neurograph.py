@@ -222,9 +222,9 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
 
 
 @cli.command(name="import-lsn")
-@click.argument("source", type=int)
-@click.argument("dest", type=int)
-@click.argument("groupname", type=str, default="lsn")
+@click.argument("source", type=str)
+@click.argument("dest", type=str)
+@click.argument("groupname", type=str)
 @click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
 @click.argument("outputfile", type=click.Path())
 @click.option('--dbs', 'layout', flag_value='dbs', default=True)
@@ -237,20 +237,21 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
 @click.option("--bufsize", type=int, default=100000)
 def import_lsn(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, bufsize):
 
+    population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                           "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+    layer_mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                     "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+
     with h5py.File(outputfile, "a", libver="latest") as h5:
         if not (grp_h5types in h5.keys()):
             # create an HDF5 enumerated type for the layer information
-            mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
-                       "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
-            dt = h5py.special_dtype(enum=(np.uint8, mapping))
+            dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
             h5[path_layer_tags] = dt
             
             # create an HDF5 enumerated type for the population label
-            mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
-                        "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
-            dt = h5py.special_dtype(enum=(np.uint16, mapping))
+            dt = h5py.special_dtype(enum=(np.uint16, population_mapping))
             h5[path_population_labels] = dt
-            
+
             # create an HDF5 compound type for valid combinations of
             # population labels
             dt = np.dtype([("Source", h5[path_population_labels].dtype),
@@ -263,16 +264,19 @@ def import_lsn(inputfiles, outputfile, source, dest, groupname, layout, indextyp
         for p in dset[:]:
             population_defns[p[2]] = (p[0], p[1])
 
+    src_index = population_mapping[source]
+    dst_index = population_mapping[dest]
+
     if indextype_src == 'rel':
         src_base = 0
     else:
-        src_base = int((population_defns[source])[0])
+        src_base = int((population_defns[src_index])[0])
     if indextype_dst == 'rel':
         dst_base = 0
     else:
-        dst_base = int((population_defns[dst])[0])
+        dst_base = int((population_defns[dst_index])[0])
 
-    write_population_ids (source, dest, groupname, outputfile)
+    write_population_ids (src_index, dst_index, groupname, outputfile)
         
     for inputfile in inputfiles:
 
@@ -354,9 +358,9 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,groupname,output
 
 
 @cli.command(name="import-ltdist")
-@click.argument("source", type=int)
-@click.argument("dest", type=int)
-@click.argument("groupname", type=str, default="lsn")
+@click.argument("source", type=str)
+@click.argument("dest", type=str)
+@click.argument("groupname", type=str)
 @click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
 @click.argument("outputfile", type=click.Path())
 @click.option('--dbs', 'layout', flag_value='dbs', default=True)
@@ -369,18 +373,19 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,groupname,output
 @click.option("--bufsize", type=int, default=100000)
 def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, bufsize):
 
+    population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                           "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+    layer_mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                     "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+
     with h5py.File(outputfile, "a", libver="latest") as h5:
         if not (grp_h5types in h5.keys()):
             # create an HDF5 enumerated type for the layer information
-            mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
-                       "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
-            dt = h5py.special_dtype(enum=(np.uint8, mapping))
+            dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
             h5[path_layer_tags] = dt
             
             # create an HDF5 enumerated type for the population label
-            mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
-                        "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
-            dt = h5py.special_dtype(enum=(np.uint16, mapping))
+            dt = h5py.special_dtype(enum=(np.uint16, population_mapping))
             h5[path_population_labels] = dt
             
             # create an HDF5 compound type for valid combinations of
@@ -395,16 +400,19 @@ def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, index
         for p in dset[:]:
             population_defns[p[2]] = (p[0], p[1])
 
+    src_index = population_mapping[source]
+    dst_index = population_mapping[dest]
+
     if indextype_src == 'rel':
         src_base = 0
     else:
-        src_base = int((population_defns[source])[0])
+        src_base = int((population_defns[src_index])[0])
     if indextype_dst == 'rel':
         dst_base = 0
     else:
-        dst_base = int((population_defns[dest])[0])
+        dst_base = int((population_defns[dst_index])[0])
 
-    write_population_ids (source, dest, groupname, outputfile)
+    write_population_ids (src_index, dst_index, groupname, outputfile)
         
     for inputfile in inputfiles:
 
@@ -478,9 +486,9 @@ def import_dist_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfi
 
 
 @cli.command(name="import-dist")
-@click.argument("source", type=int)
-@click.argument("dest", type=int)
-@click.argument("groupname", type=str, default="lsn")
+@click.argument("source", type=str)
+@click.argument("dest", type=str)
+@click.argument("groupname", type=str)
 @click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
 @click.argument("outputfile", type=click.Path())
 @click.option('--dbs', 'layout', flag_value='dbs', default=True)
@@ -493,18 +501,19 @@ def import_dist_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfi
 @click.option("--bufsize", type=int, default=100000)
 def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, bufsize):
 
+    population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                           "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+    layer_mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                     "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+
     with h5py.File(outputfile, "a", libver="latest") as h5:
         if not (grp_h5types in h5.keys()):
             # create an HDF5 enumerated type for the layer information
-            mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
-                       "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
-            dt = h5py.special_dtype(enum=(np.uint8, mapping))
+            dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
             h5[path_layer_tags] = dt
             
             # create an HDF5 enumerated type for the population label
-            mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
-                        "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
-            dt = h5py.special_dtype(enum=(np.uint16, mapping))
+            dt = h5py.special_dtype(enum=(np.uint16, population_mapping))
             h5[path_population_labels] = dt
             
             # create an HDF5 compound type for valid combinations of
@@ -519,16 +528,19 @@ def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indexty
         for p in dset[:]:
             population_defns[p[2]] = (p[0], p[1])
 
+    src_index = population_mapping[source]
+    dst_index = population_mapping[dest]
+
     if indextype_src == 'rel':
         src_base = 0
     else:
-        src_base = int((population_defns[source])[0])
+        src_base = int((population_defns[src_index])[0])
     if indextype_dst == 'rel':
         dst_base = 0
     else:
-        dst_base = int((population_defns[dst])[0])
+        dst_base = int((population_defns[dst_index])[0])
 
-    write_population_ids (source, dest, groupname, outputfile)
+    write_population_ids (src_index, dst_index, groupname, outputfile)
         
     for inputfile in inputfiles:
 
