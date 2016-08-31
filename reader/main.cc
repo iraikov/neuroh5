@@ -108,7 +108,7 @@ int main(int argc, char** argv)
       
       // validate the edges
       
-      //assert(validate_edge_list(base, row_ptr, col_idx, pop_ranges, pop_pairs) == true);
+      assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
       
       // create the partitioner input
       assert(create_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, edge_list) >= 0);
@@ -124,6 +124,6 @@ int main(int argc, char** argv)
     }
 
   MPI_Barrier(MPI_COMM_WORLD);
-  //MPI_Finalize();
+  MPI_Finalize();
   return 0;
 }
