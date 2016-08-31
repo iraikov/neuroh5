@@ -9,6 +9,13 @@
 
 using namespace std;
 
+std::string ngh5_pop_path (const char *name) 
+{
+  std::string result;
+  result = std::string("/H5Types/") + name;
+  return result;
+}
+
 /*****************************************************************************
  * Read the valid population combinations
  *****************************************************************************/
@@ -38,7 +45,7 @@ herr_t read_population_combos
       file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
-      dset = H5Dopen2(file, POP_COMB_H5_PATH, H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_pop_path (POP_COMB_H5_PATH).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -95,7 +102,8 @@ herr_t read_population_ranges
 (
  MPI_Comm                                comm,
  const char*                             fname, 
- map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges
+ map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges,
+ vector<pop_range_t> &pop_vector
  )
 {
   herr_t ierr = 0;
@@ -116,7 +124,7 @@ herr_t read_population_ranges
       file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
-      dset = H5Dopen2(file, POP_RANGE_H5_PATH, H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_pop_path (POP_RANGE_H5_PATH).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -128,7 +136,7 @@ herr_t read_population_ranges
   assert(MPI_Bcast(&num_ranges, 1, MPI_UINT64_T, 0, comm) >= 0);
 
   // allocate buffers
-  vector<pop_range_t> v(num_ranges);
+  pop_vector.resize(num_ranges);
 
   // MPI rank 0 reads and broadcasts the population ranges
 
@@ -138,7 +146,7 @@ herr_t read_population_ranges
       assert(ftype >= 0);
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
 
-      assert(H5Dread(dset, mtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &v[0]) >= 0);
+      assert(H5Dread(dset, mtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &pop_vector[0]) >= 0);
 
       assert(H5Tclose(mtype) >= 0);
       assert(H5Tclose(ftype) >= 0);
@@ -147,12 +155,13 @@ herr_t read_population_ranges
       assert(H5Fclose(file) >= 0);
     }
 
-  assert(MPI_Bcast(&v[0], (int)num_ranges*sizeof(pop_range_t), MPI_BYTE, 0,
+  assert(MPI_Bcast(&pop_vector[0], (int)num_ranges*sizeof(pop_range_t), MPI_BYTE, 0,
                    comm) >= 0);
 
-  for(size_t i = 0; i < v.size(); ++i)
+  for(size_t i = 0; i < pop_vector.size(); ++i)
     {
-      pop_ranges.insert(make_pair(v[i].start, make_pair(v[i].count, v[i].pop)));
+      pop_ranges.insert(make_pair(pop_vector[i].start, make_pair(pop_vector[i].count, pop_vector[i].pop)));
+      printf ("pop_ranges = %lu %u %u\n", pop_vector[i].start, pop_vector[i].count, pop_vector[i].pop);
     }
 
   return ierr;
@@ -164,16 +173,20 @@ herr_t read_population_ranges
 
 bool validate_edge_list
 (
- const NODE_IDX_T&                base,
- const vector<ROW_PTR_T>&         row_ptr,
- const vector<NODE_IDX_T>&        col_idx,
+ NODE_IDX_T&         base,
+ NODE_IDX_T&         dst_start,
+ NODE_IDX_T&         src_start,
+ vector<DST_BLK_PTR_T>&  dst_blk_ptr,
+ vector<NODE_IDX_T>& dst_idx,
+ vector<DST_PTR_T>&  dst_ptr,
+ vector<NODE_IDX_T>& src_idx,
  const pop_range_map_t&           pop_ranges,
  const set< pair<pop_t, pop_t> >& pop_pairs
  )
 {
   bool result = false;
 
-  NODE_IDX_T row, col;
+  NODE_IDX_T src, dst;
 
   pop_range_iter_t riter, citer;
 
@@ -181,30 +194,37 @@ bool validate_edge_list
 
   // loop over all edges, look up the node populations, and validate the pairs
 
-  for (size_t i = 0; i < row_ptr.size(); ++i)
+  if (dst_blk_ptr.size() > 0) 
     {
-      row = base + (NODE_IDX_T)i;
-      riter = pop_ranges.lower_bound(row);
-      if (riter == pop_ranges.end()) { return false; }
-      pp.first = riter->second.second;
-
-      if (i < row_ptr.size()-1)
-	{
-	  size_t low = row_ptr[i], high = row_ptr[i+1];
-	  for (size_t j = low; j < high; ++j)
-	    {
-	      col = col_idx[j];
-	      citer = pop_ranges.lower_bound(col);
-	      if (citer == pop_ranges.end()) { return false; }
-	      pp.second = citer->second.second;
-
-	      // check if the population combo is valid
-	      result = (pop_pairs.find(pp) != pop_pairs.end());
-
-	      if (!result) { return false; }
-	    }
-	}
+      size_t dst_ptr_size = dst_ptr.size();
+      for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+        {
+          size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
+          NODE_IDX_T dst_base = base + dst_idx[b];
+          for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
+            {
+              if (i < dst_ptr_size-1)
+                {
+                  dst = dst_base + ii + dst_start;
+                  riter = pop_ranges.upper_bound(dst);
+                  if (riter == pop_ranges.end()) { return false; }
+                  pp.second = riter->second.second-1;
+                  size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                  for (size_t j = low; j < high; ++j)
+                    {
+                      src = src_idx[j] + src_start;
+                      citer = pop_ranges.upper_bound(src);
+                      if (citer == pop_ranges.end()) { return false; }
+                      pp.first = citer->second.second-1;
+                      // check if the population combo is valid
+                      result = (pop_pairs.find(pp) != pop_pairs.end());
+                      if (!result) { return false; }
+                    }
+                }
+            }
+        }
     }
 
   return result;
 }
+
