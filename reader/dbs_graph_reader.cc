@@ -222,7 +222,7 @@ herr_t read_dbs_projection
 
   // rebase the block_ptr array to local offsets
   // REBASE is going to be the start offset for the hyperslab
-  DST_BLK_PTR_T block_rebase;
+  DST_BLK_PTR_T block_rebase = 0;
   if (rank <= (num_blocks - 1))
     {
       block_rebase = dst_blk_ptr[0];

@@ -20,10 +20,10 @@
 using namespace std;
 
 /*****************************************************************************
- * Create a list of edges (represented as src/dst node pairs)
+ * Append src/dst node pairs to a list of edges
  *****************************************************************************/
 
-int create_edge_list
+int append_edge_list
 (
  const NODE_IDX_T&         base,
  const NODE_IDX_T&         dst_start,
@@ -107,11 +107,10 @@ int main(int argc, char** argv)
       assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], argv[i+2], pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
       // validate the edges
-      
       assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
       
-      // create the partitioner input
-      assert(create_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, edge_list) >= 0);
+      // append to the partitioner input list
+      assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, edge_list) >= 0);
     }
   
   if (edge_list.size() > 0) 
