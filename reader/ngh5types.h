@@ -1,7 +1,7 @@
 #ifndef NGH5TYPES_HH
 #define NGH5TYPES_HH
 
-#include "hdf5.h"
+#include <hdf5.h>
 
 // node index type
 

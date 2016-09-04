@@ -1,17 +1,18 @@
+MPI_INCDIR      =
+MPI_LIBDIR      = 
 HDF5_INCDIR	= $(HOME)/.local/include
 HDF5_LIBDIR	= $(HOME)/.local/lib
 
-MPICXX		= mpicxx
-CFLAGS		= -Wall -I$(HDF5_INCDIR)
-LDFLAGS		= -L$(HDF5_LIBDIR)
+CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR)
+LDFLAGS		= -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR)
 
 all: reader
 
 reader: main.o
-	$(MPICXX) -o reader $(LDFLAGS) main.o -lhdf5
+	$(CXX) -o reader $(LDFLAGS) main.o -lhdf5 -lmpich
 
 .cc.o:
-	$(MPICXX) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@
 
 clean:
 	-rm *.o reader

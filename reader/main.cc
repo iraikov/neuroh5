@@ -1,7 +1,7 @@
 
 #include "ngh5types.h"
 
-#include "hdf5.h"
+#include <hdf5.h>
 
 #include <cassert>
 #include <cstdio>
