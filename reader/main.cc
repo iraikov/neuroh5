@@ -1,189 +1,65 @@
 
-#include "ngh5types.h"
+#include "ngh5paths.h"
+#include "ngh5types.hh"
+
+#include "dbs_graph_reader.hh"
+#include "population_reader.hh"
 
 #include <hdf5.h>
 
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <iostream>
+#include <map>
+#include <set>
 #include <vector>
+
 #include <mpi.h>
 
 using namespace std;
 
-// names
-
-#define FNAME "crs.h5"
-
-#define ROW_PTR_H5_PATH "row_ptr"
-#define COL_IDX_H5_PATH "col_idx"
-
-
 /*****************************************************************************
- * Read the basic CRS graph structure
+ * Append src/dst node pairs to a list of edges
  *****************************************************************************/
 
-herr_t read_graph
+int append_edge_list
 (
-MPI_Comm            comm,
-const char*         fname, 
-NODE_IDX_T&         base,     /* global index of the first node */
-vector<ROW_PTR_T>&  row_ptr,  /* one element longer than owned nodes count */
-vector<NODE_IDX_T>& col_idx
-)
+ const NODE_IDX_T&         base,
+ const NODE_IDX_T&         dst_start,
+ const NODE_IDX_T&         src_start,
+ const vector<DST_BLK_PTR_T>&  dst_blk_ptr,
+ const vector<NODE_IDX_T>& dst_idx,
+ const vector<DST_PTR_T>&  dst_ptr,
+ const vector<NODE_IDX_T>& src_idx,
+ vector<NODE_IDX_T>&       edge_list
+ )
 {
-  herr_t ierr = 0;
-
-  int rank, size;
-  assert(MPI_Comm_size(comm, &size) >= 0);
-  assert(MPI_Comm_rank(comm, &rank) >= 0);
-
-  /***************************************************************************
-   * MPI rank 0 reads and broadcasts the number of nodes
-   ***************************************************************************/
-
-  uint64_t num_nodes;
-
-  // process 0 reads the size of row_ptr (= num_nodes+1)
-  if (rank == 0)
-  {
-      hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(file >= 0);
-
-      hid_t dset = H5Dopen2(file, ROW_PTR_H5_PATH, H5P_DEFAULT);
-      assert(dset >= 0);
-      hid_t fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
-      num_nodes = (uint64_t) H5Sget_simple_extent_npoints(fspace) - 1;
-      assert(num_nodes > 0);
-
-      assert(H5Sclose(fspace) >= 0);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Fclose(file) >= 0);
-  }
-
-  assert(MPI_Bcast(&num_nodes, 1, MPI_UINT64_T, 0, comm) >= 0);
-
-  /***************************************************************************
-   * read ROW_PTR
-   ***************************************************************************/
-
-  // determine my block of row_ptr
-  hsize_t ppcount = (hsize_t) num_nodes/size;
-  hsize_t start = (hsize_t) rank*ppcount;
-  base = (NODE_IDX_T) start;
-  hsize_t stop = (hsize_t) (rank+1)*ppcount + 1;
-  // patch the last rank
-  if (rank == size-1) { stop = (hsize_t) num_nodes+1; }
-
-  hsize_t block = stop - start;
-
-  // allocate buffer and memory dataspace
-  row_ptr.resize(block);
-  assert(row_ptr.size() > 0);
-
-  hid_t mspace = H5Screate_simple(1, &block, NULL);
-  assert(mspace >= 0);
-  ierr = H5Sselect_all(mspace);
-  assert(ierr >= 0);
-
-  // open the file (independent I/O)
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-  assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-  hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
-  assert(file >= 0);
-  hid_t dset = H5Dopen2(file, ROW_PTR_H5_PATH, H5P_DEFAULT);
-  assert(dset >= 0);
-
-  // make hyperslab selection
-  hid_t fspace = H5Dget_space(dset);
-  assert(fspace >= 0);
-  hsize_t one = 1;
-  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
-  assert(ierr >= 0);
-
-  ierr = H5Dread(dset, ROW_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &row_ptr[0]);
-  assert(ierr >= 0);
-
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Dclose(dset) >= 0);
-  assert(H5Sclose(mspace) >= 0);
-
-  // rebase the row_ptr array to local offsets
-  // REBASE is going to be the start offset for the hyperslab
-  ROW_PTR_T rebase = row_ptr[0];
-  for (size_t i = 0; i < row_ptr.size(); ++i)
-  {
-    row_ptr[i] -= rebase;
-  }
-
-  /***************************************************************************
-   * read COL_IDX
-   ***************************************************************************/
-
-  // determine my read block of col_idx
-  block = (hsize_t)(row_ptr.back() - row_ptr.front());
-  start = (hsize_t)rebase;
-
-  // allocate buffer and memory dataspace
-  col_idx.resize(block);
-  assert(col_idx.size() > 0);
-
-  mspace = H5Screate_simple(1, &block, NULL);
-  assert(mspace >= 0);
-  ierr = H5Sselect_all(mspace);
-  assert(ierr >= 0);
-
-  dset = H5Dopen2(file, COL_IDX_H5_PATH, H5P_DEFAULT);
-  assert(dset >= 0);
-
-  // make hyperslab selection
-  fspace = H5Dget_space(dset);
-  assert(fspace >= 0);
-  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
-  assert(ierr >= 0);
-
-  ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T , mspace, fspace, H5P_DEFAULT, &col_idx[0]);
-  assert(ierr >= 0);
-
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Dclose(dset) >= 0);
-  assert(H5Sclose(mspace) >= 0);
-
-  assert(H5Fclose(file) >= 0);
-
-  return ierr;
-}
-
-/*****************************************************************************
- * Create a list of edges (represented as src/dst node pairs)
- *****************************************************************************/
-
-int create_edge_list
-(
-  const NODE_IDX_T&         base,
-  const vector<ROW_PTR_T>&  row_ptr,
-  const vector<NODE_IDX_T>& col_idx,
-  vector<NODE_IDX_T>&       edge_list
-)
-{
-  int ierr = 0;
-
-  for (size_t i = 0; i < row_ptr.size(); ++i)
-  {
-    NODE_IDX_T row = base + (NODE_IDX_T)i;
-    if (i < row_ptr.size()-1)
+  int ierr = 0; size_t dst_ptr_size;
+  
+  if (dst_blk_ptr.size() > 0) 
     {
-      size_t low = row_ptr[i], high = row_ptr[i+1];
-      for (size_t j = low; j < high; ++j)
-      {
-        NODE_IDX_T col = col_idx[j];
-        edge_list.push_back(row);
-        edge_list.push_back(col);
-      }
+      dst_ptr_size = dst_ptr.size();
+      for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+        {
+          size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
+          NODE_IDX_T dst_base = base + dst_idx[b];
+          for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
+            {
+              if (i < dst_ptr_size-1) 
+                {
+                  NODE_IDX_T dst = dst_base + ii + dst_start;
+                  size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                  for (size_t j = low; j < high; ++j)
+                    {
+                      NODE_IDX_T src = src_idx[j] + src_start;
+                      edge_list.push_back(src);
+                      edge_list.push_back(dst);
+                    }
+                }
+            }
+        }
     }
-  }
 
   return ierr;
 }
@@ -203,22 +79,50 @@ int main(int argc, char** argv)
 
   // parse arguments
 
-  // read the file
+  if (argc < 2) 
+    {
+      std::cout << "Usage: reader <FILE> <DATASET> ..." << std::endl;
+      exit(1);
+    }
 
-  NODE_IDX_T base;
-  vector<ROW_PTR_T> row_ptr;
-  vector<NODE_IDX_T> col_idx;
-  assert(read_graph(MPI_COMM_WORLD, FNAME, base, row_ptr, col_idx) >= 0);
+ 
+  // read the population info
+  set< pair<pop_t, pop_t> > pop_pairs;
+  assert(read_population_combos(MPI_COMM_WORLD, argv[1], pop_pairs) >= 0);
 
-  // create the partitioner input
+  vector<pop_range_t> pop_vector;
+  map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+  assert(read_population_ranges(MPI_COMM_WORLD, argv[1], pop_ranges, pop_vector) >= 0);
 
   vector<NODE_IDX_T> edge_list;
-  assert(create_edge_list(base, row_ptr, col_idx, edge_list) >= 0);
-  assert(edge_list.size()%2 == 0);
 
-  // partition the graph
-
+  // read the edges
+  for (int i = 0; i < argc-2; i++)
+    {
+      NODE_IDX_T base, dst_start, src_start;
+      vector<DST_BLK_PTR_T> dst_blk_ptr;
+      vector<NODE_IDX_T> dst_idx;
+      vector<DST_PTR_T> dst_ptr;
+      vector<NODE_IDX_T> src_idx;
+      assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], argv[i+2], pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+      
+      // validate the edges
+      assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+      
+      // append to the partitioner input list
+      assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, edge_list) >= 0);
+    }
   
+  if (edge_list.size() > 0) 
+    {
+      assert(edge_list.size()%2 == 0);
+      for (size_t i = 0, k = 0; i < edge_list.size()-1; i+=2, k++)
+        {
+          std::cout << k << " " << edge_list[i] << " " << edge_list[i+1] << std::endl;
+        }
+    }
+
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   return 0;
 }

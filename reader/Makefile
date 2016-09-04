@@ -3,13 +3,14 @@ MPI_LIBDIR      =
 HDF5_INCDIR	= $(HOME)/.local/include
 HDF5_LIBDIR	= $(HOME)/.local/lib
 
-CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR)
-LDFLAGS		= -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR)
+MPICXX		= mpicxx -std=c++11
+CFLAGS		= -Wall -I$(HDF5_INCDIR)
+LDFLAGS		= -L$(HDF5_LIBDIR)
 
 all: reader
 
-reader: main.o
-	$(CXX) -o reader $(LDFLAGS) main.o -lhdf5 -lmpich
+reader: main.o dbs_graph_reader.o population_reader.o
+	$(MPICXX) -o reader $(LDFLAGS) main.o dbs_graph_reader.o population_reader.o -lhdf5
 
 .cc.o:
 	$(CXX) $(CFLAGS) -c $< -o $@
