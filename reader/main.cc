@@ -104,7 +104,7 @@ int main(int argc, char** argv)
   vector<NODE_IDX_T> edge_list;
 
   // read the edges
-  for (size_t i = 0; i < (size_t)argc-2; i++)
+  for (size_t i = 0; i < prj_names.size(); i++)
     {
       NODE_IDX_T base, dst_start, src_start;
       vector<DST_BLK_PTR_T> dst_blk_ptr;
@@ -112,7 +112,8 @@ int main(int argc, char** argv)
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
 
-      assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], argv[i+2], pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+      assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], prj_names[i].c_str(), 
+                                 pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
       // validate the edges
       assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
