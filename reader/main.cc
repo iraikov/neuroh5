@@ -98,7 +98,7 @@ int main(int argc, char** argv)
   assert(read_projection_names(MPI_COMM_WORLD, argv[1], prj_names) >= 0);
   for (size_t i = 0; i < prj_names.size(); i++)
     {
-      printf("prj_names[%lu] = %s\n", i, prj_names[i].c_str());
+      printf("Projection %lu is named %s\n", i, prj_names[i].c_str());
     }
       
   vector<NODE_IDX_T> edge_list;

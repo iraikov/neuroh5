@@ -71,6 +71,7 @@ herr_t read_projection_names
     }
 
   assert(MPI_Bcast(&num_projections, 1, MPI_UINT64_T, 0, comm) >= 0);
+  DEBUG("num_projections = ",num_projections,"\n"); 
 
   // allocate buffer
   prj_name_lengths.resize(num_projections);
@@ -95,16 +96,28 @@ herr_t read_projection_names
       assert(H5Fclose(file) >= 0);
     }
 
+  DEBUG("prj_names_total_length = ",prj_names_total_length,"\n"); 
   // Broadcast projection name lengths
   assert(MPI_Bcast(&prj_names_total_length, 1, MPI_UINT64_T, 0, comm) >= 0);
   assert(MPI_Bcast(&prj_name_lengths[0], num_projections, MPI_UINT64_T, 0, comm) >= 0);
-  
+
   // Broadcast projection names
+  size_t offset = 0;
   assert((prj_names_buf = (char *)malloc(prj_names_total_length)) != NULL);
+  if (rank == 0)
+    {
+      for (i = 0; i < num_projections; i++)
+        {
+          DEBUG("prj_name_lengths[",i,"] = ",prj_name_lengths[i],"\n"); 
+          memcpy(prj_names_buf+offset,prj_vector[i].c_str(),prj_name_lengths[i]);
+          offset = offset + prj_name_lengths[i];
+        }
+      DEBUG("prj_names_buf = ",string(prj_names_buf)+'\0',"\n"); 
+    }
   assert(MPI_Bcast(prj_names_buf, prj_names_total_length, MPI_BYTE, 0, comm) >= 0);
 
   // Copy projection names into prj_vector
-  size_t offset = 0;
+  offset = 0;
   for (i = 0; i < num_projections; i++) 
     {
       size_t len = prj_name_lengths[i];
