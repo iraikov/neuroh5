@@ -8,6 +8,12 @@
 #include <map>
 #include <vector>
 
+extern herr_t read_projection_names
+(
+ MPI_Comm                 comm,
+ const char*              fname, 
+ std::vector<std::string> &prj_vector
+ );
 
 extern herr_t read_dbs_projection
 (

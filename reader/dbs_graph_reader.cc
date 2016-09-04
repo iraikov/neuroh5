@@ -5,7 +5,10 @@
 #include <cassert>
 #include <cstdio>
 #include <iostream>
+#include <string>
+#include <cstring>
 
+#define MAX_PRJ_NAME 1024
 
 using namespace std;
 
@@ -28,6 +31,92 @@ std::string ngh5_prj_path (const char *dsetname, const char *name)
   std::string result;
   result = std::string("/Projections/") + dsetname + name;
   return result;
+}
+
+
+/*****************************************************************************
+ * Read projection names
+ *****************************************************************************/
+
+herr_t read_projection_names
+(
+ MPI_Comm                                comm,
+ const char*                             fname, 
+ vector<string> &prj_vector
+ )
+{
+  herr_t ierr = 0;
+
+  int rank, size;
+  assert(MPI_Comm_size(comm, &size) >= 0);
+  assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+  // MPI rank 0 reads and broadcasts the number of ranges 
+  hsize_t num_projections, i;
+  hid_t file = -1, grp = -1;
+  char prj_name[MAX_PRJ_NAME]; char *prj_names_buf;
+  size_t prj_names_total_length = 0;
+  vector<char> prj_names;
+  vector<uint64_t> prj_name_lengths;
+
+  // process 0 reads the names of projections and broadcasts
+  if (rank == 0)
+    {
+      file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+      assert(file >= 0);
+
+      grp = H5Gopen(file, string("/Projections").c_str(), H5P_DEFAULT);
+      
+      assert(H5Gget_num_objs(grp, &num_projections)>=0);
+    }
+
+  assert(MPI_Bcast(&num_projections, 1, MPI_UINT64_T, 0, comm) >= 0);
+
+  // allocate buffer
+  prj_name_lengths.resize(num_projections);
+  prj_vector.resize(num_projections);
+
+  // MPI rank 0 reads and broadcasts the projection names
+  if (rank == 0)
+    {
+      for (i = 0; i < num_projections; i++) 
+        {
+          size_t len;
+          /* For each object in the group, get the name */
+          assert(H5Gget_objname_by_idx(grp, i, prj_name, (size_t)MAX_PRJ_NAME )>0);
+          DEBUG("Projection ",i," is named ",prj_name,"\n"); 
+          len = strlen(prj_name);
+          prj_vector[i] = string(prj_name);
+          prj_name_lengths[i] = len;
+          prj_names_total_length =  prj_names_total_length + len;
+        }
+
+      assert(H5Gclose(grp) >= 0);
+      assert(H5Fclose(file) >= 0);
+    }
+
+  // Broadcast projection name lengths
+  assert(MPI_Bcast(&prj_names_total_length, 1, MPI_UINT64_T, 0, comm) >= 0);
+  assert(MPI_Bcast(&prj_name_lengths[0], num_projections, MPI_UINT64_T, 0, comm) >= 0);
+  
+  // Broadcast projection names
+  assert((prj_names_buf = (char *)malloc(prj_names_total_length)) != NULL);
+  assert(MPI_Bcast(prj_names_buf, prj_names_total_length, MPI_BYTE, 0, comm) >= 0);
+
+  // Copy projection names into prj_vector
+  size_t offset = 0;
+  for (i = 0; i < num_projections; i++) 
+    {
+      size_t len = prj_name_lengths[i];
+      memcpy(prj_name, prj_names_buf+offset, len);
+      prj_name[len] = '\0';
+      prj_vector[i] = string(prj_name);
+      offset = offset + len;
+    }
+
+  free(prj_names_buf);
+  
+  return ierr;
 }
 
 /*****************************************************************************

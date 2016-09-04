@@ -94,16 +94,24 @@ int main(int argc, char** argv)
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
   assert(read_population_ranges(MPI_COMM_WORLD, argv[1], pop_ranges, pop_vector) >= 0);
 
+  vector<string> prj_names;
+  assert(read_projection_names(MPI_COMM_WORLD, argv[1], prj_names) >= 0);
+  for (size_t i = 0; i < prj_names.size(); i++)
+    {
+      printf("prj_names[%lu] = %s\n", i, prj_names[i].c_str());
+    }
+      
   vector<NODE_IDX_T> edge_list;
 
   // read the edges
-  for (int i = 0; i < argc-2; i++)
+  for (size_t i = 0; i < (size_t)argc-2; i++)
     {
       NODE_IDX_T base, dst_start, src_start;
       vector<DST_BLK_PTR_T> dst_blk_ptr;
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
+
       assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], argv[i+2], pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
       // validate the edges
