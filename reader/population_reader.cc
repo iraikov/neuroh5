@@ -207,22 +207,36 @@ bool validate_edge_list
                 {
                   dst = dst_base + ii + dst_start;
                   riter = pop_ranges.upper_bound(dst);
-                  if (riter == pop_ranges.end()) { return false; }
+                  if (riter == pop_ranges.end())
+                    {
+                      return false;
+                    }
                   pp.second = riter->second.second-1;
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   for (size_t j = low; j < high; ++j)
                     {
+                      
                       src = src_idx[j] + src_start;
                       citer = pop_ranges.upper_bound(src);
-                      if (citer == pop_ranges.end()) { return false; }
+                      if (citer == pop_ranges.end())
+                        {
+                          return false;
+                        }
                       pp.first = citer->second.second-1;
                       // check if the population combo is valid
                       result = (pop_pairs.find(pp) != pop_pairs.end());
-                      if (!result) { return false; }
+                      if (!result)
+                        {
+                          return false;
+                      }
                     }
                 }
             }
         }
+    }
+  else
+    {
+      result = true;
     }
 
   return result;
