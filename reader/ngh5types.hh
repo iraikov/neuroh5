@@ -51,5 +51,8 @@ typedef std::map<NODE_IDX_T,std::pair<uint32_t,pop_t> > pop_range_map_t;
 
 typedef pop_range_map_t::const_iterator pop_range_iter_t;
 
+typedef std::map<uint32_t, vector<NODE_IDX_T> > rank_edge_map_t;
+
+typedef rank_edge_map_t::const_iterator rank_edge_iter_t;
 
 #endif
