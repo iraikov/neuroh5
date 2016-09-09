@@ -2,6 +2,7 @@
 #define NGH5TYPES_HH
 
 #include <map>
+#include <vector>
 #include <iostream>
 #include <utility>
 
@@ -51,8 +52,17 @@ typedef std::map<NODE_IDX_T,std::pair<uint32_t,pop_t> > pop_range_map_t;
 
 typedef pop_range_map_t::const_iterator pop_range_iter_t;
 
-typedef std::map<uint32_t, vector<NODE_IDX_T> > rank_edge_map_t;
+// Type for mapping nodes and edges in the graph to MPI ranks
 
-typedef rank_edge_map_t::const_iterator rank_edge_iter_t;
+typedef uint32_t rank_t;
+
+typedef std::map<NODE_IDX_T, std::vector<NODE_IDX_T> > edge_map_t;
+
+typedef edge_map_t::const_iterator edge_map_iter_t;
+
+typedef std::map<rank_t, edge_map_t> rank_edge_map_t;
+
+typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
+
 
 #endif

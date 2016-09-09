@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <map>
 #include <set>
 #include <vector>
@@ -33,11 +35,11 @@ int append_edge_map
  const vector<NODE_IDX_T>& dst_idx,
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
- rank_edge_map_t & edge_map
+ const vector<rank_t>& node_rank_vector,
+ rank_edge_map_t & rank_edge_map
  )
 {
   int ierr = 0; size_t dst_ptr_size;
-  edge_map_iter_t riter;
   
   if (dst_blk_ptr.size() > 0) 
     {
@@ -51,16 +53,17 @@ int append_edge_map
               if (i < dst_ptr_size-1) 
                 {
                   NODE_IDX_T dst = dst_base + ii + dst_start;
-                  riter = edge_map.find(dst);
-                  if (riter == edge_map.end())
-                    {
-                      riter = map.insert(make_pair(dst, vector<NODE_IDX_T>()));
-                    }
+                  // determine the compute rank that the dst node is assigned to
+                  rank_t dstrank = node_rank_vector[dst];
+                  pair<rank_edge_map_iter_t,bool> const& r = rank_edge_map.insert(make_pair(dstrank, edge_map_t()));
+                  edge_map_t m = r.first->second;
+                  pair<edge_map_iter_t,bool> const& n = m.insert(make_pair(dst, vector<NODE_IDX_T>()));
+                  vector<NODE_IDX_T> pred = n.first->second;
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   for (size_t j = low; j < high; ++j)
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
-                      riter.push_back (src);
+                      pred.push_back (src);
                     }
                 }
             }
@@ -77,61 +80,106 @@ int append_edge_map
 
 int main(int argc, char** argv)
 {
+  // MPI Communicator for I/O ranks
+  MPI_Comm io_comm;
+  // MPI group color value used for I/O ranks
+  int io_color = 1;
+  // A vector that maps nodes to compute ranks
+  vector<rank_t> node_rank_vector;
+  
   assert(MPI_Init(&argc, &argv) >= 0);
 
-  int rank, size, io_size;
+  int rank, size, io_size; size_t n_nodes;
   assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
 
   // parse arguments
 
-  if (argc < 3) 
+  if (argc < 4) 
     {
-      std::cout << "Usage: scatter <FILE> <IOSIZE>" << std::endl;
+      std::cout << "Usage: scatter <FILE> <N> <IOSIZE> [<RANKFILE>]" << std::endl;
       exit(1);
     }
 
- 
-  // read the population info
-  set< pair<pop_t, pop_t> > pop_pairs;
-  assert(read_population_combos(MPI_COMM_WORLD, argv[1], pop_pairs) >= 0);
+  n_nodes = (size_t)std::stoi(string(argv[2]));
+  io_size = std::stoi(string(argv[3]));
 
-  vector<pop_range_t> pop_vector;
-  map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-  assert(read_population_ranges(MPI_COMM_WORLD, argv[1], pop_ranges, pop_vector) >= 0);
 
-  vector<string> prj_names;
-  assert(read_projection_names(MPI_COMM_WORLD, argv[1], prj_names) >= 0);
-  for (size_t i = 0; i < prj_names.size(); i++)
+  // Am I an I/O rank?
+  if (rank < io_size)
     {
-      printf("Projection %lu is named %s\n", i, prj_names[i].c_str());
-    }
-      
-  rank_edge_map_t rank_edge_map;
-    
-  io_size = std::stoi(string(argv[2]));
+      MPI_Comm_split(MPI_COMM_WORLD,io_color,rank,&io_comm);
+
+        // Determine which nodes are assigned to which compute ranks
+      node_rank_vector.resize(n_nodes);
+      if (argc < 5)
+        {
+          // round-robin node to rank assignment from file
+          for (size_t i = 0; i < n_nodes; i++)
+            {
+              node_rank_vector[i] = i%size;
+            }
+        }
+      else
+        {
+          ifstream infile(argv[4]);
+          string line;
+          size_t i = 0;
+          // reads node to rank assignment from file
+          while (getline(infile, line))
+            {
+              istringstream iss(line);
+              rank_t n;
+              
+              assert (iss >> n);
+              node_rank_vector[i] = n;
+              i++;
+            }
+          
+          infile.close();
+        }
+
+      // The set of compute ranks for which the current I/O rank is responsible
+      rank_edge_map_t rank_edge_map;
   
-  // read the edges
-  for (size_t i = 0; i < prj_names.size(); i++)
+      // read the population info
+      set< pair<pop_t, pop_t> > pop_pairs;
+      assert(read_population_combos(io_comm, argv[1], pop_pairs) >= 0);
+      
+      vector<pop_range_t> pop_vector;
+      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+      assert(read_population_ranges(io_comm, argv[1], pop_ranges, pop_vector) >= 0);
+      
+      vector<string> prj_names;
+      assert(read_projection_names(io_comm, argv[1], prj_names) >= 0);
+      
+      
+      // read the edges
+      for (size_t i = 0; i < prj_names.size(); i++)
+        {
+          NODE_IDX_T base, dst_start, src_start;
+          vector<DST_BLK_PTR_T> dst_blk_ptr;
+          vector<NODE_IDX_T> dst_idx;
+          vector<DST_PTR_T> dst_ptr;
+          vector<NODE_IDX_T> src_idx;
+          
+          assert(read_dbs_projection(io_comm, argv[1], prj_names[i].c_str(), 
+                                     pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+          
+          // validate the edges
+          assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+          
+          // append to the edge map
+          assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, node_rank_vector, rank_edge_map) >= 0);
+        }
+      
+    } else
     {
-      NODE_IDX_T base, dst_start, src_start;
-      vector<DST_BLK_PTR_T> dst_blk_ptr;
-      vector<NODE_IDX_T> dst_idx;
-      vector<DST_PTR_T> dst_ptr;
-      vector<NODE_IDX_T> src_idx;
-
-      assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], prj_names[i].c_str(), 
-                                 pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
-      
-      // validate the edges
-      assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
-      
-      // append to the edge map
-      assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, rank_edge_map) >= 0);
+      MPI_Comm_split(MPI_COMM_WORLD,MPI_UNDEFINED,rank,&io_comm);
     }
   
-
   MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_free(&io_comm);
   MPI_Finalize();
   return 0;
 }
