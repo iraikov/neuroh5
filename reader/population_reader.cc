@@ -1,3 +1,4 @@
+#include "debug.hh"
 #include "population_reader.hh"
 
 #include "ngh5paths.h"
@@ -227,6 +228,7 @@ bool validate_edge_list
                       result = (pop_pairs.find(pp) != pop_pairs.end());
                       if (!result)
                         {
+                          DEBUG("invalid edge: src = ",src," dst = ",dst," pp = ",pp.first,", ",pp.second,"\n"); 
                           return false;
                       }
                     }

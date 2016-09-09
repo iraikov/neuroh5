@@ -1,4 +1,4 @@
-
+#include "debug.hh"
 #include "ngh5paths.h"
 #include "ngh5types.hh"
 
@@ -43,7 +43,7 @@ int append_edge_list
       for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
         {
           size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
-          NODE_IDX_T dst_base = base + dst_idx[b];
+          NODE_IDX_T dst_base = dst_idx[b];
           for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
             {
               if (i < dst_ptr_size-1) 
@@ -96,10 +96,6 @@ int main(int argc, char** argv)
 
   vector<string> prj_names;
   assert(read_projection_names(MPI_COMM_WORLD, argv[1], prj_names) >= 0);
-  for (size_t i = 0; i < prj_names.size(); i++)
-    {
-      printf("Projection %lu is named %s\n", i, prj_names[i].c_str());
-    }
       
   vector<NODE_IDX_T> edge_list;
 
@@ -111,6 +107,8 @@ int main(int argc, char** argv)
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
+
+      printf("Reading projection %lu (%s)\n", i, prj_names[i].c_str());
 
       assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], prj_names[i].c_str(), 
                                  pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);

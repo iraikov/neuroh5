@@ -1,4 +1,6 @@
 
+#include "debug.hh"
+
 #include "dbs_graph_reader.hh"
 
 #include "ngh5paths.h"
@@ -13,25 +15,32 @@
 
 using namespace std;
 
-bool debug_enabled = true;
-
-void DEBUG(){}
-
-template<typename First, typename ...Rest>
-void DEBUG(First && first, Rest && ...rest)
-{
-  if (debug_enabled)
-    {
-      std::cerr << std::forward<First>(first);
-      DEBUG(std::forward<Rest>(rest)...);
-    }
-}
-
 std::string ngh5_prj_path (const char *dsetname, const char *name) 
 {
   std::string result;
   result = std::string("/Projections/") + dsetname + name;
   return result;
+}
+
+// Calculate the starting and stopping block for each rank
+void compute_bins (size_t num_blocks, size_t size, vector<size_t> bins)
+{
+int nr_alloced = 0;
+    for (i=0; i<nprocs; i++) {
+        remainder = NR_ITEMS - nr_alloced;
+        buckets = (nprocs - i);
+        bins[i] = remainder / buckets;
+        nr_alloced += bins[i];
+    }
+
+    if (num_blocks < size)
+    { ppcount = 1; }
+  else
+    {
+      bins.resize(size);
+      ppcount = (hsize_t) num_blocks/size;
+      
+    }
 }
 
 
@@ -242,16 +251,18 @@ herr_t read_dbs_projection
    ***************************************************************************/
 
   // determine my block of block_ptr
-  hsize_t start, stop, ppcount, block;
+  hsize_t start, stop, block, ppcount;
+  vector<hsize_t> bins;
 
-  if (num_blocks < size)
-    { ppcount = 1; }
-  else
-    { ppcount = (hsize_t) num_blocks/size; }
-    
+  compute_bins(num_blocks, size, bins);
+  ppcount = bins[rank];
+  
+  DEBUG("num_blocks = ", num_blocks, "\n");
+  DEBUG("ppcount = ", ppcount, "\n");
+
   start = (hsize_t) rank*ppcount;
-  stop = (hsize_t) (rank+1)*ppcount + 1;
-  base = (NODE_IDX_T) start;
+  stop  = (hsize_t) (rank+1)*ppcount;
+  base  = (NODE_IDX_T) start;
 
   // patch the last rank
   if ((num_blocks < size) && (rank == size-1))
@@ -259,14 +270,14 @@ herr_t read_dbs_projection
   else if ((num_blocks >= size) && (rank == num_blocks-1))
     { stop = (hsize_t) num_blocks+1; };
 
-  DEBUG("rank ", rank, ": ", "ppcount = ", ppcount, " start = ", start, " stop = ", stop, "\n");
+  DEBUG(" start = ", start, " stop = ", stop, "\n");
 
   if ((num_blocks - 1) < rank)
     { block = 0; }
   else 
     { block = stop - start; }
 
-  DEBUG("rank ", rank, ": ", "block = ", block, "\n");
+  DEBUG("block = ", block, "\n");
   std::cerr << std::flush;
 
   // allocate buffer and memory dataspace
@@ -275,17 +286,17 @@ herr_t read_dbs_projection
   if (rank <= (num_blocks - 1))
     { assert(dst_blk_ptr.size() > 0); }
 
-  DEBUG("rank ", rank, ": ", "dst_blk_ptr.size = ", dst_blk_ptr.size(), "\n");
+  DEBUG("dst_blk_ptr.size = ", dst_blk_ptr.size(), "\n");
 
   hid_t mspace = H5Screate_simple(1, &block, NULL);
   assert(mspace >= 0);
   ierr = H5Sselect_all(mspace);
   assert(ierr >= 0);
 
-  DEBUG("rank ", rank, ": ", "after create_simple\n");
+  DEBUG("after create_simple\n");
   std::cerr << std::flush;
   // open the file (independent I/O)
-  DEBUG("rank ", rank, ": ", "before open\n");
+  DEBUG("before open\n");
   std::cerr << std::flush;
 
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -294,11 +305,11 @@ herr_t read_dbs_projection
 
   hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
   assert(file >= 0);
-  DEBUG("rank ", rank, ": ", "after open\n");
+  DEBUG("after open\n");
   std::cerr << std::flush;
   hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
   assert(dset >= 0);
-  DEBUG("rank ", rank, ": ", "after open2\n");
+  DEBUG("after open2\n");
   std::cerr << std::flush;
 
   // make hyperslab selection
@@ -306,18 +317,18 @@ herr_t read_dbs_projection
   assert(fspace >= 0);
   hsize_t one = 1;
   
-  DEBUG("rank ", rank, ": ", "before hyperslab\n");
+  DEBUG("before hyperslab\n");
   std::cerr << std::flush;
 
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
 
-  DEBUG("rank ", rank, ": ", "before read\n");
+  DEBUG("before read\n");
 
   ierr = H5Dread(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_blk_ptr[0]);
   assert(ierr >= 0);
 
-  DEBUG("rank ", rank, ": ", "after read\n");
+  DEBUG("after read\n");
 
   assert(H5Sclose(fspace) >= 0);
   assert(H5Dclose(dset) >= 0);
@@ -329,7 +340,7 @@ herr_t read_dbs_projection
   if (rank <= (num_blocks - 1))
     {
       block_rebase = dst_blk_ptr[0];
-      DEBUG("rank ", rank, ": ", "block_rebase = ", block_rebase, "\n");
+      DEBUG("block_rebase = ", block_rebase, "\n");
       
       for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
         {
@@ -350,8 +361,8 @@ herr_t read_dbs_projection
       assert(dst_idx.size() > 0);
     }
   
-  DEBUG("rank ", rank, ": ", "dst_idx: block = ", block, "\n");
-  DEBUG("rank ", rank, ": ", "dst_idx: start = ", start, "\n");
+  DEBUG("dst_idx: block = ", block, "\n");
+  DEBUG("dst_idx: start = ", start, "\n");
 
   mspace = H5Screate_simple(1, &block, NULL);
   assert(mspace >= 0);
@@ -367,10 +378,10 @@ herr_t read_dbs_projection
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
 
-  DEBUG("rank ", rank, ": ", "dst_idx: before read\n");
+  DEBUG("dst_idx: before read\n");
   ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_idx[0]);
   assert(ierr >= 0);
-  DEBUG("rank ", rank, ": ", "dst_idx: after read\n");
+  DEBUG("dst_idx: after read\n");
 
   assert(H5Sclose(fspace) >= 0);
   assert(H5Dclose(dset) >= 0);
@@ -390,8 +401,8 @@ herr_t read_dbs_projection
       assert(dst_ptr.size() > 0);
     }
 
-  DEBUG("rank ", rank, ": ", "dst_ptr: block = ", block, "\n");
-  DEBUG("rank ", rank, ": ", "dst_ptr: start = ", start, "\n");
+  DEBUG("dst_ptr: block = ", block, "\n");
+  DEBUG("dst_ptr: start = ", start, "\n");
 
   // allocate buffer and memory dataspace
 
@@ -409,10 +420,10 @@ herr_t read_dbs_projection
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
 
-  DEBUG("rank ", rank, ": ", "dst_ptr: before read\n");
+  DEBUG("dst_ptr: before read\n");
   ierr = H5Dread(dset, DST_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_ptr[0]);
   assert(ierr >= 0);
-  DEBUG("rank ", rank, ": ", "dst_ptr: after read\n");
+  DEBUG("dst_ptr: after read\n");
 
   assert(H5Sclose(fspace) >= 0);
   assert(H5Dclose(dset) >= 0);
@@ -456,10 +467,10 @@ herr_t read_dbs_projection
   ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
   assert(ierr >= 0);
 
-  DEBUG("rank ", rank, ": ", "src_idx: before read\n");
+  DEBUG("src_idx: before read\n");
   ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &src_idx[0]);
   assert(ierr >= 0);
-  DEBUG("rank ", rank, ": ", "src_idx: after read\n");
+  DEBUG("src_idx: after read\n");
 
   assert(H5Sclose(fspace) >= 0);
   assert(H5Dclose(dset) >= 0);
