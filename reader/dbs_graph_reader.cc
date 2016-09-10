@@ -155,8 +155,13 @@ herr_t read_dbs_projection
  vector<NODE_IDX_T>& src_idx
  )
 {
+  hid_t fapl, file;
   herr_t ierr = 0;
   unsigned int rank, size;
+  hsize_t one = 1;
+  DST_BLK_PTR_T block_rebase = 0;
+  DST_PTR_T dst_rebase = 0;
+
   assert(MPI_Comm_size(comm, (int*)&size) >= 0);
   assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
@@ -269,65 +274,60 @@ herr_t read_dbs_projection
   DEBUG("block = ", block, "\n");
   std::cerr << std::flush;
 
-  // allocate buffer and memory dataspace
-  dst_blk_ptr.resize(block);
-  
-  if (rank <= (num_blocks - 1))
-    { assert(dst_blk_ptr.size() > 0); }
-
-  DEBUG("dst_blk_ptr.size = ", dst_blk_ptr.size(), "\n");
-
-  hid_t mspace = H5Screate_simple(1, &block, NULL);
-  assert(mspace >= 0);
-  ierr = H5Sselect_all(mspace);
-  assert(ierr >= 0);
-
-  DEBUG("after create_simple\n");
-  std::cerr << std::flush;
-  // open the file (independent I/O)
-  DEBUG("before open\n");
-  std::cerr << std::flush;
-
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-  assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-
-  hid_t file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
-  assert(file >= 0);
-  DEBUG("after open\n");
-  std::cerr << std::flush;
-  hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
-  assert(dset >= 0);
-  DEBUG("after open2\n");
-  std::cerr << std::flush;
-
-  // make hyperslab selection
-  hid_t fspace = H5Dget_space(dset);
-  assert(fspace >= 0);
-  hsize_t one = 1;
-  
-  DEBUG("before hyperslab\n");
-  std::cerr << std::flush;
-
-  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
-  assert(ierr >= 0);
-
-  DEBUG("before read\n");
-
-  ierr = H5Dread(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_blk_ptr[0]);
-  assert(ierr >= 0);
-
-  DEBUG("after read\n");
-
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Dclose(dset) >= 0);
-  assert(H5Sclose(mspace) >= 0);
-
-  // rebase the block_ptr array to local offsets
-  // REBASE is going to be the start offset for the hyperslab
-  DST_BLK_PTR_T block_rebase = 0;
-  if (rank <= (num_blocks - 1))
+  if (block > 0)
     {
+      // allocate buffer and memory dataspace
+      dst_blk_ptr.resize(block);
+      
+      DEBUG("dst_blk_ptr.size = ", dst_blk_ptr.size(), "\n");
+      
+      hid_t mspace = H5Screate_simple(1, &block, NULL);
+      assert(mspace >= 0);
+      ierr = H5Sselect_all(mspace);
+      assert(ierr >= 0);
+      
+      DEBUG("after create_simple\n");
+      std::cerr << std::flush;
+      // open the file (independent I/O)
+      DEBUG("before open\n");
+      std::cerr << std::flush;
+      
+      fapl = H5Pcreate(H5P_FILE_ACCESS);
+      assert(fapl >= 0);
+      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      
+      file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
+      assert(file >= 0);
+      DEBUG("after open\n");
+      std::cerr << std::flush;
+      hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
+      DEBUG("after open2\n");
+      std::cerr << std::flush;
+      
+      // make hyperslab selection
+      hid_t fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      
+      DEBUG("before hyperslab\n");
+      std::cerr << std::flush;
+      
+      ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
+      assert(ierr >= 0);
+      
+      DEBUG("before read\n");
+      
+      ierr = H5Dread(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_blk_ptr[0]);
+      assert(ierr >= 0);
+      
+      DEBUG("after read\n");
+      
+      assert(H5Sclose(fspace) >= 0);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+      
+      // rebase the block_ptr array to local offsets
+      // REBASE is going to be the start offset for the hyperslab
       block_rebase = dst_blk_ptr[0];
       DEBUG("block_rebase = ", block_rebase, "\n");
       
@@ -336,45 +336,45 @@ herr_t read_dbs_projection
           dst_blk_ptr[i] -= block_rebase;
         }
     }
-
+  
   /***************************************************************************
    * read DST_IDX
    ***************************************************************************/
 
   // determine my read block of dst_idx
 
-  if (rank <= (num_blocks - 1))
+  if (block > 0)
     {
       block = block - 1;
       dst_idx.resize(block);
       assert(dst_idx.size() > 0);
-    }
   
-  DEBUG("dst_idx: block = ", block, "\n");
-  DEBUG("dst_idx: start = ", start, "\n");
-
-  mspace = H5Screate_simple(1, &block, NULL);
-  assert(mspace >= 0);
-  ierr = H5Sselect_all(mspace);
-  assert(ierr >= 0);
-
-  dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_IDX_H5_PATH).c_str(), H5P_DEFAULT);
-  assert(dset >= 0);
-
-  // make hyperslab selection
-  fspace = H5Dget_space(dset);
-  assert(fspace >= 0);
-  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
-  assert(ierr >= 0);
-
-  DEBUG("dst_idx: before read\n");
-  ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_idx[0]);
-  assert(ierr >= 0);
-  DEBUG("dst_idx: after read\n");
-
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Dclose(dset) >= 0);
-  assert(H5Sclose(mspace) >= 0);
+      DEBUG("dst_idx: block = ", block, "\n");
+      DEBUG("dst_idx: start = ", start, "\n");
+      
+      hid_t mspace = H5Screate_simple(1, &block, NULL);
+      assert(mspace >= 0);
+      ierr = H5Sselect_all(mspace);
+      assert(ierr >= 0);
+      
+      hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_IDX_H5_PATH).c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
+      
+      // make hyperslab selection
+      hid_t fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
+      assert(ierr >= 0);
+      
+      DEBUG("dst_idx: before read\n");
+      ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_idx[0]);
+      assert(ierr >= 0);
+      DEBUG("dst_idx: after read\n");
+      
+      assert(H5Sclose(fspace) >= 0);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+    }
 
 
   /***************************************************************************
@@ -382,49 +382,48 @@ herr_t read_dbs_projection
    ***************************************************************************/
 
   // determine my read block of dst_ptr
-  if (rank <= (num_blocks - 1))
+  if (block > 0)
     {
       block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
       start = (hsize_t)block_rebase;
       dst_ptr.resize(block);
       assert(dst_ptr.size() > 0);
-    }
 
-  DEBUG("dst_ptr: block = ", block, "\n");
-  DEBUG("dst_ptr: start = ", start, "\n");
-
-  // allocate buffer and memory dataspace
-
-  mspace = H5Screate_simple(1, &block, NULL);
-  assert(mspace >= 0);
-  ierr = H5Sselect_all(mspace);
-  assert(ierr >= 0);
-
-  dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_PTR_H5_PATH).c_str(), H5P_DEFAULT);
-  assert(dset >= 0);
-
-  // make hyperslab selection
-  fspace = H5Dget_space(dset);
-  assert(fspace >= 0);
-  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
-  assert(ierr >= 0);
-
-  DEBUG("dst_ptr: before read\n");
-  ierr = H5Dread(dset, DST_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_ptr[0]);
-  assert(ierr >= 0);
-  DEBUG("dst_ptr: after read\n");
-
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Dclose(dset) >= 0);
-  assert(H5Sclose(mspace) >= 0);
-
-  DST_PTR_T dst_rebase;
-  if (rank <= (num_blocks - 1))
-    {
-      dst_rebase = dst_ptr[0];
-      for (size_t i = 0; i < dst_ptr.size(); ++i)
+      DEBUG("dst_ptr: block = ", block, "\n");
+      DEBUG("dst_ptr: start = ", start, "\n");
+      
+      // allocate buffer and memory dataspace
+      
+      hid_t mspace = H5Screate_simple(1, &block, NULL);
+      assert(mspace >= 0);
+      ierr = H5Sselect_all(mspace);
+      assert(ierr >= 0);
+      
+      hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_PTR_H5_PATH).c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
+      
+      // make hyperslab selection
+      hid_t fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
+      assert(ierr >= 0);
+      
+      DEBUG("dst_ptr: before read\n");
+      ierr = H5Dread(dset, DST_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &dst_ptr[0]);
+      assert(ierr >= 0);
+      DEBUG("dst_ptr: after read\n");
+      
+      assert(H5Sclose(fspace) >= 0);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+      
+      if (rank <= (num_blocks - 1))
         {
-          dst_ptr[i] -= dst_rebase;
+          dst_rebase = dst_ptr[0];
+          for (size_t i = 0; i < dst_ptr.size(); ++i)
+            {
+              dst_ptr[i] -= dst_rebase;
+            }
         }
     }
 
@@ -433,39 +432,42 @@ herr_t read_dbs_projection
    ***************************************************************************/
 
   // determine my read block of dst_idx
-  if (rank <= (num_blocks - 1))
+  if (block > 0)
     {
       block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
       start = (hsize_t)dst_rebase;
       // allocate buffer and memory dataspace
       src_idx.resize(block);
       assert(src_idx.size() > 0);
+
+      hid_t mspace = H5Screate_simple(1, &block, NULL);
+      assert(mspace >= 0);
+      ierr = H5Sselect_all(mspace);
+      assert(ierr >= 0);
+      
+      hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, SRC_IDX_H5_PATH).c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
+      
+      // make hyperslab selection
+      hid_t fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
+      assert(ierr >= 0);
+      
+      DEBUG("src_idx: before read\n");
+      ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &src_idx[0]);
+      assert(ierr >= 0);
+      DEBUG("src_idx: after read\n");
+      
+      assert(H5Sclose(fspace) >= 0);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
     }
 
-  mspace = H5Screate_simple(1, &block, NULL);
-  assert(mspace >= 0);
-  ierr = H5Sselect_all(mspace);
-  assert(ierr >= 0);
-
-  dset = H5Dopen2(file, ngh5_prj_path(dsetname, SRC_IDX_H5_PATH).c_str(), H5P_DEFAULT);
-  assert(dset >= 0);
-
-  // make hyperslab selection
-  fspace = H5Dget_space(dset);
-  assert(fspace >= 0);
-  ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &block);
-  assert(ierr >= 0);
-
-  DEBUG("src_idx: before read\n");
-  ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT, &src_idx[0]);
-  assert(ierr >= 0);
-  DEBUG("src_idx: after read\n");
-
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Dclose(dset) >= 0);
-  assert(H5Sclose(mspace) >= 0);
-
-  assert(H5Fclose(file) >= 0);
+  if (block > 0)
+    {
+      assert(H5Fclose(file) >= 0);
+    }
 
   return ierr;
 }

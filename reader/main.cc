@@ -120,6 +120,8 @@ int main(int argc, char** argv)
       assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, edge_list) >= 0);
     }
   
+  MPI_Barrier(MPI_COMM_WORLD);
+
   if (edge_list.size() > 0) 
     {
       assert(edge_list.size()%2 == 0);
@@ -129,7 +131,6 @@ int main(int argc, char** argv)
         }
     }
 
-  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   return 0;
 }
