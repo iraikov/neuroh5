@@ -23,24 +23,18 @@ std::string ngh5_prj_path (const char *dsetname, const char *name)
 }
 
 // Calculate the starting and stopping block for each rank
-void compute_bins (size_t num_blocks, size_t size, vector<size_t> bins)
+void compute_bins (size_t num_blocks, size_t size, vector< pair<hsize_t,hsize_t> > &bins)
 {
-int nr_alloced = 0;
-    for (i=0; i<nprocs; i++) {
-        remainder = NR_ITEMS - nr_alloced;
-        buckets = (nprocs - i);
-        bins[i] = remainder / buckets;
-        nr_alloced += bins[i];
+  hsize_t remainder=0, offset=0, buckets=0;
+  
+  for (size_t i=0; i<size; i++)
+    {
+        remainder = num_blocks - offset;
+        buckets   = (size - i);
+        bins[i]   = make_pair(offset, remainder / buckets);
+        offset    += bins[i].first;
     }
 
-    if (num_blocks < size)
-    { ppcount = 1; }
-  else
-    {
-      bins.resize(size);
-      ppcount = (hsize_t) num_blocks/size;
-      
-    }
 }
 
 
@@ -250,33 +244,28 @@ herr_t read_dbs_projection
    * read BLOCK_PTR
    ***************************************************************************/
 
-  // determine my block of block_ptr
-  hsize_t start, stop, block, ppcount;
-  vector<hsize_t> bins;
-
-  compute_bins(num_blocks, size, bins);
-  ppcount = bins[rank];
+  hsize_t start, stop, block;
+  vector< pair<hsize_t,hsize_t> > bins;
   
-  DEBUG("num_blocks = ", num_blocks, "\n");
-  DEBUG("ppcount = ", ppcount, "\n");
+  // determine which blocks of block_ptr are read by which rank
+  bins.resize(size);
+  compute_bins(num_blocks, size, bins);
 
-  start = (hsize_t) rank*ppcount;
-  stop  = (hsize_t) (rank+1)*ppcount;
+  // determine start and stop block for the current rank
+  start = bins[rank].first;
+  stop  = bins[rank].first + bins[rank].second;
   base  = (NODE_IDX_T) start;
 
-  // patch the last rank
-  if ((num_blocks < size) && (rank == size-1))
+  // patch the last rank so that it reads the extra block at the end
+  if (rank == size-1)
     { stop = (hsize_t) num_blocks+1; }
-  else if ((num_blocks >= size) && (rank == num_blocks-1))
-    { stop = (hsize_t) num_blocks+1; };
 
+  block = stop - start;
+
+  DEBUG("num_blocks = ", num_blocks, "\n");
+  std::cerr << std::flush;
   DEBUG(" start = ", start, " stop = ", stop, "\n");
-
-  if ((num_blocks - 1) < rank)
-    { block = 0; }
-  else 
-    { block = stop - start; }
-
+  std::cerr << std::flush;
   DEBUG("block = ", block, "\n");
   std::cerr << std::flush;
 
