@@ -274,6 +274,15 @@ herr_t read_dbs_projection
   DEBUG("block = ", block, "\n");
   std::cerr << std::flush;
 
+  fapl = H5Pcreate(H5P_FILE_ACCESS);
+  assert(fapl >= 0);
+  assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+  
+  file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
+  assert(file >= 0);
+  DEBUG("after open\n");
+  std::cerr << std::flush;
+  
   if (block > 0)
     {
       // allocate buffer and memory dataspace
@@ -288,17 +297,9 @@ herr_t read_dbs_projection
       
       DEBUG("after create_simple\n");
       std::cerr << std::flush;
+
       // open the file (independent I/O)
-      DEBUG("before open\n");
-      std::cerr << std::flush;
-      
-      fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-      
-      file = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
-      DEBUG("after open\n");
+      DEBUG("before open2\n");
       std::cerr << std::flush;
       hid_t dset = H5Dopen2(file, ngh5_prj_path(dsetname, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
@@ -464,10 +465,7 @@ herr_t read_dbs_projection
       assert(H5Sclose(mspace) >= 0);
     }
 
-  if (block > 0)
-    {
-      assert(H5Fclose(file) >= 0);
-    }
+  assert(H5Fclose(file) >= 0);
 
   return ierr;
 }
