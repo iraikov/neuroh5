@@ -8,8 +8,8 @@ LDFLAGS		= -L$(HDF5_LIBDIR)
 
 all: reader scatter
 
-reader: main.o dbs_graph_reader.o population_reader.o
-	$(MPICXX) -o reader $(LDFLAGS) main.o dbs_graph_reader.o population_reader.o -l$(HDF5_LIB)
+reader: reader.o dbs_graph_reader.o population_reader.o
+	$(MPICXX) -o reader $(LDFLAGS) reader.o dbs_graph_reader.o population_reader.o -l$(HDF5_LIB)
 
 scatter: scatter.o dbs_graph_reader.o population_reader.o
 	$(MPICXX) -o scatter $(LDFLAGS) scatter.o dbs_graph_reader.o population_reader.o -l$(HDF5_LIB)
