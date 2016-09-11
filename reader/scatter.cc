@@ -1,4 +1,5 @@
 
+#include "debug.hh"
 #include "ngh5paths.h"
 #include "ngh5types.hh"
 
@@ -80,11 +81,18 @@ int append_edge_map
 int main(int argc, char** argv)
 {
   // MPI Communicator for I/O ranks
-  MPI_Comm io_comm;
+  MPI_Comm io_comm, all_comm;
   // MPI group color value used for I/O ranks
   int io_color = 1;
   // A vector that maps nodes to compute ranks
   vector<rank_t> node_rank_vector;
+  // The set of compute ranks for which the current I/O rank is responsible
+  rank_edge_map_t rank_edge_map;
+  set< pair<pop_t, pop_t> > pop_pairs;
+  vector<pop_range_t> pop_vector;
+  map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+  vector<string> prj_names;
+  size_t prj_size = 0;
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -103,13 +111,15 @@ int main(int argc, char** argv)
   n_nodes = (size_t)std::stoi(string(argv[2]));
   io_size = std::stoi(string(argv[3]));
 
+  MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
   // Am I an I/O rank?
   if (rank < io_size)
     {
       MPI_Comm_split(MPI_COMM_WORLD,io_color,rank,&io_comm);
-
-        // Determine which nodes are assigned to which compute ranks
+      MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+      
+      // Determine which nodes are assigned to which compute ranks
       node_rank_vector.resize(n_nodes);
       if (argc < 5)
         {
@@ -138,23 +148,32 @@ int main(int argc, char** argv)
           infile.close();
         }
 
-      // The set of compute ranks for which the current I/O rank is responsible
-      rank_edge_map_t rank_edge_map;
   
       // read the population info
-      set< pair<pop_t, pop_t> > pop_pairs;
       assert(read_population_combos(io_comm, argv[1], pop_pairs) >= 0);
-      
-      vector<pop_range_t> pop_vector;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       assert(read_population_ranges(io_comm, argv[1], pop_ranges, pop_vector) >= 0);
-      
-      vector<string> prj_names;
       assert(read_projection_names(io_comm, argv[1], prj_names) >= 0);
+      prj_size = prj_names.size();
+      MPI_Barrier(all_comm);
+
+    }
+  else
+    {
+      MPI_Comm_split(MPI_COMM_WORLD,0,rank,&io_comm);
+      MPI_Barrier(all_comm);
+    }
+
+  
+  assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) >= 0);
       
-      
-      // read the edges
-      for (size_t i = 0; i < prj_names.size(); i++)
+  // For each projection, I/O ranks read the edges and scatter
+  for (size_t i = 0; i < prj_size; i++)
+    {
+      int recvcount;
+      vector<int> sendcounts, displs;
+      vector<NODE_IDX_T> edges, recv_edges;
+
+      if (rank < io_size)
         {
           NODE_IDX_T base, dst_start, src_start;
           vector<DST_BLK_PTR_T> dst_blk_ptr;
@@ -164,36 +183,70 @@ int main(int argc, char** argv)
           
           assert(read_dbs_projection(io_comm, argv[1], prj_names[i].c_str(), 
                                      pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
-          
+      
           // validate the edges
           assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
           
           // append to the edge map
           assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, node_rank_vector, rank_edge_map) >= 0);
-
+      
+          // prepare scatterv operation
+          sendcounts.resize(size,0);
+          displs.resize(size,0);
+      
           for (auto it1 = rank_edge_map.cbegin(); it1 != rank_edge_map.cend(); ++it1)
             {
-              printf ("edge_map: it1->first = %u it1->second.size = %lu\n",
-                      it1->first, it1->second.size());
+              uint32_t dst_rank;
+              dst_rank = it1->first;
+              DEBUG ("edge_map: dstrank = ", dst_rank,
+                     " nodes = ", it1->second.size(), "\n");
+              displs[dst_rank] = edges.size();
               if (it1->second.size() > 0)
                 {
-                  printf ("edge_map: it2->second keys =");
                   for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
                     {
-                      printf (" %u", it2->first);
+                      NODE_IDX_T dst = it2->first;
+                      vector<NODE_IDX_T> vect = it2->second;
+                      edges.push_back(dst);
+                      sendcounts[dst_rank]++;
+                      edges.push_back(vect.size());
+                      sendcounts[dst_rank]++;
+                      for (size_t j=0; j<vect.size(); j++)
+                        {
+                          edges.push_back(vect[j]);
+                          sendcounts[dst_rank]++;
+                        }
                     }
-                  printf("\n");
                 }
             }
         }
-      
-    } else
-    {
-      MPI_Comm_split(MPI_COMM_WORLD,MPI_UNDEFINED,rank,&io_comm);
+
+      for (size_t j=0; j<(size_t)io_size; j++)
+        {
+          if (j == (size_t)rank)
+            {
+              MPI_Scatter(&sendcounts[0], 1, MPI_INT,
+                          &recvcount, 1, MPI_INT, j, MPI_COMM_WORLD);
+              recv_edges.resize(recvcount);
+              MPI_Scatterv(&(edges[0]), &(sendcounts[0]), &(displs[0]), MPI_INT,
+                           &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
+            }
+          else
+            {
+              MPI_Scatter(NULL, 1, MPI_INT,
+                          &recvcount, 1, MPI_INT, j, MPI_COMM_WORLD);
+              recv_edges.resize(recvcount);
+              MPI_Scatterv(NULL, NULL, NULL, MPI_INT,
+                           &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
+            }
+        }
     }
   
   MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Comm_free(&io_comm);
+  if (rank < io_size)
+    {
+      MPI_Comm_free(&io_comm);
+    } 
   MPI_Finalize();
   return 0;
 }
