@@ -55,15 +55,14 @@ int append_edge_map
                   NODE_IDX_T dst = dst_base + ii + dst_start;
                   // determine the compute rank that the dst node is assigned to
                   rank_t dstrank = node_rank_vector[dst];
-                  pair<rank_edge_map_iter_t,bool> const& r = rank_edge_map.insert(make_pair(dstrank, edge_map_t()));
-                  edge_map_t m = r.first->second;
-                  pair<edge_map_iter_t,bool> const& n = m.insert(make_pair(dst, vector<NODE_IDX_T>()));
-                  vector<NODE_IDX_T> pred = n.first->second;
+                  pair<rank_edge_map_iter_t,bool> r = rank_edge_map.insert(make_pair(dstrank, edge_map_t()));
+                  pair<edge_map_iter_t,bool> n = rank_edge_map[dstrank].insert(make_pair(dst, vector<NODE_IDX_T>()));
+                  vector<NODE_IDX_T> &v = rank_edge_map[dstrank][dst];
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   for (size_t j = low; j < high; ++j)
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
-                      pred.push_back (src);
+                      v.push_back (src);
                     }
                 }
             }
@@ -171,6 +170,21 @@ int main(int argc, char** argv)
           
           // append to the edge map
           assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, node_rank_vector, rank_edge_map) >= 0);
+
+          for (auto it1 = rank_edge_map.cbegin(); it1 != rank_edge_map.cend(); ++it1)
+            {
+              printf ("edge_map: it1->first = %u it1->second.size = %lu\n",
+                      it1->first, it1->second.size());
+              if (it1->second.size() > 0)
+                {
+                  printf ("edge_map: it2->second keys =");
+                  for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
+                    {
+                      printf (" %u", it2->first);
+                    }
+                  printf("\n");
+                }
+            }
         }
       
     } else
