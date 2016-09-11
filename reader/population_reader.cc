@@ -201,7 +201,7 @@ bool validate_edge_list
       for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
         {
           size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
-          NODE_IDX_T dst_base = base + dst_idx[b];
+          NODE_IDX_T dst_base = dst_idx[b];
           for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
             {
               if (i < dst_ptr_size-1)
