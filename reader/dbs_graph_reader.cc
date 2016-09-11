@@ -32,7 +32,7 @@ void compute_bins (size_t num_blocks, size_t size, vector< pair<hsize_t,hsize_t>
         remainder = num_blocks - offset;
         buckets   = (size - i);
         bins[i]   = make_pair(offset, remainder / buckets);
-        offset    += bins[i].first;
+        offset    += bins[i].second;
     }
 
 }
