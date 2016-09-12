@@ -11,6 +11,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <map>
 #include <set>
 #include <vector>
@@ -71,6 +74,8 @@ int append_edge_list
 
 int main(int argc, char** argv)
 {
+  char *input_file_name;
+  
   assert(MPI_Init(&argc, &argv) >= 0);
 
   int rank, size;
@@ -85,17 +90,18 @@ int main(int argc, char** argv)
       exit(1);
     }
 
+  input_file_name = argv[1];
  
   // read the population info
   set< pair<pop_t, pop_t> > pop_pairs;
-  assert(read_population_combos(MPI_COMM_WORLD, argv[1], pop_pairs) >= 0);
+  assert(read_population_combos(MPI_COMM_WORLD, input_file_name, pop_pairs) >= 0);
 
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-  assert(read_population_ranges(MPI_COMM_WORLD, argv[1], pop_ranges, pop_vector) >= 0);
+  assert(read_population_ranges(MPI_COMM_WORLD, input_file_name, pop_ranges, pop_vector) >= 0);
 
   vector<string> prj_names;
-  assert(read_projection_names(MPI_COMM_WORLD, argv[1], prj_names) >= 0);
+  assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
       
   vector<NODE_IDX_T> edge_list;
 
@@ -110,7 +116,7 @@ int main(int argc, char** argv)
 
       printf("Reading projection %lu (%s)\n", i, prj_names[i].c_str());
 
-      assert(read_dbs_projection(MPI_COMM_WORLD, argv[1], prj_names[i].c_str(), 
+      assert(read_dbs_projection(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), 
                                  pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
       // validate the edges
@@ -124,11 +130,19 @@ int main(int argc, char** argv)
 
   if (edge_list.size() > 0) 
     {
+      ofstream outfile;
+      stringstream outfilename;
       assert(edge_list.size()%2 == 0);
+
+      outfilename << string(input_file_name) << "." << rank << ".edges";
+      outfile.open(outfilename.str());
+
       for (size_t i = 0, k = 0; i < edge_list.size()-1; i+=2, k++)
         {
-          std::cout << k << " " << edge_list[i] << " " << edge_list[i+1] << std::endl;
+          outfile << k << " " << edge_list[i] << " " << edge_list[i+1] << std::endl;
         }
+      outfile.close();
+
     }
 
   MPI_Finalize();

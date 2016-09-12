@@ -48,7 +48,7 @@ int append_edge_map
       for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
         {
           size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
-          NODE_IDX_T dst_base = base + dst_idx[b];
+          NODE_IDX_T dst_base = dst_idx[b];
           for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
             {
               if (i < dst_ptr_size-1) 
@@ -80,6 +80,7 @@ int append_edge_map
 
 int main(int argc, char** argv)
 {
+  char *input_file_name;
   // MPI Communicator for I/O ranks
   MPI_Comm io_comm, all_comm;
   // MPI group color value used for I/O ranks
@@ -108,6 +109,7 @@ int main(int argc, char** argv)
       exit(1);
     }
 
+  input_file_name = argv[1];
   n_nodes = (size_t)std::stoi(string(argv[2]));
   io_size = std::stoi(string(argv[3]));
 
@@ -150,9 +152,9 @@ int main(int argc, char** argv)
 
   
       // read the population info
-      assert(read_population_combos(io_comm, argv[1], pop_pairs) >= 0);
-      assert(read_population_ranges(io_comm, argv[1], pop_ranges, pop_vector) >= 0);
-      assert(read_projection_names(io_comm, argv[1], prj_names) >= 0);
+      assert(read_population_combos(io_comm, input_file_name, pop_pairs) >= 0);
+      assert(read_population_ranges(io_comm, input_file_name, pop_ranges, pop_vector) >= 0);
+      assert(read_projection_names(io_comm, input_file_name, prj_names) >= 0);
       prj_size = prj_names.size();
       MPI_Barrier(all_comm);
 
@@ -169,9 +171,10 @@ int main(int argc, char** argv)
   // For each projection, I/O ranks read the edges and scatter
   for (size_t i = 0; i < prj_size; i++)
     {
-      int recvcount;
+      int recvcount; size_t num_edges=0;
       vector<int> sendcounts, displs;
       vector<NODE_IDX_T> edges, recv_edges;
+      rank_edge_map_t prj_rank_edge_map;
 
       if (rank < io_size)
         {
@@ -180,26 +183,29 @@ int main(int argc, char** argv)
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
+
+          printf("dst_ptr.size() = %lu\n", dst_ptr.size());
           
-          assert(read_dbs_projection(io_comm, argv[1], prj_names[i].c_str(), 
+          assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
                                      pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
           // validate the edges
-          assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+          assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                    pop_ranges, pop_pairs) == true);
           
           // append to the edge map
-          assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, node_rank_vector, rank_edge_map) >= 0);
+          assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                 node_rank_vector, prj_rank_edge_map) >= 0);
       
           // prepare scatterv operation
           sendcounts.resize(size,0);
           displs.resize(size,0);
-      
-          for (auto it1 = rank_edge_map.cbegin(); it1 != rank_edge_map.cend(); ++it1)
+
+          num_edges = 0;
+          for (auto it1 = prj_rank_edge_map.cbegin(); it1 != prj_rank_edge_map.cend(); ++it1)
             {
               uint32_t dst_rank;
               dst_rank = it1->first;
-              DEBUG ("edge_map: dstrank = ", dst_rank,
-                     " nodes = ", it1->second.size(), "\n");
               displs[dst_rank] = edges.size();
               if (it1->second.size() > 0)
                 {
@@ -215,12 +221,15 @@ int main(int argc, char** argv)
                         {
                           edges.push_back(vect[j]);
                           sendcounts[dst_rank]++;
+                          num_edges++;
                         }
                     }
                 }
             }
         }
 
+      printf("Projection %lu size is %lu edges\n", i, num_edges);
+      
       for (size_t j=0; j<(size_t)io_size; j++)
         {
           if (j == (size_t)rank)
@@ -240,13 +249,39 @@ int main(int argc, char** argv)
                            &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
             }
         }
+
+      if (recv_edges.size() > 0) 
+        {
+          size_t offset = 0;
+          ofstream outfile;
+          stringstream outfilename;
+          outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
+          outfile.open(outfilename.str());
+          while (offset < recv_edges.size()-1)
+            {
+              NODE_IDX_T dst; size_t dst_len;
+              dst = recv_edges[offset++];
+              dst_len = recv_edges[offset++];
+              DEBUG ("edge_map: dst = ", dst, " dst_len = ", dst_len, "\n");
+              for (size_t k = 0; k < dst_len; k++)
+                {
+                  NODE_IDX_T src = recv_edges[offset++];
+                  outfile << "    " << src << " " << dst << std::endl;
+                }
+            }
+          outfile.close();
+        }
+
+      edges.clear();
+      recv_edges.clear();
     }
   
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank < io_size)
     {
       MPI_Comm_free(&io_comm);
-    } 
+    }
+  
   MPI_Finalize();
   return 0;
 }

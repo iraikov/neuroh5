@@ -162,7 +162,6 @@ herr_t read_population_ranges
   for(size_t i = 0; i < pop_vector.size(); ++i)
     {
       pop_ranges.insert(make_pair(pop_vector[i].start, make_pair(pop_vector[i].count, pop_vector[i].pop)));
-      printf ("pop_ranges = %lu %u %u\n", pop_vector[i].start, pop_vector[i].count, pop_vector[i].pop);
     }
 
   return ierr;
@@ -185,7 +184,7 @@ bool validate_edge_list
  const set< pair<pop_t, pop_t> >& pop_pairs
  )
 {
-  bool result = false;
+  bool result = true;
 
   NODE_IDX_T src, dst;
 
@@ -214,31 +213,33 @@ bool validate_edge_list
                     }
                   pp.second = riter->second.second-1;
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
-                  for (size_t j = low; j < high; ++j)
+                  if ((high-low) == 0)
                     {
-                      
-                      src = src_idx[j] + src_start;
-                      citer = pop_ranges.upper_bound(src);
-                      if (citer == pop_ranges.end())
+                      result = true;
+                    }
+                  else
+                    {
+                      for (size_t j = low; j < high; ++j)
                         {
-                          return false;
+                          src = src_idx[j] + src_start;
+                          citer = pop_ranges.upper_bound(src);
+                          if (citer == pop_ranges.end())
+                            {
+                              return false;
+                            }
+                          pp.first = citer->second.second-1;
+                          // check if the population combo is valid
+                          result = (pop_pairs.find(pp) != pop_pairs.end());
+                          if (!result)
+                            {
+                              DEBUG("invalid edge: src = ",src," dst = ",dst," pp = ",pp.first,", ",pp.second,"\n"); 
+                              return false;
+                            }
                         }
-                      pp.first = citer->second.second-1;
-                      // check if the population combo is valid
-                      result = (pop_pairs.find(pp) != pop_pairs.end());
-                      if (!result)
-                        {
-                          DEBUG("invalid edge: src = ",src," dst = ",dst," pp = ",pp.first,", ",pp.second,"\n"); 
-                          return false;
-                      }
                     }
                 }
             }
         }
-    }
-  else
-    {
-      result = true;
     }
 
   return result;
