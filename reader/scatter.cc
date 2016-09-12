@@ -173,7 +173,7 @@ int main(int argc, char** argv)
     {
       int recvcount; size_t num_edges=0;
       vector<int> sendcounts, displs;
-      vector<NODE_IDX_T> edges, recv_edges;
+      vector<NODE_IDX_T> edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
 
       if (rank < io_size)
@@ -184,8 +184,6 @@ int main(int argc, char** argv)
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
 
-          printf("dst_ptr.size() = %lu\n", dst_ptr.size());
-          
           assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
                                      pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
@@ -228,8 +226,7 @@ int main(int argc, char** argv)
             }
         }
 
-      printf("Projection %lu size is %lu edges\n", i, num_edges);
-      
+
       for (size_t j=0; j<(size_t)io_size; j++)
         {
           if (j == (size_t)rank)
@@ -248,32 +245,34 @@ int main(int argc, char** argv)
               MPI_Scatterv(NULL, NULL, NULL, MPI_INT,
                            &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
             }
+          total_recv_edges.insert(total_recv_edges.end(),
+                                  recv_edges.begin(), recv_edges.end());
         }
+      recv_edges.clear();
+      edges.clear();
 
-      if (recv_edges.size() > 0) 
+      if (total_recv_edges.size() > 0) 
         {
           size_t offset = 0;
           ofstream outfile;
           stringstream outfilename;
           outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
           outfile.open(outfilename.str());
-          while (offset < recv_edges.size()-1)
+          while (offset < total_recv_edges.size()-1)
             {
               NODE_IDX_T dst; size_t dst_len;
-              dst = recv_edges[offset++];
-              dst_len = recv_edges[offset++];
-              DEBUG ("edge_map: dst = ", dst, " dst_len = ", dst_len, "\n");
+              dst = total_recv_edges[offset++];
+              dst_len = total_recv_edges[offset++];
               for (size_t k = 0; k < dst_len; k++)
                 {
-                  NODE_IDX_T src = recv_edges[offset++];
+                  NODE_IDX_T src = total_recv_edges[offset++];
                   outfile << "    " << src << " " << dst << std::endl;
                 }
             }
           outfile.close();
         }
 
-      edges.clear();
-      recv_edges.clear();
+      total_recv_edges.clear();
     }
   
   MPI_Barrier(MPI_COMM_WORLD);
