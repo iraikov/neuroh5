@@ -209,9 +209,20 @@ bool validate_edge_list
                   riter = pop_ranges.upper_bound(dst);
                   if (riter == pop_ranges.end())
                     {
-                      return false;
+                      if (dst < pop_ranges.rbegin()->first+pop_ranges.rbegin()->second.first)
+                        {
+                          pp.second = pop_ranges.rbegin()->second.second;
+                        }
+                      else
+                        {
+                          DEBUG("unable to find population for dst = ",dst,"\n"); 
+                          return false;
+                        }
                     }
-                  pp.second = riter->second.second-1;
+                  else
+                    {
+                      pp.second = riter->second.second-1;
+                    }
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   if ((high-low) == 0)
                     {
@@ -225,9 +236,20 @@ bool validate_edge_list
                           citer = pop_ranges.upper_bound(src);
                           if (citer == pop_ranges.end())
                             {
-                              return false;
+                              if (src < pop_ranges.rbegin()->first+pop_ranges.rbegin()->second.first)
+                                {
+                                  pp.first = pop_ranges.rbegin()->second.second;
+                                }
+                              else
+                                {
+                                  DEBUG("unable to find population for src = ",src,"\n"); 
+                                  return false;
+                                }
                             }
-                          pp.first = citer->second.second-1;
+                          else
+                            {
+                              pp.first = citer->second.second-1;
+                            }
                           // check if the population combo is valid
                           result = (pop_pairs.find(pp) != pop_pairs.end());
                           if (!result)
