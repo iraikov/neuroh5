@@ -118,7 +118,7 @@ int main(int argc, char** argv)
   // Am I an I/O rank?
   if (rank < io_size)
     {
-      MPI_Comm_split(MPI_COMM_WORLD,io_color,rank,&io_comm);
+      MPI_Comm_split(all_comm,io_color,rank,&io_comm);
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
       
       // Determine which nodes are assigned to which compute ranks
@@ -156,15 +156,12 @@ int main(int argc, char** argv)
       assert(read_population_ranges(io_comm, input_file_name, pop_ranges, pop_vector) >= 0);
       assert(read_projection_names(io_comm, input_file_name, prj_names) >= 0);
       prj_size = prj_names.size();
-      MPI_Barrier(all_comm);
-
     }
   else
     {
-      MPI_Comm_split(MPI_COMM_WORLD,0,rank,&io_comm);
-      MPI_Barrier(all_comm);
+      MPI_Comm_split(all_comm,0,rank,&io_comm);
     }
-
+  MPI_Barrier(all_comm);
   
   assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) >= 0);
       
@@ -232,18 +229,18 @@ int main(int argc, char** argv)
           if (j == (size_t)rank)
             {
               MPI_Scatter(&sendcounts[0], 1, MPI_INT,
-                          &recvcount, 1, MPI_INT, j, MPI_COMM_WORLD);
+                          &recvcount, 1, MPI_INT, j, all_comm);
               recv_edges.resize(recvcount);
               MPI_Scatterv(&(edges[0]), &(sendcounts[0]), &(displs[0]), MPI_INT,
-                           &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
+                           &(recv_edges[0]), recvcount, MPI_INT, j, all_comm);
             }
           else
             {
               MPI_Scatter(NULL, 1, MPI_INT,
-                          &recvcount, 1, MPI_INT, j, MPI_COMM_WORLD);
+                          &recvcount, 1, MPI_INT, j, all_comm);
               recv_edges.resize(recvcount);
               MPI_Scatterv(NULL, NULL, NULL, MPI_INT,
-                           &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
+                           &(recv_edges[0]), recvcount, MPI_INT, j, all_comm);
             }
           total_recv_edges.insert(total_recv_edges.end(),
                                   recv_edges.begin(), recv_edges.end());
@@ -275,11 +272,12 @@ int main(int argc, char** argv)
       total_recv_edges.clear();
     }
   
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(all_comm);
   if (rank < io_size)
     {
       MPI_Comm_free(&io_comm);
     }
+  MPI_Comm_free(&all_comm);
   
   MPI_Finalize();
   return 0;
