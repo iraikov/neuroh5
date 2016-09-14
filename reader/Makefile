@@ -18,4 +18,4 @@ scatter: scatter.o dbs_graph_reader.o population_reader.o
 	$(MPICXX) $(CFLAGS) -c $< -o $@
 
 clean:
-	-rm *.o reader scatter
+	-rm *.o reader scatter *.edges

@@ -169,9 +169,14 @@ int main(int argc, char** argv)
   for (size_t i = 0; i < prj_size; i++)
     {
       int recvcount; size_t num_edges=0;
-      vector<int> sendcounts, displs;
+      vector<int> sendcounts, sdispls, recvcounts, rdispls;
       vector<NODE_IDX_T> edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
+
+      sendcounts.resize(size,0);
+      sdispls.resize(size,0);
+      recvcounts.resize(size,0);
+      rdispls.resize(size,0);
 
       if (rank < io_size)
         {
@@ -192,16 +197,12 @@ int main(int argc, char** argv)
           assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                  node_rank_vector, prj_rank_edge_map) >= 0);
       
-          // prepare scatterv operation
-          sendcounts.resize(size,0);
-          displs.resize(size,0);
-
           num_edges = 0;
           for (auto it1 = prj_rank_edge_map.cbegin(); it1 != prj_rank_edge_map.cend(); ++it1)
             {
               uint32_t dst_rank;
               dst_rank = it1->first;
-              displs[dst_rank] = edges.size();
+              sdispls[dst_rank] = edges.size();
               if (it1->second.size() > 0)
                 {
                   for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
@@ -223,6 +224,31 @@ int main(int argc, char** argv)
             }
         }
 
+      // 1. Each ALL_COMM rank sends an edge vector size to
+      //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
+      //    and creates sendcounts and sdispls arrays
+
+      MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT,
+                   all_comm);
+
+      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
+      //    a receive buffer, recvcounts, and rdispls
+
+      size_t recvbuf_size = recvcounts[0];
+      for (int p = 1; p < size; ++p)
+        {
+          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
+          recvbuf_size += recvcounts[p];
+        }
+
+      vector<NODE_IDX_T> recvbuf(recvbuf_size);
+
+      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
+
+      MPI_Alltoallv(&edges[0], &sendcounts[0], &sdispls[0], NODE_IDX_MPI_T,
+                    &recvbuf[0], &recvcounts[0], &rdispls[0], NODE_IDX_MPI_T,
+                    all_comm);
+      /*
 
       for (size_t j=0; j<(size_t)io_size; j++)
         {
@@ -231,7 +257,7 @@ int main(int argc, char** argv)
               MPI_Scatter(&sendcounts[0], 1, MPI_INT,
                           &recvcount, 1, MPI_INT, j, all_comm);
               recv_edges.resize(recvcount);
-              MPI_Scatterv(&(edges[0]), &(sendcounts[0]), &(displs[0]), MPI_INT,
+              MPI_Scatterv(&(edges[0]), &(sendcounts[0]), &(sdispls[0]), MPI_INT,
                            &(recv_edges[0]), recvcount, MPI_INT, j, all_comm);
             }
           else
@@ -248,28 +274,30 @@ int main(int argc, char** argv)
       recv_edges.clear();
       edges.clear();
 
-      if (total_recv_edges.size() > 0) 
+      */
+
+      if (recvbuf.size() > 0) 
         {
           size_t offset = 0;
           ofstream outfile;
           stringstream outfilename;
           outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
           outfile.open(outfilename.str());
-          while (offset < total_recv_edges.size()-1)
+          while (offset < recvbuf.size()-1)
             {
               NODE_IDX_T dst; size_t dst_len;
-              dst = total_recv_edges[offset++];
-              dst_len = total_recv_edges[offset++];
+              dst = recvbuf[offset++];
+              dst_len = recvbuf[offset++];
               for (size_t k = 0; k < dst_len; k++)
                 {
-                  NODE_IDX_T src = total_recv_edges[offset++];
+                  NODE_IDX_T src = recvbuf[offset++];
                   outfile << "    " << src << " " << dst << std::endl;
                 }
             }
           outfile.close();
         }
 
-      total_recv_edges.clear();
+      recvbuf.clear();
     }
   
   MPI_Barrier(all_comm);

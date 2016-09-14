@@ -26,6 +26,7 @@ typedef unsigned int NODE_IDX_T;
 
 #define NODE_IDX_H5_NATIVE_T H5T_NATIVE_UINT32
 #define NODE_IDX_H5_FILE_T   H5T_STD_U32LE
+#define NODE_IDX_MPI_T       MPI_UINT32_T
 
 // Population types
 
