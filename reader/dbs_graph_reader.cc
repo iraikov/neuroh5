@@ -425,15 +425,11 @@ herr_t read_dbs_projection
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
 
-      if (rank <= (num_blocks - 1))
+      dst_rebase = dst_ptr[0];
+      for (size_t i = 0; i < dst_ptr.size(); ++i)
         {
-          dst_rebase = dst_ptr[0];
-          for (size_t i = 0; i < dst_ptr.size(); ++i)
-            {
-              dst_ptr[i] -= dst_rebase;
-            }
+          dst_ptr[i] -= dst_rebase;
         }
-
     }
 
   /***************************************************************************

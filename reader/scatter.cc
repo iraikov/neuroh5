@@ -168,7 +168,7 @@ int main(int argc, char** argv)
   // For each projection, I/O ranks read the edges and scatter
   for (size_t i = 0; i < prj_size; i++)
     {
-      int recvcount; size_t num_edges=0;
+      size_t num_edges=0;
       vector<int> sendcounts, sdispls, recvcounts, rdispls;
       vector<NODE_IDX_T> edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
@@ -248,33 +248,7 @@ int main(int argc, char** argv)
       MPI_Alltoallv(&edges[0], &sendcounts[0], &sdispls[0], NODE_IDX_MPI_T,
                     &recvbuf[0], &recvcounts[0], &rdispls[0], NODE_IDX_MPI_T,
                     all_comm);
-      /*
-
-      for (size_t j=0; j<(size_t)io_size; j++)
-        {
-          if (j == (size_t)rank)
-            {
-              MPI_Scatter(&sendcounts[0], 1, MPI_INT,
-                          &recvcount, 1, MPI_INT, j, all_comm);
-              recv_edges.resize(recvcount);
-              MPI_Scatterv(&(edges[0]), &(sendcounts[0]), &(sdispls[0]), MPI_INT,
-                           &(recv_edges[0]), recvcount, MPI_INT, j, all_comm);
-            }
-          else
-            {
-              MPI_Scatter(NULL, 1, MPI_INT,
-                          &recvcount, 1, MPI_INT, j, all_comm);
-              recv_edges.resize(recvcount);
-              MPI_Scatterv(NULL, NULL, NULL, MPI_INT,
-                           &(recv_edges[0]), recvcount, MPI_INT, j, all_comm);
-            }
-          total_recv_edges.insert(total_recv_edges.end(),
-                                  recv_edges.begin(), recv_edges.end());
-        }
-      recv_edges.clear();
       edges.clear();
-
-      */
 
       if (recvbuf.size() > 0) 
         {
