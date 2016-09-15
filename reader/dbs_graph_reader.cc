@@ -175,7 +175,7 @@ herr_t read_dbs_projection
   // process 0 reads the size of dst_blk_ptr and the source and target populations
   if (rank == 0)
     {
-      uint16_t dst_pop, src_pop;
+      uint32_t dst_pop, src_pop;
       hid_t file, fspace, mspace, dset;
       hsize_t one = 1;
 
