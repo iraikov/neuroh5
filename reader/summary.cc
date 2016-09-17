@@ -35,10 +35,12 @@ int append_edge_list
  const vector<NODE_IDX_T>& dst_idx,
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
+ size_t&                   num_edges,
  vector<NODE_IDX_T>&       edge_list
  )
 {
   int ierr = 0; size_t dst_ptr_size;
+  num_edges = 0;
   
   if (dst_blk_ptr.size() > 0) 
     {
@@ -58,6 +60,7 @@ int append_edge_list
                       NODE_IDX_T src = src_idx[j] + src_start;
                       edge_list.push_back(src);
                       edge_list.push_back(dst);
+		      num_edges++;
                     }
                 }
             }
@@ -113,6 +116,7 @@ int main(int argc, char** argv)
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
+      size_t num_edges;
 
       printf("Reading projection %lu (%s)\n", i, prj_names[i].c_str());
 
@@ -123,9 +127,9 @@ int main(int argc, char** argv)
       assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
       
       // append to the partitioner input list
-      assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, edge_list) >= 0);
+      assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, num_edges, edge_list) >= 0);
 
-      printf("Task %d projection %lu has %lu edges\n", rank, i, src_idx.size());
+      printf("Task %d projection %lu has %lu edges; read %lu edges\n", rank, i, src_idx.size(), num_edges);
 
     }
   
@@ -133,22 +137,6 @@ int main(int argc, char** argv)
 
   printf("Task %d has %lu edges\n", rank,  edge_list.size());
   
-  if (edge_list.size() > 0) 
-    {
-      ofstream outfile;
-      stringstream outfilename;
-      assert(edge_list.size()%2 == 0);
-
-      outfilename << string(input_file_name) << "." << rank << ".edges";
-      outfile.open(outfilename.str());
-
-      for (size_t i = 0, k = 0; i < edge_list.size()-1; i+=2, k++)
-        {
-          outfile << k << " " << edge_list[i] << " " << edge_list[i+1] << std::endl;
-        }
-      outfile.close();
-
-    }
 
   MPI_Finalize();
   return 0;
