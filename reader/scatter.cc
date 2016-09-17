@@ -37,6 +37,7 @@ int append_edge_map
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
  const vector<rank_t>& node_rank_vector,
+ size_t& num_edges,
  rank_edge_map_t & rank_edge_map
  )
 {
@@ -64,6 +65,7 @@ int append_edge_map
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
                       v.push_back (src);
+                      num_edges++;
                     }
                 }
             }
@@ -168,7 +170,6 @@ int main(int argc, char** argv)
   // For each projection, I/O ranks read the edges and scatter
   for (size_t i = 0; i < prj_size; i++)
     {
-      size_t num_edges=0;
       vector<int> sendcounts, sdispls, recvcounts, rdispls;
       vector<NODE_IDX_T> edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
@@ -185,6 +186,7 @@ int main(int argc, char** argv)
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
+          size_t num_edges = 0;
 
           assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
                                      pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
@@ -195,9 +197,12 @@ int main(int argc, char** argv)
           
           // append to the edge map
           assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                 node_rank_vector, prj_rank_edge_map) >= 0);
+                                 node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
       
-          num_edges = 0;
+          
+          // ensure that all edges in the projection have been read and appended to edge_list
+          assert(num_edges == src_idx.size());
+
           for (auto it1 = prj_rank_edge_map.cbegin(); it1 != prj_rank_edge_map.cend(); ++it1)
             {
               uint32_t dst_rank;
@@ -217,7 +222,6 @@ int main(int argc, char** argv)
                         {
                           edges.push_back(vect[j]);
                           sendcounts[dst_rank]++;
-                          num_edges++;
                         }
                     }
                 }

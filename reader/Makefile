@@ -6,10 +6,7 @@ MPICXX		= mpicxx -std=c++11
 CFLAGS		= -Wall -I$(HDF5_INCDIR)
 LDFLAGS		= -L$(HDF5_LIBDIR)
 
-all: summary reader scatter
-
-summary: summary.o dbs_graph_reader.o population_reader.o
-	$(MPICXX) -o summary $(LDFLAGS) summary.o dbs_graph_reader.o population_reader.o -l$(HDF5_LIB)
+all: reader scatter
 
 reader: reader.o dbs_graph_reader.o population_reader.o
 	$(MPICXX) -o reader $(LDFLAGS) reader.o dbs_graph_reader.o population_reader.o -l$(HDF5_LIB)
@@ -21,4 +18,4 @@ scatter: scatter.o dbs_graph_reader.o population_reader.o
 	$(MPICXX) $(CFLAGS) -c $< -o $@
 
 clean:
-	-rm *.o reader scatter summary *.edges
+	-rm *.o reader scatter *.edges
