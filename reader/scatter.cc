@@ -186,10 +186,10 @@ int main(int argc, char** argv)
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
-          size_t num_edges = 0;
+          size_t num_edges = 0, total_prj_num_edges = 0;
 
           assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
-                                     pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                     pop_vector, total_prj_num_edges, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
           // validate the edges
           assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,

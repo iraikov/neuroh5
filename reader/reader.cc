@@ -167,6 +167,8 @@ int main(int argc, char** argv)
       
   vector<NODE_IDX_T> edge_list;
 
+  size_t total_num_edges = 0, local_num_edges = 0;
+  
   // read the edges
   for (size_t i = 0; i < prj_names.size(); i++)
     {
@@ -175,30 +177,41 @@ int main(int argc, char** argv)
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
-      size_t num_edges = 0;
+      size_t local_prj_num_edges = 0, total_prj_num_edges = 0;
       
       printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
       assert(read_dbs_projection(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), 
-                                 pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                 pop_vector, total_prj_num_edges, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
       // validate the edges
       assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
       
       // append to the partitioner input list
-      assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, num_edges, edge_list) >= 0);
+      assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, local_prj_num_edges, edge_list) >= 0);
 
       // ensure that all edges in the projection have been read and appended to edge_list
-      assert(num_edges == src_idx.size());
+      assert(local_prj_num_edges == src_idx.size());
 
-      printf("Task %d has read %lu edges in projection %lu (%s)\n", rank,  edge_list.size(), i, prj_names[i].c_str());
+      printf("Task %d has read %lu edges in projection %lu (%s)\n", rank,  local_prj_num_edges, i, prj_names[i].c_str());
 
+      total_num_edges = total_num_edges + total_prj_num_edges;
+      local_num_edges = local_num_edges + local_prj_num_edges;
+    }
+
+  assert(local_num_edges == edge_list.size()/2);
+
+  printf("Task %d has read a total of %lu edges\n", rank,  local_num_edges);
+  printf("Task %d: total number of edges is %lu\n", rank,  total_num_edges);
+  
+  size_t sum_local_num_edges = 0;
+  MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
+	     MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (rank == 0)
+    {
+      assert(sum_local_num_edges == total_num_edges);
     }
   
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  printf("Task %d has read a total of %lu edges\n", rank,  edge_list.size());
-
   if (!opt_summary)
     {
       if (edge_list.size() > 0) 
