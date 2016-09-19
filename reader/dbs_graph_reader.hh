@@ -21,6 +21,7 @@ extern herr_t read_dbs_projection
  const char*              fname, 
  const char*              dsetname, 
  const std::vector<pop_range_t> &pop_vector,
+ uint64_t                 &nedges,  /* total number of edges in the projection */
  NODE_IDX_T&              base,     /* global index of the first node */
  NODE_IDX_T&         dst_start,
  NODE_IDX_T&         src_start,

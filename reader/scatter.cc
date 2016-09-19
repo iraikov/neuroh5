@@ -37,6 +37,7 @@ int append_edge_map
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
  const vector<rank_t>& node_rank_vector,
+ size_t& num_edges,
  rank_edge_map_t & rank_edge_map
  )
 {
@@ -64,6 +65,7 @@ int append_edge_map
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
                       v.push_back (src);
+                      num_edges++;
                     }
                 }
             }
@@ -118,7 +120,7 @@ int main(int argc, char** argv)
   // Am I an I/O rank?
   if (rank < io_size)
     {
-      MPI_Comm_split(MPI_COMM_WORLD,io_color,rank,&io_comm);
+      MPI_Comm_split(all_comm,io_color,rank,&io_comm);
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
       
       // Determine which nodes are assigned to which compute ranks
@@ -156,25 +158,26 @@ int main(int argc, char** argv)
       assert(read_population_ranges(io_comm, input_file_name, pop_ranges, pop_vector) >= 0);
       assert(read_projection_names(io_comm, input_file_name, prj_names) >= 0);
       prj_size = prj_names.size();
-      MPI_Barrier(all_comm);
-
     }
   else
     {
-      MPI_Comm_split(MPI_COMM_WORLD,0,rank,&io_comm);
-      MPI_Barrier(all_comm);
+      MPI_Comm_split(all_comm,0,rank,&io_comm);
     }
-
+  MPI_Barrier(all_comm);
   
   assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) >= 0);
       
   // For each projection, I/O ranks read the edges and scatter
   for (size_t i = 0; i < prj_size; i++)
     {
-      int recvcount; size_t num_edges=0;
-      vector<int> sendcounts, displs;
+      vector<int> sendcounts, sdispls, recvcounts, rdispls;
       vector<NODE_IDX_T> edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
+
+      sendcounts.resize(size,0);
+      sdispls.resize(size,0);
+      recvcounts.resize(size,0);
+      rdispls.resize(size,0);
 
       if (rank < io_size)
         {
@@ -183,9 +186,10 @@ int main(int argc, char** argv)
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
+          size_t num_edges = 0, total_prj_num_edges = 0;
 
           assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
-                                     pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                     pop_vector, total_prj_num_edges, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
           // validate the edges
           assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
@@ -193,18 +197,17 @@ int main(int argc, char** argv)
           
           // append to the edge map
           assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                 node_rank_vector, prj_rank_edge_map) >= 0);
+                                 node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
       
-          // prepare scatterv operation
-          sendcounts.resize(size,0);
-          displs.resize(size,0);
+          
+          // ensure that all edges in the projection have been read and appended to edge_list
+          assert(num_edges == src_idx.size());
 
-          num_edges = 0;
           for (auto it1 = prj_rank_edge_map.cbegin(); it1 != prj_rank_edge_map.cend(); ++it1)
             {
               uint32_t dst_rank;
               dst_rank = it1->first;
-              displs[dst_rank] = edges.size();
+              sdispls[dst_rank] = edges.size();
               if (it1->second.size() > 0)
                 {
                   for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
@@ -219,67 +222,68 @@ int main(int argc, char** argv)
                         {
                           edges.push_back(vect[j]);
                           sendcounts[dst_rank]++;
-                          num_edges++;
                         }
                     }
                 }
             }
         }
 
+      // 1. Each ALL_COMM rank sends an edge vector size to
+      //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
+      //    and creates sendcounts and sdispls arrays
 
-      for (size_t j=0; j<(size_t)io_size; j++)
+      MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT,
+                   all_comm);
+
+      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
+      //    a receive buffer, recvcounts, and rdispls
+
+      size_t recvbuf_size = recvcounts[0];
+      for (int p = 1; p < size; ++p)
         {
-          if (j == (size_t)rank)
-            {
-              MPI_Scatter(&sendcounts[0], 1, MPI_INT,
-                          &recvcount, 1, MPI_INT, j, MPI_COMM_WORLD);
-              recv_edges.resize(recvcount);
-              MPI_Scatterv(&(edges[0]), &(sendcounts[0]), &(displs[0]), MPI_INT,
-                           &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
-            }
-          else
-            {
-              MPI_Scatter(NULL, 1, MPI_INT,
-                          &recvcount, 1, MPI_INT, j, MPI_COMM_WORLD);
-              recv_edges.resize(recvcount);
-              MPI_Scatterv(NULL, NULL, NULL, MPI_INT,
-                           &(recv_edges[0]), recvcount, MPI_INT, j, MPI_COMM_WORLD);
-            }
-          total_recv_edges.insert(total_recv_edges.end(),
-                                  recv_edges.begin(), recv_edges.end());
+          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
+          recvbuf_size += recvcounts[p];
         }
-      recv_edges.clear();
+
+      vector<NODE_IDX_T> recvbuf(recvbuf_size);
+
+      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
+
+      MPI_Alltoallv(&edges[0], &sendcounts[0], &sdispls[0], NODE_IDX_MPI_T,
+                    &recvbuf[0], &recvcounts[0], &rdispls[0], NODE_IDX_MPI_T,
+                    all_comm);
       edges.clear();
 
-      if (total_recv_edges.size() > 0) 
+      if (recvbuf.size() > 0) 
         {
           size_t offset = 0;
           ofstream outfile;
           stringstream outfilename;
           outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
           outfile.open(outfilename.str());
-          while (offset < total_recv_edges.size()-1)
+          while (offset < recvbuf.size()-1)
             {
               NODE_IDX_T dst; size_t dst_len;
-              dst = total_recv_edges[offset++];
-              dst_len = total_recv_edges[offset++];
+              dst = recvbuf[offset++];
+              dst_len = recvbuf[offset++];
               for (size_t k = 0; k < dst_len; k++)
                 {
-                  NODE_IDX_T src = total_recv_edges[offset++];
+                  NODE_IDX_T src = recvbuf[offset++];
                   outfile << "    " << src << " " << dst << std::endl;
                 }
             }
           outfile.close();
         }
 
-      total_recv_edges.clear();
+      recvbuf.clear();
     }
   
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(all_comm);
   if (rank < io_size)
     {
       MPI_Comm_free(&io_comm);
     }
+  MPI_Comm_free(&all_comm);
   
   MPI_Finalize();
   return 0;

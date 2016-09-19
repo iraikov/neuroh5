@@ -16,6 +16,7 @@ inline void DEBUG(First && first, Rest && ...rest)
     {
       std::cerr << std::forward<First>(first);
       DEBUG(std::forward<Rest>(rest)...);
+      std::cerr << std::flush;
     }
 }
 #endif
