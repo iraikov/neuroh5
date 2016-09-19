@@ -4,6 +4,7 @@
 
 #include "dbs_graph_reader.hh"
 #include "population_reader.hh"
+#include "edge_reader.hh"
 
 #include "hdf5.h"
 
@@ -56,7 +57,6 @@ void print_usage_full(char** argv)
 
 int append_edge_list
 (
- const NODE_IDX_T&         base,
  const NODE_IDX_T&         dst_start,
  const NODE_IDX_T&         src_start,
  const vector<DST_BLK_PTR_T>&  dst_blk_ptr,
@@ -116,13 +116,14 @@ int main(int argc, char** argv)
   // parse arguments
   int optflag_summary = 0;
   bool opt_summary = false;
+  bool opt_attrs = false;
   static struct option long_options[] = {
     {"summary",    no_argument, &optflag_summary,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "sh",
+  while ((c = getopt_long (argc, argv, "ash",
 			   long_options, &option_index)) != -1)
     {
       switch (c)
@@ -138,6 +139,9 @@ int main(int argc, char** argv)
           break;
         case 's':
           opt_summary = true;
+          break;
+        case 'a':
+          opt_attrs = true;
           break;
         default:
           throw_err("Input argument format error");
@@ -164,31 +168,119 @@ int main(int argc, char** argv)
 
   vector<string> prj_names;
   assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
-      
-  vector<NODE_IDX_T> edge_list;
 
+  vector<NODE_IDX_T> edge_list;
+ 
   size_t total_num_edges = 0, local_num_edges = 0;
   
   // read the edges
   for (size_t i = 0; i < prj_names.size(); i++)
     {
-      NODE_IDX_T base, dst_start, src_start;
+      size_t local_prj_num_edges = 0, total_prj_num_edges = 0;
+      DST_BLK_PTR_T block_base;
+      DST_PTR_T edge_base, edge_count;
+      NODE_IDX_T dst_start, src_start;
       vector<DST_BLK_PTR_T> dst_blk_ptr;
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
-      size_t local_prj_num_edges = 0, total_prj_num_edges = 0;
+      vector<string> edge_attr_names;
+      vector<float> longitudinal_distance;
+      vector<float> transverse_distance;
+      vector<float> distance;
+      vector<float> synaptic_weight;
+      vector<uint16_t> segment_index;
+      vector<uint16_t> segment_point_index;
+      vector<uint8_t> layer;
       
       printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
       assert(read_dbs_projection(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), 
-                                 pop_vector, total_prj_num_edges, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                 pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
+                                 dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
       // validate the edges
-      assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+      assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
       
+      if (opt_attrs)
+        {
+          edge_count = src_idx.size();
+          assert(read_edge_attribute_names(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_attr_names) >= 0);
+          for (size_t j = 0; j < edge_attr_names.size(); j++)
+            {
+              if (edge_attr_names[j].compare(string("Longitudinal Distance")) == 0)
+                {
+                  assert(read_edge_attributes<float>(MPI_COMM_WORLD,
+                                                     input_file_name,
+                                                     prj_names[i].c_str(),
+                                                     "Longitudinal Distance",
+                                                     edge_base, edge_count,
+                                                     LONG_DISTANCE_H5_NATIVE_T,
+                                                     longitudinal_distance) >= 0);
+                  continue;
+                }
+              if (edge_attr_names[j].compare(string("Transverse Distance")) == 0)
+                {
+                  assert(read_edge_attributes<float>(MPI_COMM_WORLD,
+                                                     input_file_name,
+                                                     prj_names[i].c_str(),
+                                                     "Transverse Distance",
+                                                     edge_base, edge_count,
+                                                     TRANS_DISTANCE_H5_NATIVE_T,
+                                                     transverse_distance)  >= 0);
+                  continue;
+                }
+              if (edge_attr_names[j].compare(string("Distance")) == 0)
+                {
+                  assert(read_edge_attributes<float>(MPI_COMM_WORLD,
+                                                     input_file_name,
+                                                     prj_names[i].c_str(),
+                                                     "Distance",
+                                                     edge_base, edge_count,
+                                                     DISTANCE_H5_NATIVE_T,
+                                                     distance)  >= 0);
+                  continue;
+                }
+              if (edge_attr_names[j].compare(string("Segment Index")) == 0)
+                {
+                  assert(read_edge_attributes<uint16_t>(MPI_COMM_WORLD,
+                                                        input_file_name,
+                                                        prj_names[i].c_str(),
+                                                        "Segment Index",
+                                                        edge_base, edge_count,
+                                                        SEGMENT_INDEX_H5_NATIVE_T,
+                                                        segment_index) >= 0);
+                  continue;
+                }
+              if (edge_attr_names[j].compare(string("Segment Point Index")) == 0)
+                {
+                  assert(read_edge_attributes<uint16_t>(MPI_COMM_WORLD,
+                                                        input_file_name,
+                                                        prj_names[i].c_str(),
+                                                        "Segment Point Index",
+                                                        edge_base, edge_count,
+                                                        SEGMENT_POINT_INDEX_H5_NATIVE_T,
+                                                        segment_point_index) >= 0);
+                  continue;
+                }
+              if (edge_attr_names[j].compare(string("Layer")) == 0)
+                {
+                  assert(read_edge_attributes<uint8_t>(MPI_COMM_WORLD,
+                                                       input_file_name,
+                                                       prj_names[i].c_str(),
+                                                       "Layer",
+                                                       edge_base, edge_count,
+                                                       LAYER_H5_NATIVE_T,
+                                                       layer) >= 0);
+                  continue;
+                }
+              
+            }
+        }
+
       // append to the partitioner input list
-      assert(append_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, local_prj_num_edges, edge_list) >= 0);
+      assert(append_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, local_prj_num_edges, edge_list) >= 0);
+
 
       // ensure that all edges in the projection have been read and appended to edge_list
       assert(local_prj_num_edges == src_idx.size());
@@ -197,6 +289,7 @@ int main(int argc, char** argv)
 
       total_num_edges = total_num_edges + total_prj_num_edges;
       local_num_edges = local_num_edges + local_prj_num_edges;
+
     }
 
   assert(local_num_edges == edge_list.size()/2);

@@ -8,9 +8,11 @@
 
 #include "hdf5.h"
 
+#include <getopt.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -22,6 +24,32 @@
 
 using namespace std;
 
+void throw_err(char const* err_message)
+{
+  fprintf(stderr, "Error: %s\n", err_message);
+  MPI_Abort(MPI_COMM_WORLD, 1);
+}
+
+void throw_err(char const* err_message, int32_t task)
+{
+  fprintf(stderr, "Task %d Error: %s\n", task, err_message);
+  MPI_Abort(MPI_COMM_WORLD, 1);
+}
+
+void throw_err(char const* err_message, int32_t task, int32_t thread)
+{
+  fprintf(stderr, "Task %d Thread %d Error: %s\n", task, thread, err_message);
+  MPI_Abort(MPI_COMM_WORLD, 1);
+}
+
+void print_usage_full(char** argv)
+{
+  printf("Usage: %s  <FILE> <N> <IOSIZE> [<RANKFILE>]\n\n", argv[0]);
+  printf("Options:\n");
+  printf("\t-s:\n");
+  printf("\t\tPrint only edge summary\n");
+}
+
 /*****************************************************************************
  * Append src/dst node pairs to a list of edges
  *****************************************************************************/
@@ -29,7 +57,6 @@ using namespace std;
 
 int append_edge_map
 (
- const NODE_IDX_T&         base,
  const NODE_IDX_T&         dst_start,
  const NODE_IDX_T&         src_start,
  const vector<DST_BLK_PTR_T>&  dst_blk_ptr,
@@ -82,7 +109,7 @@ int append_edge_map
 
 int main(int argc, char** argv)
 {
-  char *input_file_name;
+  char *input_file_name, *rank_file_name;
   // MPI Communicator for I/O ranks
   MPI_Comm io_comm, all_comm;
   // MPI group color value used for I/O ranks
@@ -104,16 +131,80 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
 
   // parse arguments
+  int optflag_binary = 0;
+  int optflag_rankfile = 0;
+  int optflag_iosize = 0;
+  int optflag_nnodes = 0;
+  bool opt_binary = false,
+    opt_rankfile = false,
+    opt_iosize = false,
+    opt_nnodes = false;
 
-  if (argc < 4) 
+  static struct option long_options[] = {
+    {"binary",    no_argument, &optflag_binary,  1 },
+    {"rankfile",  required_argument, &optflag_rankfile,  1 },
+    {"iosize",    required_argument, &optflag_iosize,  1 },
+    {"nnodes",    required_argument, &optflag_nnodes,  1 },
+    {0,         0,                 0,  0 }
+  };
+  char c;
+  int option_index = 0;
+  while ((c = getopt_long (argc, argv, "br:i:n:h",
+			   long_options, &option_index)) != -1)
     {
-      std::cout << "Usage: scatter <FILE> <N> <IOSIZE> [<RANKFILE>]" << std::endl;
+      switch (c)
+        {
+        case 0:
+          if (optflag_binary == 1) {
+            opt_binary = true;
+          }
+          if (optflag_rankfile == 1) {
+            opt_rankfile = true;
+            rank_file_name = strdup(optarg);
+          }
+          if (optflag_iosize == 1) {
+            opt_iosize = true;
+            io_size = (size_t)std::stoi(string(optarg));;
+          }
+          if (optflag_nnodes == 1) {
+            opt_nnodes = true;
+            n_nodes = (size_t)std::stoi(string(optarg));
+          }
+          break;
+        case 'h':
+          print_usage_full(argv);
+          exit(0);
+          break;
+        case 'b':
+          opt_binary = true;
+          break;
+        case 'r':
+          opt_rankfile = true;
+          rank_file_name = strdup(optarg);
+          break;
+        case 'n':
+          opt_nnodes = true;
+          n_nodes = (size_t)std::stoi(string(optarg));
+          break;
+        case 'i':
+          opt_iosize = true;
+          io_size = (size_t)std::stoi(string(optarg));
+          break;
+        default:
+          throw_err("Input argument format error");
+        }
+    }
+
+  if ((optind < argc) && opt_nnodes && opt_iosize)
+    {
+      input_file_name = argv[optind];
+    }
+  else
+    {
+      print_usage_full(argv);
       exit(1);
     }
 
-  input_file_name = argv[1];
-  n_nodes = (size_t)std::stoi(string(argv[2]));
-  io_size = std::stoi(string(argv[3]));
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
@@ -125,7 +216,7 @@ int main(int argc, char** argv)
       
       // Determine which nodes are assigned to which compute ranks
       node_rank_vector.resize(n_nodes);
-      if (argc < 5)
+      if (opt_rankfile)
         {
           // round-robin node to rank assignment from file
           for (size_t i = 0; i < n_nodes; i++)
@@ -135,7 +226,7 @@ int main(int argc, char** argv)
         }
       else
         {
-          ifstream infile(argv[4]);
+          ifstream infile(rank_file_name);
           string line;
           size_t i = 0;
           // reads node to rank assignment from file
@@ -181,7 +272,9 @@ int main(int argc, char** argv)
 
       if (rank < io_size)
         {
-          NODE_IDX_T base, dst_start, src_start;
+          DST_BLK_PTR_T block_base;
+          DST_PTR_T edge_base;
+          NODE_IDX_T dst_start, src_start;
           vector<DST_BLK_PTR_T> dst_blk_ptr;
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
@@ -189,14 +282,15 @@ int main(int argc, char** argv)
           size_t num_edges = 0, total_prj_num_edges = 0;
 
           assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
-                                     pop_vector, total_prj_num_edges, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                     pop_vector, dst_start, src_start, total_prj_num_edges,
+                                     block_base, edge_base, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
           // validate the edges
-          assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+          assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                     pop_ranges, pop_pairs) == true);
           
           // append to the edge map
-          assert(append_edge_map(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+          assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                  node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
       
           
@@ -254,28 +348,57 @@ int main(int argc, char** argv)
                     all_comm);
       edges.clear();
 
-      if (recvbuf.size() > 0) 
-        {
-          size_t offset = 0;
-          ofstream outfile;
-          stringstream outfilename;
-          outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
-          outfile.open(outfilename.str());
-          while (offset < recvbuf.size()-1)
-            {
-              NODE_IDX_T dst; size_t dst_len;
-              dst = recvbuf[offset++];
-              dst_len = recvbuf[offset++];
-              for (size_t k = 0; k < dst_len; k++)
-                {
-                  NODE_IDX_T src = recvbuf[offset++];
-                  outfile << "    " << src << " " << dst << std::endl;
-                }
-            }
-          outfile.close();
-        }
 
-      recvbuf.clear();
+      if (opt_binary)
+        {
+          if (recvbuf.size() > 0) 
+            {
+              size_t offset = 0;
+              ofstream outfile;
+              stringstream outfilename;
+              outfilename << string(input_file_name) << "." << i << "." << rank << ".edges.bin";
+              outfile.open(outfilename.str(), ios::binary);
+              while (offset < recvbuf.size()-1)
+                {
+                  NODE_IDX_T dst; size_t dst_len;
+                  dst = recvbuf[offset++];
+                  dst_len = recvbuf[offset++];
+                  for (size_t k = 0; k < dst_len; k++)
+                    {
+                      NODE_IDX_T src = recvbuf[offset++];
+                      outfile << src << dst;
+                    }
+                }
+              outfile.close();
+            }
+          
+          recvbuf.clear();
+        }
+      else
+        {
+          if (recvbuf.size() > 0) 
+            {
+              size_t offset = 0;
+              ofstream outfile;
+              stringstream outfilename;
+              outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
+              outfile.open(outfilename.str());
+              while (offset < recvbuf.size()-1)
+                {
+                  NODE_IDX_T dst; size_t dst_len;
+                  dst = recvbuf[offset++];
+                  dst_len = recvbuf[offset++];
+                  for (size_t k = 0; k < dst_len; k++)
+                    {
+                      NODE_IDX_T src = recvbuf[offset++];
+                      outfile << "    " << src << " " << dst << std::endl;
+                    }
+                }
+              outfile.close();
+            }
+          
+          recvbuf.clear();
+        }
     }
   
   MPI_Barrier(all_comm);
