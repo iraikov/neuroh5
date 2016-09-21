@@ -75,5 +75,15 @@ typedef std::map<rank_t, edge_map_t> rank_edge_map_t;
 
 typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
 
+typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
+                    std::vector<NODE_IDX_T>, // destination vector
+                    std::vector<float>,  // longitudinal distance,
+                    std::vector<float>, // transverse distance,
+                    std::vector<float>, // distance
+                    std::vector<float>, // synaptic weight,
+                    std::vector<uint16_t>, // segment index,
+                    std::vector<uint16_t>, // segment point index,
+                    std::vector<uint8_t> // layer
+                   > prj_tuple_t;
 
 #endif

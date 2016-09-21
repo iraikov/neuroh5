@@ -51,11 +51,14 @@ void print_usage_full(char** argv)
   printf("\t\tPrint only edge summary\n");
 }
 
+
+
+
 /*****************************************************************************
- * Append src/dst node pairs to a list of edges
+ * Append src/dst node indices to a vector of edges
  *****************************************************************************/
 
-int append_edge_list
+int append_prj_list
 (
  const NODE_IDX_T&         dst_start,
  const NODE_IDX_T&         src_start,
@@ -63,12 +66,21 @@ int append_edge_list
  const vector<NODE_IDX_T>& dst_idx,
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
+ const vector<float>&      longitudinal_distance,
+ const vector<float>&      transverse_distance,
+ const vector<float>&      distance,
+ const vector<float>&      synaptic_weight,
+ const vector<uint16_t>&   segment_index,
+ const vector<uint16_t>&   segment_point_index,
+ const vector<uint8_t>&    layer,
  size_t&                   num_edges,
- vector<NODE_IDX_T>&       edge_list
+ vector<prj_tuple_t>&      prj_list
  )
 {
   int ierr = 0; size_t dst_ptr_size;
   num_edges = 0;
+  vector<NODE_IDX_T> src_vec, dst_vec;
+  
   
   if (dst_blk_ptr.size() > 0) 
     {
@@ -86,8 +98,8 @@ int append_edge_list
                   for (size_t j = low; j < high; ++j)
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
-                      edge_list.push_back(src);
-                      edge_list.push_back(dst);
+                      src_vec.push_back(src);
+                      dst_vec.push_back(dst);
 		      num_edges++;
                     }
                 }
@@ -95,8 +107,74 @@ int append_edge_list
         }
     }
 
+  prj_list.push_back(make_tuple(src_vec, dst_vec,
+                                longitudinal_distance,
+                                transverse_distance,
+                                distance,
+                                synaptic_weight,
+                                segment_index,
+                                segment_point_index,
+                                layer));
+
   return ierr;
 }
+
+
+/*****************************************************************************
+ * Prints out projection content
+ *****************************************************************************/
+
+void output_projection(string outfilename,
+                       const prj_tuple_t& projection)
+{
+  DEBUG("output_projection: outfilename is ",outfilename,"\n");
+  
+  const vector<NODE_IDX_T>& src_list = get<0>(projection);
+  const vector<NODE_IDX_T>& dst_list = get<1>(projection);
+  
+  const vector<float>&      longitudinal_distance = get<2>(projection);
+  const vector<float>&      transverse_distance   = get<3>(projection);
+  const vector<float>&      distance              = get<4>(projection);
+  const vector<float>&      synaptic_weight       = get<5>(projection);
+  const vector<uint16_t>&   segment_index         = get<6>(projection);
+  const vector<uint16_t>&   segment_point_index   = get<7>(projection);
+  const vector<uint8_t>&    layer                 = get<8>(projection);
+
+  bool has_longitudinal_distance = longitudinal_distance.size() > 0;
+  bool has_transverse_distance   = transverse_distance.size() > 0;
+  bool has_distance              = distance.size() > 0;
+  bool has_synaptic_weight       = synaptic_weight.size() > 0;
+  bool has_segment_index         = segment_index.size() > 0;
+  bool has_segment_point_index   = segment_point_index.size() > 0;
+  bool has_layer                 = layer.size() > 0;
+
+  ofstream outfile;
+  outfile.open(outfilename);
+
+  for (size_t i = 0; i < src_list.size(); i++)
+    {
+      outfile << i << " " << src_list[i] << " " << dst_list[i];
+      if (has_longitudinal_distance)
+        outfile << " " << longitudinal_distance[i];
+      if (has_transverse_distance)
+        outfile << " " << transverse_distance[i];
+      if (has_distance)
+        outfile << " " << distance[i];
+      if (has_synaptic_weight)
+        outfile << " " << synaptic_weight[i];
+      if (has_segment_index)
+        outfile << " " << segment_index[i];
+      if (has_segment_point_index)
+        outfile << " " << segment_point_index[i];
+      if (has_layer)
+        outfile << " " << layer[i];
+      outfile << std::endl;
+    }
+
+  outfile.close();
+
+}
+
 
 
 /*****************************************************************************
@@ -169,7 +247,7 @@ int main(int argc, char** argv)
   vector<string> prj_names;
   assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
-  vector<NODE_IDX_T> edge_list;
+  vector<prj_tuple_t> prj_list;
  
   size_t total_num_edges = 0, local_num_edges = 0;
   
@@ -278,8 +356,11 @@ int main(int argc, char** argv)
             }
         }
 
-      // append to the partitioner input list
-      assert(append_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, local_prj_num_edges, edge_list) >= 0);
+      // append to the vectors representing a projection (sources, destinations, edge attributes)
+      assert(append_prj_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, 
+                             longitudinal_distance, transverse_distance, distance,
+                             synaptic_weight, segment_index, segment_point_index, layer,
+                             local_prj_num_edges, prj_list) >= 0);
 
 
       // ensure that all edges in the projection have been read and appended to edge_list
@@ -292,8 +373,7 @@ int main(int argc, char** argv)
 
     }
 
-  assert(local_num_edges == edge_list.size()/2);
-
+  printf("Task %d has read a total of %lu projections\n", rank,  prj_list.size());
   printf("Task %d has read a total of %lu edges\n", rank,  local_num_edges);
   printf("Task %d: total number of edges is %lu\n", rank,  total_num_edges);
   
@@ -304,23 +384,18 @@ int main(int argc, char** argv)
     {
       assert(sum_local_num_edges == total_num_edges);
     }
+
   
   if (!opt_summary)
     {
-      if (edge_list.size() > 0) 
+      if (prj_list.size() > 0) 
         {
-          ofstream outfile;
-          stringstream outfilename;
-          assert(edge_list.size()%2 == 0);
-          
-          outfilename << string(input_file_name) << "." << rank << ".edges";
-          outfile.open(outfilename.str());
-          
-          for (size_t i = 0, k = 0; i < edge_list.size()-1; i+=2, k++)
+          for (size_t i = 0; i < prj_list.size(); i++)
             {
-              outfile << k << " " << edge_list[i] << " " << edge_list[i+1] << std::endl;
+              stringstream outfilename;
+              outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
+              output_projection(outfilename.str(), prj_list[i]);
             }
-          outfile.close();
         }
     }
 

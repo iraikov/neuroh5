@@ -180,7 +180,7 @@ herr_t read_edge_attribute_names
 
   // allocate buffer
   edge_attr_name_lengths.resize(num_edge_attrs);
-  edge_attr_name_lengths.resize(num_edge_attrs);
+  edge_attr_vector.resize(num_edge_attrs);
 
   // MPI rank 0 reads and broadcasts the edge attribute names
   if (rank == 0)
@@ -192,9 +192,11 @@ herr_t read_edge_attribute_names
           assert(H5Gget_objname_by_idx(grp, i, edge_attr_name, (size_t)MAX_EDGE_ATTR_NAME )>0);
           DEBUG("Edge attribute ",i," is named ",edge_attr_name,"\n"); 
           len = strlen(edge_attr_name);
+          DEBUG("Edge attribute ",i," has length ",len,"\n"); 
           edge_attr_vector[i] = string(edge_attr_name);
           edge_attr_name_lengths[i] = len;
           edge_attr_names_total_length =  edge_attr_names_total_length + len;
+          DEBUG("Total length of edge attributes is ",edge_attr_names_total_length,"\n"); 
         }
 
       assert(H5Gclose(grp) >= 0);
