@@ -178,6 +178,103 @@ void output_projection(string outfilename,
 
 
 /*****************************************************************************
+ * Read edge attributes
+ *****************************************************************************/
+
+int read_all_edge_attributes
+(
+ MPI_Comm comm,
+ const char *input_file_name,
+ const char *prj_name,
+ const DST_PTR_T edge_base,
+ const DST_PTR_T edge_count,
+ const vector<string>&      edge_attr_names,
+ vector<float>&      longitudinal_distance,
+ vector<float>&      transverse_distance,
+ vector<float>&      distance,
+ vector<float>&      synaptic_weight,
+ vector<uint16_t>&   segment_index,
+ vector<uint16_t>&   segment_point_index,
+ vector<uint8_t>&    layer
+ )
+{
+  int ierr = 0; size_t dst_ptr_size;
+  vector<NODE_IDX_T> src_vec, dst_vec;
+
+  for (size_t j = 0; j < edge_attr_names.size(); j++)
+    {
+      if (edge_attr_names[j].compare(string("Longitudinal Distance")) == 0)
+        {
+          assert(read_edge_attributes<float>(comm,
+                                             input_file_name,
+                                             prj_name,
+                                             "Longitudinal Distance",
+                                             edge_base, edge_count,
+                                             LONG_DISTANCE_H5_NATIVE_T,
+                                             longitudinal_distance) >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Transverse Distance")) == 0)
+        {
+          assert(read_edge_attributes<float>(comm,
+                                             input_file_name,
+                                             prj_name,
+                                             "Transverse Distance",
+                                             edge_base, edge_count,
+                                             TRANS_DISTANCE_H5_NATIVE_T,
+                                             transverse_distance)  >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Distance")) == 0)
+        {
+          assert(read_edge_attributes<float>(comm,
+                                             input_file_name,
+                                             prj_name,
+                                             "Distance",
+                                             edge_base, edge_count,
+                                             DISTANCE_H5_NATIVE_T,
+                                             distance)  >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Segment Index")) == 0)
+        {
+          assert(read_edge_attributes<uint16_t>(comm,
+                                                input_file_name,
+                                                prj_name,
+                                                "Segment Index",
+                                                edge_base, edge_count,
+                                                SEGMENT_INDEX_H5_NATIVE_T,
+                                                segment_index) >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Segment Point Index")) == 0)
+        {
+          assert(read_edge_attributes<uint16_t>(comm,
+                                                input_file_name,
+                                                prj_name,
+                                                "Segment Point Index",
+                                                edge_base, edge_count,
+                                                SEGMENT_POINT_INDEX_H5_NATIVE_T,
+                                                segment_point_index) >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Layer")) == 0)
+        {
+          assert(read_edge_attributes<uint8_t>(comm,
+                                               input_file_name,
+                                               prj_name,
+                                               "Layer",
+                                               edge_base, edge_count,
+                                               LAYER_H5_NATIVE_T,
+                                               layer) >= 0);
+          continue;
+        }
+
+    }
+  return ierr;
+}
+
+/*****************************************************************************
  * Main driver
  *****************************************************************************/
 
@@ -284,76 +381,10 @@ int main(int argc, char** argv)
         {
           edge_count = src_idx.size();
           assert(read_edge_attribute_names(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_attr_names) >= 0);
-          for (size_t j = 0; j < edge_attr_names.size(); j++)
-            {
-              if (edge_attr_names[j].compare(string("Longitudinal Distance")) == 0)
-                {
-                  assert(read_edge_attributes<float>(MPI_COMM_WORLD,
-                                                     input_file_name,
-                                                     prj_names[i].c_str(),
-                                                     "Longitudinal Distance",
-                                                     edge_base, edge_count,
-                                                     LONG_DISTANCE_H5_NATIVE_T,
-                                                     longitudinal_distance) >= 0);
-                  continue;
-                }
-              if (edge_attr_names[j].compare(string("Transverse Distance")) == 0)
-                {
-                  assert(read_edge_attributes<float>(MPI_COMM_WORLD,
-                                                     input_file_name,
-                                                     prj_names[i].c_str(),
-                                                     "Transverse Distance",
-                                                     edge_base, edge_count,
-                                                     TRANS_DISTANCE_H5_NATIVE_T,
-                                                     transverse_distance)  >= 0);
-                  continue;
-                }
-              if (edge_attr_names[j].compare(string("Distance")) == 0)
-                {
-                  assert(read_edge_attributes<float>(MPI_COMM_WORLD,
-                                                     input_file_name,
-                                                     prj_names[i].c_str(),
-                                                     "Distance",
-                                                     edge_base, edge_count,
-                                                     DISTANCE_H5_NATIVE_T,
-                                                     distance)  >= 0);
-                  continue;
-                }
-              if (edge_attr_names[j].compare(string("Segment Index")) == 0)
-                {
-                  assert(read_edge_attributes<uint16_t>(MPI_COMM_WORLD,
-                                                        input_file_name,
-                                                        prj_names[i].c_str(),
-                                                        "Segment Index",
-                                                        edge_base, edge_count,
-                                                        SEGMENT_INDEX_H5_NATIVE_T,
-                                                        segment_index) >= 0);
-                  continue;
-                }
-              if (edge_attr_names[j].compare(string("Segment Point Index")) == 0)
-                {
-                  assert(read_edge_attributes<uint16_t>(MPI_COMM_WORLD,
-                                                        input_file_name,
-                                                        prj_names[i].c_str(),
-                                                        "Segment Point Index",
-                                                        edge_base, edge_count,
-                                                        SEGMENT_POINT_INDEX_H5_NATIVE_T,
-                                                        segment_point_index) >= 0);
-                  continue;
-                }
-              if (edge_attr_names[j].compare(string("Layer")) == 0)
-                {
-                  assert(read_edge_attributes<uint8_t>(MPI_COMM_WORLD,
-                                                       input_file_name,
-                                                       prj_names[i].c_str(),
-                                                       "Layer",
-                                                       edge_base, edge_count,
-                                                       LAYER_H5_NATIVE_T,
-                                                       layer) >= 0);
-                  continue;
-                }
-              
-            }
+
+          assert(read_all_edge_attributes(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
+                                          edge_attr_names, longitudinal_distance, transverse_distance, distance,
+                                          synaptic_weight, segment_index, segment_point_index, layer) >= 0);
         }
 
       // append to the vectors representing a projection (sources, destinations, edge attributes)

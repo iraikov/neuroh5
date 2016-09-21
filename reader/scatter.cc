@@ -5,6 +5,7 @@
 
 #include "dbs_graph_reader.hh"
 #include "population_reader.hh"
+#include "edge_reader.hh"
 
 #include "hdf5.h"
 
@@ -63,6 +64,13 @@ int append_edge_map
  const vector<NODE_IDX_T>& dst_idx,
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
+ const vector<float>&      longitudinal_distance,
+ const vector<float>&      transverse_distance,
+ const vector<float>&      distance,
+ const vector<float>&      synaptic_weight,
+ const vector<uint16_t>&   segment_index,
+ const vector<uint16_t>&   segment_point_index,
+ const vector<uint8_t>&    layer,
  const vector<rank_t>& node_rank_vector,
  size_t& num_edges,
  rank_edge_map_t & rank_edge_map
@@ -72,6 +80,14 @@ int append_edge_map
   
   if (dst_blk_ptr.size() > 0) 
     {
+      bool has_longitudinal_distance = longitudinal_distance.size() > 0;
+      bool has_transverse_distance   = transverse_distance.size() > 0;
+      bool has_distance              = distance.size() > 0;
+      bool has_synaptic_weight       = synaptic_weight.size() > 0;
+      bool has_segment_index         = segment_index.size() > 0;
+      bool has_segment_point_index   = segment_point_index.size() > 0;
+      bool has_layer                 = layer.size() > 0;
+
       dst_ptr_size = dst_ptr.size();
       for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
         {
@@ -85,13 +101,37 @@ int append_edge_map
                   // determine the compute rank that the dst node is assigned to
                   rank_t dstrank = node_rank_vector[dst];
                   pair<rank_edge_map_iter_t,bool> r = rank_edge_map.insert(make_pair(dstrank, edge_map_t()));
-                  pair<edge_map_iter_t,bool> n = rank_edge_map[dstrank].insert(make_pair(dst, vector<NODE_IDX_T>()));
-                  vector<NODE_IDX_T> &v = rank_edge_map[dstrank][dst];
+                  pair<edge_map_iter_t,bool> n = rank_edge_map[dstrank].insert(make_pair(dst, edge_tuple_t()));
+                  edge_tuple_t et = rank_edge_map[dstrank][dst];
+
+                  vector<NODE_IDX_T> &my_srcs = get<0>(et);
+                  vector<float>&      my_longitudinal_distance = get<1>(et);
+                  vector<float>&      my_transverse_distance   = get<2>(et);
+                  vector<float>&      my_distance              = get<3>(et);
+                  vector<float>&      my_synaptic_weight       = get<4>(et);
+                  vector<uint16_t>&   my_segment_index         = get<5>(et);
+                  vector<uint16_t>&   my_segment_point_index   = get<6>(et);
+                  vector<uint8_t>&    my_layer                 = get<7>(et);
+                  
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   for (size_t j = low; j < high; ++j)
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
-                      v.push_back (src);
+                      my_srcs.push_back (src);
+                      if (has_longitudinal_distance)
+                        my_longitudinal_distance.push_back(longitudinal_distance[j]);
+                      if (has_transverse_distance)
+                        my_transverse_distance.push_back(transverse_distance[j]);
+                      if (has_distance)
+                        my_distance.push_back(distance[j]);
+                      if (has_synaptic_weight)
+                        my_synaptic_weight.push_back(synaptic_weight[j]);
+                      if (has_segment_index)
+                        my_segment_index.push_back(segment_index[j]);
+                      if (has_segment_point_index)
+                        my_segment_point_index.push_back(segment_point_index[j]);
+                      if (has_layer)
+                        my_layer.push_back(layer[j]);
                       num_edges++;
                     }
                 }
@@ -99,6 +139,103 @@ int append_edge_map
         }
     }
 
+  return ierr;
+}
+
+/*****************************************************************************
+ * Read edge attributes
+ *****************************************************************************/
+
+int read_all_edge_attributes
+(
+ MPI_Comm comm,
+ const char *input_file_name,
+ const char *prj_name,
+ const DST_PTR_T edge_base,
+ const DST_PTR_T edge_count,
+ const vector<string>&      edge_attr_names,
+ vector<float>&      longitudinal_distance,
+ vector<float>&      transverse_distance,
+ vector<float>&      distance,
+ vector<float>&      synaptic_weight,
+ vector<uint16_t>&   segment_index,
+ vector<uint16_t>&   segment_point_index,
+ vector<uint8_t>&    layer
+ )
+{
+  int ierr = 0; size_t dst_ptr_size;
+  vector<NODE_IDX_T> src_vec, dst_vec;
+
+  for (size_t j = 0; j < edge_attr_names.size(); j++)
+    {
+      if (edge_attr_names[j].compare(string("Longitudinal Distance")) == 0)
+        {
+          assert(read_edge_attributes<float>(comm,
+                                             input_file_name,
+                                             prj_name,
+                                             "Longitudinal Distance",
+                                             edge_base, edge_count,
+                                             LONG_DISTANCE_H5_NATIVE_T,
+                                             longitudinal_distance) >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Transverse Distance")) == 0)
+        {
+          assert(read_edge_attributes<float>(comm,
+                                             input_file_name,
+                                             prj_name,
+                                             "Transverse Distance",
+                                             edge_base, edge_count,
+                                             TRANS_DISTANCE_H5_NATIVE_T,
+                                             transverse_distance)  >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Distance")) == 0)
+        {
+          assert(read_edge_attributes<float>(comm,
+                                             input_file_name,
+                                             prj_name,
+                                             "Distance",
+                                             edge_base, edge_count,
+                                             DISTANCE_H5_NATIVE_T,
+                                             distance)  >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Segment Index")) == 0)
+        {
+          assert(read_edge_attributes<uint16_t>(comm,
+                                                input_file_name,
+                                                prj_name,
+                                                "Segment Index",
+                                                edge_base, edge_count,
+                                                SEGMENT_INDEX_H5_NATIVE_T,
+                                                segment_index) >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Segment Point Index")) == 0)
+        {
+          assert(read_edge_attributes<uint16_t>(comm,
+                                                input_file_name,
+                                                prj_name,
+                                                "Segment Point Index",
+                                                edge_base, edge_count,
+                                                SEGMENT_POINT_INDEX_H5_NATIVE_T,
+                                                segment_point_index) >= 0);
+          continue;
+        }
+      if (edge_attr_names[j].compare(string("Layer")) == 0)
+        {
+          assert(read_edge_attributes<uint8_t>(comm,
+                                               input_file_name,
+                                               prj_name,
+                                               "Layer",
+                                               edge_base, edge_count,
+                                               LAYER_H5_NATIVE_T,
+                                               layer) >= 0);
+          continue;
+        }
+
+    }
   return ierr;
 }
 
@@ -138,7 +275,8 @@ int main(int argc, char** argv)
   bool opt_binary = false,
     opt_rankfile = false,
     opt_iosize = false,
-    opt_nnodes = false;
+    opt_nnodes = false,
+    opt_attrs = false;
 
   static struct option long_options[] = {
     {"binary",    no_argument, &optflag_binary,  1 },
@@ -175,6 +313,9 @@ int main(int argc, char** argv)
           print_usage_full(argv);
           exit(0);
           break;
+        case 'a':
+          opt_attrs = true;
+          break;
         case 'b':
           opt_binary = true;
           break;
@@ -195,7 +336,7 @@ int main(int argc, char** argv)
         }
     }
 
-  if ((optind < argc) && opt_nnodes && opt_iosize)
+  if ((optind < argc) && (opt_nnodes || opt_rankfile) && opt_iosize)
     {
       input_file_name = argv[optind];
     }
@@ -273,13 +414,21 @@ int main(int argc, char** argv)
       if (rank < io_size)
         {
           DST_BLK_PTR_T block_base;
-          DST_PTR_T edge_base;
+          DST_PTR_T edge_base, edge_count;
           NODE_IDX_T dst_start, src_start;
           vector<DST_BLK_PTR_T> dst_blk_ptr;
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
           size_t num_edges = 0, total_prj_num_edges = 0;
+          vector<string> edge_attr_names;
+          vector<float> longitudinal_distance;
+          vector<float> transverse_distance;
+          vector<float> distance;
+          vector<float> synaptic_weight;
+          vector<uint16_t> segment_index;
+          vector<uint16_t> segment_point_index;
+          vector<uint8_t> layer;
 
           assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
                                      pop_vector, dst_start, src_start, total_prj_num_edges,
@@ -288,9 +437,22 @@ int main(int argc, char** argv)
           // validate the edges
           assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                     pop_ranges, pop_pairs) == true);
+
+          if (opt_attrs)
+            {
+              edge_count = src_idx.size();
+              assert(read_edge_attribute_names(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_attr_names) >= 0);
+              
+              assert(read_all_edge_attributes(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
+                                              edge_attr_names, longitudinal_distance, transverse_distance, distance,
+                                              synaptic_weight, segment_index, segment_point_index, layer) >= 0);
+            }
+
           
           // append to the edge map
           assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                 longitudinal_distance, transverse_distance, distance,
+                                 synaptic_weight, segment_index, segment_point_index, layer,
                                  node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
       
           
@@ -307,7 +469,7 @@ int main(int argc, char** argv)
                   for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
                     {
                       NODE_IDX_T dst = it2->first;
-                      vector<NODE_IDX_T> vect = it2->second;
+                      vector<NODE_IDX_T> vect = get<0>(it2->second);
                       edges.push_back(dst);
                       sendcounts[dst_rank]++;
                       edges.push_back(vect.size());

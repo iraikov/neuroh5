@@ -67,7 +67,17 @@ typedef pop_range_map_t::const_iterator pop_range_iter_t;
 
 typedef uint32_t rank_t;
 
-typedef std::map<NODE_IDX_T, std::vector<NODE_IDX_T> > edge_map_t;
+typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
+                    std::vector<float>,  // longitudinal distance,
+                    std::vector<float>, // transverse distance,
+                    std::vector<float>, // distance
+                    std::vector<float>, // synaptic weight,
+                    std::vector<uint16_t>, // segment index,
+                    std::vector<uint16_t>, // segment point index,
+                    std::vector<uint8_t> // layer
+                   > edge_tuple_t;
+
+typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
 
 typedef edge_map_t::const_iterator edge_map_iter_t;
 
