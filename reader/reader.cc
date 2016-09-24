@@ -198,7 +198,7 @@ int read_all_edge_attributes
  vector<uint8_t>&    layer
  )
 {
-  int ierr = 0; size_t dst_ptr_size;
+  int ierr = 0; 
   vector<NODE_IDX_T> src_vec, dst_vec;
 
   for (size_t j = 0; j < edge_attr_names.size(); j++)
