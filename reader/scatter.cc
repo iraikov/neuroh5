@@ -563,7 +563,7 @@ int main(int argc, char** argv)
       
       // Determine which nodes are assigned to which compute ranks
       node_rank_vector.resize(n_nodes);
-      if (opt_rankfile)
+      if (!opt_rankfile)
         {
           // round-robin node to rank assignment from file
           for (size_t i = 0; i < n_nodes; i++)
@@ -702,7 +702,8 @@ int main(int argc, char** argv)
             {
               uint32_t dst_rank;
               dst_rank = it1->first;
-              sdispls[dst_rank] = sendbuf.size();
+              sdispls[dst_rank] = sendpos;
+              printf("dst_rank = %u: size = %lu\n", dst_rank, it1->second.size());
               if (it1->second.size() > 0)
                 {
                   for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
@@ -737,6 +738,7 @@ int main(int argc, char** argv)
                                            sendbuf
                                            ) == 0);
                           
+                          printf("after pack_edge: dst_rank = %u sendsize = %d\n", dst_rank, sendsize);
                           sendcounts[dst_rank] += sendsize;
                         }
                     }
@@ -748,22 +750,23 @@ int main(int argc, char** argv)
                     
         }
 
-      if (rank == 0)
-        {
-          has_edge_attrs_length = has_edge_attrs.size();
-          assert(MPI_Bcast(&has_edge_attrs_length, 1, MPI_UINT32_T, 0, all_comm) >= 0);
-        }
+      has_edge_attrs_length = has_edge_attrs.size();
+      assert(MPI_Bcast(&has_edge_attrs_length, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+      printf("Rank %d: has_edge_attrs_length = %d\n", rank, has_edge_attrs_length);
       if (rank > 0)
         {
           has_edge_attrs.resize(has_edge_attrs_length);
         }
-      if (rank == 0)
-        {
-          assert(MPI_Bcast(&has_edge_attrs[0], has_edge_attrs_length, MPI_UINT8_T, 0, all_comm) >= 0);
-        }
+      assert(MPI_Bcast(&has_edge_attrs[0], has_edge_attrs_length, MPI_UINT8_T, 0, all_comm) >= 0);
 
+      assert(MPI_Barrier(all_comm) >= 0);
+      printf("Rank %d: before alltoall\n", rank);
       
-
+      for (int p = 0; p < size; ++p)
+        {
+          printf("Rank %d: sendcounts[%d] = %d\n", rank, p, sendcounts[p]);
+        }
+      
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
       //    and creates sendcounts and sdispls arrays
@@ -771,6 +774,7 @@ int main(int argc, char** argv)
       assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT,
                           all_comm) >= 0);
 
+      printf("Rank %d: after alltoall\n", rank);
 
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
@@ -780,13 +784,16 @@ int main(int argc, char** argv)
         {
           rdispls[p] = rdispls[p-1] + recvcounts[p-1];
           recvbuf_size += recvcounts[p];
+          printf("Rank %d: recvcounts[%d] = %d\n", rank, p, recvcounts[p]);
         }
 
       int recvpos = 0;
       vector<uint8_t> recvbuf(recvbuf_size);
+      printf("Rank %d: recvbuf_size = %lu\n", rank, recvbuf_size);
 
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
 
+      printf("Rank %d: before alltoallv\n", rank);
       
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
