@@ -1,3 +1,4 @@
+#include "debug.hh"
 #include "population_reader.hh"
 
 #include "ngh5paths.h"
@@ -161,7 +162,6 @@ herr_t read_population_ranges
   for(size_t i = 0; i < pop_vector.size(); ++i)
     {
       pop_ranges.insert(make_pair(pop_vector[i].start, make_pair(pop_vector[i].count, pop_vector[i].pop)));
-      printf ("pop_ranges = %lu %u %u\n", pop_vector[i].start, pop_vector[i].count, pop_vector[i].pop);
     }
 
   return ierr;
@@ -173,7 +173,6 @@ herr_t read_population_ranges
 
 bool validate_edge_list
 (
- NODE_IDX_T&         base,
  NODE_IDX_T&         dst_start,
  NODE_IDX_T&         src_start,
  vector<DST_BLK_PTR_T>&  dst_blk_ptr,
@@ -184,7 +183,7 @@ bool validate_edge_list
  const set< pair<pop_t, pop_t> >& pop_pairs
  )
 {
-  bool result = false;
+  bool result = true;
 
   NODE_IDX_T src, dst;
 
@@ -200,25 +199,64 @@ bool validate_edge_list
       for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
         {
           size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
-          NODE_IDX_T dst_base = base + dst_idx[b];
+          NODE_IDX_T dst_base = dst_idx[b];
           for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
             {
               if (i < dst_ptr_size-1)
                 {
                   dst = dst_base + ii + dst_start;
                   riter = pop_ranges.upper_bound(dst);
-                  if (riter == pop_ranges.end()) { return false; }
-                  pp.second = riter->second.second-1;
-                  size_t low = dst_ptr[i], high = dst_ptr[i+1];
-                  for (size_t j = low; j < high; ++j)
+                  if (riter == pop_ranges.end())
                     {
-                      src = src_idx[j] + src_start;
-                      citer = pop_ranges.upper_bound(src);
-                      if (citer == pop_ranges.end()) { return false; }
-                      pp.first = citer->second.second-1;
-                      // check if the population combo is valid
-                      result = (pop_pairs.find(pp) != pop_pairs.end());
-                      if (!result) { return false; }
+                      if (dst < pop_ranges.rbegin()->first+pop_ranges.rbegin()->second.first)
+                        {
+                          pp.second = pop_ranges.rbegin()->second.second;
+                        }
+                      else
+                        {
+                          DEBUG("unable to find population for dst = ",dst,"\n"); 
+                          return false;
+                        }
+                    }
+                  else
+                    {
+                      pp.second = riter->second.second-1;
+                    }
+                  size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                  if ((high-low) == 0)
+                    {
+                      result = true;
+                    }
+                  else
+                    {
+                      for (size_t j = low; j < high; ++j)
+                        {
+                          src = src_idx[j] + src_start;
+                          citer = pop_ranges.upper_bound(src);
+                          if (citer == pop_ranges.end())
+                            {
+                              if (src < pop_ranges.rbegin()->first+pop_ranges.rbegin()->second.first)
+                                {
+                                  pp.first = pop_ranges.rbegin()->second.second;
+                                }
+                              else
+                                {
+                                  DEBUG("unable to find population for src = ",src,"\n"); 
+                                  return false;
+                                }
+                            }
+                          else
+                            {
+                              pp.first = citer->second.second-1;
+                            }
+                          // check if the population combo is valid
+                          result = (pop_pairs.find(pp) != pop_pairs.end());
+                          if (!result)
+                            {
+                              DEBUG("invalid edge: src = ",src," dst = ",dst," pp = ",pp.first,", ",pp.second,"\n"); 
+                              return false;
+                            }
+                        }
                     }
                 }
             }
