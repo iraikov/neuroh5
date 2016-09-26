@@ -128,8 +128,6 @@ int append_edge_map
                       num_edges++;
                     }
 
-                                                          
-                  printf("dst = %u my_srcs.size() = %lu\n", dst, my_srcs.size());
                 }
             }
         }
@@ -388,10 +386,8 @@ int unpack_edge
 
   
   assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst, 1, NODE_IDX_MPI_T, comm) >= 0);
-  printf("dst = %u\n", dst);
 
   MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  printf("dst_numitems = %u\n", dst_numitems);
   src_vect.resize(dst_numitems);
   MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
              &src_vect[0], dst_numitems, NODE_IDX_MPI_T,
@@ -651,17 +647,10 @@ int main(int argc, char** argv)
             {
               edge_count = src_idx.size();
               assert(read_edge_attribute_names(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_attr_names) >= 0);
-              for (size_t in = 0; in < edge_attr_names.size(); in++)
-                {
-                  printf("edge_attr_names[%lu] = %s\n", in, edge_attr_names[in].c_str());
-                }
               assert(read_all_edge_attributes(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
                                               edge_attr_names, longitudinal_distance, transverse_distance, distance,
                                               synaptic_weight, segment_index, segment_point_index, layer) >= 0);
-              printf("edge attributes read\n");
             }
-
-          printf("before has_edge_attrs\n");
 
           has_edge_attrs.push_back(longitudinal_distance.size() > 0);
           has_edge_attrs.push_back(transverse_distance.size() > 0);
@@ -671,16 +660,12 @@ int main(int argc, char** argv)
           has_edge_attrs.push_back(segment_point_index.size() > 0);
           has_edge_attrs.push_back(layer.size() > 0);
 
-          printf("before append_edge_map\n");
-
           // append to the edge map
           assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                  longitudinal_distance, transverse_distance, distance,
                                  synaptic_weight, segment_index, segment_point_index, layer,
                                  node_rank_vector, has_edge_attrs, num_edges, prj_rank_edge_map) >= 0);
       
-          printf("num_edges = %lu\n", num_edges);
-          
           // ensure that all edges in the projection have been read and appended to edge_list
           assert(num_edges == src_idx.size());
 
@@ -703,7 +688,6 @@ int main(int argc, char** argv)
               uint32_t dst_rank;
               dst_rank = it1->first;
               sdispls[dst_rank] = sendpos;
-              printf("dst_rank = %u: size = %lu\n", dst_rank, it1->second.size());
               if (it1->second.size() > 0)
                 {
                   for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
@@ -720,7 +704,6 @@ int main(int argc, char** argv)
                       const vector<uint16_t>&   segment_point_index_vect   = get<6>(it2->second);
                       const vector<uint8_t>&    layer_vect                 = get<7>(it2->second);
 
-                      printf("before pack_edge: dst = %u src_vect_size = %lu\n", dst, src_vect.size());
                       if (src_vect.size() > 0)
                         {
                           
@@ -738,7 +721,6 @@ int main(int argc, char** argv)
                                            sendbuf
                                            ) == 0);
                           
-                          printf("after pack_edge: dst_rank = %u sendsize = %d\n", dst_rank, sendsize);
                           sendcounts[dst_rank] += sendsize;
                         }
                     }
@@ -752,20 +734,11 @@ int main(int argc, char** argv)
 
       has_edge_attrs_length = has_edge_attrs.size();
       assert(MPI_Bcast(&has_edge_attrs_length, 1, MPI_UINT32_T, 0, all_comm) >= 0);
-      printf("Rank %d: has_edge_attrs_length = %d\n", rank, has_edge_attrs_length);
       if (rank > 0)
         {
           has_edge_attrs.resize(has_edge_attrs_length);
         }
       assert(MPI_Bcast(&has_edge_attrs[0], has_edge_attrs_length, MPI_UINT8_T, 0, all_comm) >= 0);
-
-      assert(MPI_Barrier(all_comm) >= 0);
-      printf("Rank %d: before alltoall\n", rank);
-      
-      for (int p = 0; p < size; ++p)
-        {
-          printf("Rank %d: sendcounts[%d] = %d\n", rank, p, sendcounts[p]);
-        }
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
@@ -773,8 +746,6 @@ int main(int argc, char** argv)
 
       assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT,
                           all_comm) >= 0);
-
-      printf("Rank %d: after alltoall\n", rank);
 
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
@@ -784,24 +755,18 @@ int main(int argc, char** argv)
         {
           rdispls[p] = rdispls[p-1] + recvcounts[p-1];
           recvbuf_size += recvcounts[p];
-          printf("Rank %d: recvcounts[%d] = %d\n", rank, p, recvcounts[p]);
         }
 
       int recvpos = 0;
       vector<uint8_t> recvbuf(recvbuf_size);
-      printf("Rank %d: recvbuf_size = %lu\n", rank, recvbuf_size);
 
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
 
-      printf("Rank %d: before alltoallv\n", rank);
-      
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
                            all_comm) >= 0);
       sendbuf.clear();
 
-      printf("rank %d: after alltoallv\n", rank);
-      
       if (opt_binary)
         {
           if (recvbuf.size() > 0) 
@@ -893,7 +858,6 @@ int main(int argc, char** argv)
                               recvpos,
                               recvbuf
                               );
-                  printf("src_vect.size = %lu\n", src_vect.size());
                   for (size_t k = 0; k < src_vect.size(); k++)
                     {
                       NODE_IDX_T src = src_vect[k];
