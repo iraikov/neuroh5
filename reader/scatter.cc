@@ -608,7 +608,7 @@ int main(int argc, char** argv)
 
   
   assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) >= 0);
-      
+
   // For each projection, I/O ranks read the edges and scatter
   for (size_t i = 0; i < prj_size; i++)
     {
@@ -619,6 +619,7 @@ int main(int argc, char** argv)
       vector<uint8_t> has_edge_attrs;
       uint32_t has_edge_attrs_length;
       
+      has_edge_attrs.resize(0,0);
       sendcounts.resize(size,0);
       sdispls.resize(size,0);
       recvcounts.resize(size,0);
@@ -658,9 +659,9 @@ int main(int argc, char** argv)
             {
               edge_count = src_idx.size();
 	      DEBUG("scatter: validating edge attribute names from projection ", i, "(", prj_names[i], ")");
-              assert(read_edge_attribute_names(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_attr_names) >= 0);
+              assert(read_edge_attribute_names(io_comm, input_file_name, prj_names[i].c_str(), edge_attr_names) >= 0);
 	      DEBUG("scatter: validating edge attributes from projection ", i, "(", prj_names[i], ")");
-              assert(read_all_edge_attributes(MPI_COMM_WORLD, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
+              assert(read_all_edge_attributes(io_comm, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
                                               edge_attr_names, longitudinal_distance, transverse_distance, distance,
                                               synaptic_weight, segment_index, segment_point_index, layer) >= 0);
             }
@@ -681,20 +682,19 @@ int main(int argc, char** argv)
       
           // ensure that all edges in the projection have been read and appended to edge_list
           assert(num_edges == src_idx.size());
+	} // rank < io_size
 
-          
-          dst_blk_ptr.clear();
-          dst_idx.clear();
-          dst_ptr.clear();
-          src_idx.clear();
-          longitudinal_distance.clear();
-          transverse_distance.clear();
-          distance.clear();
-          synaptic_weight.clear();
-          segment_index.clear();
-          segment_point_index.clear();
-          layer.clear();
+      if (opt_attrs)
+	{
+	  has_edge_attrs_length = has_edge_attrs.size();
+	  assert(MPI_Bcast(&has_edge_attrs_length, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+	  has_edge_attrs.resize(has_edge_attrs_length);
+	  assert(MPI_Bcast(&has_edge_attrs[0], has_edge_attrs_length, MPI_UINT8_T, 0, all_comm) >= 0);
+	}
 
+
+      if (rank < io_size)
+	{
 	  DEBUG("scatter: packing edge data from projection ", i, "(", prj_names[i], ")");
 
           for (auto it1 = prj_rank_edge_map.cbegin(); it1 != prj_rank_edge_map.cend(); ++it1)
@@ -743,28 +743,14 @@ int main(int argc, char** argv)
 
             }
 
-                    
+	  DEBUG("scatter: finished packing edge data from projection ", i, "(", prj_names[i], ")");
         }
-
-      MPI_Barrier(all_comm);
-
-      DEBUG("scatter: broadcasting edge attributes length ", i, "(", prj_names[i], ")");
-      has_edge_attrs_length = has_edge_attrs.size();
-      assert(MPI_Bcast(&has_edge_attrs_length, 1, MPI_UINT32_T, 0, all_comm) >= 0);
-      if (rank > 0)
-        {
-          has_edge_attrs.resize(has_edge_attrs_length);
-        }
-      assert(MPI_Bcast(&has_edge_attrs[0], has_edge_attrs_length, MPI_UINT8_T, 0, all_comm) >= 0);
-      
-      DEBUG("scatter: alltoallv with edge data ", i, "(", prj_names[i], ")");
 
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
       //    and creates sendcounts and sdispls arrays
 
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT,
-                          all_comm) >= 0);
+      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) >= 0);
 
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
@@ -780,14 +766,15 @@ int main(int argc, char** argv)
       vector<uint8_t> recvbuf(recvbuf_size);
 
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
                            all_comm) >= 0);
       sendbuf.clear();
 
+
       if (opt_output)
 	{
+	  DEBUG("scatter: outputting edges ", i);
 	  if (opt_binary)
 	    {
 	      if (recvbuf.size() > 0) 

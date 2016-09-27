@@ -127,7 +127,7 @@ herr_t read_projection_names
       size_t len = prj_name_lengths[i];
       memcpy(prj_name, prj_names_buf+offset, len);
       prj_name[len] = '\0';
-      prj_vector[i] = string(prj_name);
+      prj_vector[i] = string((const char*)prj_name);
       offset = offset + len;
     }
 
