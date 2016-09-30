@@ -151,14 +151,15 @@ def write_connectivity_dbs (g, l_src_idx, l_dst_ptr, dst_min):
     dset = h5_concat_dataset(dset, np.asarray([dst_min]))
 
 
-def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfile):
+def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,outputfile):
     
     l_dst_ptr    = [0]
     l_src_idx    = []
-    l_syn_weight = []
+    l_dist       = []
     l_layer      = []
     l_seg_idx    = []
     l_seg_pt_idx = []
+    l_syn_weight = []
         
     # read and parse line-by-line
 
@@ -166,8 +167,8 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
     dst_old = -1
     for l in lines:
         a = l.split(colsep)
-        src = int(a[0])-1-source_base
-        dst = int(a[1])-1-dest_base
+        src = int(a[0])-offset-source_base
+        dst = int(a[1])-offset-dest_base
         if dst_min < 0:
             dst_min = dst
         else:
@@ -179,10 +180,11 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
                 dst_old = dst_old + 1
                 l_dst_ptr.append(len(l_src_idx))
         l_src_idx.append(src)
-        l_syn_weight.append(float(a[2]))
+        l_dist.append(float(a[2]))
         l_layer.append(int(a[3]))
         l_seg_idx.append(int(a[4])-1)
         l_seg_pt_idx.append(int(a[5])-1)
+        l_syn_weight.append(float(a[6]))
         
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
@@ -202,9 +204,9 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
 
         # for floating point numbers, it's usally beneficial to apply the
         # bit-shuffle filter before compressing with GZIP
-        dset = h5_get_dataset(g3, attr_syn_weight, dtype=np.float32,
+        dset = h5_get_dataset(g3, attr_dist, dtype=np.float32,
                               maxshape=(None,), compression=6, shuffle=True)
-        dset = h5_concat_dataset(dset, np.asarray(l_syn_weight))
+        dset = h5_concat_dataset(dset, np.asarray(l_dist))
 
         dset = h5_get_dataset(g3, attr_layer, dtype=dt, 
                               maxshape=(None,), compression=6)
@@ -217,6 +219,10 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
         dset = h5_get_dataset(g3, attr_seg_pt_idx, dtype=np.uint16, 
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(l_seg_pt_idx))
+
+        dset = h5_get_dataset(g3, attr_syn_weight, dtype=np.float32,
+                              maxshape=(None,), compression=6, shuffle=True)
+        dset = h5_concat_dataset(dset, np.asarray(l_syn_weight))
 
 
 
