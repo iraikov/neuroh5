@@ -36,6 +36,7 @@ int filter_edge_list
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
  const set<NODE_IDX_T>&    src_selection,
+ const set<NODE_IDX_T>&    dst_selection,
  vector<NODE_IDX_T>&       edge_list
  )
 {
@@ -53,14 +54,17 @@ int filter_edge_list
               if (i < dst_ptr_size-1) 
                 {
                   NODE_IDX_T dst = dst_base + ii + dst_start;
-                  size_t low = dst_ptr[i], high = dst_ptr[i+1];
-                  for (size_t j = low; j < high; ++j)
+                  if (dst_selection.empty() || (dst_selection.find(dst) != dst_selection.end()))
                     {
-                      NODE_IDX_T src = src_idx[j] + src_start;
-                      if (src_selection.find(src) != src_selection.end())
+                      size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                      for (size_t j = low; j < high; ++j)
                         {
-                          edge_list.push_back(src);
-                          edge_list.push_back(dst);
+                          NODE_IDX_T src = src_idx[j] + src_start;
+                          if (src_selection.empty() || (src_selection.find(src) != src_selection.end()))
+                            {
+                              edge_list.push_back(src);
+                              edge_list.push_back(dst);
+                            }
                         }
                     }
                 }
@@ -97,13 +101,14 @@ int main(int argc, char** argv)
   input_file_name = string(argv[1]);
   projection_name = string(argv[2]);
 
-  // determine src node selection
+  // determine src and dst node selections
   set <NODE_IDX_T> src_selection;
-  ifstream infile(argv[3]);
+  set <NODE_IDX_T> dst_selection;
+  ifstream srcfile(argv[3]);
   string line;
   size_t lnum = 0;
   // reads node to rank assignment from file
-  while (getline(infile, line))
+  while (getline(srcfile, line))
     {
       istringstream iss(line);
       NODE_IDX_T n;
@@ -113,8 +118,27 @@ int main(int argc, char** argv)
       lnum++;
     }
   
-  infile.close();
-  
+  srcfile.close();
+
+  ifstream dstfile(argv[4]);
+
+  // reads node to rank assignment from file
+  while (getline(dstfile, line))
+    {
+      istringstream iss(line);
+      NODE_IDX_T n;
+      
+      assert (iss >> n);
+      dst_selection.insert(n);
+      lnum++;
+    }
+  dstfile.close();
+
+  printf("src_selection.size() = %lu\n", src_selection.size());
+  printf("dst_selection.size() = %lu\n", dst_selection.size());
+
+
+  assert (!((src_selection.size() == 0) && (dst_selection.size() == 0)));
   // read the population info
   set< pair<pop_t, pop_t> > pop_pairs;
   assert(read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
@@ -131,6 +155,9 @@ int main(int argc, char** argv)
   // read the edges
   for (size_t i = 0; i < prj_names.size(); i++)
     {
+      size_t total_prj_num_edges = 0;
+      DST_BLK_PTR_T block_base;
+      DST_PTR_T edge_base;
       NODE_IDX_T base, dst_start, src_start;
       vector<DST_BLK_PTR_T> dst_blk_ptr;
       vector<NODE_IDX_T> dst_idx;
@@ -142,13 +169,15 @@ int main(int argc, char** argv)
           printf("Reading projection %lu (%s)\n", i, prj_names[i].c_str());
           
           assert(read_dbs_projection(MPI_COMM_WORLD, input_file_name.c_str(), prj_names[i].c_str(), 
-                                     pop_vector, base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                     pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
+                                     dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+
           
           // validate the edges
-          assert(validate_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+          assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
           
           // filter/append to the edge list
-          assert(filter_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, src_selection, edge_list) >= 0);
+          assert(filter_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, src_selection, dst_selection, edge_list) >= 0);
         }
     }
   
