@@ -27,7 +27,6 @@ extern herr_t read_population_ranges
 
 extern bool validate_edge_list
 (
- NODE_IDX_T&         base,
  NODE_IDX_T&         dst_start,
  NODE_IDX_T&         src_start,
  std::vector<DST_BLK_PTR_T>&  dst_blk_ptr,

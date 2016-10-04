@@ -28,6 +28,26 @@ typedef unsigned int NODE_IDX_T;
 #define NODE_IDX_H5_FILE_T   H5T_STD_U32LE
 #define NODE_IDX_MPI_T       MPI_UINT32_T
 
+#define LAYER_H5_NATIVE_T H5T_NATIVE_UINT8
+#define LAYER_MPI_T MPI_UINT8_T
+
+#define SEGMENT_INDEX_H5_NATIVE_T H5T_NATIVE_UINT16
+#define SEGMENT_INDEX_MPI_T MPI_UINT16_T
+
+#define SEGMENT_POINT_INDEX_H5_NATIVE_T H5T_NATIVE_UINT16
+#define SEGMENT_POINT_INDEX_MPI_T MPI_UINT16_T
+
+#define LONG_DISTANCE_H5_NATIVE_T H5T_NATIVE_FLOAT
+#define TRANS_DISTANCE_H5_NATIVE_T H5T_NATIVE_FLOAT
+
+#define DISTANCE_H5_NATIVE_T H5T_NATIVE_FLOAT
+#define DISTANCE_MPI_T MPI_FLOAT
+
+#define SYNAPTIC_WEIGHT_H5_NATIVE_T H5T_NATIVE_FLOAT
+#define SYNAPTIC_WEIGHT_MPI_T MPI_FLOAT
+
+
+
 // Population types
 
 // memory type for valid population combinations
@@ -57,7 +77,17 @@ typedef pop_range_map_t::const_iterator pop_range_iter_t;
 
 typedef uint32_t rank_t;
 
-typedef std::map<NODE_IDX_T, std::vector<NODE_IDX_T> > edge_map_t;
+typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
+                    std::vector<float>,  // longitudinal distance,
+                    std::vector<float>, // transverse distance,
+                    std::vector<float>, // distance
+                    std::vector<float>, // synaptic weight,
+                    std::vector<uint16_t>, // segment index,
+                    std::vector<uint16_t>, // segment point index,
+                    std::vector<uint8_t> // layer
+                   > edge_tuple_t;
+
+typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
 
 typedef edge_map_t::const_iterator edge_map_iter_t;
 
@@ -65,5 +95,15 @@ typedef std::map<rank_t, edge_map_t> rank_edge_map_t;
 
 typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
 
+typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
+                    std::vector<NODE_IDX_T>, // destination vector
+                    std::vector<float>,  // longitudinal distance,
+                    std::vector<float>, // transverse distance,
+                    std::vector<float>, // distance
+                    std::vector<float>, // synaptic weight,
+                    std::vector<uint16_t>, // segment index,
+                    std::vector<uint16_t>, // segment point index,
+                    std::vector<uint8_t> // layer
+                   > prj_tuple_t;
 
 #endif

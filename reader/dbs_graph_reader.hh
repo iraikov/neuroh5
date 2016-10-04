@@ -15,16 +15,27 @@ extern herr_t read_projection_names
  std::vector<std::string> &prj_vector
  );
 
+
+herr_t read_edge_attribute_names
+(
+ MPI_Comm                                comm,
+ const char*                             fname, 
+ const char*                             prjname, 
+ std::vector<std::string> &edge_attr_vector
+ );
+
+
 extern herr_t read_dbs_projection
 (
  MPI_Comm                 comm,
  const char*              fname, 
  const char*              dsetname, 
  const std::vector<pop_range_t> &pop_vector,
- uint64_t                 &nedges,  /* total number of edges in the projection */
- NODE_IDX_T&              base,     /* global index of the first node */
  NODE_IDX_T&         dst_start,
  NODE_IDX_T&         src_start,
+ uint64_t            &nedges, /* total number of edges in the projection */
+ DST_BLK_PTR_T&      block_base, /* global index of the first block read by this task */
+ DST_PTR_T&          edge_base,  /* global index of the first edge read by this task */
  std::vector<DST_BLK_PTR_T>&  dst_blk_ptr,  
  std::vector<NODE_IDX_T>& dst_idx,
  std::vector<DST_PTR_T>&  dst_ptr,  /* one longer than owned nodes count */

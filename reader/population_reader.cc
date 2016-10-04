@@ -173,7 +173,6 @@ herr_t read_population_ranges
 
 bool validate_edge_list
 (
- NODE_IDX_T&         base,
  NODE_IDX_T&         dst_start,
  NODE_IDX_T&         src_start,
  vector<DST_BLK_PTR_T>&  dst_blk_ptr,

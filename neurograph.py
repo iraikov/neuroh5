@@ -49,7 +49,7 @@ dst_ptr     = 'Destination Pointer'
 attr_layer        = 'Layer'
 attr_syn_weight   = 'Synaptic Weight'
 attr_seg_idx      = 'Segment Index'
-attr_seg_pt_idx   = 'Segment Index'
+attr_seg_pt_idx   = 'Segment Point Index'
 attr_long_dist    = 'Longitudinal Distance'
 attr_trans_dist   = 'Transverse Distance'
 attr_dist         = 'Distance'
@@ -151,14 +151,15 @@ def write_connectivity_dbs (g, l_src_idx, l_dst_ptr, dst_min):
     dset = h5_concat_dataset(dset, np.asarray([dst_min]))
 
 
-def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfile):
+def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,outputfile):
     
     l_dst_ptr    = [0]
     l_src_idx    = []
-    l_syn_weight = []
+    l_dist       = []
     l_layer      = []
     l_seg_idx    = []
     l_seg_pt_idx = []
+    l_syn_weight = []
         
     # read and parse line-by-line
 
@@ -166,8 +167,8 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
     dst_old = -1
     for l in lines:
         a = l.split(colsep)
-        src = int(a[0])-1-source_base
-        dst = int(a[1])-1-dest_base
+        src = int(a[0])-offset-source_base
+        dst = int(a[1])-offset-dest_base
         if dst_min < 0:
             dst_min = dst
         else:
@@ -179,10 +180,11 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
                 dst_old = dst_old + 1
                 l_dst_ptr.append(len(l_src_idx))
         l_src_idx.append(src)
-        l_syn_weight.append(float(a[2]))
+        l_dist.append(float(a[2]))
         l_layer.append(int(a[3]))
         l_seg_idx.append(int(a[4])-1)
         l_seg_pt_idx.append(int(a[5])-1)
+        l_syn_weight.append(float(a[6]))
         
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
@@ -202,9 +204,9 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
 
         # for floating point numbers, it's usally beneficial to apply the
         # bit-shuffle filter before compressing with GZIP
-        dset = h5_get_dataset(g3, attr_syn_weight, dtype=np.float32,
+        dset = h5_get_dataset(g3, attr_dist, dtype=np.float32,
                               maxshape=(None,), compression=6, shuffle=True)
-        dset = h5_concat_dataset(dset, np.asarray(l_syn_weight))
+        dset = h5_concat_dataset(dset, np.asarray(l_dist))
 
         dset = h5_get_dataset(g3, attr_layer, dtype=dt, 
                               maxshape=(None,), compression=6)
@@ -217,6 +219,10 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
         dset = h5_get_dataset(g3, attr_seg_pt_idx, dtype=np.uint16, 
                               maxshape=(None,), compression=6)
         dset = h5_concat_dataset(dset, np.asarray(l_seg_pt_idx))
+
+        dset = h5_get_dataset(g3, attr_syn_weight, dtype=np.float32,
+                              maxshape=(None,), compression=6, shuffle=True)
+        dset = h5_concat_dataset(dset, np.asarray(l_syn_weight))
 
 
 
@@ -234,8 +240,9 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfil
 @click.option('--relative-dest', 'indextype_dst', flag_value='rel', default=True)
 @click.option('--absolute-dest', 'indextype_dst', flag_value='abs')
 @click.option("--colsep", type=str, default=' ')
+@click.option("--offset", type=int, default=0)
 @click.option("--bufsize", type=int, default=100000)
-def import_lsn(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, bufsize):
+def import_lsn(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
 
     population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
                            "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
@@ -286,9 +293,9 @@ def import_lsn(inputfiles, outputfile, source, dest, groupname, layout, indextyp
 
         while lines:
             if layout=='dbs':
-                import_lsn_lines_dbs(lines, src_base, dst_base, colsep, groupname, outputfile)
+                import_lsn_lines_dbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
             elif layout=='sbs':
-                import_lsn_lines_sbs(lines, src_base, dst_base, colsep, groupname, outputfile)
+                import_lsn_lines_sbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
             lines = f.readlines(bufsize)
 
         f.close()
@@ -300,7 +307,7 @@ def import_lsn(inputfiles, outputfile, source, dest, groupname, layout, indextyp
 
 
 
-def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfile):
+def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,outputfile):
 
     l_dst_ptr    = [0]
     l_src_idx    = []
@@ -313,8 +320,8 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,groupname,output
     dst_old = -1
     for l in lines:
         a = l.split(colsep)
-        src = int(a[0])-1-source_base
-        dst = int(a[1])-1-dest_base
+        src = int(a[0])-offset-source_base
+        dst = int(a[1])-offset-dest_base
         if dst_min < 0:
             dst_min = dst
         else:
@@ -370,8 +377,9 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,groupname,output
 @click.option('--relative-dest', 'indextype_dst', flag_value='rel', default=True)
 @click.option('--absolute-dest', 'indextype_dst', flag_value='abs')
 @click.option("--colsep", type=str, default=' ')
+@click.option("--offset", type=int, default=0)
 @click.option("--bufsize", type=int, default=100000)
-def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, bufsize):
+def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
 
     population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
                            "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
@@ -422,9 +430,9 @@ def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, index
 
         while lines:
             if layout=='dbs':
-                import_ltdist_lines_dbs(lines, src_base, dst_base, colsep, groupname, outputfile)
+                import_ltdist_lines_dbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
             elif layout=='sbs':
-                import_ltdist_lines_sbs(lines, src_base, dst_base, colsep, groupname, outputfile)
+                import_ltdist_lines_sbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
             lines = f.readlines(bufsize)
 
         f.close()
@@ -435,7 +443,7 @@ def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, index
         write_final_size_sbs (groupname, outputfile)
 
 
-def import_dist_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfile):
+def import_dist_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,outputfile):
 
     l_dst_ptr    = [0]
     l_src_idx    = []
@@ -447,8 +455,8 @@ def import_dist_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfi
     dst_old = -1
     for l in lines:
         a = l.split(colsep)
-        src = int(a[0])-1-source_base
-        dst = int(a[1])-1-dest_base
+        src = int(a[0])-offset-source_base
+        dst = int(a[1])-offset-dest_base
         if dst_min < 0:
             dst_min = dst
         else:
@@ -498,8 +506,9 @@ def import_dist_lines_dbs (lines,source_base,dest_base,colsep,groupname,outputfi
 @click.option('--relative-dest', 'indextype_dst', flag_value='rel', default=True)
 @click.option('--absolute-dest', 'indextype_dst', flag_value='abs')
 @click.option("--colsep", type=str, default=' ')
+@click.option("--offset", type=int, default=0)
 @click.option("--bufsize", type=int, default=100000)
-def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, bufsize):
+def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
 
     population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
                            "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
@@ -550,9 +559,9 @@ def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indexty
 
         while lines:
             if layout=='dbs':
-                import_dist_lines_dbs(lines, src_base, dst_base, colsep, groupname, outputfile)
+                import_dist_lines_dbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
             elif layout=='sbs':
-                import_dist_lines_sbs(lines, src_base, dst_base, colsep, groupname, outputfile)
+                import_dist_lines_sbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
             lines = f.readlines(bufsize)
 
         f.close()
