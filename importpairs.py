@@ -18,6 +18,8 @@ attr_syn_weight   = 'Synaptic Weight'
 attr_seg_idx      = 'Segment Index'
 attr_seg_pt_idx   = 'Segment Point Index'
 attr_dist         = 'Distance'
+attr_ldist        = 'Longitudinal Distance'
+attr_tdist        = 'Transverse Distance'
 
 grp_projections  = 'Projections'
 grp_connectivity = 'Connectivity'
