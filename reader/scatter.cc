@@ -6,18 +6,19 @@
 #include "population_reader.hh"
 #include "graph_scatter.hh"
 
-#include <hdf5.h>
 #include <getopt.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <vector>
+#include <string>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <map>
-#include <vector>
 
+#include <hdf5.h>
 #include <mpi.h>
 
 using namespace std;
@@ -68,7 +69,8 @@ int main(int argc, char** argv)
   vector<string> prj_names;
   vector < edge_map_t > prj_vector;
   vector < vector<uint8_t> > has_edge_attrs_vector;
-  
+  stringstream ss;
+
   assert(MPI_Init(&argc, &argv) >= 0);
 
   int rank, size, io_size; size_t n_nodes;
@@ -113,11 +115,13 @@ int main(int argc, char** argv)
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
-            io_size = (size_t)std::stoi(string(optarg));;
+	    ss << string(optarg);
+	    ss >> io_size;
           }
           if (optflag_nnodes == 1) {
             opt_nnodes = true;
-            n_nodes = (size_t)std::stoi(string(optarg));
+	    ss << string(optarg);
+	    ss >> n_nodes;
           }
           break;
         case 'a':
@@ -132,11 +136,13 @@ int main(int argc, char** argv)
           break;
         case 'i':
           opt_iosize = true;
-          io_size = (size_t)std::stoi(string(optarg));
+	  ss << string(optarg);
+	  ss >> io_size;
           break;
         case 'n':
           opt_nnodes = true;
-          n_nodes = (size_t)std::stoi(string(optarg));
+	  ss << string(optarg);
+	  ss >> n_nodes;
           break;
         case 'o':
           opt_output = true;
@@ -216,7 +222,7 @@ int main(int argc, char** argv)
                   ofstream outfile;
                   stringstream outfilename;
                   outfilename << string(output_file_name) << "." << i << "." << rank << ".edges.bin";
-                  outfile.open(outfilename.str(), ios::binary);
+                  outfile.open(outfilename.str().c_str(), ios::binary);
 
                   for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
                     {
@@ -267,7 +273,7 @@ int main(int argc, char** argv)
                   ofstream outfile;
                   stringstream outfilename;
                   outfilename << string(output_file_name) << "." << i << "." << rank << ".edges";
-                  outfile.open(outfilename.str());
+                  outfile.open(outfilename.str().c_str());
 
                   for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
                     {

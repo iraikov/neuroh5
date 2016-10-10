@@ -2,6 +2,7 @@
 #define NGH5TYPES_HH
 
 #include <map>
+#include <tuple>
 #include <vector>
 #include <iostream>
 #include <utility>
