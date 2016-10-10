@@ -78,7 +78,7 @@ typedef pop_range_map_t::const_iterator pop_range_iter_t;
 typedef uint32_t rank_t;
 
 typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
-                    std::vector<float>,  // longitudinal distance,
+                    std::vector<float>,  // longitudinal distance, 
                     std::vector<float>, // transverse distance,
                     std::vector<float>, // distance
                     std::vector<float>, // synaptic weight,

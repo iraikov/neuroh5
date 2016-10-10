@@ -1,8 +1,8 @@
-MPI_INCDIR      =
-MPI_LIBDIR      = 
-HDF5_INCDIR	= $(HOME)/.local/include
-HDF5_LIBDIR	= $(HOME)/.local/lib
-HDF5_LIB        = hdf5
+MPI_INCDIR      = /usr/include/mpich
+MPI_LIBDIR      = /usr/lib/x86_64-linux-gnu/
+HDF5_INCDIR	= /usr/include/hdf5/mpich
+HDF5_LIBDIR	= /usr/lib/x86_64-linux-gnu/
+HDF5_LIB        = hdf5_mpich
 
 CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR)
 LDFLAGS		= -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR)

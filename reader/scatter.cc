@@ -449,10 +449,12 @@ int scatter_edges
 (
  MPI_Comm all_comm,
  const char *input_file_name,
- int io_size,
+ const int io_size,
+ const bool opt_attrs,
   // A vector that maps nodes to compute ranks
  const vector<rank_t> node_rank_vector,
- vector < vector<edge_tuple_t> > prj_vector
+ vector < edge_map_t > & prj_vector,
+ vector < vector <uint8_t> > & has_edge_attrs_vector
  )
 {
   int ierr = 0;
@@ -467,8 +469,10 @@ int scatter_edges
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
   vector<string> prj_names;
   size_t prj_size = 0;
-
-  MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
+  
+  int rank, size;
+  assert(MPI_Comm_size(all_comm, &size) >= 0);
+  assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
   // Am I an I/O rank?
   if (rank < io_size)
@@ -498,10 +502,10 @@ int scatter_edges
       vector<uint8_t> sendbuf; int sendpos = 0;
       vector<int> sendcounts, sdispls, recvcounts, rdispls;
       vector<NODE_IDX_T> recv_edges, total_recv_edges;
-      vector<uint8_t> &recvbuf; int recvpos = 0;
       rank_edge_map_t prj_rank_edge_map;
       vector<uint8_t> has_edge_attrs;
       uint32_t has_edge_attrs_length;
+      edge_map_t prj_edge_map;
       
       has_edge_attrs.resize(0,0);
       sendcounts.resize(size,0);
@@ -605,7 +609,8 @@ int scatter_edges
                       if (src_vect.size() > 0)
                         {
                           
-                          assert(pack_edge(all_comm, dst,
+                          assert(pack_edge(all_comm,
+                                           dst,
                                            src_vect,
                                            longitudinal_distance_vect,
                                            transverse_distance_vect,
@@ -647,6 +652,7 @@ int scatter_edges
         }
 
       vector<uint8_t> recvbuf(recvbuf_size);
+      int recvpos = 0;
 
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
@@ -679,19 +685,20 @@ int scatter_edges
                       recvbuf
                       );
 
-          edge_vector.push_back(make_tuple(dst,
-                                           src_vect,
-                                           longitudinal_distance_vect,
-                                           transverse_distance_vect,
-                                           distance_vect,
-                                           synaptic_weight_vect,
-                                           segment_index_vect,
-                                           segment_point_index_vect,
-                                           layer_vect));
+          prj_edge_map.insert(make_pair(dst,
+                                        make_tuple(src_vect,
+                                                   longitudinal_distance_vect,
+                                                   transverse_distance_vect,
+                                                   distance_vect,
+                                                   synaptic_weight_vect,
+                                                   segment_index_vect,
+                                                   segment_point_index_vect,
+                                                   layer_vect)));
 
         }
 
-      prj_vector.push_back(edge_vector);
+      has_edge_attrs_vector.push_back(has_edge_attrs);
+      prj_vector.push_back(prj_edge_map);
     }
 
   MPI_Comm_free(&io_comm);
@@ -708,9 +715,7 @@ int main(int argc, char** argv)
 {
   char *input_file_name, *output_file_name, *rank_file_name;
   // MPI Communicator for I/O ranks
-  MPI_Comm io_comm, all_comm;
-  // MPI group color value used for I/O ranks
-  int io_color = 1;
+  MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
   vector<rank_t> node_rank_vector;
   // The set of compute ranks for which the current I/O rank is responsible
@@ -719,7 +724,8 @@ int main(int argc, char** argv)
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
   vector<string> prj_names;
-  size_t prj_size = 0;
+  vector < edge_map_t > prj_vector;
+  vector < vector<uint8_t> > has_edge_attrs_vector;
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -837,7 +843,7 @@ int main(int argc, char** argv)
           assert (iss >> n);
           node_rank_vector[i] = n;
           i++;
-            }
+        }
       
       infile.close();
     }
@@ -848,129 +854,117 @@ int main(int argc, char** argv)
   scatter_edges (all_comm,
                  input_file_name,
                  io_size,
+                 opt_attrs,
                  node_rank_vector,
-                 prj_vector);
+                 prj_vector,
+                 has_edge_attrs_vector);
 
 
   if (opt_output)
     {
-      DEBUG("scatter: outputting edges ", i);
       if (opt_binary)
         {
-          if (recvbuf.size() > 0) 
+          for (size_t i = 0; i < prj_vector.size(); i++)
             {
-              ofstream outfile;
-              stringstream outfilename;
-              outfilename << string(output_file_name) << "." << i << "." << rank << ".edges.bin";
-              outfile.open(outfilename.str(), ios::binary);
-              while ((unsigned int)recvpos < recvbuf.size()-1)
+              DEBUG("scatter: outputting edges ", i);
+              edge_map_t prj_edge_map = prj_vector[i];
+              vector <uint8_t> has_edge_attrs = has_edge_attrs_vector[i];
+              if (prj_edge_map.size() > 0)
                 {
-                  NODE_IDX_T dst; 
-                  vector<NODE_IDX_T> src_vect;
-                  vector<float>      longitudinal_distance_vect;
-                  vector<float>      transverse_distance_vect;
-                  vector<float>      distance_vect;
-                  vector<float>      synaptic_weight_vect;
-                  vector<uint16_t>   segment_index_vect;
-                  vector<uint16_t>   segment_point_index_vect;
-                  vector<uint8_t>    layer_vect;
-		  
-                  unpack_edge(all_comm, dst,
-                              src_vect,
-                              longitudinal_distance_vect,
-                              transverse_distance_vect,
-                              distance_vect,
-                              synaptic_weight_vect,
-                              segment_index_vect,
-                              segment_point_index_vect,
-                              layer_vect,
-                              recvpos,
-                              recvbuf
-                              );
-                  
-                  for (size_t k = 0; k < src_vect.size(); k++)
+                  ofstream outfile;
+                  stringstream outfilename;
+                  outfilename << string(output_file_name) << "." << i << "." << rank << ".edges.bin";
+                  outfile.open(outfilename.str(), ios::binary);
+
+                  for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
                     {
-                      NODE_IDX_T src = src_vect[k];
-                      outfile << src << dst;
-                      if (has_edge_attrs[0])
-                        outfile << longitudinal_distance_vect[k];
-                      if (has_edge_attrs[1])
-                        outfile << transverse_distance_vect[k];
-                      if (has_edge_attrs[2])
-                        outfile << distance_vect[k];
-                      if (has_edge_attrs[3])
-                        outfile << synaptic_weight_vect[k];
-                      if (has_edge_attrs[4])
-                        outfile << segment_index_vect[k];
-                      if (has_edge_attrs[5])
-                        outfile << segment_point_index_vect[k];
-                      if (has_edge_attrs[6])
-                        outfile << layer_vect[k];
+                      NODE_IDX_T dst   = it->first;
+                      edge_tuple_t& et = it->second;
+                      
+                      vector<NODE_IDX_T> src_vect = get<0>(et);
+                      vector<float>      longitudinal_distance_vect = get<1>(et);
+                      vector<float>      transverse_distance_vect = get<2>(et);
+                      vector<float>      distance_vect = get<3>(et);
+                      vector<float>      synaptic_weight_vect = get<4>(et);
+                      vector<uint16_t>   segment_index_vect = get<5>(et);
+                      vector<uint16_t>   segment_point_index_vect = get<6>(et);
+                      vector<uint8_t>    layer_vect = get<7>(et);
+                      
+                      for (size_t j = 0; j < src_vect.size(); j++)
+                        {
+                          NODE_IDX_T src = src_vect[j];
+                          outfile << src << dst;
+                          if (has_edge_attrs[0])
+                            outfile << longitudinal_distance_vect[j];
+                          if (has_edge_attrs[1])
+                            outfile << transverse_distance_vect[j];
+                          if (has_edge_attrs[2])
+                            outfile << distance_vect[j];
+                          if (has_edge_attrs[3])
+                            outfile << synaptic_weight_vect[j];
+                          if (has_edge_attrs[4])
+                            outfile << segment_index_vect[j];
+                          if (has_edge_attrs[5])
+                            outfile << segment_point_index_vect[j];
+                          if (has_edge_attrs[6])
+                            outfile << layer_vect[j];
+                        }
                     }
+                  outfile.close();
                 }
-              outfile.close();
             }
-          
-          recvbuf.clear();
         }
       else
         {
-          if (recvbuf.size() > 0) 
+          for (size_t i = 0; i < prj_vector.size(); i++)
             {
-              int recvpos = 0;
-              ofstream outfile;
-              stringstream outfilename;
-              outfilename << string(output_file_name) << "." << i << "." << rank << ".edges";
-              outfile.open(outfilename.str());
-              while ((unsigned int)recvpos < recvbuf.size()-1)
+              edge_map_t prj_edge_map = prj_vector[i];
+              vector <uint8_t> has_edge_attrs = has_edge_attrs_vector[i];
+              if (prj_edge_map.size() > 0)
                 {
-                  NODE_IDX_T dst; 
-                  vector<NODE_IDX_T> src_vect;
-                  vector<float>      longitudinal_distance_vect;
-                  vector<float>      transverse_distance_vect;
-                  vector<float>      distance_vect;
-                  vector<float>      synaptic_weight_vect;
-                  vector<uint16_t>   segment_index_vect;
-                  vector<uint16_t>   segment_point_index_vect;
-                  vector<uint8_t>    layer_vect;
-		  
-                  unpack_edge(all_comm, dst,
-                              src_vect,
-                              longitudinal_distance_vect,
-                              transverse_distance_vect,
-                              distance_vect,
-                              synaptic_weight_vect,
-                              segment_index_vect,
-                              segment_point_index_vect,
-                              layer_vect,
-                              recvpos,
-                              recvbuf
-                              );
-                  for (size_t k = 0; k < src_vect.size(); k++)
+                  ofstream outfile;
+                  stringstream outfilename;
+                  outfilename << string(output_file_name) << "." << i << "." << rank << ".edges";
+                  outfile.open(outfilename.str());
+
+                  for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
                     {
-                      NODE_IDX_T src = src_vect[k];
-                      outfile << "    " << src << " " << dst;
-                      if (has_edge_attrs[0])
-                        outfile << " " << longitudinal_distance_vect[k];
-                      if (has_edge_attrs[1])
-                        outfile << " " << transverse_distance_vect[k];
-                      if (has_edge_attrs[2])
-                        outfile << " " << distance_vect[k];
-                      if (has_edge_attrs[3])
-                        outfile << " " << synaptic_weight_vect[k];
-                      if (has_edge_attrs[4])
-                        outfile << " " << segment_index_vect[k];
-                      if (has_edge_attrs[5])
-                        outfile << " " << segment_point_index_vect[k];
-                      if (has_edge_attrs[6])
-                        outfile << " " << layer_vect[k];
-                      outfile << std::endl;
+                      NODE_IDX_T dst   = it->first;
+                      edge_tuple_t& et = it->second;
+
+                      const vector<NODE_IDX_T>  src_vect                   = get<0>(et);
+                      const vector<float>&      longitudinal_distance_vect = get<1>(et);
+                      const vector<float>&      transverse_distance_vect   = get<2>(et);
+                      const vector<float>&      distance_vect              = get<3>(et);
+                      const vector<float>&      synaptic_weight_vect       = get<4>(et);
+                      const vector<uint16_t>&   segment_index_vect         = get<5>(et);
+                      const vector<uint16_t>&   segment_point_index_vect   = get<6>(et);
+                      const vector<uint8_t>&    layer_vect                 = get<7>(et);
+
+                      for (size_t j = 0; j < src_vect.size(); j++)
+                        {
+                          NODE_IDX_T src = src_vect[j];
+                          outfile << "    " << src << " " << dst;
+                          if (has_edge_attrs[0])
+                            outfile << " " << longitudinal_distance_vect[j];
+                          if (has_edge_attrs[1])
+                            outfile << " " << transverse_distance_vect[j];
+                          if (has_edge_attrs[2])
+                            outfile << " " << distance_vect[j];
+                          if (has_edge_attrs[3])
+                            outfile << " " << synaptic_weight_vect[j];
+                          if (has_edge_attrs[4])
+                            outfile << " " << segment_index_vect[j];
+                          if (has_edge_attrs[5])
+                            outfile << " " << segment_point_index_vect[j];
+                          if (has_edge_attrs[6])
+                            outfile << " " << layer_vect[j];
+                          outfile << std::endl;
+                        }
                     }
+                  outfile.close();
                 }
-              outfile.close();
             }
-          
-          recvbuf.clear();
         }
     }
 
