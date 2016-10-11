@@ -3,10 +3,12 @@
 
 #include "ngh5paths.h"
 
-#include <cassert>
 #include <cstdio>
 #include <iostream>
 #include <vector>
+
+#undef NDEBUG
+#include <cassert>
 
 using namespace std;
 
@@ -31,6 +33,9 @@ herr_t read_population_combos
   herr_t ierr = 0;
 
   int rank, size;
+
+  printf("entering read_population_combos\n");
+  
   assert(MPI_Comm_size(comm, &size) >= 0);
   assert(MPI_Comm_rank(comm, &rank) >= 0);
 

@@ -5,13 +5,15 @@
 
 #include "ngh5paths.h"
 
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <cstring>
+
+#undef NDEBUG
+#include <cassert>
 
 #define MAX_PRJ_NAME 1024
 #define MAX_EDGE_ATTR_NAME 1024
@@ -55,6 +57,9 @@ herr_t read_projection_names
   herr_t ierr = 0;
 
   int rank, size;
+
+  printf("entering read_projection_names\n");
+
   assert(MPI_Comm_size(comm, &size) >= 0);
   assert(MPI_Comm_rank(comm, &rank) >= 0);
 
@@ -71,6 +76,8 @@ herr_t read_projection_names
     {
       file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
+
+      DEBUG("file = ",file,"\n"); 
 
       grp = H5Gopen(file, string("/Projections").c_str(), H5P_DEFAULT);
       
