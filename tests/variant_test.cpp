@@ -1,9 +1,12 @@
 #include "../reader/variant.hh"
+#include <vector>
 
 int main(int argc, char **argv)
 {
     // Store int
-    Variant v(10);
+    Variant v;
+    
+    v.setValue<int>(10);
     int a = 0;
     a = v.getValue<int>();
     std::cout << "a = " << a << std::endl;
@@ -22,5 +25,18 @@ int main(int argc, char **argv)
     v.setValue<Mapping>(m);
     Mapping m2 = v.getValue<Mapping>();
     std::cout << "m2[\"one\"] = " << m2["one"] << std::endl;
+
+    std::vector<int> vv1, vv2;
+    vv1.push_back(1);
+    vv1.push_back(2);
+    vv1.push_back(3);
+    
+    v.setValue< std::vector<int> >(vv1);    
+    vv2 = v.getValue<std::vector<int>>();
+    std::cout << "vv2[0] = " << vv2[0] << std::endl;
+    std::cout << "vv2[1] = " << vv2[1] << std::endl;
+    std::cout << "vv2[2] = " << vv2[2] << std::endl;
+
+
     return 0;
 }
