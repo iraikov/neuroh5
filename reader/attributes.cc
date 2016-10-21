@@ -6,6 +6,15 @@
 
 using namespace std;
 
+// Example of dispatching over an H5 type:
+// hid_t ty;
+// size_t sz = H5Tget_size(type);
+// switch (H5Tget_class(ty)) {
+//     case H5T_INTEGER:
+//     case H5T_FLOAT:
+//     case H5T_ENUM:
+//
+
 namespace ngh5
 {
   //////////////////////////////////////////////////////////////////////////////
