@@ -126,61 +126,6 @@ int append_prj_list
 }
 
 
-/*****************************************************************************
- * Prints out projection content
- *****************************************************************************/
-
-void output_projection(string outfilename,
-                       const prj_tuple_t& projection)
-{
-  DEBUG("output_projection: outfilename is ",outfilename,"\n");
-  
-  const vector<NODE_IDX_T>& src_list = get<0>(projection);
-  const vector<NODE_IDX_T>& dst_list = get<1>(projection);
-  
-  const vector<float>&      longitudinal_distance = get<2>(projection);
-  const vector<float>&      transverse_distance   = get<3>(projection);
-  const vector<float>&      distance              = get<4>(projection);
-  const vector<float>&      synaptic_weight       = get<5>(projection);
-  const vector<uint16_t>&   segment_index         = get<6>(projection);
-  const vector<uint16_t>&   segment_point_index   = get<7>(projection);
-  const vector<uint8_t>&    layer                 = get<8>(projection);
-
-  bool has_longitudinal_distance = longitudinal_distance.size() > 0;
-  bool has_transverse_distance   = transverse_distance.size() > 0;
-  bool has_distance              = distance.size() > 0;
-  bool has_synaptic_weight       = synaptic_weight.size() > 0;
-  bool has_segment_index         = segment_index.size() > 0;
-  bool has_segment_point_index   = segment_point_index.size() > 0;
-  bool has_layer                 = layer.size() > 0;
-
-  ofstream outfile;
-  outfile.open(outfilename);
-
-  for (size_t i = 0; i < src_list.size(); i++)
-    {
-      outfile << i << " " << src_list[i] << " " << dst_list[i];
-      if (has_longitudinal_distance)
-        outfile << " " << longitudinal_distance[i];
-      if (has_transverse_distance)
-        outfile << " " << transverse_distance[i];
-      if (has_distance)
-        outfile << " " << distance[i];
-      if (has_synaptic_weight)
-        outfile << " " << synaptic_weight[i];
-      if (has_segment_index)
-        outfile << " " << segment_index[i];
-      if (has_segment_point_index)
-        outfile << " " << segment_point_index[i];
-      if (has_layer)
-        outfile << " " << layer[i];
-      outfile << std::endl;
-    }
-
-  outfile.close();
-
-}
-
 
 
 /*****************************************************************************
