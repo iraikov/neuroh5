@@ -12,6 +12,9 @@
 
 using namespace std;
 
+namespace ngh5
+{
+
 std::string ngh5_pop_path (const char *name) 
 {
   std::string result;
@@ -271,3 +274,4 @@ bool validate_edge_list
   return result;
 }
 
+}

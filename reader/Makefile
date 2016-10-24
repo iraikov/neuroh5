@@ -9,11 +9,11 @@ LDFLAGS		= -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR)
 
 all: reader scatter
 
-reader: reader.o dbs_graph_reader.o population_reader.o
-	$(CXX) -std=c++11 -o reader $(LDFLAGS) reader.o dbs_graph_reader.o population_reader.o -l$(HDF5_LIB) -lmpi
+reader: reader.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o
+	$(CXX) -std=c++11 -o reader $(LDFLAGS) reader.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o -l$(HDF5_LIB) -lmpi
 
-scatter: scatter.o dbs_graph_reader.o population_reader.o
-	$(CXX) -std=c++11 -o scatter $(LDFLAGS) scatter.o dbs_graph_reader.o population_reader.o -l$(HDF5_LIB) -lmpi
+scatter: scatter.o graph_reader.o dbs_edge_reader.o population_reader.o
+	$(CXX) -std=c++11 -o scatter $(LDFLAGS) scatter.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o -l$(HDF5_LIB) -lmpi
 
 .cc.o:
 	$(CXX) -std=c++11 $(CFLAGS) -c $< -o $@

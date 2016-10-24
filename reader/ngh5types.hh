@@ -48,6 +48,9 @@ typedef unsigned int NODE_IDX_T;
 #define SYNAPTIC_WEIGHT_MPI_T MPI_FLOAT
 
 
+namespace ngh5
+{
+
 
 // Population types
 
@@ -79,13 +82,7 @@ typedef pop_range_map_t::const_iterator pop_range_iter_t;
 typedef uint32_t rank_t;
 
 typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
-                    std::vector<float>,  // longitudinal distance, 
-                    std::vector<float>, // transverse distance,
-                    std::vector<float>, // distance
-                    std::vector<float>, // synaptic weight,
-                    std::vector<uint16_t>, // segment index,
-                    std::vector<uint16_t>, // segment point index,
-                    std::vector<uint8_t> // layer
+                    std::vector<edge_attr_val_t>  // edge attribute vector,
                    > edge_tuple_t;
 
 typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
@@ -98,13 +95,10 @@ typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
 
 typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
                     std::vector<NODE_IDX_T>, // destination vector
-                    std::vector<float>,  // longitudinal distance,
-                    std::vector<float>, // transverse distance,
-                    std::vector<float>, // distance
-                    std::vector<float>, // synaptic weight,
-                    std::vector<uint16_t>, // segment index,
-                    std::vector<uint16_t>, // segment point index,
-                    std::vector<uint8_t> // layer
+                    std::vector< std::pair<std::string,hid_t> >& edge_attr_info, // edge attribute name & type
+                    std::vector<edge_attr_val_t>  // edge attribute vector,
                    > prj_tuple_t;
+
+}
 
 #endif

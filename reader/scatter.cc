@@ -4,7 +4,7 @@
 #include "ngh5types.hh"
 
 #include "population_reader.hh"
-#include "graph_scatter.hh"
+#include "graph_reader.hh"
 
 #include <getopt.h>
 #include <cassert>
@@ -22,6 +22,7 @@
 #include <mpi.h>
 
 using namespace std;
+using namespace ngh5;
 
 void throw_err(char const* err_message)
 {
@@ -199,10 +200,15 @@ int main(int argc, char** argv)
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
-  graph_scatter (all_comm,
+  vector<string> prj_names;
+  assert(read_projection_names(all_comm, input_file_name, prj_names) >= 0);
+
+  
+  scatter_graph (all_comm,
                  input_file_name,
                  io_size,
                  opt_attrs,
+                 prj_names,
                  node_rank_vector,
                  prj_vector,
                  has_edge_attrs_vector);

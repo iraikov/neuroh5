@@ -10,6 +10,9 @@
 
 #include "hdf5.h"
 
+namespace ngh5
+{
+
 extern herr_t read_population_combos
 (
  MPI_Comm                             comm,
@@ -37,5 +40,6 @@ extern bool validate_edge_list
  const std::set< std::pair<pop_t, pop_t> >& pop_pairs
  );
 
+}
 
 #endif

@@ -8,6 +8,9 @@
 #include <map>
 #include <vector>
 
+namespace ngh5
+{
+
 extern herr_t read_projection_names
 (
  MPI_Comm                 comm,
@@ -15,14 +18,6 @@ extern herr_t read_projection_names
  std::vector<std::string> &prj_vector
  );
 
-
-herr_t read_edge_attribute_names
-(
- MPI_Comm                                comm,
- const char*                             fname, 
- const char*                             prjname, 
- std::vector<std::string> &edge_attr_vector
- );
 
 
 extern herr_t read_dbs_projection
@@ -41,5 +36,7 @@ extern herr_t read_dbs_projection
  std::vector<DST_PTR_T>&  dst_ptr,  /* one longer than owned nodes count */
  std::vector<NODE_IDX_T>& src_idx
  );
+  
+}
 
 #endif

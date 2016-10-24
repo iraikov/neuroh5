@@ -1,7 +1,7 @@
 
 #include "debug.hh"
 
-#include "dbs_graph_reader.hh"
+#include "dbs_edge_reader.hh"
 #include "population_reader.hh"
 #include "edge_reader.hh"
 
@@ -22,10 +22,66 @@
 
 using namespace std;
 
+namespace ngh5
+{
+
+/*****************************************************************************
+ * Append src/dst node indices to a vector of edges
+ *****************************************************************************/
+
+int append_prj_list
+(
+ const NODE_IDX_T&         dst_start,
+ const NODE_IDX_T&         src_start,
+ const vector<DST_BLK_PTR_T>&  dst_blk_ptr,
+ const vector<NODE_IDX_T>& dst_idx,
+ const vector<DST_PTR_T>&  dst_ptr,
+ const vector<NODE_IDX_T>& src_idx,
+ const vector< pair<string,hid_t> >& edge_attr_info,
+ const vector<edge_attrval_t>& edge_attr_values,
+ size_t&                   num_edges,
+ vector<prj_tuple_t>&      prj_list
+ )
+{
+  int ierr = 0; size_t dst_ptr_size;
+  num_edges = 0;
+  vector<NODE_IDX_T> src_vec, dst_vec;
+  vector <> edge_attr_vec;
+  
+  if (dst_blk_ptr.size() > 0) 
+    {
+      dst_ptr_size = dst_ptr.size();
+      for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+        {
+          size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
+          NODE_IDX_T dst_base = dst_idx[b];
+          for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
+            {
+              if (i < dst_ptr_size-1) 
+                {
+                  NODE_IDX_T dst = dst_base + ii + dst_start;
+                  size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                  for (size_t j = low; j < high; ++j)
+                    {
+                      NODE_IDX_T src = src_idx[j] + src_start;
+                      src_vec.push_back(src);
+                      dst_vec.push_back(dst);
+		      num_edges++;
+                    }
+                }
+            }
+        }
+    }
+
+  prj_list.push_back(make_tuple(src_vec, dst_vec, edge_attr_info, edge_attr_values));
+
+  return ierr;
+}
+
+  
 /*****************************************************************************
  * Append src/dst node pairs to a list of edges
  *****************************************************************************/
-
 
 int append_edge_map
 (
@@ -35,15 +91,8 @@ int append_edge_map
  const vector<NODE_IDX_T>& dst_idx,
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
- const vector<float>&      longitudinal_distance,
- const vector<float>&      transverse_distance,
- const vector<float>&      distance,
- const vector<float>&      synaptic_weight,
- const vector<uint16_t>&   segment_index,
- const vector<uint16_t>&   segment_point_index,
- const vector<uint8_t>&    layer,
- const vector<rank_t>& node_rank_vector,
- const vector<uint8_t>& has_edge_attrs,
+ const edge_attrval_t &    edge_attr_values,
+ const vector<rank_t>&     node_rank_vector,
  size_t& num_edges,
  rank_edge_map_t & rank_edge_map
  )
@@ -69,13 +118,7 @@ int append_edge_map
                   edge_tuple_t& et = rank_edge_map[dstrank][dst];
 
                   vector<NODE_IDX_T> &my_srcs = get<0>(et);
-                  vector<float>&      my_longitudinal_distance = get<1>(et);
-                  vector<float>&      my_transverse_distance   = get<2>(et);
-                  vector<float>&      my_distance              = get<3>(et);
-                  vector<float>&      my_synaptic_weight       = get<4>(et);
-                  vector<uint16_t>&   my_segment_index         = get<5>(et);
-                  vector<uint16_t>&   my_segment_point_index   = get<6>(et);
-                  vector<uint8_t>&    my_layer                 = get<7>(et);
+                  vector<edge_attrval_t> &my_edge_attr_vals = get<1>(et);
 
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   for (size_t j = low; j < high; ++j)
@@ -118,88 +161,21 @@ int read_all_edge_attributes
  const char *prj_name,
  const DST_PTR_T edge_base,
  const DST_PTR_T edge_count,
- const vector<string>&      edge_attr_names,
- vector<float>&      longitudinal_distance,
- vector<float>&      transverse_distance,
- vector<float>&      distance,
- vector<float>&      synaptic_weight,
- vector<uint16_t>&   segment_index,
- vector<uint16_t>&   segment_point_index,
- vector<uint8_t>&    layer
+ const vector< pair<string,hid_t> >& edge_attr_info,
+ vector<edge_attrval_t> &edge_attr_values
  )
 {
   int ierr = 0; 
   vector<NODE_IDX_T> src_vec, dst_vec;
 
-  for (size_t j = 0; j < edge_attr_names.size(); j++)
+  for (size_t j = 0; j < edge_attr_info.size(); j++)
     {
-      if (edge_attr_names[j].compare(string("Longitudinal Distance")) == 0)
-        {
-          assert(read_edge_attributes<float>(comm,
-                                             input_file_name,
-                                             prj_name,
-                                             "Longitudinal Distance",
-                                             edge_base, edge_count,
-                                             LONG_DISTANCE_H5_NATIVE_T,
-                                             longitudinal_distance) >= 0);
-          continue;
-        }
-      if (edge_attr_names[j].compare(string("Transverse Distance")) == 0)
-        {
-          assert(read_edge_attributes<float>(comm,
-                                             input_file_name,
-                                             prj_name,
-                                             "Transverse Distance",
-                                             edge_base, edge_count,
-                                             TRANS_DISTANCE_H5_NATIVE_T,
-                                             transverse_distance)  >= 0);
-          continue;
-        }
-      if (edge_attr_names[j].compare(string("Distance")) == 0)
-        {
-          assert(read_edge_attributes<float>(comm,
-                                             input_file_name,
-                                             prj_name,
-                                             "Distance",
-                                             edge_base, edge_count,
-                                             DISTANCE_H5_NATIVE_T,
-                                             distance)  >= 0);
-          continue;
-        }
-      if (edge_attr_names[j].compare(string("Segment Index")) == 0)
-        {
-          assert(read_edge_attributes<uint16_t>(comm,
-                                                input_file_name,
-                                                prj_name,
-                                                "Segment Index",
-                                                edge_base, edge_count,
-                                                SEGMENT_INDEX_H5_NATIVE_T,
-                                                segment_index) >= 0);
-          continue;
-        }
-      if (edge_attr_names[j].compare(string("Segment Point Index")) == 0)
-        {
-          assert(read_edge_attributes<uint16_t>(comm,
-                                                input_file_name,
-                                                prj_name,
-                                                "Segment Point Index",
-                                                edge_base, edge_count,
-                                                SEGMENT_POINT_INDEX_H5_NATIVE_T,
-                                                segment_point_index) >= 0);
-          continue;
-        }
-      if (edge_attr_names[j].compare(string("Layer")) == 0)
-        {
-          assert(read_edge_attributes<uint8_t>(comm,
-                                               input_file_name,
-                                               prj_name,
-                                               "Layer",
-                                               edge_base, edge_count,
-                                               LAYER_H5_NATIVE_T,
-                                               layer) >= 0);
-          continue;
-        }
-
+      edge_attrval_t attr_val;
+      string attr_name = edge_attr_info[j].first;
+      hid_t  attr_h5type = edge_attr_info[j].second;
+      assert ((ierr = read_edge_attributes(comm,input_file_name,prj_name,attr_name.c_str(),
+                                           edge_base, edge_count, attr_h5type, attr_val)) >= 0);
+      edge_attr_values.push_val(attr_val);
     }
   return ierr;
 }
@@ -411,17 +387,96 @@ int unpack_edge
 }
 
 
+/*****************************************************************************
+ * Load projection data structures 
+ *****************************************************************************/
+
+int read_graph
+(
+ MPI_Comm comm,
+ const char *input_file_name,
+ const bool opt_attrs,
+ const vector<string> prj_names,
+ vector<prj_tuple_t> &prj_list,
+ size_t &local_prj_num_edges,
+ size_t &total_prj_num_edges
+ )
+ {
+   // read the population info
+   set< pair<pop_t, pop_t> > pop_pairs;
+   assert(read_population_combos(comm, input_file_name, pop_pairs) >= 0);
+   
+   vector<pop_range_t> pop_vector;
+   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+   assert(read_population_ranges(comm, input_file_name, pop_ranges, pop_vector) >= 0);
+   
+  // read the edges
+  for (size_t i = 0; i < prj_names.size(); i++)
+    {
+      DST_BLK_PTR_T block_base;
+      DST_PTR_T edge_base, edge_count;
+      NODE_IDX_T dst_start, src_start;
+      vector<DST_BLK_PTR_T> dst_blk_ptr;
+      vector<NODE_IDX_T> dst_idx;
+      vector<DST_PTR_T> dst_ptr;
+      vector<NODE_IDX_T> src_idx;
+      vector< pair<string,hid_t> >& edge_attr_info;
+      vector<edge_attrval_t> &edge_attr_values;
+      vector<float> longitudinal_distance;
+      vector<float> transverse_distance;
+      vector<float> distance;
+      vector<float> synaptic_weight;
+      vector<uint16_t> segment_index;
+      vector<uint16_t> segment_point_index;
+      vector<uint8_t> layer;
+      
+      printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
+
+      assert(read_dbs_projection(comm, input_file_name, prj_names[i].c_str(), 
+                                 pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
+                                 dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+      
+      // validate the edges
+      assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+      
+      if (opt_attrs)
+        {
+          edge_count = src_idx.size();
+          assert(get_edge_attributes(input_file_name, prj_names[i], edge_attr_info) >= 0);
+
+          assert(read_all_edge_attributes(comm, input_file_name, prj_names[i], edge_base, edge_count,
+                                          edge_attr_info, edge_attr_values) >= 0);
+        }
+
+      // append to the vectors representing a projection (sources, destinations, edge attributes)
+      assert(append_prj_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, 
+                             edge_attr_info, edge_attr_values, local_prj_num_edges, prj_list) >= 0);
+
+
+      // ensure that all edges in the projection have been read and appended to edge_list
+      assert(local_prj_num_edges == src_idx.size());
+
+      printf("Task %d has read %lu edges in projection %lu (%s)\n",
+             rank,  local_prj_num_edges, i, prj_names[i].c_str());
+
+      total_num_edges = total_num_edges + total_prj_num_edges;
+      local_num_edges = local_num_edges + local_prj_num_edges;
+
+    }
+ }
+  
 
 /*****************************************************************************
  * Load and scatter edge data structures 
  *****************************************************************************/
 
-int graph_scatter
+int scatter_graph
 (
  MPI_Comm all_comm,
  const char *input_file_name,
  const int io_size,
  const bool opt_attrs,
+ const vector<string> prj_names,
   // A vector that maps nodes to compute ranks
  const vector<rank_t> node_rank_vector,
  vector < edge_map_t > & prj_vector,
@@ -455,7 +510,6 @@ int graph_scatter
       // read the population info
       assert(read_population_combos(io_comm, input_file_name, pop_pairs) >= 0);
       assert(read_population_ranges(io_comm, input_file_name, pop_ranges, pop_vector) >= 0);
-      assert(read_projection_names(io_comm, input_file_name, prj_names) >= 0);
       prj_size = prj_names.size();
     }
   else
@@ -676,3 +730,4 @@ int graph_scatter
   return ierr;
 }
 
+}

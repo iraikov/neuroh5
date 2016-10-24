@@ -4,24 +4,43 @@
 ///
 ///  Auxilliary functions for node and edge attribute discovery.
 ///
-///  Copyright (C) 2016 Project Neurograh.
+///  Copyright (C) 2016 Project Neurograph.
 //==============================================================================
 
 #ifndef ATTRIBUTES_HH
 #define ATTRIBUTES_HH
 
 #include "hdf5.h"
+#include "variant.hh"
 
 #include <string>
 #include <utility>
 #include <vector>
 
+using namespace std;
+
 namespace ngh5
 {
 
+  typedef Variant edge_attrval_t;
+  
+  /// @brief Specifies the path to edge attributes
+  ///
+  /// @param dsetname          Projection data set name
+  ///
+  /// @param attr_name         Edge attribute name
+  ///
+  /// @return                  A string containing the full path to the attribute data set 
+  std::string ngh5_edge_attr_path (const char *dsetname, const char *attr_name) 
+  {
+    std::string result;
+    result = std::string("/Projections/") + dsetname + "/Attributes/Edge/" + attr_name;
+    return result;
+  }
+
   /// @brief Discovers the list of edge attributes.
   ///
-  /// @param in_file           HDF5 input file handle
+  /// @param in_file           Input file name
   ///
   /// @param in_projName       The (abbreviated) name of the projection.
   ///
@@ -37,6 +56,24 @@ namespace ngh5
    hid_t&                                       in_file,
    const std::string&                           in_projName,
    std::vector< std::pair<std::string,hid_t> >& out_attributes
+   );
+
+  
+  /// @brief Reads the values of edge attributes.
+  ///
+  /// @param in_file           Input file name
+  ///
+  /// @param dsetname          The (abbreviated) name of the projection.
+  herr_t read_edge_attributes
+  (
+   MPI_Comm            comm,
+   const char*         in_file, 
+   const char*         dsetname, 
+   const char*         attr_name, 
+   const DST_PTR_T     edge_base,
+   const DST_PTR_T     edge_count,
+   const hid_t         attr_h5type,
+   edge_attrval_t      &attr_values
    );
 
 }

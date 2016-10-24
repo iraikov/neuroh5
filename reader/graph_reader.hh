@@ -9,17 +9,32 @@
 #include <map>
 #include <vector>
 
+namespace ngh5
+{
 
-int graph_scatter
+int read_graph
+(
+ MPI_Comm comm,
+ const char *input_file_name,
+ const bool opt_attrs,
+ const vector<string> prj_names,
+ vector<prj_tuple_t> &prj_list,
+ size_t &local_prj_num_edges,
+ size_t &total_prj_num_edges
+ );
+  
+int scatter_graph
 (
  MPI_Comm all_comm,
  const char *input_file_name,
  const int io_size,
  const bool opt_attrs,
+ const vector<string> prj_names,
   // A vector that maps nodes to compute ranks
  const std::vector<rank_t> node_rank_vector,
  std::vector < edge_map_t > & prj_vector,
  std::vector < std::vector <uint8_t> > & has_edge_attrs_vector
  );
+}
 
 #endif

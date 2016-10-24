@@ -1,7 +1,7 @@
 
 #include "debug.hh"
 
-#include "dbs_graph_reader.hh"
+#include "dbs_edge_reader.hh"
 
 #include "ngh5paths.h"
 
@@ -19,6 +19,9 @@
 #define MAX_EDGE_ATTR_NAME 1024
 
 using namespace std;
+
+namespace ngh5
+{
 
 std::string ngh5_prj_path (const char *dsetname, const char *name) 
 {
@@ -140,107 +143,6 @@ herr_t read_projection_names
     }
 
   free(prj_names_buf);
-  
-  return ierr;
-}
-
-/*****************************************************************************
- * Read edge attribute names
- *****************************************************************************/
-
-herr_t read_edge_attribute_names
-(
- MPI_Comm                                comm,
- const char*                             fname, 
- const char*                             prjname, 
- vector<string> &edge_attr_vector
- )
-{
-  herr_t ierr = 0;
-
-  int rank, size;
-  assert(MPI_Comm_size(comm, &size) >= 0);
-  assert(MPI_Comm_rank(comm, &rank) >= 0);
-
-  // MPI rank 0 reads and broadcasts the number of ranges 
-  hsize_t num_edge_attrs, i;
-  hid_t file = -1, grp = -1;
-  char edge_attr_name[MAX_EDGE_ATTR_NAME]; char *edge_attr_names_buf;
-  size_t edge_attr_names_total_length = 0;
-  vector<char> edge_attr_names;
-  vector<uint64_t> edge_attr_name_lengths;
-
-  // process 0 reads the names of edge attributes and broadcasts
-  if (rank == 0)
-    {
-      string edge_attr_path = string("/Projections/") + prjname + "/Attributes/Edge";
-
-      file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(file >= 0);
-
-      grp = H5Gopen(file, edge_attr_path.c_str(), H5P_DEFAULT);
-      
-      assert(H5Gget_num_objs(grp, &num_edge_attrs)>=0);
-    }
-
-  assert(MPI_Bcast(&num_edge_attrs, 1, MPI_UINT64_T, 0, comm) >= 0);
-  DEBUG("num_edge_attrs = ",num_edge_attrs,"\n"); 
-
-  // allocate buffer
-  edge_attr_name_lengths.resize(num_edge_attrs);
-  edge_attr_vector.resize(num_edge_attrs);
-
-  // MPI rank 0 reads and broadcasts the edge attribute names
-  if (rank == 0)
-    {
-      for (i = 0; i < num_edge_attrs; i++) 
-        {
-          size_t len;
-          /* For each object in the group, get the name */
-          assert(H5Gget_objname_by_idx(grp, i, edge_attr_name, (size_t)MAX_EDGE_ATTR_NAME )>0);
-          DEBUG("Edge attribute ",i," is named ",edge_attr_name,"\n"); 
-          len = strlen(edge_attr_name);
-          DEBUG("Edge attribute ",i," has length ",len,"\n"); 
-          edge_attr_vector[i] = string(edge_attr_name);
-          edge_attr_name_lengths[i] = len;
-          edge_attr_names_total_length =  edge_attr_names_total_length + len;
-          DEBUG("Total length of edge attributes is ",edge_attr_names_total_length,"\n"); 
-        }
-
-      assert(H5Gclose(grp) >= 0);
-      assert(H5Fclose(file) >= 0);
-    }
-
-  DEBUG("edge_attr_names_total_length = ",edge_attr_names_total_length,"\n"); 
-  // Broadcast edge attribute name lengths
-  assert(MPI_Bcast(&edge_attr_names_total_length, 1, MPI_UINT64_T, 0, comm) >= 0);
-  assert(MPI_Bcast(&edge_attr_name_lengths[0], num_edge_attrs, MPI_UINT64_T, 0, comm) >= 0);
-
-  // Broadcast edge attribute names
-  size_t offset = 0;
-  assert((edge_attr_names_buf = (char *)malloc(edge_attr_names_total_length)) != NULL);
-  if (rank == 0)
-    {
-      for (i = 0; i < num_edge_attrs; i++)
-        {
-          memcpy(edge_attr_names_buf+offset,edge_attr_vector[i].c_str(),edge_attr_name_lengths[i]);
-          offset = offset + edge_attr_name_lengths[i];
-        }
-    }
-  assert(MPI_Bcast(edge_attr_names_buf, edge_attr_names_total_length, MPI_BYTE, 0, comm) >= 0);
-
-  // Copy edge attribute names into prj_vector
-  offset = 0;
-  for (i = 0; i < num_edge_attrs; i++) 
-    {
-      size_t len = edge_attr_name_lengths[i];
-      memcpy(edge_attr_name, edge_attr_names_buf+offset, len);
-      edge_attr_name[len] = '\0';
-      edge_attr_vector[i] = string(edge_attr_name);
-      offset = offset + len;
-    }
-
-  free(edge_attr_names_buf);
   
   return ierr;
 }
@@ -583,3 +485,4 @@ herr_t read_dbs_projection
   return ierr;
 }
 
+}

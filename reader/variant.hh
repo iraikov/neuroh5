@@ -1,6 +1,7 @@
 
 // Variant datatype implementation; based on Stack Overflow post
 // http://stackoverflow.com/questions/5319216/implementing-a-variant-class
+// See file ./tests/variant_test.cpp for usage examples.
 
 #include <iostream>
 #include <map>
