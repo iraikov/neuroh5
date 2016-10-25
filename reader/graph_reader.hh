@@ -17,12 +17,13 @@ int read_graph
  MPI_Comm comm,
  const char *input_file_name,
  const bool opt_attrs,
- const vector<string> prj_names,
- vector<prj_tuple_t> &prj_list,
+ const std::vector<std::string> prj_names,
+ std::vector<prj_tuple_t> &prj_list,
  size_t &local_prj_num_edges,
  size_t &total_prj_num_edges
  );
-  
+
+  /*
 int scatter_graph
 (
  MPI_Comm all_comm,
@@ -35,6 +36,8 @@ int scatter_graph
  std::vector < edge_map_t > & prj_vector,
  std::vector < std::vector <uint8_t> > & has_edge_attrs_vector
  );
+  */
+  
 }
 
 #endif

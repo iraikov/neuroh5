@@ -6,16 +6,15 @@
 
 using namespace std;
 
-// Example of dispatching over an H5 type:
-// hid_t ty;
-// switch (H5Tget_class(ty)) {
-//     case H5T_INTEGER:
-//     case H5T_FLOAT:
-//     case H5T_ENUM:
-//
-
 namespace ngh5
 {
+  string ngh5_edge_attr_path (const char *dsetname, const char *attr_name)
+  {
+    string result;
+    result = string("/Projections/") + dsetname + "/Attributes/Edge/" + attr_name;
+    return result;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Callback for H5Literate
   static herr_t edge_attribute_cb
@@ -46,13 +45,15 @@ namespace ngh5
   //////////////////////////////////////////////////////////////////////////////
   herr_t get_edge_attributes
   (
-   hid_t&                        in_file,
+   const char *                  in_file_name,
    const string&                 in_projName,
    vector< pair<string,hid_t> >& out_attributes
    )
   {
+    hid_t in_file;
     herr_t ierr;
 
+    in_file = H5Fopen(in_file_name, H5F_ACC_RDONLY, H5P_DEFAULT);
     assert(in_file >= 0);
     out_attributes.clear();
 
@@ -68,6 +69,7 @@ namespace ngh5
                       &edge_attribute_cb, (void*) &out_attributes);
 
     assert(H5Gclose(grp) >= 0);
+    ierr = H5Fclose(in_file);
 
     return ierr;
   }
@@ -83,7 +85,7 @@ namespace ngh5
    const DST_PTR_T     edge_base,
    const DST_PTR_T     edge_count,
    const hid_t         attr_h5type,
-   edge_attrval_t      &attr_values
+   EdgeAttr           &attr_values
    )
   {
     hid_t file;
@@ -91,10 +93,9 @@ namespace ngh5
     hsize_t block = edge_count, base = edge_base;
     vector <float>    attr_values_float;
     vector <uint16_t> attr_values_uint16;
-    vector <uint16_t> attr_values_uint32;
+    vector <uint32_t> attr_values_uint32;
     vector <uint8_t>  attr_values_uint8;
-    size_t attr_size = H5Tget_size(type);
-    
+    size_t attr_size = H5Tget_size(attr_h5type);
     
     file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
     assert(file >= 0);
@@ -102,10 +103,6 @@ namespace ngh5
     if (edge_count > 0)
       {
         hsize_t one = 1;
-        
-        // allocate buffer and memory dataspace
-        attr_values.resize(edge_count);
-        assert(attr_values.size() > 0);
         
         hid_t mspace = H5Screate_simple(1, &block, NULL);
         assert(mspace >= 0);
@@ -124,20 +121,20 @@ namespace ngh5
         switch (H5Tget_class(attr_h5type))
           {
           case H5T_INTEGER:
-            if (size == 32)
+            if (attr_size == 32)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint32[0]);
-                attr_values.setValue< std::vector<uint32> >(attr_values_uint32);    
+                attr_values.set(attr_values_uint32);
               }
-            else if (size == 16)
+            else if (attr_size == 16)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint16[0]);
-                attr_values.setValue< std::vector<uint16> >(attr_values_uint16);    
+                attr_values.set(attr_values_uint16);    
               }
-            else if (size == 8)
+            else if (attr_size == 8)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.setValue< std::vector<uint8> >(attr_values_uint8);    
+                attr_values.set(attr_values_uint8);    
               }
             else
               {
@@ -146,13 +143,13 @@ namespace ngh5
             break;
           case H5T_FLOAT:
             ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_float[0]);
-            attr_values.setValue< std::vector<float> >(attr_values_float);    
+            attr_values.set(attr_values_float);    
             break;
           case H5T_ENUM:
-             if (size == 8)
+             if (attr_size == 8)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.setValue< std::vector<uint8> >(attr_values_uint8);    
+                attr_values.set(attr_values_uint8);    
               }
             else
               {

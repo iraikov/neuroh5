@@ -9,6 +9,7 @@
 
 #include "hdf5.h"
 
+#include "edge_attr.hh"
 
 // Block offset type
 typedef uint64_t DST_BLK_PTR_T;
@@ -82,7 +83,7 @@ typedef pop_range_map_t::const_iterator pop_range_iter_t;
 typedef uint32_t rank_t;
 
 typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
-                    std::vector<edge_attr_val_t>  // edge attribute vector,
+                    std::vector< EdgeAttr >  // edge attribute vector,
                    > edge_tuple_t;
 
 typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
@@ -95,8 +96,8 @@ typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
 
 typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
                     std::vector<NODE_IDX_T>, // destination vector
-                    std::vector< std::pair<std::string,hid_t> >& edge_attr_info, // edge attribute name & type
-                    std::vector<edge_attr_val_t>  // edge attribute vector,
+                    std::vector< std::pair<std::string,hid_t> >, // edge attribute name & type
+                    std::vector< EdgeAttr >  // edge attribute vector
                    > prj_tuple_t;
 
 }

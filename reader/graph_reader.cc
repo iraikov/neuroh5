@@ -3,7 +3,8 @@
 
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
-#include "edge_reader.hh"
+#include "graph_reader.hh"
+#include "attributes.hh"
 
 #include "ngh5paths.h"
 
@@ -38,7 +39,7 @@ int append_prj_list
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
  const vector< pair<string,hid_t> >& edge_attr_info,
- const vector<edge_attrval_t>& edge_attr_values,
+ const vector<EdgeAttr> &edge_attr_values,
  size_t&                   num_edges,
  vector<prj_tuple_t>&      prj_list
  )
@@ -46,7 +47,9 @@ int append_prj_list
   int ierr = 0; size_t dst_ptr_size;
   num_edges = 0;
   vector<NODE_IDX_T> src_vec, dst_vec;
-  vector <> edge_attr_vec;
+  vector<EdgeAttr> edge_attr_vec;
+
+  //TODO: initialize members of edge_attr_vec to appropriate types
   
   if (dst_blk_ptr.size() > 0) 
     {
@@ -66,6 +69,17 @@ int append_prj_list
                       NODE_IDX_T src = src_idx[j] + src_start;
                       src_vec.push_back(src);
                       dst_vec.push_back(dst);
+                      for (size_t k = 0; k < edge_attr_vec.size(); k++)
+                        {
+                          switch (edge_attr_values[j].tag_active_type)
+                            {
+                            case EdgeAttr::at_float:    edge_attr_vec[k].push_back<float>(edge_attr_values[k].at<float>(j)); break;
+                            case EdgeAttr::at_uint8:    edge_attr_vec[k].push_back<uint8_t>(edge_attr_values[k].at<uint8_t>(j)); break;
+                            case EdgeAttr::at_uint16:   edge_attr_vec[k].push_back<uint8_t>(edge_attr_values[k].at<uint8_t>(j)); break;
+                            case EdgeAttr::at_uint32:   edge_attr_vec[k].push_back<uint8_t>(edge_attr_values[k].at<uint8_t>(j)); break;
+                            case EdgeAttr::at_null:     break;
+                            }
+                        }
 		      num_edges++;
                     }
                 }
@@ -73,7 +87,7 @@ int append_prj_list
         }
     }
 
-  prj_list.push_back(make_tuple(src_vec, dst_vec, edge_attr_info, edge_attr_values));
+  prj_list.push_back(make_tuple(src_vec, dst_vec, edge_attr_info, edge_attr_vec));
 
   return ierr;
 }
@@ -82,7 +96,7 @@ int append_prj_list
 /*****************************************************************************
  * Append src/dst node pairs to a list of edges
  *****************************************************************************/
-
+/*
 int append_edge_map
 (
  const NODE_IDX_T&         dst_start,
@@ -149,7 +163,7 @@ int append_edge_map
 
   return ierr;
 }
-
+*/
 /*****************************************************************************
  * Read edge attributes
  *****************************************************************************/
@@ -162,7 +176,7 @@ int read_all_edge_attributes
  const DST_PTR_T edge_base,
  const DST_PTR_T edge_count,
  const vector< pair<string,hid_t> >& edge_attr_info,
- vector<edge_attrval_t> &edge_attr_values
+ vector<EdgeAttr> &edge_attr_values
  )
 {
   int ierr = 0; 
@@ -170,12 +184,12 @@ int read_all_edge_attributes
 
   for (size_t j = 0; j < edge_attr_info.size(); j++)
     {
-      edge_attrval_t attr_val;
+      EdgeAttr attr_val;
       string attr_name = edge_attr_info[j].first;
       hid_t  attr_h5type = edge_attr_info[j].second;
       assert ((ierr = read_edge_attributes(comm,input_file_name,prj_name,attr_name.c_str(),
                                            edge_base, edge_count, attr_h5type, attr_val)) >= 0);
-      edge_attr_values.push_val(attr_val);
+      edge_attr_values.push_back(attr_val);
     }
   return ierr;
 }
@@ -186,7 +200,7 @@ int read_all_edge_attributes
  * Prepare an MPI packed data structure with source vertices and edge attributes
  * for a given destination vertex.
  *****************************************************************************/
-
+/*
 int pack_edge
 (
  MPI_Comm comm,
@@ -305,12 +319,12 @@ int pack_edge
   
   return ierr;
 }
-
+*/
 
 /*****************************************************************************
  * Unpack an MPI packed edge data structure into source vertices and edge attributes
  *****************************************************************************/
-
+/*
 int unpack_edge
 (
  MPI_Comm comm,
@@ -386,7 +400,7 @@ int unpack_edge
   return ierr;
 }
 
-
+*/
 /*****************************************************************************
  * Load projection data structures 
  *****************************************************************************/
@@ -398,8 +412,8 @@ int read_graph
  const bool opt_attrs,
  const vector<string> prj_names,
  vector<prj_tuple_t> &prj_list,
- size_t &local_prj_num_edges,
- size_t &total_prj_num_edges
+ size_t &local_num_edges,
+ size_t &total_num_edges
  )
  {
    // read the population info
@@ -420,17 +434,12 @@ int read_graph
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
-      vector< pair<string,hid_t> >& edge_attr_info;
-      vector<edge_attrval_t> &edge_attr_values;
-      vector<float> longitudinal_distance;
-      vector<float> transverse_distance;
-      vector<float> distance;
-      vector<float> synaptic_weight;
-      vector<uint16_t> segment_index;
-      vector<uint16_t> segment_point_index;
-      vector<uint8_t> layer;
+      vector< pair<string,hid_t> > edge_attr_info;
+      vector<EdgeAttr> edge_attr_values;
+      size_t local_prj_num_edges;
+      size_t total_prj_num_edges;
       
-      printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
+      //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
       assert(read_dbs_projection(comm, input_file_name, prj_names[i].c_str(), 
                                  pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
@@ -444,7 +453,7 @@ int read_graph
           edge_count = src_idx.size();
           assert(get_edge_attributes(input_file_name, prj_names[i], edge_attr_info) >= 0);
 
-          assert(read_all_edge_attributes(comm, input_file_name, prj_names[i], edge_base, edge_count,
+          assert(read_all_edge_attributes(comm, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
                                           edge_attr_info, edge_attr_values) >= 0);
         }
 
@@ -456,20 +465,22 @@ int read_graph
       // ensure that all edges in the projection have been read and appended to edge_list
       assert(local_prj_num_edges == src_idx.size());
 
-      printf("Task %d has read %lu edges in projection %lu (%s)\n",
-             rank,  local_prj_num_edges, i, prj_names[i].c_str());
+      //printf("Task %d has read %lu edges in projection %lu (%s)\n",
+      //       rank,  local_prj_num_edges, i, prj_names[i].c_str());
 
       total_num_edges = total_num_edges + total_prj_num_edges;
       local_num_edges = local_num_edges + local_prj_num_edges;
 
     }
+
+  return 0;
  }
   
 
 /*****************************************************************************
  * Load and scatter edge data structures 
  *****************************************************************************/
-
+/*
 int scatter_graph
 (
  MPI_Comm all_comm,
@@ -729,5 +740,5 @@ int scatter_graph
   MPI_Comm_free(&io_comm);
   return ierr;
 }
-
+*/
 }

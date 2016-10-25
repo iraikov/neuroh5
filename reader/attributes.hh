@@ -11,7 +11,7 @@
 #define ATTRIBUTES_HH
 
 #include "hdf5.h"
-#include "variant.hh"
+#include "ngh5types.hh"
 
 #include <string>
 #include <utility>
@@ -21,8 +21,6 @@ using namespace std;
 
 namespace ngh5
 {
-
-  typedef Variant edge_attrval_t;
   
   /// @brief Specifies the path to edge attributes
   ///
@@ -31,12 +29,7 @@ namespace ngh5
   /// @param attr_name         Edge attribute name
   ///
   /// @return                  A string containing the full path to the attribute data set 
-  std::string ngh5_edge_attr_path (const char *dsetname, const char *attr_name) 
-  {
-    std::string result;
-    result = std::string("/Projections/") + dsetname + "/Attributes/Edge/" + attr_name;
-    return result;
-  }
+  std::string ngh5_edge_attr_path (const char *dsetname, const char *attr_name);
 
   /// @brief Discovers the list of edge attributes.
   ///
@@ -53,7 +46,7 @@ namespace ngh5
   /// @return                  HDF5 error code.
   herr_t get_edge_attributes
   (
-   hid_t&                                       in_file,
+   const char*                                  in_file, 
    const std::string&                           in_projName,
    std::vector< std::pair<std::string,hid_t> >& out_attributes
    );
@@ -73,7 +66,7 @@ namespace ngh5
    const DST_PTR_T     edge_base,
    const DST_PTR_T     edge_count,
    const hid_t         attr_h5type,
-   edge_attrval_t      &attr_values
+   EdgeAttr           &attr_values
    );
 
 }
