@@ -49,7 +49,19 @@ int append_prj_list
   vector<NODE_IDX_T> src_vec, dst_vec;
   vector<EdgeAttr> edge_attr_vec;
 
-  //TODO: initialize members of edge_attr_vec to appropriate types
+  for (size_t k = 0; k < edge_attr_values.size(); k++)
+    {
+      EdgeAttr attr;
+      switch (edge_attr_values[k].tag_active_type)
+        {
+        case EdgeAttr::at_float:    attr.init<float>(); break;
+        case EdgeAttr::at_uint8:    attr.init<uint8_t>(); break;
+        case EdgeAttr::at_uint16:   attr.init<uint16_t>(); break;
+        case EdgeAttr::at_uint32:   attr.init<uint32_t>(); break;
+        case EdgeAttr::at_null:     break;
+        }
+      edge_attr_vec.push_back(attr); 
+    }
   
   if (dst_blk_ptr.size() > 0) 
     {
@@ -96,7 +108,6 @@ int append_prj_list
 /*****************************************************************************
  * Append src/dst node pairs to a list of edges
  *****************************************************************************/
-/*
 int append_edge_map
 (
  const NODE_IDX_T&         dst_start,
@@ -105,7 +116,7 @@ int append_edge_map
  const vector<NODE_IDX_T>& dst_idx,
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
- const edge_attrval_t &    edge_attr_values,
+ const AttrEdge&           edge_attr_values,
  const vector<rank_t>&     node_rank_vector,
  size_t& num_edges,
  rank_edge_map_t & rank_edge_map
@@ -163,7 +174,7 @@ int append_edge_map
 
   return ierr;
 }
-*/
+
 /*****************************************************************************
  * Read edge attributes
  *****************************************************************************/
