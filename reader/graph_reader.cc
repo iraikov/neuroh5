@@ -75,8 +75,8 @@ int append_prj_list
                             {
                             case EdgeAttr::at_float:    edge_attr_vec[k].push_back<float>(edge_attr_values[k].at<float>(j)); break;
                             case EdgeAttr::at_uint8:    edge_attr_vec[k].push_back<uint8_t>(edge_attr_values[k].at<uint8_t>(j)); break;
-                            case EdgeAttr::at_uint16:   edge_attr_vec[k].push_back<uint8_t>(edge_attr_values[k].at<uint8_t>(j)); break;
-                            case EdgeAttr::at_uint32:   edge_attr_vec[k].push_back<uint8_t>(edge_attr_values[k].at<uint8_t>(j)); break;
+                            case EdgeAttr::at_uint16:   edge_attr_vec[k].push_back<uint16_t>(edge_attr_values[k].at<uint16_t>(j)); break;
+                            case EdgeAttr::at_uint32:   edge_attr_vec[k].push_back<uint32_t>(edge_attr_values[k].at<uint32_t>(j)); break;
                             case EdgeAttr::at_null:     break;
                             }
                         }
