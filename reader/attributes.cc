@@ -85,7 +85,7 @@ namespace ngh5
    const DST_PTR_T     edge_base,
    const DST_PTR_T     edge_count,
    const hid_t         attr_h5type,
-   EdgeAttr           &attr_values
+   EdgeNamedAttr      &attr_values
    )
   {
     hid_t file;
@@ -124,40 +124,40 @@ namespace ngh5
             if (attr_size == 32)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint32[0]);
-                attr_values.set(attr_values_uint32);
+                attr_values.insert<uint32_t>(std::string(attrname), attr_values_uint32);
               }
             else if (attr_size == 16)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint16[0]);
-                attr_values.set(attr_values_uint16);    
+                attr_values.insert<uint16_t>(std::string(attrname), attr_values_uint16);
               }
             else if (attr_size == 8)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.set(attr_values_uint8);    
+                attr_values.insert<uint8_t>(std::string(attrname), attr_values_uint8);
               }
             else
               {
-                throw std::logic_error("Unsupported integer attribute size");
+                throw std::runtime_error("Unsupported integer attribute size");
               };
             break;
           case H5T_FLOAT:
             ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_float[0]);
-            attr_values.set(attr_values_float);    
+            attr_values.insert<float>(std::string(attrname), attr_values_float);
             break;
           case H5T_ENUM:
              if (attr_size == 8)
               {
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.set(attr_values_uint8);    
+                attr_values.insert<uint8_t>(std::string(attrname), attr_values_uint8);    
               }
             else
               {
-                throw std::logic_error("Unsupported enumerated attribute size");
+                throw std::runtime_error("Unsupported enumerated attribute size");
               };
             break;
           default:
-            throw std::logic_error("Unsupported attribute type");
+            throw std::runtime_error("Unsupported attribute type");
             break;
           }
 

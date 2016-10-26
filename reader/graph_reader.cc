@@ -39,7 +39,7 @@ int append_prj_list
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
  const vector< pair<string,hid_t> >& edge_attr_info,
- const vector<EdgeAttr> &edge_attr_values,
+ const EdgeNamedAttr &edge_attr_values,
  size_t&                   num_edges,
  vector<prj_tuple_t>&      prj_list
  )
@@ -47,21 +47,12 @@ int append_prj_list
   int ierr = 0; size_t dst_ptr_size;
   num_edges = 0;
   vector<NODE_IDX_T> src_vec, dst_vec;
-  vector<EdgeAttr> edge_attr_vec;
+  EdgeAttr edge_attr_vec;
 
-  for (size_t k = 0; k < edge_attr_values.size(); k++)
-    {
-      EdgeAttr attr;
-      switch (edge_attr_values[k].tag_active_type)
-        {
-        case EdgeAttr::at_float:    attr.init<float>(); break;
-        case EdgeAttr::at_uint8:    attr.init<uint8_t>(); break;
-        case EdgeAttr::at_uint16:   attr.init<uint16_t>(); break;
-        case EdgeAttr::at_uint32:   attr.init<uint32_t>(); break;
-        case EdgeAttr::at_null:     break;
-        }
-      edge_attr_vec.push_back(attr); 
-    }
+  edge_attr_vec.resize<float>(edge_attr_values.size<float>());
+  edge_attr_vec.resize<uint8_t>(edge_attr_values.size<uint8_t>());
+  edge_attr_vec.resize<uint16_t>(edge_attr_values.size<uint16_t>());
+  edge_attr_vec.resize<uint32_t>(edge_attr_values.size<uint32_t>());
   
   if (dst_blk_ptr.size() > 0) 
     {
@@ -81,16 +72,21 @@ int append_prj_list
                       NODE_IDX_T src = src_idx[j] + src_start;
                       src_vec.push_back(src);
                       dst_vec.push_back(dst);
-                      for (size_t k = 0; k < edge_attr_vec.size(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size<float>(); k++)
                         {
-                          switch (edge_attr_values[j].tag_active_type)
-                            {
-                            case EdgeAttr::at_float:    edge_attr_vec[k].push_back<float>(edge_attr_values[k].at<float>(j)); break;
-                            case EdgeAttr::at_uint8:    edge_attr_vec[k].push_back<uint8_t>(edge_attr_values[k].at<uint8_t>(j)); break;
-                            case EdgeAttr::at_uint16:   edge_attr_vec[k].push_back<uint16_t>(edge_attr_values[k].at<uint16_t>(j)); break;
-                            case EdgeAttr::at_uint32:   edge_attr_vec[k].push_back<uint32_t>(edge_attr_values[k].at<uint32_t>(j)); break;
-                            case EdgeAttr::at_null:     break;
-                            }
+                          edge_attr_vec.push_back<float>(k, edge_attr_values.at<float>(k,j)); 
+                        }
+                      for (size_t k = 0; k < edge_attr_vec.size<uint8_t>(); k++)
+                        {
+                          edge_attr_vec.push_back<uint8_t>(k, edge_attr_values.at<uint8_t>(k,j)); 
+                        }
+                      for (size_t k = 0; k < edge_attr_vec.size<uint16_t>(); k++)
+                        {
+                          edge_attr_vec.push_back<uint16_t>(k, edge_attr_values.at<uint16_t>(k,j)); 
+                        }
+                      for (size_t k = 0; k < edge_attr_vec.size<uint32_t>(); k++)
+                        {
+                          edge_attr_vec.push_back<uint32_t>(k, edge_attr_values.at<uint32_t>(k,j)); 
                         }
 		      num_edges++;
                     }
@@ -99,7 +95,7 @@ int append_prj_list
         }
     }
 
-  prj_list.push_back(make_tuple(src_vec, dst_vec, edge_attr_info, edge_attr_vec));
+  prj_list.push_back(make_tuple(src_vec, dst_vec, edge_attr_vec));
 
   return ierr;
 }
@@ -116,7 +112,7 @@ int append_edge_map
  const vector<NODE_IDX_T>& dst_idx,
  const vector<DST_PTR_T>&  dst_ptr,
  const vector<NODE_IDX_T>& src_idx,
- const AttrEdge&           edge_attr_values,
+ const EdgeNamedAttr&      edge_attr_values,
  const vector<rank_t>&     node_rank_vector,
  size_t& num_edges,
  rank_edge_map_t & rank_edge_map
@@ -143,27 +139,35 @@ int append_edge_map
                   edge_tuple_t& et = rank_edge_map[dstrank][dst];
 
                   vector<NODE_IDX_T> &my_srcs = get<0>(et);
-                  vector<edge_attrval_t> &my_edge_attr_vals = get<1>(et);
+                  EdgeAttr &edge_attr_vec = get<1>(et);
+
+                  edge_attr_vec.resize<float>(edge_attr_values.size<float>());
+                  edge_attr_vec.resize<uint8_t>(edge_attr_values.size<uint8_t>());
+                  edge_attr_vec.resize<uint16_t>(edge_attr_values.size<uint16_t>());
+                  edge_attr_vec.resize<uint32_t>(edge_attr_values.size<uint32_t>());
 
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   for (size_t j = low; j < high; ++j)
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
                       my_srcs.push_back (src);
-                      if (has_edge_attrs[0])
-                        my_longitudinal_distance.push_back(longitudinal_distance[j]);
-                      if (has_edge_attrs[1])
-                        my_transverse_distance.push_back(transverse_distance[j]);
-                      if (has_edge_attrs[2])
-                        my_distance.push_back(distance[j]);
-                      if (has_edge_attrs[3])
-                        my_synaptic_weight.push_back(synaptic_weight[j]);
-                      if (has_edge_attrs[4])
-                        my_segment_index.push_back(segment_index[j]);
-                      if (has_edge_attrs[5])
-                        my_segment_point_index.push_back(segment_point_index[j]);
-                      if (has_edge_attrs[6])
-                        my_layer.push_back(layer[j]);
+                      for (size_t k = 0; k < edge_attr_vec.size<float>(); k++)
+                        {
+                          edge_attr_vec.push_back<float>(k, edge_attr_values.at<float>(k,j)); 
+                        }
+                      for (size_t k = 0; k < edge_attr_vec.size<uint8_t>(); k++)
+                        {
+                          edge_attr_vec.push_back<uint8_t>(k, edge_attr_values.at<uint8_t>(k,j)); 
+                        }
+                      for (size_t k = 0; k < edge_attr_vec.size<uint16_t>(); k++)
+                        {
+                          edge_attr_vec.push_back<uint16_t>(k, edge_attr_values.at<uint16_t>(k,j)); 
+                        }
+                      for (size_t k = 0; k < edge_attr_vec.size<uint32_t>(); k++)
+                        {
+                          edge_attr_vec.push_back<uint32_t>(k, edge_attr_values.at<uint32_t>(k,j)); 
+                        }
+
                       num_edges++;
                     }
 
@@ -187,7 +191,7 @@ int read_all_edge_attributes
  const DST_PTR_T edge_base,
  const DST_PTR_T edge_count,
  const vector< pair<string,hid_t> >& edge_attr_info,
- vector<EdgeAttr> &edge_attr_values
+ EdgeNamedAttr &edge_attr_values
  )
 {
   int ierr = 0; 
@@ -195,12 +199,10 @@ int read_all_edge_attributes
 
   for (size_t j = 0; j < edge_attr_info.size(); j++)
     {
-      EdgeAttr attr_val;
       string attr_name = edge_attr_info[j].first;
       hid_t  attr_h5type = edge_attr_info[j].second;
       assert ((ierr = read_edge_attributes(comm,input_file_name,prj_name,attr_name.c_str(),
-                                           edge_base, edge_count, attr_h5type, attr_val)) >= 0);
-      edge_attr_values.push_back(attr_val);
+                                           edge_base, edge_count, attr_h5type, edge_attr_values)) >= 0);
     }
   return ierr;
 }
@@ -211,19 +213,13 @@ int read_all_edge_attributes
  * Prepare an MPI packed data structure with source vertices and edge attributes
  * for a given destination vertex.
  *****************************************************************************/
-/*
+
 int pack_edge
 (
  MPI_Comm comm,
  const NODE_IDX_T &dst,
  const vector<NODE_IDX_T>& src_vect,
- const vector<float>&      longitudinal_distance_vect,
- const vector<float>&      transverse_distance_vect,
- const vector<float>&      distance_vect,
- const vector<float>&      synaptic_weight_vect,
- const vector<uint16_t>&   segment_index_vect,
- const vector<uint16_t>&   segment_point_index_vect,
- const vector<uint8_t>&    layer_vect,
+ const EdgeAttr& edge_attr_values,
  int &sendpos,
  int &sendsize,
  vector<uint8_t> &sendbuf
@@ -237,48 +233,40 @@ int pack_edge
   assert(MPI_Pack_size(1, NODE_IDX_MPI_T, comm, &packsize) == MPI_SUCCESS);
   sendsize += packsize;
 
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(src_vect.size(), NODE_IDX_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
+  for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+    {
+      assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+      assert(MPI_Pack_size(edge_attr_values.get<float>(k).size(), MPI_FLOAT, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+    }
 
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(longitudinal_distance_vect.size(), DISTANCE_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
+  for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+    {
+      assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+      assert(MPI_Pack_size(edge_attr_values.get<uint8_t>(k).size(), MPI_UNSIGNED_CHAR, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+    }
 
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(transverse_distance_vect.size(), DISTANCE_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
+  for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+    {
+      assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+      assert(MPI_Pack_size(edge_attr_values.get<uint16_t>(k).size(), MPI_UNSIGNED_SHORT, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+    }
 
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(distance_vect.size(), DISTANCE_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
+  for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+    {
+      assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+      assert(MPI_Pack_size(edge_attr_values.get<uint32_t>(k).size(), MPI_UNSIGNED, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+    }
 
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(synaptic_weight_vect.size(), SYNAPTIC_WEIGHT_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(segment_index_vect.size(), SEGMENT_INDEX_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(segment_point_index_vect.size(), SEGMENT_POINT_INDEX_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-
-  assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-  assert(MPI_Pack_size(layer_vect.size(), LAYER_MPI_T, comm, &packsize) == MPI_SUCCESS);
-  sendsize += packsize;
-
+  
   sendbuf.resize(sendbuf.size() + sendsize);
-
   
   size_t sendbuf_size = sendbuf.size();
   uint32_t dst_numitems = 0;
@@ -290,64 +278,56 @@ int pack_edge
   MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
   MPI_Pack(&src_vect[0], src_vect.size(), NODE_IDX_MPI_T,
            &sendbuf[0], sendbuf_size, &sendpos, comm);
-  
-  dst_numitems = longitudinal_distance_vect.size();
-  MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  MPI_Pack(&longitudinal_distance_vect[0], longitudinal_distance_vect.size(),
-           DISTANCE_MPI_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
 
-  dst_numitems = transverse_distance_vect.size();
-  MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  MPI_Pack(&transverse_distance_vect[0], transverse_distance_vect.size(),
-           DISTANCE_MPI_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
+  for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+    {
+      dst_numitems = edge_attr_values.get<float>(k).size();
+      MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
+      MPI_Pack(&(edge_attr_values.get<float>(k))[0], dst_numitems,
+               MPI_FLOAT, &sendbuf[0], sendbuf_size, &sendpos, comm);
+    }
+
+  for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+    {
+      dst_numitems = edge_attr_values.get<uint8_t>(k).size();
+      MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
+      MPI_Pack(&(edge_attr_values.get<uint8_t>(k))[0], dst_numitems,
+               MPI_UNSIGNED_CHAR, &sendbuf[0], sendbuf_size, &sendpos, comm);
+    }
+
+  for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+    {
+      dst_numitems = edge_attr_values.get<uint16_t>(k).size();
+      MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
+      MPI_Pack(&(edge_attr_values.get<uint16_t>(k))[0], dst_numitems,
+               MPI_UNSIGNED_SHORT, &sendbuf[0], sendbuf_size, &sendpos, comm);
+    }
+
+  for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+    {
+      dst_numitems = edge_attr_values.get<uint32_t>(k).size();
+      MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
+      MPI_Pack(&(edge_attr_values.get<uint8_t>(k))[0], dst_numitems,
+               MPI_UNSIGNED_CHAR, &sendbuf[0], sendbuf_size, &sendpos, comm);
+    }
   
-  dst_numitems = distance_vect.size();
-  MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  MPI_Pack(&distance_vect[0], distance_vect.size(),
-           DISTANCE_MPI_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  
-  dst_numitems = synaptic_weight_vect.size();
-  MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  MPI_Pack(&synaptic_weight_vect[0], synaptic_weight_vect.size(),
-           SYNAPTIC_WEIGHT_MPI_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  
-  dst_numitems = segment_index_vect.size();
-  MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  MPI_Pack(&segment_index_vect[0], segment_index_vect.size(),
-           SEGMENT_INDEX_MPI_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  
-  dst_numitems = segment_point_index_vect.size();
-  MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  MPI_Pack(&segment_point_index_vect[0], segment_point_index_vect.size(),
-           SEGMENT_POINT_INDEX_MPI_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  
-  dst_numitems = layer_vect.size();
-  MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-  MPI_Pack(&layer_vect[0], layer_vect.size(),
-           LAYER_MPI_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
 
   
   
   return ierr;
 }
-*/
+
 
 /*****************************************************************************
  * Unpack an MPI packed edge data structure into source vertices and edge attributes
  *****************************************************************************/
-/*
+
 int unpack_edge
 (
  MPI_Comm comm,
  NODE_IDX_T &dst,
  vector<NODE_IDX_T>& src_vect,
- vector<float>&      longitudinal_distance_vect,
- vector<float>&      transverse_distance_vect,
- vector<float>&      distance_vect,
- vector<float>&      synaptic_weight_vect,
- vector<uint16_t>&   segment_index_vect,
- vector<uint16_t>&   segment_point_index_vect,
- vector<uint8_t>&    layer_vect,
+ EdgeAttr& edge_attr_values,
  int & recvpos,
  const vector<uint8_t> &recvbuf
  )
@@ -355,7 +335,6 @@ int unpack_edge
   int ierr = 0;
   uint32_t dst_numitems;
   int recvbuf_size = recvbuf.size();
-
   
   assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst, 1, NODE_IDX_MPI_T, comm) >= 0);
 
@@ -364,54 +343,23 @@ int unpack_edge
   MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
              &src_vect[0], dst_numitems, NODE_IDX_MPI_T,
              comm);
-  
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  longitudinal_distance_vect.resize(dst_numitems);
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-             &longitudinal_distance_vect[0], dst_numitems, DISTANCE_MPI_T,
-             comm);
 
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  transverse_distance_vect.resize(dst_numitems);
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-             &transverse_distance_vect[0], dst_numitems, DISTANCE_MPI_T,
-             comm);
-
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  distance_vect.resize(dst_numitems);
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-             &distance_vect[0], dst_numitems, DISTANCE_MPI_T,
-             comm);
-
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  synaptic_weight_vect.resize(dst_numitems);
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-             &synaptic_weight_vect[0], dst_numitems, SYNAPTIC_WEIGHT_MPI_T,
-             comm);
-
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  segment_index_vect.resize(dst_numitems);
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-             &segment_index_vect[0], dst_numitems, SEGMENT_INDEX_MPI_T,
-             comm);
-
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  segment_point_index_vect.resize(dst_numitems);
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-             &segment_point_index_vect[0], dst_numitems, SEGMENT_POINT_INDEX_MPI_T,
-             comm);
-
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
-  layer_vect.resize(dst_numitems);
-  MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-             &layer_vect[0], dst_numitems, LAYER_MPI_T,
-             comm);
+  for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+    {
+      vector<float> vec;
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
+      vec.resize(dst_numitems);
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
+                 &(vec)[0], dst_numitems, MPI_FLOAT,
+                 comm);
+      edge_attr_values.insert<float>(vec);
+    }
   
   
   return ierr;
 }
 
-*/
+
 /*****************************************************************************
  * Load projection data structures 
  *****************************************************************************/
@@ -491,7 +439,7 @@ int read_graph
 /*****************************************************************************
  * Load and scatter edge data structures 
  *****************************************************************************/
-/*
+
 int scatter_graph
 (
  MPI_Comm all_comm,
@@ -501,8 +449,7 @@ int scatter_graph
  const vector<string> prj_names,
   // A vector that maps nodes to compute ranks
  const vector<rank_t> node_rank_vector,
- vector < edge_map_t > & prj_vector,
- vector < vector <uint8_t> > & has_edge_attrs_vector
+ vector < edge_map_t > & prj_vector
  )
 {
   int ierr = 0;
@@ -515,7 +462,6 @@ int scatter_graph
   set< pair<pop_t, pop_t> > pop_pairs;
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-  vector<string> prj_names;
   size_t prj_size = 0;
   
   int rank, size;
@@ -550,11 +496,8 @@ int scatter_graph
       vector<int> sendcounts, sdispls, recvcounts, rdispls;
       vector<NODE_IDX_T> recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
-      vector<uint8_t> has_edge_attrs;
-      uint32_t has_edge_attrs_length;
       edge_map_t prj_edge_map;
       
-      has_edge_attrs.resize(0,0);
       sendcounts.resize(size,0);
       sdispls.resize(size,0);
       recvcounts.resize(size,0);
@@ -570,14 +513,8 @@ int scatter_graph
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
           size_t num_edges = 0, total_prj_num_edges = 0;
-          vector<string> edge_attr_names;
-          vector<float> longitudinal_distance;
-          vector<float> transverse_distance;
-          vector<float> distance;
-          vector<float> synaptic_weight;
-          vector<uint16_t> segment_index;
-          vector<uint16_t> segment_point_index;
-          vector<uint8_t> layer;
+          vector< pair<string,hid_t> > edge_attr_info;
+          EdgeNamedAttr edge_attr_values;
 
 	  DEBUG("scatter: reading projection ", i, "(", prj_names[i], ")");
           assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
@@ -594,38 +531,19 @@ int scatter_graph
             {
               edge_count = src_idx.size();
 	      DEBUG("scatter: validating edge attribute names from projection ", i, "(", prj_names[i], ")");
-              assert(read_edge_attribute_names(io_comm, input_file_name, prj_names[i].c_str(), edge_attr_names) >= 0);
+              assert(get_edge_attributes(input_file_name, prj_names[i].c_str(), edge_attr_info) >= 0);
 	      DEBUG("scatter: validating edge attributes from projection ", i, "(", prj_names[i], ")");
               assert(read_all_edge_attributes(io_comm, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
-                                              edge_attr_names, longitudinal_distance, transverse_distance, distance,
-                                              synaptic_weight, segment_index, segment_point_index, layer) >= 0);
+                                              edge_attr_info, edge_attr_values) >= 0);
             }
-
-          has_edge_attrs.push_back(longitudinal_distance.size() > 0);
-          has_edge_attrs.push_back(transverse_distance.size() > 0);
-          has_edge_attrs.push_back(distance.size() > 0);
-          has_edge_attrs.push_back(synaptic_weight.size() > 0);
-          has_edge_attrs.push_back(segment_index.size() > 0);
-          has_edge_attrs.push_back(segment_point_index.size() > 0);
-          has_edge_attrs.push_back(layer.size() > 0);
 
           // append to the edge map
           assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                 longitudinal_distance, transverse_distance, distance,
-                                 synaptic_weight, segment_index, segment_point_index, layer,
-                                 node_rank_vector, has_edge_attrs, num_edges, prj_rank_edge_map) >= 0);
+                                 edge_attr_values, node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
       
           // ensure that all edges in the projection have been read and appended to edge_list
           assert(num_edges == src_idx.size());
 	} // rank < io_size
-
-      if (opt_attrs)
-	{
-	  has_edge_attrs_length = has_edge_attrs.size();
-	  assert(MPI_Bcast(&has_edge_attrs_length, 1, MPI_UINT32_T, 0, all_comm) >= 0);
-	  has_edge_attrs.resize(has_edge_attrs_length);
-	  assert(MPI_Bcast(&has_edge_attrs[0], has_edge_attrs_length, MPI_UINT8_T, 0, all_comm) >= 0);
-	}
 
 
       if (rank < io_size)
@@ -644,32 +562,14 @@ int scatter_graph
                       int sendsize;
                       NODE_IDX_T dst = it2->first;
 
-                      const vector<NODE_IDX_T>  src_vect                   = get<0>(it2->second);
-                      const vector<float>&      longitudinal_distance_vect = get<1>(it2->second);
-                      const vector<float>&      transverse_distance_vect   = get<2>(it2->second);
-                      const vector<float>&      distance_vect              = get<3>(it2->second);
-                      const vector<float>&      synaptic_weight_vect       = get<4>(it2->second);
-                      const vector<uint16_t>&   segment_index_vect         = get<5>(it2->second);
-                      const vector<uint16_t>&   segment_point_index_vect   = get<6>(it2->second);
-                      const vector<uint8_t>&    layer_vect                 = get<7>(it2->second);
+                      const vector<NODE_IDX_T>  src_vect = get<0>(it2->second);
+                      const EdgeAttr&      my_edge_attrs = get<1>(it2->second);
 
                       if (src_vect.size() > 0)
                         {
                           
-                          assert(pack_edge(all_comm,
-                                           dst,
-                                           src_vect,
-                                           longitudinal_distance_vect,
-                                           transverse_distance_vect,
-                                           distance_vect,
-                                           synaptic_weight_vect,
-                                           segment_index_vect,
-                                           segment_point_index_vect,
-                                           layer_vect,
-                                           sendpos,
-                                           sendsize,
-                                           sendbuf
-                                           ) == 0);
+                          assert(pack_edge(all_comm, dst, src_vect, my_edge_attrs,
+                                           sendpos, sendsize, sendbuf) == 0);
                           
                           sendcounts[dst_rank] += sendsize;
                         }
@@ -710,46 +610,19 @@ int scatter_graph
         {
           NODE_IDX_T dst; 
           vector<NODE_IDX_T> src_vect;
-          vector<float>      longitudinal_distance_vect;
-          vector<float>      transverse_distance_vect;
-          vector<float>      distance_vect;
-          vector<float>      synaptic_weight_vect;
-          vector<uint16_t>   segment_index_vect;
-          vector<uint16_t>   segment_point_index_vect;
-          vector<uint8_t>    layer_vect;
+          EdgeAttr           edge_attr_values;
           
-          unpack_edge(all_comm,
-                      dst,
-                      src_vect,
-                      longitudinal_distance_vect,
-                      transverse_distance_vect,
-                      distance_vect,
-                      synaptic_weight_vect,
-                      segment_index_vect,
-                      segment_point_index_vect,
-                      layer_vect,
-                      recvpos,
-                      recvbuf
-                      );
+          unpack_edge(all_comm, dst, src_vect, edge_attr_values, recvpos, recvbuf);
 
-          prj_edge_map.insert(make_pair(dst,
-                                        make_tuple(src_vect,
-                                                   longitudinal_distance_vect,
-                                                   transverse_distance_vect,
-                                                   distance_vect,
-                                                   synaptic_weight_vect,
-                                                   segment_index_vect,
-                                                   segment_point_index_vect,
-                                                   layer_vect)));
+          prj_edge_map.insert(make_pair(dst,make_tuple(src_vect, edge_attr_values)));
 
         }
 
-      has_edge_attrs_vector.push_back(has_edge_attrs);
       prj_vector.push_back(prj_edge_map);
     }
 
   MPI_Comm_free(&io_comm);
   return ierr;
 }
-*/
+
 }

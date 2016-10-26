@@ -236,32 +236,29 @@ int main(int argc, char** argv)
                       edge_tuple_t& et = it->second;
                       
                       vector<NODE_IDX_T> src_vect = get<0>(et);
-                      vector<float>      longitudinal_distance_vect = get<1>(et);
-                      vector<float>      transverse_distance_vect = get<2>(et);
-                      vector<float>      distance_vect = get<3>(et);
-                      vector<float>      synaptic_weight_vect = get<4>(et);
-                      vector<uint16_t>   segment_index_vect = get<5>(et);
-                      vector<uint16_t>   segment_point_index_vect = get<6>(et);
-                      vector<uint8_t>    layer_vect = get<7>(et);
+                      const EdgeAttr&   edge_attr_values = get<1>(et);
                       
                       for (size_t j = 0; j < src_vect.size(); j++)
                         {
                           NODE_IDX_T src = src_vect[j];
                           outfile << src << dst;
-                          if (has_edge_attrs[0])
-                            outfile << longitudinal_distance_vect[j];
-                          if (has_edge_attrs[1])
-                            outfile << transverse_distance_vect[j];
-                          if (has_edge_attrs[2])
-                            outfile << distance_vect[j];
-                          if (has_edge_attrs[3])
-                            outfile << synaptic_weight_vect[j];
-                          if (has_edge_attrs[4])
-                            outfile << segment_index_vect[j];
-                          if (has_edge_attrs[5])
-                            outfile << segment_point_index_vect[j];
-                          if (has_edge_attrs[6])
-                            outfile << layer_vect[j];
+                          for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+                            {
+                              outfile << edge_attr_values.at<float>(k,j); 
+                            }
+                          for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+                            {
+                              outfile << edge_attr_values.at<uint8_t>(k,j); 
+                            }
+                          for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+                            {
+                              outfile << edge_attr_values.at<uint16_t>(k,j); 
+                            }
+                          for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+                            {
+                              outfile << edge_attr_values.at<uint32_t>(k,j); 
+                            }
+
                         }
                     }
                   outfile.close();
@@ -286,33 +283,31 @@ int main(int argc, char** argv)
                       NODE_IDX_T dst   = it->first;
                       edge_tuple_t& et = it->second;
 
-                      const vector<NODE_IDX_T>  src_vect                   = get<0>(et);
-                      const vector<float>&      longitudinal_distance_vect = get<1>(et);
-                      const vector<float>&      transverse_distance_vect   = get<2>(et);
-                      const vector<float>&      distance_vect              = get<3>(et);
-                      const vector<float>&      synaptic_weight_vect       = get<4>(et);
-                      const vector<uint16_t>&   segment_index_vect         = get<5>(et);
-                      const vector<uint16_t>&   segment_point_index_vect   = get<6>(et);
-                      const vector<uint8_t>&    layer_vect                 = get<7>(et);
+                      const vector<NODE_IDX_T> src_vect = get<0>(et);
+                      const EdgeAttr&   edge_attr_values = get<1>(et);
 
+                      
                       for (size_t j = 0; j < src_vect.size(); j++)
                         {
                           NODE_IDX_T src = src_vect[j];
                           outfile << "    " << src << " " << dst;
-                          if (has_edge_attrs[0])
-                            outfile << " " << longitudinal_distance_vect[j];
-                          if (has_edge_attrs[1])
-                            outfile << " " << transverse_distance_vect[j];
-                          if (has_edge_attrs[2])
-                            outfile << " " << distance_vect[j];
-                          if (has_edge_attrs[3])
-                            outfile << " " << synaptic_weight_vect[j];
-                          if (has_edge_attrs[4])
-                            outfile << " " << segment_index_vect[j];
-                          if (has_edge_attrs[5])
-                            outfile << " " << segment_point_index_vect[j];
-                          if (has_edge_attrs[6])
-                            outfile << " " << layer_vect[j];
+                          for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+                            {
+                              outfile << " " << edge_attr_values.at<float>(k,j); 
+                            }
+                          for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+                            {
+                              outfile << " " << edge_attr_values.at<uint8_t>(k,j); 
+                            }
+                          for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+                            {
+                              outfile << " " << edge_attr_values.at<uint16_t>(k,j); 
+                            }
+                          for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+                            {
+                              outfile << " " << edge_attr_values.at<uint32_t>(k,j); 
+                            }
+                          
                           outfile << std::endl;
                         }
                     }

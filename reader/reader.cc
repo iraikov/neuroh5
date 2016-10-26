@@ -63,8 +63,7 @@ void output_projection(string outfilename,
   
   const vector<NODE_IDX_T>& src_list = get<0>(projection);
   const vector<NODE_IDX_T>& dst_list = get<1>(projection);
-  const vector< pair<string,hid_t> >& edge_attr_info = get<2>(projection);
-  const vector<EdgeAttr>&   edge_attr_values         = get<3>(projection);
+  const EdgeAttr&  edge_attr_values  = get<2>(projection);
 
   ofstream outfile;
   outfile.open(outfilename);
@@ -72,17 +71,23 @@ void output_projection(string outfilename,
   for (size_t i = 0; i < src_list.size(); i++)
     {
       outfile << i << " " << src_list[i] << " " << dst_list[i];
-      for (size_t j = 0; j < edge_attr_values.size(); j++)
+      for (size_t j = 0; j < edge_attr_values.size<float>(); j++)
         {
-          switch (edge_attr_values[j].tag_active_type)
-            {
-            case EdgeAttr::at_float:    outfile << " " << edge_attr_values[j].at<float>(i); break;
-            case EdgeAttr::at_uint8:    outfile << " " << edge_attr_values[j].at<uint8_t>(i); break;
-            case EdgeAttr::at_uint16:   outfile << " " << edge_attr_values[j].at<uint16_t>(i); break;
-            case EdgeAttr::at_uint32:   outfile << " " << edge_attr_values[j].at<uint32_t>(i); break;
-            case EdgeAttr::at_null: break;
-            }
+          outfile << " " << edge_attr_values.at<float>(j,i); 
         }
+      for (size_t j = 0; j < edge_attr_values.size<uint8_t>(); j++)
+        {
+          outfile << " " << edge_attr_values.at<uint8_t>(j,i); 
+        }
+      for (size_t j = 0; j < edge_attr_values.size<uint16_t>(); j++)
+        {
+          outfile << " " << edge_attr_values.at<uint16_t>(j,i);
+        }
+      for (size_t j = 0; j < edge_attr_values.size<uint32_t>(); j++)
+        {
+          outfile << " " << edge_attr_values.at<uint32_t>(j,i);
+        }
+
       outfile << std::endl;
     }
 
