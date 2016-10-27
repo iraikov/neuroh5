@@ -49,10 +49,10 @@ int append_prj_list
   vector<NODE_IDX_T> src_vec, dst_vec;
   EdgeAttr edge_attr_vec;
 
-  edge_attr_vec.resize<float>(edge_attr_values.size<float>());
-  edge_attr_vec.resize<uint8_t>(edge_attr_values.size<uint8_t>());
-  edge_attr_vec.resize<uint16_t>(edge_attr_values.size<uint16_t>());
-  edge_attr_vec.resize<uint32_t>(edge_attr_values.size<uint32_t>());
+  edge_attr_vec.resize<float>(edge_attr_values.size_attr_vec<float>());
+  edge_attr_vec.resize<uint8_t>(edge_attr_values.size_attr_vec<uint8_t>());
+  edge_attr_vec.resize<uint16_t>(edge_attr_values.size_attr_vec<uint16_t>());
+  edge_attr_vec.resize<uint32_t>(edge_attr_values.size_attr_vec<uint32_t>());
   
   if (dst_blk_ptr.size() > 0) 
     {
@@ -72,19 +72,19 @@ int append_prj_list
                       NODE_IDX_T src = src_idx[j] + src_start;
                       src_vec.push_back(src);
                       dst_vec.push_back(dst);
-                      for (size_t k = 0; k < edge_attr_vec.size<float>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<float>(); k++)
                         {
                           edge_attr_vec.push_back<float>(k, edge_attr_values.at<float>(k,j)); 
                         }
-                      for (size_t k = 0; k < edge_attr_vec.size<uint8_t>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<uint8_t>(); k++)
                         {
                           edge_attr_vec.push_back<uint8_t>(k, edge_attr_values.at<uint8_t>(k,j)); 
                         }
-                      for (size_t k = 0; k < edge_attr_vec.size<uint16_t>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<uint16_t>(); k++)
                         {
                           edge_attr_vec.push_back<uint16_t>(k, edge_attr_values.at<uint16_t>(k,j)); 
                         }
-                      for (size_t k = 0; k < edge_attr_vec.size<uint32_t>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<uint32_t>(); k++)
                         {
                           edge_attr_vec.push_back<uint32_t>(k, edge_attr_values.at<uint32_t>(k,j)); 
                         }
@@ -141,29 +141,29 @@ int append_edge_map
                   vector<NODE_IDX_T> &my_srcs = get<0>(et);
                   EdgeAttr &edge_attr_vec = get<1>(et);
 
-                  edge_attr_vec.resize<float>(edge_attr_values.size<float>());
-                  edge_attr_vec.resize<uint8_t>(edge_attr_values.size<uint8_t>());
-                  edge_attr_vec.resize<uint16_t>(edge_attr_values.size<uint16_t>());
-                  edge_attr_vec.resize<uint32_t>(edge_attr_values.size<uint32_t>());
+                  edge_attr_vec.resize<float>(edge_attr_values.size_attr_vec<float>());
+                  edge_attr_vec.resize<uint8_t>(edge_attr_values.size_attr_vec<uint8_t>());
+                  edge_attr_vec.resize<uint16_t>(edge_attr_values.size_attr_vec<uint16_t>());
+                  edge_attr_vec.resize<uint32_t>(edge_attr_values.size_attr_vec<uint32_t>());
 
                   size_t low = dst_ptr[i], high = dst_ptr[i+1];
                   for (size_t j = low; j < high; ++j)
                     {
                       NODE_IDX_T src = src_idx[j] + src_start;
                       my_srcs.push_back (src);
-                      for (size_t k = 0; k < edge_attr_vec.size<float>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<float>(); k++)
                         {
                           edge_attr_vec.push_back<float>(k, edge_attr_values.at<float>(k,j)); 
                         }
-                      for (size_t k = 0; k < edge_attr_vec.size<uint8_t>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<uint8_t>(); k++)
                         {
                           edge_attr_vec.push_back<uint8_t>(k, edge_attr_values.at<uint8_t>(k,j)); 
                         }
-                      for (size_t k = 0; k < edge_attr_vec.size<uint16_t>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<uint16_t>(); k++)
                         {
                           edge_attr_vec.push_back<uint16_t>(k, edge_attr_values.at<uint16_t>(k,j)); 
                         }
-                      for (size_t k = 0; k < edge_attr_vec.size<uint32_t>(); k++)
+                      for (size_t k = 0; k < edge_attr_vec.size_attr_vec<uint32_t>(); k++)
                         {
                           edge_attr_vec.push_back<uint32_t>(k, edge_attr_values.at<uint32_t>(k,j)); 
                         }
@@ -201,7 +201,7 @@ int read_all_edge_attributes
     {
       string attr_name = edge_attr_info[j].first;
       hid_t  attr_h5type = edge_attr_info[j].second;
-      assert ((ierr = read_edge_attributes(comm,input_file_name,prj_name,attr_name.c_str(),
+      assert ((ierr = read_edge_attributes(comm, input_file_name, prj_name, attr_name,
                                            edge_base, edge_count, attr_h5type, edge_attr_values)) >= 0);
     }
   return ierr;
@@ -233,35 +233,39 @@ int pack_edge
   assert(MPI_Pack_size(1, NODE_IDX_MPI_T, comm, &packsize) == MPI_SUCCESS);
   sendsize += packsize;
 
-  for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
     {
+      size_t numitems = edge_attr_values.size_attr<float>(k); 
       assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
-      assert(MPI_Pack_size(edge_attr_values.get<float>(k).size(), MPI_FLOAT, comm, &packsize) == MPI_SUCCESS);
+      assert(MPI_Pack_size(numitems, MPI_FLOAT, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
     }
 
-  for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
     {
+      size_t numitems = edge_attr_values.size_attr<uint8_t>(k); 
       assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
-      assert(MPI_Pack_size(edge_attr_values.get<uint8_t>(k).size(), MPI_UNSIGNED_CHAR, comm, &packsize) == MPI_SUCCESS);
+      assert(MPI_Pack_size(numitems, MPI_UNSIGNED_CHAR, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
     }
 
-  for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
     {
+      size_t numitems = edge_attr_values.size_attr<uint16_t>(k); 
       assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
-      assert(MPI_Pack_size(edge_attr_values.get<uint16_t>(k).size(), MPI_UNSIGNED_SHORT, comm, &packsize) == MPI_SUCCESS);
+      assert(MPI_Pack_size(numitems, MPI_UNSIGNED_SHORT, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
     }
 
-  for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
     {
+      size_t numitems = edge_attr_values.size_attr<uint32_t>(k); 
       assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
-      assert(MPI_Pack_size(edge_attr_values.get<uint32_t>(k).size(), MPI_UNSIGNED, comm, &packsize) == MPI_SUCCESS);
+      assert(MPI_Pack_size(numitems, MPI_UNSIGNED, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
     }
 
@@ -279,35 +283,35 @@ int pack_edge
   MPI_Pack(&src_vect[0], src_vect.size(), NODE_IDX_MPI_T,
            &sendbuf[0], sendbuf_size, &sendpos, comm);
 
-  for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
     {
-      dst_numitems = edge_attr_values.get<float>(k).size();
+      dst_numitems = edge_attr_values.size_attr<float>(k);
       MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-      MPI_Pack(&(edge_attr_values.get<float>(k))[0], dst_numitems,
+      MPI_Pack(edge_attr_values.attr_ptr<float>(k), dst_numitems,
                MPI_FLOAT, &sendbuf[0], sendbuf_size, &sendpos, comm);
     }
 
-  for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
     {
-      dst_numitems = edge_attr_values.get<uint8_t>(k).size();
+      dst_numitems = edge_attr_values.size_attr<uint8_t>(k);
       MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-      MPI_Pack(&(edge_attr_values.get<uint8_t>(k))[0], dst_numitems,
+      MPI_Pack(edge_attr_values.attr_ptr<uint8_t>(k), dst_numitems,
                MPI_UNSIGNED_CHAR, &sendbuf[0], sendbuf_size, &sendpos, comm);
     }
 
-  for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
     {
-      dst_numitems = edge_attr_values.get<uint16_t>(k).size();
+      dst_numitems = edge_attr_values.size_attr<uint16_t>(k);
       MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-      MPI_Pack(&(edge_attr_values.get<uint16_t>(k))[0], dst_numitems,
+      MPI_Pack(edge_attr_values.attr_ptr<uint16_t>(k), dst_numitems,
                MPI_UNSIGNED_SHORT, &sendbuf[0], sendbuf_size, &sendpos, comm);
     }
 
-  for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
     {
-      dst_numitems = edge_attr_values.get<uint32_t>(k).size();
+      dst_numitems = edge_attr_values.size_attr<uint32_t>(k);
       MPI_Pack(&dst_numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size, &sendpos, comm);
-      MPI_Pack(&(edge_attr_values.get<uint8_t>(k))[0], dst_numitems,
+      MPI_Pack(edge_attr_values.attr_ptr<uint8_t>(k), dst_numitems,
                MPI_UNSIGNED_CHAR, &sendbuf[0], sendbuf_size, &sendpos, comm);
     }
   
@@ -344,7 +348,7 @@ int unpack_edge
              &src_vect[0], dst_numitems, NODE_IDX_MPI_T,
              comm);
 
-  for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
     {
       vector<float> vec;
       MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
@@ -352,7 +356,37 @@ int unpack_edge
       MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
                  &(vec)[0], dst_numitems, MPI_FLOAT,
                  comm);
-      edge_attr_values.insert<float>(vec);
+      edge_attr_values.insert(vec);
+    }
+
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
+    {
+      vector<uint8_t> vec;
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
+      vec.resize(dst_numitems);
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
+                 &(vec)[0], dst_numitems, MPI_UNSIGNED_CHAR, comm);
+      edge_attr_values.insert(vec);
+    }
+
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
+    {
+      vector<uint16_t> vec;
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
+      vec.resize(dst_numitems);
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
+                 &(vec)[0], dst_numitems, MPI_UNSIGNED_SHORT, comm);
+      edge_attr_values.insert(vec);
+    }
+
+  for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
+    {
+      vector<uint32_t> vec;
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
+      vec.resize(dst_numitems);
+      MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
+                 &(vec)[0], dst_numitems, MPI_UNSIGNED, comm);
+      edge_attr_values.insert(vec);
     }
   
   
@@ -394,7 +428,7 @@ int read_graph
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
       vector< pair<string,hid_t> > edge_attr_info;
-      vector<EdgeAttr> edge_attr_values;
+      EdgeNamedAttr edge_attr_values;
       size_t local_prj_num_edges;
       size_t total_prj_num_edges;
       
@@ -403,9 +437,11 @@ int read_graph
       assert(read_dbs_projection(comm, input_file_name, prj_names[i].c_str(), 
                                  pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
                                  dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+      DEBUG("reader: validating projection ", i, "(", prj_names[i], ")");
       
       // validate the edges
       assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+      DEBUG("reader: validation of ", i, "(", prj_names[i], ") finished");
       
       if (opt_attrs)
         {
@@ -415,6 +451,8 @@ int read_graph
           assert(read_all_edge_attributes(comm, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
                                           edge_attr_info, edge_attr_values) >= 0);
         }
+
+      DEBUG("reader: ", i, "(", prj_names[i], ") attributes read");
 
       // append to the vectors representing a projection (sources, destinations, edge attributes)
       assert(append_prj_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, 

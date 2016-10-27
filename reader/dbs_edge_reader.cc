@@ -479,9 +479,12 @@ herr_t read_dbs_projection
           assert(H5Dclose(dset) >= 0);
           assert(H5Sclose(mspace) >= 0);
         }
+
+      DEBUG("Task ",rank,": ", "src_idx: done\n");
     }
   assert(H5Fclose(file) >= 0);
 
+  DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
   return ierr;
 }
 

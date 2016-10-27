@@ -3,93 +3,124 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
+#include <typeindex>
 
 struct EdgeAttr
 {
   std::vector < std::vector <float> > float_values;
   std::vector < std::vector <uint8_t> > uint8_values;
-  std::vector < std::vector <uint8_t> > uint16_values;
-  std::vector < std::vector <uint8_t> > uint32_values;
+  std::vector < std::vector <uint16_t> > uint16_values;
+  std::vector < std::vector <uint32_t> > uint32_values;
   
 
   template<class T>
-  const size_t size () const
+  const size_t size_attr_vec () const
   {
-    size_t result;
-    if (typeid(T) == typeid(std::vector<float>))
-      result = float_values.size();
+    size_t result = 0;
+    if (typeid(T) == typeid(float))
+      {
+        result = float_values.size();
+      }
     else
-      if (typeid(T) == typeid(std::vector<uint8_t>))
-        result = uint8_values.size();
-      else if (typeid(T) == typeid(std::vector<uint16_t>))
-        result = uint16_values.size();
-      else if (typeid(T) == typeid(std::vector<uint32_t>))
-        result = uint32_values.size();
+      if (std::type_index(typeid(T)) == std::type_index(typeid(uint8_t)))
+        {
+          result = uint8_values.size();
+        }
+      else if (std::type_index(typeid(T)) == std::type_index(typeid(uint16_t)))
+        {
+          result = uint16_values.size();
+        }
+      else if (std::type_index(typeid(T)) == std::type_index(typeid(uint32_t)))
+        {
+          result = uint32_values.size();
+        }
       else
-        std::runtime_error("Unknown type for size");
+        throw std::runtime_error("Unknown type for size_attr_vec");
     return result;
   }
 
   template<class T>
   const void resize (size_t size) 
   {
-    if (typeid(T) == typeid(std::vector<float>))
+    if (typeid(T) == typeid(float))
       float_values.resize(size);
     else
-      if (typeid(T) == typeid(std::vector<uint8_t>))
+      if (typeid(T) == typeid(uint8_t))
         uint8_values.resize(size);
-      else if (typeid(T) == typeid(std::vector<uint16_t>))
+      else if (typeid(T) == typeid(uint16_t))
         uint16_values.resize(size);
-      else if (typeid(T) == typeid(std::vector<uint32_t>))
+      else if (typeid(T) == typeid(uint32_t))
         uint32_values.resize(size);
       else
-        std::runtime_error("Unknown type for resize");
+        throw std::runtime_error("Unknown type for resize");
   }
 
+
   template<class T>
-  const std::vector<T>& get (size_t i) const
+  const void *attr_ptr (size_t i) const
   {
-    std::vector<t> result;
-    if (typeid(T) == typeid(std::vector<float>))
-      return(float_values[i]);
+    const void *result;
+    if (typeid(T) == typeid(float))
+      result = &float_values[i][0];
     else
-      if (typeid(T) == typeid(std::vector<uint8_t>))
-        return(uint8_values[i]);
-      else if (typeid(T) == typeid(std::vector<uint16_t>))
-          return(uint16_values[i]);
-      else if (typeid(T) == typeid(std::vector<uint32_t>))
-          return(uint32_values[i]);
+      if (typeid(T) == typeid(uint8_t))
+        result = &uint8_values[i][0];
+      else if (typeid(T) == typeid(uint16_t))
+        result = &uint16_values[i][0];
+      else if (typeid(T) == typeid(uint32_t))
+        result = &uint32_values[i][0];
       else
-        std::runtime_error("Unknown type for get");
+        throw std::runtime_error("Unknown type for attr_ptr");
+    return result;
   }
 
   template<class T>
-  size_t insert (const std::vector<T> &value) 
+  size_t size_attr (size_t i) const
+  {
+    size_t result;
+    if (typeid(T) == typeid(float))
+      result = float_values[i].size();
+    else
+      if (typeid(T) == typeid(uint8_t))
+        result = uint8_values[i].size();
+      else if (typeid(T) == typeid(uint16_t))
+        result = uint16_values[i].size();
+      else if (typeid(T) == typeid(uint32_t))
+        result = uint32_values[i].size();
+      else
+        throw std::runtime_error("Unknown type for size_attr");
+    return result;
+  }
+
+  size_t insert (const std::vector<float> &value) 
   {
     size_t index;
-    if (typeid(T) == typeid(std::vector<float>))
-      {
-        index = float_values.size();
-        float_values.push_back(value);
-      }
-    else
-      if (typeid(T) == typeid(std::vector<uint8_t>))
-        {
-          index = uint8_values.size();
-          uint8_values.push_back (value);
-        }
-      else if (typeid(T) == typeid(std::vector<uint16_t>))
-        {
-          index = uint16_values.size();
-          uint16_values.push_back (value);
-        }
-      else if (typeid(T) == typeid(std::vector<uint32_t>))
-        {
-          index = uint32_values.size();
-          uint32_values.push_back (value);
-        }
-      else
-        std::runtime_error("Unknown type for insert");
+    index = float_values.size();
+    float_values.push_back(value);
+    return index;
+  }
+
+  size_t insert (const std::vector<uint8_t> &value) 
+  {
+    size_t index;
+    index = uint8_values.size();
+    uint8_values.push_back(value);
+    return index;
+  }
+
+  size_t insert (const std::vector<uint16_t> &value) 
+  {
+    size_t index;
+    index = uint16_values.size();
+    uint16_values.push_back(value);
+    return index;
+  }
+
+  size_t insert (const std::vector<uint32_t> &value) 
+  {
+    size_t index;
+    index = uint32_values.size();
+    uint32_values.push_back(value);
     return index;
   }
   
@@ -97,25 +128,25 @@ struct EdgeAttr
   template<class T>
   void push_back (size_t vindex, T value) 
   {
-    if (typeid(T) == typeid(std::vector<float>))
+    if (typeid(T) == typeid(float))
       {
         float_values[vindex].push_back(value);
       }
     else
-      if (typeid(T) == typeid(std::vector<uint8_t>))
+      if (typeid(T) == typeid(uint8_t))
         {
           uint8_values[vindex].push_back (value);
         }
-      else if (typeid(T) == typeid(std::vector<uint16_t>))
+      else if (typeid(T) == typeid(uint16_t))
         {
           uint16_values[vindex].push_back (value);
         }
-      else if (typeid(T) == typeid(std::vector<uint32_t>))
+      else if (typeid(T) == typeid(uint32_t))
         {
           uint32_values[vindex].push_back (value);
         }
       else
-        std::runtime_error("Unknown type for push_back");
+        throw std::runtime_error("Unknown type for push_back");
   }
   
   
@@ -124,25 +155,25 @@ struct EdgeAttr
   const T at (size_t vindex, size_t index) const
   {
     T result;
-    if (typeid(T) == typeid(std::vector<float>))
+    if (typeid(T) == typeid(float))
       {
         result = float_values[vindex][index];
       }
     else
-      if (typeid(T) == typeid(std::vector<uint8_t>))
+      if (typeid(T) == typeid(uint8_t))
         {
           result = uint8_values[vindex][index];
         }
-      else if (typeid(T) == typeid(std::vector<uint16_t>))
+      else if (typeid(T) == typeid(uint16_t))
         {
           result = uint16_values[vindex][index];
         }
-      else if (typeid(T) == typeid(std::vector<uint32_t>))
+      else if (typeid(T) == typeid(uint32_t))
         {
           result = uint32_values[vindex][index];
         }
       else
-        std::runtime_error("Unknown type for push_back");
+        throw std::runtime_error("Unknown type for push_back");
     return result;
   }
   
@@ -159,37 +190,39 @@ struct EdgeNamedAttr : EdgeAttr
   std::map<std::string, size_t> uint32_names;
   
 
-  template<class T>
-  size_t insert (std::string name, const std::vector<T> &value) 
+  size_t insert (std::string name, const std::vector<float> &value) 
   {
     size_t index;
-    if (typeid(T) == typeid(std::vector<float>))
-      {
-        index = float_values.size();
-        float_names.insert(make_pair(name, index));
-        float_values.push_back(value);
-      }
-    else
-      if (typeid(T) == typeid(std::vector<uint8_t>))
-        {
-          index = uint8_values.size();
-          uint8_names.insert(make_pair(name, index));
-          uint8_values.push_back (value);
-        }
-      else if (typeid(T) == typeid(std::vector<uint16_t>))
-        {
-          index = uint16_values.size();
-          uint16_names.insert(make_pair(name, index));
-          uint16_values.push_back (value);
-        }
-      else if (typeid(T) == typeid(std::vector<uint32_t>))
-        {
-          index = uint32_values.size();
-          uint32_names.insert(make_pair(name, index));
-          uint32_values.push_back (value);
-        }
-      else
-        std::runtime_error("Unknown type for insert");
+    index = float_values.size();
+    float_values.push_back(value);
+    float_names.insert(make_pair(name, index));
+    return index;
+  }
+
+  size_t insert (std::string name, const std::vector<uint8_t> &value) 
+  {
+    size_t index;
+    index = uint8_values.size();
+    uint8_values.push_back(value);
+    uint8_names.insert(make_pair(name, index));
+    return index;
+  }
+
+  size_t insert (std::string name, const std::vector<uint16_t> &value) 
+  {
+    size_t index;
+    index = uint16_values.size();
+    uint16_values.push_back(value);
+    uint16_names.insert(make_pair(name, index));
+    return index;
+  }
+
+  size_t insert (std::string name, const std::vector<uint32_t> &value) 
+  {
+    size_t index;
+    index = uint32_values.size();
+    uint32_values.push_back(value);
+    uint32_names.insert(make_pair(name, index));
     return index;
   }
   

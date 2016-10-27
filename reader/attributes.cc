@@ -81,7 +81,7 @@ namespace ngh5
    MPI_Comm            comm,
    const char*         fname, 
    const char*         dsetname, 
-   const char*         attrname, 
+   const std::string   attrname, 
    const DST_PTR_T     edge_base,
    const DST_PTR_T     edge_count,
    const hid_t         attr_h5type,
@@ -109,7 +109,7 @@ namespace ngh5
         ierr = H5Sselect_all(mspace);
         assert(ierr >= 0);
         
-        hid_t dset = H5Dopen2(file, ngh5_edge_attr_path(dsetname, attrname).c_str(), H5P_DEFAULT);
+        hid_t dset = H5Dopen2(file, ngh5_edge_attr_path(dsetname, attrname.c_str()).c_str(), H5P_DEFAULT);
         assert(dset >= 0);
         
         // make hyperslab selection
@@ -123,18 +123,21 @@ namespace ngh5
           case H5T_INTEGER:
             if (attr_size == 32)
               {
+                attr_values_uint32.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint32[0]);
-                attr_values.insert<uint32_t>(std::string(attrname), attr_values_uint32);
+                attr_values.insert(std::string(attrname), attr_values_uint32);
               }
             else if (attr_size == 16)
               {
+                attr_values_uint16.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint16[0]);
-                attr_values.insert<uint16_t>(std::string(attrname), attr_values_uint16);
+                attr_values.insert(std::string(attrname), attr_values_uint16);
               }
             else if (attr_size == 8)
               {
+                attr_values_uint8.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.insert<uint8_t>(std::string(attrname), attr_values_uint8);
+                attr_values.insert(std::string(attrname), attr_values_uint8);
               }
             else
               {
@@ -142,14 +145,16 @@ namespace ngh5
               };
             break;
           case H5T_FLOAT:
+            attr_values_float.resize(edge_count);
             ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_float[0]);
-            attr_values.insert<float>(std::string(attrname), attr_values_float);
+            attr_values.insert(std::string(attrname), attr_values_float);
             break;
           case H5T_ENUM:
              if (attr_size == 8)
               {
+                attr_values_uint8.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.insert<uint8_t>(std::string(attrname), attr_values_uint8);    
+                attr_values.insert(std::string(attrname), attr_values_uint8);    
               }
             else
               {

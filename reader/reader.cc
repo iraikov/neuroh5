@@ -1,6 +1,7 @@
 #include "debug.hh"
 #include "ngh5paths.h"
 #include "ngh5types.hh"
+
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
 #include "graph_reader.hh"
@@ -71,19 +72,19 @@ void output_projection(string outfilename,
   for (size_t i = 0; i < src_list.size(); i++)
     {
       outfile << i << " " << src_list[i] << " " << dst_list[i];
-      for (size_t j = 0; j < edge_attr_values.size<float>(); j++)
+      for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
         {
           outfile << " " << edge_attr_values.at<float>(j,i); 
         }
-      for (size_t j = 0; j < edge_attr_values.size<uint8_t>(); j++)
+      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
         {
           outfile << " " << edge_attr_values.at<uint8_t>(j,i); 
         }
-      for (size_t j = 0; j < edge_attr_values.size<uint16_t>(); j++)
+      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
         {
           outfile << " " << edge_attr_values.at<uint16_t>(j,i);
         }
-      for (size_t j = 0; j < edge_attr_values.size<uint32_t>(); j++)
+      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
         {
           outfile << " " << edge_attr_values.at<uint32_t>(j,i);
         }

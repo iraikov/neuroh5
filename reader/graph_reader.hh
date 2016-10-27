@@ -23,20 +23,18 @@ int read_graph
  size_t &total_prj_num_edges
  );
 
-  /*
 int scatter_graph
 (
  MPI_Comm all_comm,
  const char *input_file_name,
  const int io_size,
  const bool opt_attrs,
- const vector<string> prj_names,
+ const std::vector<std::string> prj_names,
   // A vector that maps nodes to compute ranks
  const std::vector<rank_t> node_rank_vector,
- std::vector < edge_map_t > & prj_vector,
- std::vector < std::vector <uint8_t> > & has_edge_attrs_vector
+ std::vector < edge_map_t > & prj_vector
  );
-  */
+
   
 }
 

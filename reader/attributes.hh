@@ -60,15 +60,14 @@ namespace ngh5
   herr_t read_edge_attributes
   (
    MPI_Comm            comm,
-   const char*         in_file, 
+   const char*         fname, 
    const char*         dsetname, 
-   const char*         attr_name, 
+   const std::string   attrname, 
    const DST_PTR_T     edge_base,
    const DST_PTR_T     edge_count,
    const hid_t         attr_h5type,
-   EdgeAttr           &attr_values
+   EdgeNamedAttr      &attr_values
    );
-
 }
 
 #endif

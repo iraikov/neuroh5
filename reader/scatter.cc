@@ -3,6 +3,7 @@
 #include "ngh5paths.h"
 #include "ngh5types.hh"
 
+#include "dbs_edge_reader.hh"
 #include "population_reader.hh"
 #include "graph_reader.hh"
 
@@ -200,9 +201,7 @@ int main(int argc, char** argv)
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
-  vector<string> prj_names;
   assert(read_projection_names(all_comm, input_file_name, prj_names) >= 0);
-
   
   scatter_graph (all_comm,
                  input_file_name,
@@ -210,8 +209,7 @@ int main(int argc, char** argv)
                  opt_attrs,
                  prj_names,
                  node_rank_vector,
-                 prj_vector,
-                 has_edge_attrs_vector);
+                 prj_vector);
 
 
   if (opt_output)
@@ -242,19 +240,19 @@ int main(int argc, char** argv)
                         {
                           NODE_IDX_T src = src_vect[j];
                           outfile << src << dst;
-                          for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
                             {
                               outfile << edge_attr_values.at<float>(k,j); 
                             }
-                          for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
                             {
                               outfile << edge_attr_values.at<uint8_t>(k,j); 
                             }
-                          for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
                             {
                               outfile << edge_attr_values.at<uint16_t>(k,j); 
                             }
-                          for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
                             {
                               outfile << edge_attr_values.at<uint32_t>(k,j); 
                             }
@@ -291,19 +289,19 @@ int main(int argc, char** argv)
                         {
                           NODE_IDX_T src = src_vect[j];
                           outfile << "    " << src << " " << dst;
-                          for (size_t k = 0; k < edge_attr_values.size<float>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
                             {
                               outfile << " " << edge_attr_values.at<float>(k,j); 
                             }
-                          for (size_t k = 0; k < edge_attr_values.size<uint8_t>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
                             {
                               outfile << " " << edge_attr_values.at<uint8_t>(k,j); 
                             }
-                          for (size_t k = 0; k < edge_attr_values.size<uint16_t>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
                             {
                               outfile << " " << edge_attr_values.at<uint16_t>(k,j); 
                             }
-                          for (size_t k = 0; k < edge_attr_values.size<uint32_t>(); k++)
+                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
                             {
                               outfile << " " << edge_attr_values.at<uint32_t>(k,j); 
                             }
