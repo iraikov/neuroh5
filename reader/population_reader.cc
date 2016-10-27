@@ -1,3 +1,13 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file population_reader.cc
+///
+///  Functions for reading population information and validating the
+///  source and destination indices of edges.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
+
 #include "debug.hh"
 #include "population_reader.hh"
 
@@ -29,7 +39,7 @@ std::string ngh5_pop_path (const char *name)
 herr_t read_population_combos
 (
  MPI_Comm                   comm,
- const char*                fname, 
+ const std::string&         file_name, 
  set< pair<pop_t,pop_t> >&  pop_pairs
  )
 {
@@ -51,7 +61,7 @@ herr_t read_population_combos
   // process 0 reads the number of pairs and broadcasts
   if (rank == 0)
     {
-      file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+      file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
       dset = H5Dopen2(file, ngh5_pop_path (POP_COMB_H5_PATH).c_str(), H5P_DEFAULT);
@@ -110,7 +120,7 @@ herr_t read_population_combos
 herr_t read_population_ranges
 (
  MPI_Comm                                comm,
- const char*                             fname, 
+ const std::string&                      file_name, 
  map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges,
  vector<pop_range_t> &pop_vector
  )
@@ -130,7 +140,7 @@ herr_t read_population_ranges
   // process 0 reads the number of ranges and broadcasts
   if (rank == 0)
     {
-      file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+      file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
       dset = H5Dopen2(file, ngh5_pop_path (POP_RANGE_H5_PATH).c_str(), H5P_DEFAULT);

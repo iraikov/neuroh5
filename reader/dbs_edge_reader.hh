@@ -1,3 +1,12 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file dbs_edge_reader.cc
+///
+///  Functions for reading edge information in DBS (Destination Block Sparse) format.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
+
 #ifndef DBS_GRAPH_READER_HH
 #define DBS_GRAPH_READER_HH
 
@@ -14,17 +23,15 @@ namespace ngh5
 extern herr_t read_projection_names
 (
  MPI_Comm                 comm,
- const char*              fname, 
+ const std::string&       file_name, 
  std::vector<std::string> &prj_vector
  );
-
-
 
 extern herr_t read_dbs_projection
 (
  MPI_Comm                 comm,
- const char*              fname, 
- const char*              dsetname, 
+ const std::string&       file_name, 
+ const std::string&       proj_name, 
  const std::vector<pop_range_t> &pop_vector,
  NODE_IDX_T&         dst_start,
  NODE_IDX_T&         src_start,

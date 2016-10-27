@@ -1,3 +1,11 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file attributes.cc
+///
+///  Functions for node and edge attribute discovery.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
 
 #include "attributes.hh"
 
@@ -8,10 +16,17 @@ using namespace std;
 
 namespace ngh5
 {
-  string ngh5_edge_attr_path (const char *dsetname, const char *attr_name)
+  string ngh5_edge_attr_prefix (const std::string& proj_name)
   {
     string result;
-    result = string("/Projections/") + dsetname + "/Attributes/Edge/" + attr_name;
+    result = string("/Projections/") + proj_name + "/Attributes/Edge/";
+    return result;
+  }
+
+  string ngh5_edge_attr_path (const std::string& proj_name, const std::string& attr_name)
+  {
+    string result;
+    result = ngh5_edge_attr_prefix(proj_name) + attr_name;
     return result;
   }
 
@@ -45,20 +60,20 @@ namespace ngh5
   //////////////////////////////////////////////////////////////////////////////
   herr_t get_edge_attributes
   (
-   const char *                  in_file_name,
-   const string&                 in_projName,
+   const string&                 file_name,
+   const string&                 proj_name,
    vector< pair<string,hid_t> >& out_attributes
    )
   {
     hid_t in_file;
     herr_t ierr;
 
-    in_file = H5Fopen(in_file_name, H5F_ACC_RDONLY, H5P_DEFAULT);
+    in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
     assert(in_file >= 0);
     out_attributes.clear();
 
     // TODO: Don't hardcode this!
-     string path = "/Projections/" + in_projName + "/Attributes/Edge";
+    string path = ngh5_edge_attr_prefix(proj_name);
 
     // TODO: Be more gentle if the group is not found!
     hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
@@ -79,9 +94,9 @@ namespace ngh5
   herr_t read_edge_attributes
   (
    MPI_Comm            comm,
-   const char*         fname, 
-   const char*         dsetname, 
-   const std::string   attrname, 
+   const std::string&  file_name, 
+   const std::string&  proj_name, 
+   const std::string&  attr_name, 
    const DST_PTR_T     edge_base,
    const DST_PTR_T     edge_count,
    const hid_t         attr_h5type,
@@ -97,7 +112,7 @@ namespace ngh5
     vector <uint8_t>  attr_values_uint8;
     size_t attr_size = H5Tget_size(attr_h5type);
     
-    file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+    file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
     assert(file >= 0);
     
     if (edge_count > 0)
@@ -109,7 +124,7 @@ namespace ngh5
         ierr = H5Sselect_all(mspace);
         assert(ierr >= 0);
         
-        hid_t dset = H5Dopen2(file, ngh5_edge_attr_path(dsetname, attrname.c_str()).c_str(), H5P_DEFAULT);
+        hid_t dset = H5Dopen2(file, ngh5_edge_attr_path(proj_name, attr_name).c_str(), H5P_DEFAULT);
         assert(dset >= 0);
         
         // make hyperslab selection
@@ -125,19 +140,19 @@ namespace ngh5
               {
                 attr_values_uint32.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint32[0]);
-                attr_values.insert(std::string(attrname), attr_values_uint32);
+                attr_values.insert(std::string(attr_name), attr_values_uint32);
               }
             else if (attr_size == 16)
               {
                 attr_values_uint16.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint16[0]);
-                attr_values.insert(std::string(attrname), attr_values_uint16);
+                attr_values.insert(std::string(attr_name), attr_values_uint16);
               }
             else if (attr_size == 8)
               {
                 attr_values_uint8.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.insert(std::string(attrname), attr_values_uint8);
+                attr_values.insert(std::string(attr_name), attr_values_uint8);
               }
             else
               {
@@ -147,14 +162,14 @@ namespace ngh5
           case H5T_FLOAT:
             attr_values_float.resize(edge_count);
             ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_float[0]);
-            attr_values.insert(std::string(attrname), attr_values_float);
+            attr_values.insert(std::string(attr_name), attr_values_float);
             break;
           case H5T_ENUM:
              if (attr_size == 8)
               {
                 attr_values_uint8.resize(edge_count);
                 ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT, &attr_values_uint8[0]);
-                attr_values.insert(std::string(attrname), attr_values_uint8);    
+                attr_values.insert(std::string(attr_name), attr_values_uint8);    
               }
             else
               {

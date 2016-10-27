@@ -1,3 +1,13 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file reader.cc
+///
+///  Driver program for read_graph function.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
+
+
 #include "debug.hh"
 #include "ngh5paths.h"
 #include "ngh5types.hh"
@@ -104,7 +114,7 @@ void output_projection(string outfilename,
 
 int main(int argc, char** argv)
 {
-  char *input_file_name;
+  std::string input_file_name;
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -149,7 +159,7 @@ int main(int argc, char** argv)
 
   if (optind < argc)
     {
-      input_file_name = argv[optind];
+      input_file_name = std::string(argv[optind]);
     }
   else
     {

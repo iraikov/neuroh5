@@ -1,3 +1,11 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file edge_attr.hh
+///
+///  Functions for storing node and edge attributes in vectors of different types.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
 
 #include <map>
 #include <vector>

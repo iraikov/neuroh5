@@ -1,3 +1,11 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file graph_reader.cc
+///
+///  Top-level functions for reading graphs in DBS (Destination Block Sparse) format.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
 
 #include "debug.hh"
 
@@ -186,8 +194,8 @@ int append_edge_map
 int read_all_edge_attributes
 (
  MPI_Comm comm,
- const char *input_file_name,
- const char *prj_name,
+ const string file_name,
+ const string prj_name,
  const DST_PTR_T edge_base,
  const DST_PTR_T edge_count,
  const vector< pair<string,hid_t> >& edge_attr_info,
@@ -199,9 +207,9 @@ int read_all_edge_attributes
 
   for (size_t j = 0; j < edge_attr_info.size(); j++)
     {
-      string attr_name = edge_attr_info[j].first;
+      string attr_name   = edge_attr_info[j].first;
       hid_t  attr_h5type = edge_attr_info[j].second;
-      assert ((ierr = read_edge_attributes(comm, input_file_name, prj_name, attr_name,
+      assert ((ierr = read_edge_attributes(comm, file_name, prj_name, attr_name,
                                            edge_base, edge_count, attr_h5type, edge_attr_values)) >= 0);
     }
   return ierr;
@@ -401,7 +409,7 @@ int unpack_edge
 int read_graph
 (
  MPI_Comm comm,
- const char *input_file_name,
+ const std::string& file_name,
  const bool opt_attrs,
  const vector<string> prj_names,
  vector<prj_tuple_t> &prj_list,
@@ -411,11 +419,11 @@ int read_graph
  {
    // read the population info
    set< pair<pop_t, pop_t> > pop_pairs;
-   assert(read_population_combos(comm, input_file_name, pop_pairs) >= 0);
+   assert(read_population_combos(comm, file_name, pop_pairs) >= 0);
    
    vector<pop_range_t> pop_vector;
    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-   assert(read_population_ranges(comm, input_file_name, pop_ranges, pop_vector) >= 0);
+   assert(read_population_ranges(comm, file_name, pop_ranges, pop_vector) >= 0);
    
   // read the edges
   for (size_t i = 0; i < prj_names.size(); i++)
@@ -434,7 +442,7 @@ int read_graph
       
       //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
-      assert(read_dbs_projection(comm, input_file_name, prj_names[i].c_str(), 
+      assert(read_dbs_projection(comm, file_name, prj_names[i], 
                                  pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
                                  dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       DEBUG("reader: validating projection ", i, "(", prj_names[i], ")");
@@ -446,9 +454,9 @@ int read_graph
       if (opt_attrs)
         {
           edge_count = src_idx.size();
-          assert(get_edge_attributes(input_file_name, prj_names[i], edge_attr_info) >= 0);
+          assert(get_edge_attributes(file_name, prj_names[i], edge_attr_info) >= 0);
 
-          assert(read_all_edge_attributes(comm, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
+          assert(read_all_edge_attributes(comm, file_name, prj_names[i], edge_base, edge_count,
                                           edge_attr_info, edge_attr_values) >= 0);
         }
 
@@ -481,7 +489,7 @@ int read_graph
 int scatter_graph
 (
  MPI_Comm all_comm,
- const char *input_file_name,
+ const std::string& file_name,
  const int io_size,
  const bool opt_attrs,
  const vector<string> prj_names,
@@ -514,8 +522,8 @@ int scatter_graph
       
   
       // read the population info
-      assert(read_population_combos(io_comm, input_file_name, pop_pairs) >= 0);
-      assert(read_population_ranges(io_comm, input_file_name, pop_ranges, pop_vector) >= 0);
+      assert(read_population_combos(io_comm, file_name, pop_pairs) >= 0);
+      assert(read_population_ranges(io_comm, file_name, pop_ranges, pop_vector) >= 0);
       prj_size = prj_names.size();
     }
   else
@@ -555,7 +563,7 @@ int scatter_graph
           EdgeNamedAttr edge_attr_values;
 
 	  DEBUG("scatter: reading projection ", i, "(", prj_names[i], ")");
-          assert(read_dbs_projection(io_comm, input_file_name, prj_names[i].c_str(), 
+          assert(read_dbs_projection(io_comm, file_name, prj_names[i], 
                                      pop_vector, dst_start, src_start, total_prj_num_edges,
                                      block_base, edge_base, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
@@ -569,9 +577,9 @@ int scatter_graph
             {
               edge_count = src_idx.size();
 	      DEBUG("scatter: validating edge attribute names from projection ", i, "(", prj_names[i], ")");
-              assert(get_edge_attributes(input_file_name, prj_names[i].c_str(), edge_attr_info) >= 0);
+              assert(get_edge_attributes(file_name, prj_names[i], edge_attr_info) >= 0);
 	      DEBUG("scatter: validating edge attributes from projection ", i, "(", prj_names[i], ")");
-              assert(read_all_edge_attributes(io_comm, input_file_name, prj_names[i].c_str(), edge_base, edge_count,
+              assert(read_all_edge_attributes(io_comm, file_name, prj_names[i], edge_base, edge_count,
                                               edge_attr_info, edge_attr_values) >= 0);
             }
 

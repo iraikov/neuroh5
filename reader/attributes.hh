@@ -24,18 +24,18 @@ namespace ngh5
   
   /// @brief Specifies the path to edge attributes
   ///
-  /// @param dsetname          Projection data set name
+  /// @param proj_name          Projection data set name
   ///
   /// @param attr_name         Edge attribute name
   ///
   /// @return                  A string containing the full path to the attribute data set 
-  std::string ngh5_edge_attr_path (const char *dsetname, const char *attr_name);
+  std::string ngh5_edge_attr_path (const std::string& proj_name, const std::string& attr_name);
 
   /// @brief Discovers the list of edge attributes.
   ///
-  /// @param in_file           Input file name
+  /// @param file_name      Input file name
   ///
-  /// @param in_projName       The (abbreviated) name of the projection.
+  /// @param proj_name      The (abbreviated) name of the projection data set.
   ///
   /// @param out_attributes    A vector of pairs, one for each edge attribute
   ///                          discovered. The pairs contain the attribute name
@@ -46,23 +46,33 @@ namespace ngh5
   /// @return                  HDF5 error code.
   herr_t get_edge_attributes
   (
-   const char*                                  in_file, 
-   const std::string&                           in_projName,
+   const std::string&                           file_name, 
+   const std::string&                           proj_name,
    std::vector< std::pair<std::string,hid_t> >& out_attributes
    );
 
   
   /// @brief Reads the values of edge attributes.
   ///
-  /// @param in_file           Input file name
+  /// @param file_name      Input file name
   ///
-  /// @param dsetname          The (abbreviated) name of the projection.
+  /// @param proj_name      The (abbreviated) name of the projection.
+  ///
+  /// @param attr_name      The name of the attribute.
+  ///
+  /// @param edge_base      Edge offset (returned by read_dbs_projection).
+  ///
+  /// @param edge_count     Edge count.
+  ///
+  /// @param attr_h5type    The HDF5 type of the attribute.
+  ///
+  /// @param attr_values    An EdgeNamedAttr object that holds attribute values.
   herr_t read_edge_attributes
   (
    MPI_Comm            comm,
-   const char*         fname, 
-   const char*         dsetname, 
-   const std::string   attrname, 
+   const std::string&  file_name, 
+   const std::string&  proj_name, 
+   const std::string&  attr_name, 
    const DST_PTR_T     edge_base,
    const DST_PTR_T     edge_count,
    const hid_t         attr_h5type,

@@ -1,3 +1,13 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file population_reader.cc
+///
+///  Functions for reading population information and validating the
+///  source and destination indices of edges.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
+
 #ifndef POPULATION_READER_HH
 #define POPULATION_READER_HH
 
@@ -16,15 +26,15 @@ namespace ngh5
 extern herr_t read_population_combos
 (
  MPI_Comm                             comm,
- const char*                          fname, 
+ const std::string&                   file_name, 
  std::set< std::pair<pop_t,pop_t> >&  pop_pairs
  );
 
 extern herr_t read_population_ranges
 (
- MPI_Comm         comm,
- const char*      fname, 
- pop_range_map_t& pop_ranges,
+ MPI_Comm           comm,
+ const std::string& file_name, 
+ pop_range_map_t&   pop_ranges,
  std::vector<pop_range_t> &pop_vector
  );
 

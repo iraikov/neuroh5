@@ -1,3 +1,11 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file reader.cc
+///
+///  Driver program for scatter_graph function.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
 
 #include "debug.hh"
 #include "ngh5paths.h"
@@ -58,7 +66,7 @@ void print_usage_full(char** argv)
 
 int main(int argc, char** argv)
 {
-  char *input_file_name, *output_file_name, *rank_file_name;
+  std::string input_file_name, output_file_name, rank_file_name;
   // MPI Communicator for I/O ranks
   MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
@@ -113,7 +121,7 @@ int main(int argc, char** argv)
           }
           if (optflag_rankfile == 1) {
             opt_rankfile = true;
-            rank_file_name = strdup(optarg);
+            rank_file_name = std::string(strdup(optarg));
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
@@ -148,11 +156,11 @@ int main(int argc, char** argv)
           break;
         case 'o':
           opt_output = true;
-          output_file_name = strdup(optarg);
+          output_file_name = std::string(strdup(optarg));
           break;
         case 'r':
           opt_rankfile = true;
-          rank_file_name = strdup(optarg);
+          rank_file_name = std::string(strdup(optarg));
           break;
         default:
           throw_err("Input argument format error");
@@ -161,7 +169,7 @@ int main(int argc, char** argv)
 
   if ((optind < argc) && (opt_nnodes || opt_rankfile) && opt_iosize)
     {
-      input_file_name = argv[optind];
+      input_file_name = std::string(argv[optind]);
     }
   else
     {
@@ -225,7 +233,7 @@ int main(int argc, char** argv)
                 {
                   ofstream outfile;
                   stringstream outfilename;
-                  outfilename << string(output_file_name) << "." << i << "." << rank << ".edges.bin";
+                  outfilename << output_file_name << "." << i << "." << rank << ".edges.bin";
                   outfile.open(outfilename.str().c_str(), ios::binary);
 
                   for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
@@ -273,7 +281,7 @@ int main(int argc, char** argv)
                 {
                   ofstream outfile;
                   stringstream outfilename;
-                  outfilename << string(output_file_name) << "." << i << "." << rank << ".edges";
+                  outfilename << output_file_name << "." << i << "." << rank << ".edges";
                   outfile.open(outfilename.str().c_str());
 
                   for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
