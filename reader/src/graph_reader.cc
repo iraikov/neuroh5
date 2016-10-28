@@ -14,7 +14,7 @@
 #include "graph_reader.hh"
 #include "attributes.hh"
 
-#include "ngh5paths.h"
+#include "ngh5paths.hh"
 
 #include <cassert>
 #include <cstdio>
