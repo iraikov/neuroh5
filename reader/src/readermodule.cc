@@ -1,5 +1,5 @@
 #include "debug.hh"
-#include "ngh5paths.h"
+#include "ngh5paths.hh"
 #include "ngh5types.hh"
 
 #include "dbs_edge_reader.hh"

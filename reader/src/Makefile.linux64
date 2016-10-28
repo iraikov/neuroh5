@@ -4,7 +4,7 @@ HDF5_INCDIR	= /usr/include/hdf5/mpich
 HDF5_LIBDIR	= /usr/lib/x86_64-linux-gnu/
 HDF5_LIB        = hdf5_mpich
 
-CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR)
+CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR) -I../include
 LDFLAGS		= -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR)
 
 all: reader scatter

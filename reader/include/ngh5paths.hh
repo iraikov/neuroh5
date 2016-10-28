@@ -1,6 +1,7 @@
-#ifndef NGH5PATHS_H
-#define NGH5PATHS_H
-#include <string>
+#ifndef NGH5PATHS_HH
+#define NGH5PATHS_HH
+
+// Get rid of these!
 
 #define DST_BLK_PTR_H5_PATH "/Connectivity/Destination Block Pointer"
 
@@ -19,5 +20,32 @@
 #define POP_RANGE_H5_PATH "Populations"
 
 #define CONNECTIVITY_H5_PATH "Connectivity"
+
+#include <string>
+
+namespace ngh5
+{
+  struct H5PathNames
+  {
+    static const std::string CONN;
+
+    static const std::string DST_BLK_PTR;
+
+    static const std::string DST_IDX;
+
+    static const std::string DST_POP;
+
+    static const std::string DST_PTR;
+
+    static const std::string POP_RNG;
+
+    static const std::string POP_COMB;
+
+    static const std::string SRC_IDX;
+
+    static const std::string SRC_POP;
+
+  };
+};
 
 #endif
