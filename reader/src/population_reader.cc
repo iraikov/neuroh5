@@ -11,7 +11,7 @@
 #include "debug.hh"
 #include "population_reader.hh"
 
-#include "ngh5paths.h"
+#include "ngh5paths.hh"
 
 #include <cstdio>
 #include <iostream>
