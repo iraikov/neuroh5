@@ -5,7 +5,7 @@ HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/gnu/4.9/lib
 HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/gnu/4.9/include/
 HDF5_LIB        = hdf5
 
-CFLAGS		= -Wall -I$(HDF5_INCDIR) 
+CFLAGS		= -Wall -I$(HDF5_INCDIR) -I../include
 LDFLAGS		= -L$(HDF5_LIBDIR) 
 
 all: reader scatter

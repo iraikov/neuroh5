@@ -25,10 +25,8 @@
 
 namespace ngh5
 {
-  class H5PathNames
+  struct H5PathNames
   {
-  public:
-
     static const std::string CONN;
 
     static const std::string DST_BLK_PTR;
@@ -45,9 +43,9 @@ namespace ngh5
 
     static const std::string SRC_IDX;
 
-    static const std::string SRC_POP
+    static const std::string SRC_POP;
 
-  }
+  };
 };
 
 #endif
