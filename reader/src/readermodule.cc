@@ -4,6 +4,7 @@
 
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
+#include "attributes.hh"
 #include "graph_reader.hh"
 
 #include <Python.h>
@@ -70,11 +71,8 @@ extern "C"
 
     assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
-    read_graph((MPI_Comm)(long(commptr)), std::string(input_file_name), true,
+    read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name), true,
                prj_names, prj_vector, local_num_edges, total_num_edges);
-
-    printf("prj_vector.size() = %lu\n", prj_vector.size());
-    printf("total_num_edges = %lu\n", total_num_edges);
     
     for (size_t i = 0; i < prj_vector.size(); i++)
       {

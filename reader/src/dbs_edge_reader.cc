@@ -69,8 +69,6 @@ herr_t read_projection_names
 
   int rank, size;
 
-  printf("entering read_projection_names\n");
-
   assert(MPI_Comm_size(comm, &size) >= 0);
   assert(MPI_Comm_rank(comm, &rank) >= 0);
 
@@ -191,7 +189,6 @@ herr_t read_dbs_projection
    ***************************************************************************/
 
   uint64_t num_blocks; 
-
 
   // process 0 reads the size of dst_blk_ptr and the source and target populations
   if (rank == 0)
