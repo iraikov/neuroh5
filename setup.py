@@ -21,11 +21,12 @@ setup(
     ''',
     ext_modules = [
         Extension('neurograph_reader',
-                    extra_compile_args = ["-std=c++11"],
+                    extra_compile_args = ["-std=c++11", "-Ireader/include"],
                     libraries = ['hdf5_mpich', 'mpich'],
-                    sources = ['reader/readermodule.cc',
-                               'reader/dbs_graph_reader.cc',
-                               'reader/population_reader.cc'
+                    sources = ['reader/src/readermodule.cc',
+                               'reader/src/graph_reader.cc',
+                               'reader/src/dbs_edge_reader.cc',
+                               'reader/src/population_reader.cc'
                                ])
         ]
     )
