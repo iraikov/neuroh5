@@ -49,9 +49,9 @@ namespace ngh5
   ///
   /// @param pop_vector    Population ranges
   ///
-  /// @param dst_start     ???
+  /// @param dst_start     Updated with global starting index of destination population
   ///
-  /// @param src_start     ???
+  /// @param src_start     Updated with global starting index of source population
   ///
   /// @param nedges        Total number of edges in the projection
   ///
@@ -59,13 +59,13 @@ namespace ngh5
   ///
   /// @param edge_base     Global index of the first edge read by this task
   ///
-  /// @param dst_blk_ptr   ???
+  /// @param dst_blk_ptr   Destination Block Pointer (pointer to Destination Pointer for blocks of connectivity)
   ///
-  /// @param dst_idx       ???
+  /// @param dst_idx       Destination Index (starting destination index for each block)
   ///
-  /// @param dst_ptr       ???
+  /// @param dst_ptr       Destination Pointer (pointer to Source Index where the source indices for a given destination can be located)
   ///
-  /// @param src_idx       ???
+  /// @param src_idx       Source Index (source indices of edges)
   ///
   /// @return              HDF5 error code
   extern herr_t read_dbs_projection
