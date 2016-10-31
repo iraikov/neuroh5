@@ -47,8 +47,6 @@ herr_t read_population_combos
 
   int rank, size;
 
-  printf("entering read_population_combos\n");
-  
   assert(MPI_Comm_size(comm, &size) >= 0);
   assert(MPI_Comm_rank(comm, &rank) >= 0);
 

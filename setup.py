@@ -24,7 +24,7 @@ setup(
     ext_package = 'neurograph',
     ext_modules = [
         Extension('reader',
-                  extra_compile_args = ["-std=c++11", "-Ireader/include"],
+                  extra_compile_args = ["-std=c++11", "-Ireader/include", "-g"],
                   libraries = ['hdf5_mpich', 'mpich'],
                   sources = [
                       'reader/src/graph_reader.cc',

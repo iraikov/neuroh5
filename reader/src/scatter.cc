@@ -104,7 +104,7 @@ int main(int argc, char** argv)
   char c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "abr:i:h",
-			   long_options, &option_index)) != -1)
+                           long_options, &option_index)) != -1)
     {
       switch (c)
         {
@@ -159,6 +159,9 @@ int main(int argc, char** argv)
       exit(1);
     }
 
+
+  MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
+
   // Read population info to determine n_nodes
   assert(read_population_ranges(all_comm, input_file_name, pop_ranges, pop_vector, n_nodes) >= 0);
   
@@ -190,9 +193,6 @@ int main(int argc, char** argv)
       
       infile.close();
     }
-
-
-  MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
   assert(read_projection_names(all_comm, input_file_name, prj_names) >= 0);
   

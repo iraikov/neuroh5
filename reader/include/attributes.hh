@@ -51,6 +51,26 @@ namespace ngh5
    std::vector< std::pair<std::string,hid_t> >& out_attributes
    );
 
+  /// @brief Determines the number of edge attributes for each supported type.
+  ///
+  ///
+  /// @param attributes    A vector of pairs, one for each edge attribute
+  ///                      discovered. The pairs contain the attribute name
+  ///                      and the attributes HDF5 file datatype.
+  ///
+  /// @param num_attrs     A vector which indicates the number of attributes of each type.
+  ///                      - Index 0 float type
+  ///                      - Index 1: uint8/enum type
+  ///                      - Index 1: uint16 type
+  ///                      - Index 1: uint32 type
+  ///
+  /// @return                  HDF5 error code.
+  herr_t num_edge_attributes
+  (
+   const std::vector< std::pair<std::string,hid_t> >& attributes,
+   std:: vector <size_t> &num_attrs
+   );
+
   
   /// @brief Reads the values of edge attributes.
   ///

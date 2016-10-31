@@ -91,6 +91,62 @@ namespace ngh5
 
 
   
+  herr_t num_edge_attributes
+  (
+   const vector< pair<string,hid_t> >& attributes,
+   vector <size_t> &num_attrs
+   )
+  {
+    herr_t ierr = 0;
+    num_attrs.resize(4);
+    for (size_t i = 0; i < attributes.size(); i++)
+      {
+        hid_t attr_h5type = attributes[i].second;
+        size_t attr_size = H5Tget_size(attr_h5type);
+        switch (H5Tget_class(attr_h5type))
+          {
+          case H5T_INTEGER:
+            if (attr_size == 32)
+              {
+                num_attrs[3]++;
+              }
+            else if (attr_size == 16)
+              {
+                num_attrs[2]++;
+              }
+            else if (attr_size == 8)
+              {
+                num_attrs[1]++;
+              }
+            else
+              {
+                throw std::runtime_error("Unsupported integer attribute size");
+              };
+            break;
+          case H5T_FLOAT:
+            num_attrs[0]++;
+            break;
+          case H5T_ENUM:
+             if (attr_size == 8)
+              {
+                num_attrs[1]++;
+              }
+            else
+              {
+                throw std::runtime_error("Unsupported enumerated attribute size");
+              };
+            break;
+          default:
+            throw std::runtime_error("Unsupported attribute type");
+            break;
+          }
+
+        assert(ierr >= 0);
+      }
+    
+    return ierr;
+  }
+  
   herr_t read_edge_attributes
   (
    MPI_Comm            comm,
