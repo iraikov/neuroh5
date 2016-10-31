@@ -343,8 +343,10 @@ extern "C"
 
   
   static PyMethodDef module_methods[] = {
-    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS, NULL },
-    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS, NULL },
+    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
+      "Reads graph connectivity in Destnation Block Sparse format." },
+    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS,
+      "Reads and scatters graph connectivity in Destnation Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };
 }
