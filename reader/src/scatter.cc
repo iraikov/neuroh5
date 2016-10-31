@@ -71,14 +71,10 @@ int main(int argc, char** argv)
   MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
   vector<rank_t> node_rank_vector;
-  // The set of compute ranks for which the current I/O rank is responsible
-  rank_edge_map_t rank_edge_map;
-  set< pair<pop_t, pop_t> > pop_pairs;
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
   vector<string> prj_names;
   vector < edge_map_t > prj_vector;
-  vector < vector<uint8_t> > has_edge_attrs_vector;
   stringstream ss;
 
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -218,7 +214,6 @@ int main(int argc, char** argv)
             {
               DEBUG("scatter: outputting edges ", i);
               edge_map_t prj_edge_map = prj_vector[i];
-              vector <uint8_t> has_edge_attrs = has_edge_attrs_vector[i];
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
@@ -266,7 +261,6 @@ int main(int argc, char** argv)
           for (size_t i = 0; i < prj_vector.size(); i++)
             {
               edge_map_t prj_edge_map = prj_vector[i];
-              vector <uint8_t> has_edge_attrs = has_edge_attrs_vector[i];
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
