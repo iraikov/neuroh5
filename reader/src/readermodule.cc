@@ -2,11 +2,6 @@
 #include "ngh5paths.hh"
 #include "ngh5types.hh"
 
-#include "dbs_edge_reader.hh"
-#include "population_reader.hh"
-#include "attributes.hh"
-#include "graph_reader.hh"
-
 #include <Python.h>
 #include <numpy/numpyconfig.h>
 #include <numpy/arrayobject.h>
@@ -28,6 +23,11 @@
 
 #undef NDEBUG
 #include <cassert>
+
+#include "dbs_edge_reader.hh"
+#include "population_reader.hh"
+#include "attributes.hh"
+#include "graph_reader.hh"
 
 using namespace std;
 using namespace ngh5;
@@ -200,29 +200,29 @@ extern "C"
     unsigned long commptr; unsigned long io_size; int size;
     char *input_file_name;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
-
-    MPI_Comm_size(*((MPI_Comm *)(commptr)), &size);
     
-    if (!PyArg_ParseTuple(args, "ksk", &commptr, &input_file_name, io_size))
+    if (!PyArg_ParseTuple(args, "ksk", &commptr, &input_file_name, &io_size))
       return NULL;
+
+    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
 
     assert(read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
     assert(read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
-    
+
     // Determine which nodes are assigned to which compute ranks
     node_rank_vector.resize(total_num_nodes);
     // round-robin node to rank assignment from file
     for (size_t i = 0; i < total_num_nodes; i++)
       {
         node_rank_vector[i] = i%size;
-    }
+      }
 
     scatter_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
                   io_size, true, prj_names, node_rank_vector, prj_vector,
                   total_num_nodes);
-    
+
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
         PyObject *py_edge_dict = PyDict_New();
