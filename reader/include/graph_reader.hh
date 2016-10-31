@@ -29,6 +29,7 @@ int read_graph
  const bool opt_attrs,
  const std::vector<std::string> prj_names,
  std::vector<prj_tuple_t> &prj_list,
+ size_t &total_num_nodes,
  size_t &local_prj_num_edges,
  size_t &total_prj_num_edges
  );
@@ -42,7 +43,8 @@ int scatter_graph
  const std::vector<std::string> prj_names,
   // A vector that maps nodes to compute ranks
  const std::vector<rank_t> node_rank_vector,
- std::vector < edge_map_t > & prj_vector
+ std::vector < edge_map_t > & prj_vector,
+ size_t &total_num_nodes
  );
 
   

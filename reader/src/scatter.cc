@@ -92,11 +92,9 @@ int main(int argc, char** argv)
   int optflag_binary = 0;
   int optflag_rankfile = 0;
   int optflag_iosize = 0;
-  int optflag_nnodes = 0;
   bool opt_binary = false,
     opt_rankfile = false,
     opt_iosize = false,
-    opt_nnodes = false,
     opt_attrs = false,
     opt_output = false;
 
@@ -105,12 +103,11 @@ int main(int argc, char** argv)
     {"binary",    no_argument, &optflag_binary,  1 },
     {"rankfile",  required_argument, &optflag_rankfile,  1 },
     {"iosize",    required_argument, &optflag_iosize,  1 },
-    {"nnodes",    required_argument, &optflag_nnodes,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "abr:i:n:h",
+  while ((c = getopt_long (argc, argv, "abr:i:h",
 			   long_options, &option_index)) != -1)
     {
       switch (c)
@@ -125,15 +122,9 @@ int main(int argc, char** argv)
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
-	    ss << string(optarg);
-	    ss >> io_size;
+            ss << string(optarg);
+            ss >> io_size;
           }
-          if (optflag_nnodes == 1) {
-            opt_nnodes = true;
-	    ss << string(optarg);
-	    ss >> n_nodes;
-          }
-          break;
         case 'a':
           opt_attrs = true;
           break;
@@ -146,13 +137,8 @@ int main(int argc, char** argv)
           break;
         case 'i':
           opt_iosize = true;
-	  ss << string(optarg);
-	  ss >> io_size;
-          break;
-        case 'n':
-          opt_nnodes = true;
-	  ss << string(optarg);
-	  ss >> n_nodes;
+          ss << string(optarg);
+          ss >> io_size;
           break;
         case 'o':
           opt_output = true;
@@ -167,7 +153,7 @@ int main(int argc, char** argv)
         }
     }
 
-  if ((optind < argc) && (opt_nnodes || opt_rankfile) && opt_iosize)
+  if ((optind < argc) && opt_iosize)
     {
       input_file_name = std::string(argv[optind]);
     }
@@ -177,6 +163,9 @@ int main(int argc, char** argv)
       exit(1);
     }
 
+  // Read population info to determine n_nodes
+  assert(read_population_ranges(all_comm, input_file_name, pop_ranges, pop_vector, n_nodes) >= 0);
+  
   // Determine which nodes are assigned to which compute ranks
   node_rank_vector.resize(n_nodes);
   if (!opt_rankfile)
@@ -217,7 +206,8 @@ int main(int argc, char** argv)
                  opt_attrs,
                  prj_names,
                  node_rank_vector,
-                 prj_vector);
+                 prj_vector,
+                 n_nodes);
 
 
   if (opt_output)

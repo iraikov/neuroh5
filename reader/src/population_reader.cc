@@ -122,7 +122,8 @@ herr_t read_population_ranges
  MPI_Comm                                comm,
  const std::string&                      file_name, 
  map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges,
- vector<pop_range_t> &pop_vector
+ vector<pop_range_t> &pop_vector,
+ size_t &n_nodes
  )
 {
   herr_t ierr = 0;
@@ -177,9 +178,11 @@ herr_t read_population_ranges
   assert(MPI_Bcast(&pop_vector[0], (int)num_ranges*sizeof(pop_range_t), MPI_BYTE, 0,
                    comm) >= 0);
 
+  n_nodes = 0;
   for(size_t i = 0; i < pop_vector.size(); ++i)
     {
       pop_ranges.insert(make_pair(pop_vector[i].start, make_pair(pop_vector[i].count, pop_vector[i].pop)));
+      n_nodes = n_nodes + pop_vector[i].count;
     }
 
   return ierr;

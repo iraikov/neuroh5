@@ -64,7 +64,7 @@ extern "C"
     PyObject *prj_dict = PyDict_New();
     unsigned long commptr;
     char *input_file_name;
-    size_t total_num_edges = 0, local_num_edges = 0;
+    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
 
     if (!PyArg_ParseTuple(args, "ks", &commptr, &input_file_name))
       return NULL;
@@ -72,7 +72,8 @@ extern "C"
     assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
     read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name), true,
-               prj_names, prj_vector, local_num_edges, total_num_edges);
+               prj_names, prj_vector, total_num_nodes,
+               local_num_edges, total_num_edges);
     
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
@@ -192,9 +193,9 @@ extern "C"
 }
 
 PyMODINIT_FUNC
-initneurograph_reader(void) {
+initreader(void) {
   import_array();
-  Py_InitModule3("neurograph_reader", module_methods, "HDF5 graph reader");
+  Py_InitModule3("reader", module_methods, "HDF5 graph reader");
 }
 
   

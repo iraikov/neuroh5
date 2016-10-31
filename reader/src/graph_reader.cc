@@ -415,17 +415,17 @@ int read_graph
  const bool opt_attrs,
  const vector<string> prj_names,
  vector<prj_tuple_t> &prj_list,
+ size_t &total_num_nodes,
  size_t &local_num_edges,
  size_t &total_num_edges
  )
  {
    // read the population info
-   set< pair<pop_t, pop_t> > pop_pairs;
-   assert(read_population_combos(comm, file_name, pop_pairs) >= 0);
-   
    vector<pop_range_t> pop_vector;
    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-   assert(read_population_ranges(comm, file_name, pop_ranges, pop_vector) >= 0);
+   set< pair<pop_t, pop_t> > pop_pairs;
+   assert(read_population_combos(comm, file_name, pop_pairs) >= 0);
+   assert(read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
    
   // read the edges
   for (size_t i = 0; i < prj_names.size(); i++)
@@ -498,7 +498,8 @@ int scatter_graph
  const vector<string> prj_names,
   // A vector that maps nodes to compute ranks
  const vector<rank_t> node_rank_vector,
- vector < edge_map_t > & prj_vector
+ vector < edge_map_t > & prj_vector,
+ size_t &total_num_nodes
  )
 {
   int ierr = 0;
@@ -523,10 +524,9 @@ int scatter_graph
       MPI_Comm_split(all_comm,io_color,rank,&io_comm);
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
       
-  
       // read the population info
       assert(read_population_combos(io_comm, file_name, pop_pairs) >= 0);
-      assert(read_population_ranges(io_comm, file_name, pop_ranges, pop_vector) >= 0);
+      assert(read_population_ranges(io_comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
       prj_size = prj_names.size();
     }
   else

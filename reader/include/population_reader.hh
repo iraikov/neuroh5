@@ -35,7 +35,8 @@ extern herr_t read_population_ranges
  MPI_Comm           comm,
  const std::string& file_name, 
  pop_range_map_t&   pop_ranges,
- std::vector<pop_range_t> &pop_vector
+ std::vector<pop_range_t> &pop_vector,
+ size_t &total_num_nodes
  );
 
 extern bool validate_edge_list

@@ -172,7 +172,7 @@ int main(int argc, char** argv)
   assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
   vector<prj_tuple_t> prj_list;
-  size_t total_num_edges = 0, local_num_edges = 0;
+  size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
   
   // read the edges
   read_graph (MPI_COMM_WORLD,
@@ -180,6 +180,7 @@ int main(int argc, char** argv)
               opt_attrs,
               prj_names,
               prj_list,
+              total_num_nodes,
               local_num_edges,
               total_num_edges);
 

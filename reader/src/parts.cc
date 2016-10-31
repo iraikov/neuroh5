@@ -158,9 +158,10 @@ int main(int argc, char** argv)
   set< pair<pop_t, pop_t> > pop_pairs;
   assert(read_population_combos(MPI_COMM_WORLD, input_file_name, pop_pairs) >= 0);
 
+  size_t num_nodes;
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-  assert(read_population_ranges(MPI_COMM_WORLD, input_file_name, pop_ranges, pop_vector) >= 0);
+  assert(read_population_ranges(MPI_COMM_WORLD, input_file_name, pop_ranges, pop_vector, num_nodes) >= 0);
 
   vector<string> prj_names;
   assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
