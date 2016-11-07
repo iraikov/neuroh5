@@ -58,8 +58,12 @@ void print_usage_full(char** argv)
 {
   printf("Usage: %s [graphfile] [options]\n\n", argv[0]);
   printf("Options:\n");
+  printf("\t-a:\n");
+  printf("\t\tInclude edge attribute information\n");
   printf("\t-s:\n");
   printf("\t\tPrint only edge summary\n");
+  printf("\t--verbose:\n");
+  printf("\t\tPrint verbose diagnostic information\n");
 }
 
 
@@ -122,17 +126,21 @@ int main(int argc, char** argv)
   assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
 
+  debug_enabled = false;
+  
   // parse arguments
   int optflag_summary = 0;
+  int optflag_verbose = 0;
   bool opt_summary = false;
   bool opt_attrs = false;
   static struct option long_options[] = {
-    {"summary",    no_argument, &optflag_summary,  1 },
+    {"summary",  no_argument, &optflag_summary,  1 },
+    {"verbose",  no_argument, &optflag_verbose,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "ash",
+  while ((c = getopt_long (argc, argv, "ahs",
 			   long_options, &option_index)) != -1)
     {
       switch (c)
@@ -141,6 +149,12 @@ int main(int argc, char** argv)
           if (optflag_summary == 1) {
             opt_summary = true;
           }
+          if (optflag_verbose == 1) {
+            debug_enabled = true;
+          }
+          break;
+        case 'a':
+          opt_attrs = true;
           break;
         case 'h':
           print_usage_full(argv);
@@ -148,9 +162,6 @@ int main(int argc, char** argv)
           break;
         case 's':
           opt_summary = true;
-          break;
-        case 'a':
-          opt_attrs = true;
           break;
         default:
           throw_err("Input argument format error");

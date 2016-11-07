@@ -25,15 +25,15 @@ namespace ngh5
 
   const string H5PathNames::DST_PTR = "/Connectivity/Destination Pointer";
 
-  const string H5PathNames::DST_POP = "/Destination Population";
-
   const string H5PathNames::SRC_IDX = "/Connectivity/Source Index";
+
+  const string H5PathNames::DST_POP = "/Destination Population";
 
   const string H5PathNames::SRC_POP = "/Source Population";
 
   const string H5PathNames::POP_RNG = "/Population range";
 
-  const string H5PathNames::POP_COMB = "Valid population projections";
+  const string H5PathNames::POP_COMB = "/Valid population projections";
 
   string ngh5_prj_path (const string& proj_name, const string& name) 
   {
@@ -46,7 +46,7 @@ namespace ngh5
   string ngh5_pop_path (const string& name) 
   {
     string result;
-    result = string("/H5Types/") + name;
+    result = string("/H5Types") + name;
     return result;
   }
 

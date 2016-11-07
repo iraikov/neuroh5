@@ -5,19 +5,24 @@
 #include <cstdio>
 #include <iostream>
 
-static bool debug_enabled = true;
-
-inline void DEBUG(){}
-
-template<typename First, typename ...Rest>
-inline void DEBUG(First && first, Rest && ...rest)
+namespace ngh5
 {
-  if (debug_enabled)
-    {
-      std::cerr << std::forward<First>(first);
-      DEBUG(std::forward<Rest>(rest)...);
-      std::cerr << std::endl;
-      std::cerr << std::flush;
-    }
+
+  static bool debug_enabled = true;
+  
+  inline void DEBUG(){}
+  
+  template<typename First, typename ...Rest>
+  inline void DEBUG(First && first, Rest && ...rest)
+  {
+    if (debug_enabled)
+      {
+        std::cerr << std::forward<First>(first);
+        DEBUG(std::forward<Rest>(rest)...);
+        std::cerr << std::endl;
+        std::cerr << std::flush;
+      }
+  }
+
 }
 #endif

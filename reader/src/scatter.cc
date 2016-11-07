@@ -83,7 +83,10 @@ int main(int argc, char** argv)
   assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
 
+  debug_enabled = false;
+  
   // parse arguments
+  int optflag_verbose = 0;
   int optflag_output = 0;
   int optflag_binary = 0;
   int optflag_rankfile = 0;
@@ -95,6 +98,7 @@ int main(int argc, char** argv)
     opt_output = false;
 
   static struct option long_options[] = {
+    {"verbose",   no_argument, &optflag_verbose,  1 },
     {"output",    required_argument, &optflag_output,  1 },
     {"binary",    no_argument, &optflag_binary,  1 },
     {"rankfile",  required_argument, &optflag_rankfile,  1 },
@@ -120,6 +124,9 @@ int main(int argc, char** argv)
             opt_iosize = true;
             ss << string(optarg);
             ss >> io_size;
+          }
+          if (optflag_verbose == 1) {
+            debug_enabled = true;
           }
         case 'a':
           opt_attrs = true;

@@ -134,8 +134,7 @@ herr_t read_population_ranges
     {
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
-
-      dset = H5Dopen2(file, ngh5_pop_path (H5PathNames::POP_RNG).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_pop_path (H5PathNames::POP).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
