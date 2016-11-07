@@ -42,7 +42,7 @@ path_node_attrs   = '%s/Node' % grp_attributes
 path_edge_attrs   = '%s/Edge' % grp_attributes
 
 src_idx     = 'Source Index'
-dst_idx     = 'Destination Index'
+dst_idx     = 'Destination Block Index'
 dst_blk_ptr = 'Destination Block Pointer'
 dst_ptr     = 'Destination Pointer'
 

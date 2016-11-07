@@ -25,13 +25,6 @@ using namespace std;
 namespace ngh5
 {
 
-std::string ngh5_pop_path (const char *name) 
-{
-  std::string result;
-  result = std::string("/H5Types/") + name;
-  return result;
-}
-
 /*****************************************************************************
  * Read the valid population combinations
  *****************************************************************************/
@@ -62,7 +55,7 @@ herr_t read_population_combos
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
-      dset = H5Dopen2(file, ngh5_pop_path (POP_COMB_H5_PATH).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_pop_path (H5PathNames::POP_COMB).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -142,7 +135,7 @@ herr_t read_population_ranges
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
-      dset = H5Dopen2(file, ngh5_pop_path (POP_RANGE_H5_PATH).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_pop_path (H5PathNames::POP_RNG).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);

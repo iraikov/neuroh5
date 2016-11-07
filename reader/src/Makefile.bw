@@ -10,11 +10,11 @@ LDFLAGS		= -L$(HDF5_LIBDIR)
 
 all: reader scatter
 
-reader: graph_reader.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o
-	$(CXX) -std=c++11 -o reader $(LDFLAGS) reader.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o -l$(HDF5_LIB) 
+reader: reader.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o ngh5paths.o
+	$(CXX) -std=c++11 -o reader $(LDFLAGS) $^ -l$(HDF5_LIB) 
 
-scatter: scatter.o graph_reader.o dbs_edge_reader.o graph_scatter.o population_reader.o
-	$(CXX) -std=c++11 -o scatter $(LDFLAGS) scatter.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o -l$(HDF5_LIB) 
+scatter: scatter.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o ngh5paths.o
+	$(CXX) -std=c++11 -o scatter $(LDFLAGS) $^ -l$(HDF5_LIB) 
 
 .cc.o:
 	$(CXX) -std=c++11 $(CFLAGS) -c $< -o $@

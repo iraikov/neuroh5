@@ -31,13 +31,6 @@ using namespace std;
 namespace ngh5
 {
 
-std::string ngh5_prj_path (const std::string& proj_name, const char *name) 
-{
-  std::string result;
-  result = std::string("/Projections/") + proj_name + name;
-  return result;
-}
-
 // Calculate the starting and end block for each rank
 void compute_bins (size_t num_blocks, size_t size, vector< pair<hsize_t,hsize_t> > &bins)
 {
@@ -88,7 +81,7 @@ herr_t read_projection_names
 
       DEBUG("file = ",file,"\n"); 
 
-      grp = H5Gopen(file, string("/Projections").c_str(), H5P_DEFAULT);
+      grp = H5Gopen(file, H5PathNames::PRJ.c_str(), H5P_DEFAULT);
       
       assert(H5Gget_num_objs(grp, &num_projections)>=0);
     }
@@ -200,7 +193,7 @@ herr_t read_dbs_projection
       // determine number of blocks in projection
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
-      dset = H5Dopen2(file, ngh5_prj_path(proj_name, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::DST_BLK_PTR).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -210,7 +203,7 @@ herr_t read_dbs_projection
       assert(H5Dclose(dset) >= 0);
 
       // determine number of edges in projection
-      dset = H5Dopen2(file, ngh5_prj_path(proj_name, SRC_IDX_H5_PATH).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::SRC_IDX).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -225,7 +218,7 @@ herr_t read_dbs_projection
       ierr = H5Sselect_all(mspace);
       assert(ierr >= 0);
 
-      dset = H5Dopen2(file, ngh5_prj_path(proj_name, DST_POP_H5_PATH).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::DST_POP).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -245,7 +238,7 @@ herr_t read_dbs_projection
       ierr = H5Sselect_all(mspace);
       assert(ierr >= 0);
 
-      dset = H5Dopen2(file, ngh5_prj_path(proj_name, SRC_POP_H5_PATH).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::SRC_POP).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -318,7 +311,7 @@ herr_t read_dbs_projection
 
       // open the file (independent I/O)
       std::cerr << std::flush;
-      hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, DST_BLK_PTR_H5_PATH).c_str(), H5P_DEFAULT);
+      hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::DST_BLK_PTR).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       
       // make hyperslab selection
@@ -369,7 +362,7 @@ herr_t read_dbs_projection
       ierr = H5Sselect_all(mspace);
       assert(ierr >= 0);
       
-      hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, DST_IDX_H5_PATH).c_str(), H5P_DEFAULT);
+      hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::DST_IDX).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       
       // make hyperslab selection
@@ -416,7 +409,7 @@ herr_t read_dbs_projection
       ierr = H5Sselect_all(mspace);
       assert(ierr >= 0);
       
-      hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, DST_PTR_H5_PATH).c_str(), H5P_DEFAULT);
+      hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::DST_PTR).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       
       // make hyperslab selection
@@ -468,7 +461,7 @@ herr_t read_dbs_projection
           ierr = H5Sselect_all(mspace);
           assert(ierr >= 0);
           
-          hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, SRC_IDX_H5_PATH).c_str(), H5P_DEFAULT);
+          hid_t dset = H5Dopen2(file, ngh5_prj_path(proj_name, H5PathNames::SRC_IDX).c_str(), H5P_DEFAULT);
           assert(dset >= 0);
           
           // make hyperslab selection
