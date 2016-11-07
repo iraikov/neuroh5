@@ -1,3 +1,12 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file readermodule.cc
+///
+///  Python module for reading edge information in DBS (Destination Block Sparse) format.
+///
+///  Copyright (C) 2016 Project Neurograph.
+//==============================================================================
+
 #include "debug.hh"
 #include "ngh5paths.hh"
 #include "ngh5types.hh"
