@@ -12,7 +12,11 @@
 
 #include "dbs_edge_reader.hh"
 
+#include "destination_block_index.hh"
+#include "destination_block_pointer.hh"
+#include "destination_pointer.hh"
 #include "ngh5paths.hh"
+#include "src_index.hh"
 
 #include <cstdio>
 #include <cstdlib>
@@ -198,9 +202,6 @@ namespace ngh5
     hid_t fapl, file;
     herr_t ierr = 0;
     unsigned int rank, size;
-    hsize_t one = 1;
-    DST_BLK_PTR_T block_rebase = 0;
-    DST_PTR_T dst_rebase = 0;
 
     assert(MPI_Comm_size(comm, (int*)&size) >= 0);
     assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
@@ -336,212 +337,29 @@ namespace ngh5
     file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
     assert(file >= 0);
 
-    if (block > 0)
-      {
-        // allocate buffer and memory dataspace
-        dst_blk_ptr.resize(block);
+    DST_BLK_PTR_T block_rebase = 0;
 
-        hid_t mspace = H5Screate_simple(1, &block, NULL);
-        assert(mspace >= 0);
-        ierr = H5Sselect_all(mspace);
-        assert(ierr >= 0);
+    // read destination block pointers
+    ierr = destination_block_pointer(comm, file, proj_name, start, block,
+                                     dst_blk_ptr, block_rebase);
+    assert(ierr >= 0);
 
-        std::cerr << std::flush;
+    // read destination block indices
+    ierr = destination_block_index(comm, file, proj_name, start, block, dst_idx);
+    assert(ierr >= 0);
 
-        // open the file (independent I/O)
-        std::cerr << std::flush;
-        hid_t dset = H5Dopen2(file,
-                              ngh5_prj_path(proj_name,
-                                            H5PathNames::DST_BLK_PTR).c_str(),
-                              H5P_DEFAULT);
-        assert(dset >= 0);
+    DST_PTR_T dst_rebase = 0;
 
-        // make hyperslab selection
-        hid_t fspace = H5Dget_space(dset);
-        assert(fspace >= 0);
-        ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one,
-                                   &block);
-        assert(ierr >= 0);
+    // read destination pointers
+    ierr = destination_pointer(comm, file, proj_name, block, block_rebase,
+                               dst_blk_ptr, dst_ptr, edge_base, dst_rebase);
+    assert(ierr >= 0);
 
-        ierr = H5Dread(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
-                       H5P_DEFAULT, &dst_blk_ptr[0]);
-        assert(ierr >= 0);
+    // read source indices
+    ierr = source_index(comm, file, proj_name, block, dst_rebase, dst_ptr,
+                        src_idx);
+    assert(ierr >= 0);
 
-        assert(H5Sclose(fspace) >= 0);
-        assert(H5Dclose(dset) >= 0);
-        assert(H5Sclose(mspace) >= 0);
-
-        // rebase the block_ptr array to local offsets
-        // REBASE is going to be the start offset for the hyperslab
-
-        block_rebase = dst_blk_ptr[0];
-        DEBUG("Task ",rank,": ","block_rebase = ", block_rebase, "\n");
-
-        for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
-          {
-            dst_blk_ptr[i] -= block_rebase;
-          }
-      }
-
-    /***************************************************************************
-     * read DST_IDX
-     ***************************************************************************/
-
-    // determine my read block of dst_idx
-
-    if (block > 0)
-      {
-        if (rank == size-1)
-          { block = block-1; }
-
-        dst_idx.resize(block);
-        assert(dst_idx.size() > 0);
-
-        DEBUG("Task ",rank,": ", "dst_idx: block = ", block, "\n");
-        DEBUG("Task ",rank,": ", "dst_idx: start = ", start, "\n");
-
-        hid_t mspace = H5Screate_simple(1, &block, NULL);
-        assert(mspace >= 0);
-        ierr = H5Sselect_all(mspace);
-        assert(ierr >= 0);
-
-        hid_t dset = H5Dopen2(file,
-                              ngh5_prj_path(proj_name,
-                                            H5PathNames::DST_BLK_IDX).c_str(),
-                              H5P_DEFAULT);
-        assert(dset >= 0);
-
-        // make hyperslab selection
-        hid_t fspace = H5Dget_space(dset);
-        assert(fspace >= 0);
-        ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one,
-                                   &block);
-        assert(ierr >= 0);
-
-        ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
-                       &dst_idx[0]);
-        assert(ierr >= 0);
-
-        assert(H5Sclose(fspace) >= 0);
-        assert(H5Dclose(dset) >= 0);
-        assert(H5Sclose(mspace) >= 0);
-      }
-
-
-    /***************************************************************************
-     * read DST_PTR
-     ***************************************************************************/
-
-    // determine my read block of dst_ptr
-    if (block > 0)
-      {
-        DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.front() = ",
-              dst_blk_ptr.front(), "\n");
-        DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.back() = ",
-              dst_blk_ptr.back(), "\n");
-
-        if (rank < size-1)
-          block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front() + 1);
-        else
-          block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-
-        start = (hsize_t)block_rebase;
-        dst_ptr.resize(block);
-        assert(dst_ptr.size() > 0);
-
-        DEBUG("Task ",rank,": ", "dst_ptr: start = ", start, "\n");
-        DEBUG("Task ",rank,": ", "dst_ptr: block = ", block, "\n");
-
-        // allocate buffer and memory dataspace
-
-        hid_t mspace = H5Screate_simple(1, &block, NULL);
-        assert(mspace >= 0);
-        ierr = H5Sselect_all(mspace);
-        assert(ierr >= 0);
-
-        hid_t dset = H5Dopen2(file,
-                              ngh5_prj_path(proj_name,
-                                            H5PathNames::DST_PTR).c_str(),
-                              H5P_DEFAULT);
-        assert(dset >= 0);
-
-        // make hyperslab selection
-        hid_t fspace = H5Dget_space(dset);
-        assert(fspace >= 0);
-        ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one,
-                                   &block);
-        assert(ierr >= 0);
-
-        ierr = H5Dread(dset, DST_PTR_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
-                       &dst_ptr[0]);
-        assert(ierr >= 0);
-
-        assert(H5Sclose(fspace) >= 0);
-        assert(H5Dclose(dset) >= 0);
-        assert(H5Sclose(mspace) >= 0);
-
-        dst_rebase = dst_ptr[0];
-        edge_base = dst_rebase;
-        DEBUG("Task ",rank,": ", "dst_ptr: dst_rebase = ", dst_rebase, "\n");
-        for (size_t i = 0; i < dst_ptr.size(); ++i)
-          {
-            dst_ptr[i] -= dst_rebase;
-          }
-      }
-
-    /***************************************************************************
-     * read SRC_IDX
-     ***************************************************************************/
-
-    // determine my read block of dst_idx
-    if (block > 0)
-      {
-        DEBUG("Task ",rank,": ", "src_idx: dst_ptr.front() = ", dst_ptr.front(),
-              "\n");
-        DEBUG("Task ",rank,": ", "src_idx: dst_ptr.back() = ", dst_ptr.back(),
-              "\n");
-
-        block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
-        start = (hsize_t)dst_rebase;
-
-        DEBUG("Task ",rank,": ", "src_idx: block = ", block, "\n");
-        DEBUG("Task ",rank,": ", "src_idx: start = ", start, "\n");
-
-        if (block > 0)
-          {
-            // allocate buffer and memory dataspace
-            src_idx.resize(block);
-            assert(src_idx.size() > 0);
-
-            hid_t mspace = H5Screate_simple(1, &block, NULL);
-            assert(mspace >= 0);
-            ierr = H5Sselect_all(mspace);
-            assert(ierr >= 0);
-
-            hid_t dset = H5Dopen2(file,
-                                  ngh5_prj_path(proj_name,
-                                                H5PathNames::SRC_IDX).c_str(),
-                                  H5P_DEFAULT);
-            assert(dset >= 0);
-
-            // make hyperslab selection
-            hid_t fspace = H5Dget_space(dset);
-            assert(fspace >= 0);
-            ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                       &one, &block);
-            assert(ierr >= 0);
-
-            ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
-                           H5P_DEFAULT, &src_idx[0]);
-            assert(ierr >= 0);
-
-            assert(H5Sclose(fspace) >= 0);
-            assert(H5Dclose(dset) >= 0);
-            assert(H5Sclose(mspace) >= 0);
-          }
-
-        DEBUG("Task ",rank,": ", "src_idx: done\n");
-      }
     assert(H5Fclose(file) >= 0);
 
     DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
