@@ -118,6 +118,8 @@ namespace ngh5
         assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                           &iterate_cb, (void*)&op_data ) >= 0);
 
+        assert(op_data.size() == num_projections);
+
         for (size_t i = 0; i < op_data.size(); ++i)
           {
             DEBUG("Projection ",i," is named ",op_data[i],"\n");
