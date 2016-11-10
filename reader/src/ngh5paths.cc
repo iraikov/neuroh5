@@ -41,12 +41,13 @@ namespace ngh5
 
   string ngh5_prj_path (const string& proj_name, const string& name)
   {
-    return H5PathNames::PRJ + H5PathNames::H5_PATH_SEP + proj_name + name;
+    return H5PathNames::PRJ + H5PathNames::H5_PATH_SEP + proj_name +
+      H5PathNames::H5_PATH_SEP + name;
   }
 
   string ngh5_pop_path (const string& name)
   {
-    return H5PathNames::H5_TYPES + name;
+    return H5PathNames::H5_TYPES + H5PathNames::H5_PATH_SEP + name;
   }
 
 }

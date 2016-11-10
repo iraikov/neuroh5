@@ -11,12 +11,8 @@
 #include "debug.hh"
 
 #include "dbs_edge_reader.hh"
-
-#include "destination_block_index.hh"
-#include "destination_block_pointer.hh"
-#include "destination_pointer.hh"
+#include "dbs_read_template.hh"
 #include "ngh5paths.hh"
-#include "src_index.hh"
 
 #include <cstdio>
 #include <cstdlib>
@@ -309,7 +305,7 @@ namespace ngh5
     assert(MPI_Bcast(&src_start, 1, MPI_UINT32_T, 0, comm) >= 0);
 
     /***************************************************************************
-     * read BLOCK_PTR
+     * read the connectivity in DBS format
      ***************************************************************************/
 
     hsize_t start, stop, block;
@@ -340,25 +336,144 @@ namespace ngh5
     DST_BLK_PTR_T block_rebase = 0;
 
     // read destination block pointers
-    ierr = destination_block_pointer(comm, file, proj_name, start, block,
-                                     dst_blk_ptr, block_rebase);
-    assert(ierr >= 0);
+
+    if (block > 0)
+      {
+        // allocate buffer and memory dataspace
+        dst_blk_ptr.resize(block);
+
+        ierr = dbs_read<DST_BLK_PTR_T>
+          (
+           file,
+           ngh5_prj_path(proj_name, H5PathNames::DST_BLK_PTR),
+           start,
+           block,
+           DST_BLK_PTR_H5_NATIVE_T,
+           dst_blk_ptr
+           );
+        assert(ierr >= 0);
+
+        // rebase the block_ptr array to local offsets
+        // REBASE is going to be the start offset for the hyperslab
+
+        block_rebase = dst_blk_ptr[0];
+        DEBUG("Task ",rank,": ","block_rebase = ", block_rebase, "\n");
+
+        for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
+          {
+            dst_blk_ptr[i] -= block_rebase;
+          }
+      }
 
     // read destination block indices
-    ierr = destination_block_index(comm, file, proj_name, start, block, dst_idx);
-    assert(ierr >= 0);
+
+    if (block > 0)
+      {
+        if (rank == size-1)
+          {
+            block = block-1;
+          }
+
+        dst_idx.resize(block);
+        assert(dst_idx.size() > 0);
+
+        DEBUG("Task ",rank,": ", "dst_idx: block = ", block, "\n");
+        DEBUG("Task ",rank,": ", "dst_idx: start = ", start, "\n");
+
+        ierr = dbs_read<NODE_IDX_T>
+          (
+           file,
+           ngh5_prj_path(proj_name, H5PathNames::DST_BLK_IDX),
+           start,
+           block,
+           NODE_IDX_H5_NATIVE_T,
+           dst_idx
+           );
+        assert(ierr >= 0);
+      }
 
     DST_PTR_T dst_rebase = 0;
 
     // read destination pointers
-    ierr = destination_pointer(comm, file, proj_name, block, block_rebase,
-                               dst_blk_ptr, dst_ptr, edge_base, dst_rebase);
-    assert(ierr >= 0);
+
+    if (block > 0)
+      {
+        DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.front() = ",
+              dst_blk_ptr.front(), "\n");
+        DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.back() = ",
+              dst_blk_ptr.back(), "\n");
+
+        if (rank < size-1)
+          {
+            block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front() + 1);
+          }
+        else
+          {
+            block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
+          }
+
+        hsize_t start = (hsize_t)block_rebase;
+        dst_ptr.resize(block);
+        assert(dst_ptr.size() > 0);
+
+        DEBUG("Task ",rank,": ", "dst_ptr: start = ", start, "\n");
+        DEBUG("Task ",rank,": ", "dst_ptr: block = ", block, "\n");
+
+        ierr = dbs_read<DST_PTR_T>
+          (
+           file,
+           ngh5_prj_path(proj_name, H5PathNames::DST_PTR),
+           start,
+           block,
+           DST_PTR_H5_NATIVE_T,
+           dst_ptr
+           );
+        assert(ierr >= 0);
+
+        dst_rebase = dst_ptr[0];
+        edge_base = dst_rebase;
+        DEBUG("Task ",rank,": ", "dst_ptr: dst_rebase = ", dst_rebase, "\n");
+        for (size_t i = 0; i < dst_ptr.size(); ++i)
+          {
+            dst_ptr[i] -= dst_rebase;
+          }
+      }
 
     // read source indices
-    ierr = source_index(comm, file, proj_name, block, dst_rebase, dst_ptr,
-                        src_idx);
-    assert(ierr >= 0);
+
+    if (block > 0)
+      {
+        DEBUG("Task ",rank,": ", "src_idx: dst_ptr.front() = ", dst_ptr.front(),
+              "\n");
+        DEBUG("Task ",rank,": ", "src_idx: dst_ptr.back() = ", dst_ptr.back(),
+              "\n");
+
+        hsize_t block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
+        hsize_t start = (hsize_t)dst_rebase;
+
+        DEBUG("Task ",rank,": ", "src_idx: block = ", block, "\n");
+        DEBUG("Task ",rank,": ", "src_idx: start = ", start, "\n");
+
+        if (block > 0)
+          {
+            // allocate buffer and memory dataspace
+            src_idx.resize(block);
+            assert(src_idx.size() > 0);
+
+            ierr = dbs_read<NODE_IDX_T>
+              (
+               file,
+               ngh5_prj_path(proj_name, H5PathNames::SRC_IDX),
+               start,
+               block,
+               NODE_IDX_H5_NATIVE_T,
+               src_idx
+               );
+            assert(ierr >= 0);
+          }
+
+        DEBUG("Task ",rank,": ", "src_idx: done\n");
+      }
 
     assert(H5Fclose(file) >= 0);
 
