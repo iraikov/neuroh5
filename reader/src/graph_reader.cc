@@ -553,6 +553,7 @@ namespace ngh5
         rank_edge_map_t prj_rank_edge_map;
         edge_map_t prj_edge_map;
         vector<size_t> edge_attr_num;
+        size_t num_edges = 0, total_prj_num_edges = 0, num_recv_edges = 0;
       
         sendcounts.resize(size,0);
         sdispls.resize(size,0);
@@ -568,7 +569,6 @@ namespace ngh5
             vector<NODE_IDX_T> dst_idx;
             vector<DST_PTR_T> dst_ptr;
             vector<NODE_IDX_T> src_idx;
-            size_t num_edges = 0, total_prj_num_edges = 0;
             vector< pair<string,hid_t> > edge_attr_info;
             EdgeNamedAttr edge_attr_values;
 
@@ -598,12 +598,16 @@ namespace ngh5
       
             // ensure that all edges in the projection have been read and appended to edge_list
             assert(num_edges == src_idx.size());
+
+            printf("scatter: projection %lu: num_edges = %lu\n", i, num_edges);
           } // rank < io_size
 
 
         if (rank < io_size)
           {
+            size_t num_packed_edges = 0;
             DEBUG("scatter: packing edge data from projection ", i, "(", prj_names[i], ")");
+            
       
             for (auto it1 = prj_rank_edge_map.cbegin(); it1 != prj_rank_edge_map.cend(); ++it1)
               {
@@ -619,7 +623,9 @@ namespace ngh5
                   
                         const vector<NODE_IDX_T>  src_vector = get<0>(it2->second);
                         const EdgeAttr&      my_edge_attrs = get<1>(it2->second);
-                  
+
+                        num_packed_edges = num_packed_edges + src_vector.size();
+                        
                         if (src_vector.size() > 0)
                           {
                       
@@ -631,9 +637,11 @@ namespace ngh5
                       }
                   }
           
-          
               }
-      
+            
+            // ensure the correct number of edges is being packed
+            assert(num_packed_edges == num_edges);
+            
             DEBUG("scatter: finished packing edge data from projection ", i, "(", prj_names[i], ")");
           }
 
@@ -676,11 +684,16 @@ namespace ngh5
             EdgeAttr           edge_attr_values;
           
             unpack_edge(all_comm, dst, src_vector, edge_attr_values, recvpos, recvbuf, edge_attr_num);
+            num_recv_edges = num_recv_edges + src_vector.size();
 
+            assert(prj_edge_map.find(dst) == prj_edge_map.end());
             prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
             
           }
         DEBUG("scatter: finished unpacking edges for projection ", i, "(", prj_names[i], ")");
+
+        printf("scatter: rank %d prj_edge_map.size() = %lu\n", rank, prj_edge_map.size());
+        printf("scatter: rank %d projection %lu: num_recv_edges = %lu\n", rank, i, num_recv_edges);
 
         prj_vector.push_back(prj_edge_map);
       }

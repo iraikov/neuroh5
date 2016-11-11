@@ -53,7 +53,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s  <FILE> <N> <IOSIZE> [<RANKFILE>]\n\n", argv[0]);
+  printf("Usage: %s  <FILE> <IOSIZE> [<RANKFILE>]\n\n", argv[0]);
   printf("Options:\n");
   printf("\t-s:\n");
   printf("\t\tPrint only edge summary\n");
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "abr:i:h",
+  while ((c = getopt_long (argc, argv, "abo:r:i:h",
                            long_options, &option_index)) != -1)
     {
       switch (c)
@@ -127,6 +127,10 @@ int main(int argc, char** argv)
           }
           if (optflag_verbose == 1) {
             debug_enabled = true;
+          }
+          if (optflag_output == 1) {
+            opt_output = true;
+            output_file_name = std::string(strdup(optarg));
           }
         case 'a':
           opt_attrs = true;
@@ -212,7 +216,7 @@ int main(int argc, char** argv)
                  prj_vector,
                  n_nodes);
 
-
+  
   if (opt_output)
     {
       if (opt_binary)
@@ -268,6 +272,7 @@ int main(int argc, char** argv)
           for (size_t i = 0; i < prj_vector.size(); i++)
             {
               edge_map_t prj_edge_map = prj_vector[i];
+              printf("rank %d: prj_edge_map.size() = %lu\n", rank, prj_edge_map.size());
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
@@ -283,11 +288,12 @@ int main(int argc, char** argv)
                       const vector<NODE_IDX_T> src_vect = get<0>(et);
                       const EdgeAttr&   edge_attr_values = get<1>(et);
 
+                      printf("rank %d: prj = %lu dst = %lu src_vect.size = %lu\n", rank, i, dst, src_vect.size());
                       
                       for (size_t j = 0; j < src_vect.size(); j++)
                         {
                           NODE_IDX_T src = src_vect[j];
-                          outfile << "    " << src << " " << dst;
+                          outfile << src << " " << dst;
                           for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
                             {
                               outfile << " " << edge_attr_values.at<float>(k,j); 
@@ -308,6 +314,7 @@ int main(int argc, char** argv)
                           outfile << std::endl;
                         }
                     }
+                  outfile.flush();
                   outfile.close();
                 }
             }
