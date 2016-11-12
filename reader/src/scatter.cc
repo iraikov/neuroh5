@@ -24,6 +24,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 
@@ -272,7 +273,6 @@ int main(int argc, char** argv)
           for (size_t i = 0; i < prj_vector.size(); i++)
             {
               edge_map_t prj_edge_map = prj_vector[i];
-              printf("rank %d: prj_edge_map.size() = %lu\n", rank, prj_edge_map.size());
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
@@ -288,15 +288,13 @@ int main(int argc, char** argv)
                       const vector<NODE_IDX_T> src_vect = get<0>(et);
                       const EdgeAttr&   edge_attr_values = get<1>(et);
 
-                      printf("rank %d: prj = %lu dst = %lu src_vect.size = %lu\n", rank, i, dst, src_vect.size());
-                      
                       for (size_t j = 0; j < src_vect.size(); j++)
                         {
                           NODE_IDX_T src = src_vect[j];
                           outfile << src << " " << dst;
                           for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
                             {
-                              outfile << " " << edge_attr_values.at<float>(k,j); 
+                              outfile << " " << setprecision(9) << edge_attr_values.at<float>(k,j); 
                             }
                           for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
                             {

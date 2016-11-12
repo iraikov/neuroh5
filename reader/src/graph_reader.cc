@@ -599,7 +599,6 @@ namespace ngh5
             // ensure that all edges in the projection have been read and appended to edge_list
             assert(num_edges == src_idx.size());
 
-            printf("scatter: projection %lu: num_edges = %lu\n", i, num_edges);
           } // rank < io_size
 
 
@@ -686,14 +685,21 @@ namespace ngh5
             unpack_edge(all_comm, dst, src_vector, edge_attr_values, recvpos, recvbuf, edge_attr_num);
             num_recv_edges = num_recv_edges + src_vector.size();
 
-            assert(prj_edge_map.find(dst) == prj_edge_map.end());
-            prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
-            
+            if (prj_edge_map.find(dst) == prj_edge_map.end())
+              {
+                prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
+              }
+            else
+              {
+                edge_tuple_t et = prj_edge_map[dst];
+                vector<NODE_IDX_T> &v = get<0>(et);
+                EdgeAttr &a = get<1>(et);
+                v.insert(v.end(),src_vector.begin(),src_vector.end());
+                a.append(edge_attr_values);
+                prj_edge_map[dst] = make_tuple(v,a);
+              }
           }
         DEBUG("scatter: finished unpacking edges for projection ", i, "(", prj_names[i], ")");
-
-        printf("scatter: rank %d prj_edge_map.size() = %lu\n", rank, prj_edge_map.size());
-        printf("scatter: rank %d projection %lu: num_recv_edges = %lu\n", rank, i, num_recv_edges);
 
         prj_vector.push_back(prj_edge_map);
       }

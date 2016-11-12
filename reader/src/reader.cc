@@ -23,7 +23,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <map>
@@ -88,7 +88,7 @@ void output_projection(string outfilename,
       outfile << i << " " << src_list[i] << " " << dst_list[i];
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
         {
-          outfile << " " << edge_attr_values.at<float>(j,i); 
+          outfile << " " << setprecision(9) << edge_attr_values.at<float>(j,i); 
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
         {

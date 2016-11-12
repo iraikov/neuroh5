@@ -185,6 +185,13 @@ struct EdgeAttr
     return result;
   }
   
+  void append (EdgeAttr a)
+  {
+    float_values.insert(float_values.end(),a.float_values.begin(),a.float_values.end());
+    uint8_values.insert(uint8_values.end(),a.uint8_values.begin(),a.uint8_values.end());
+    uint16_values.insert(uint16_values.end(),a.uint16_values.begin(),a.uint16_values.end());
+    uint32_values.insert(uint32_values.end(),a.uint32_values.begin(),a.uint32_values.end());
+  }
   
   
 };
