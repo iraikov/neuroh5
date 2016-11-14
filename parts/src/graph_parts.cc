@@ -151,7 +151,9 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
     
     // Read population info to determine total_num_nodes
-    size_t total_num_nodes;
+    size_t local_num_nodes, total_num_nodes,
+      local_num_edges, total_num_edges;
+
     vector<pop_range_t> pop_vector;
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     assert(read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
@@ -172,7 +174,9 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
                    prj_names,
                    node_rank_vector,
                    prj_vector,
-                   n_nodes);
+                   total_num_nodes,
+                   local_num_edges,
+                   total_num_edges);
 
     // Combine the edges from all projections into a single edge map
     map<NODE_IDX_T, vector<NODE_IDX_T> > &edge_map;
@@ -189,7 +193,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     idx_t ncon    = 0; // number of weights per vertex
     idx_t nparts  = Nparts;
     real_t *tpwgts = NULL, ubvec = 1.05; 
-    idx_t options[4],edgecut;
+    idx_t options[4], edgecut;
     
     // Common for every rank:
     // determines which graph nodes are assigned to which MPI rank
@@ -213,10 +217,10 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
       }
     xadj.push_back(adjncy.size());
                    
-    parts.resize (); // resize to number of locally stored vertices
+    parts.resize (vtxdist[rank+1]-vtxdist[rank]); // resize to number of locally stored vertices
     status = ParMETIS_V3_PartKway (&vtxdist[0],&xadj[0],&adjncy[0],
                                    vwgt,adjwgt,&wgtflag,&numflag,&ncon,&nparts,
-                                   tpwgts,&ubvec,options,&edgecut,
+                                   tpwgts,&ubvec,options,&edgecut,&parts[0],
                                    comm);
     if (status != METIS_OK)
       {

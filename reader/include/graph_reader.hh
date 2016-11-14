@@ -69,6 +69,10 @@ namespace ngh5
   ///
   /// @param total_num_nodes  Updated with the total number of nodes (vertices) in the graph
   ///
+  /// @param local_prj_num_edges  Updated with the number of edges in the graph read by the current (local) rank
+  ///
+  /// @param total_prj_num_edges  Updated with the total number of edges in the graph
+  ///
   /// @return              HDF5 error code
   int scatter_graph
   (
@@ -80,7 +84,9 @@ namespace ngh5
    // A vector that maps nodes to compute ranks
    const std::vector<rank_t> node_rank_vector,
    std::vector < edge_map_t > & prj_vector,
-   size_t &total_num_nodes
+   size_t &total_num_nodes,
+   size_t &local_prj_num_edges,
+   size_t &total_prj_num_edges
    );
 
   

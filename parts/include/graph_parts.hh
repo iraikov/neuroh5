@@ -30,9 +30,11 @@ namespace ngh5
   ///
   /// @param prj_names     Vector of projection names to be read
   ///
+  /// @param io_size       Number of I/O ranks (those ranks that conduct I/O operations)
+  ///
   /// @param Nparts        Number of partitions
   ///
-  /// @param parts         Vector of node vectors containing the partitioner output
+  /// @param parts         Updated with node vectors containing the partitioner output
   ///                      (assignment of graph nodes to MPI ranks)
   ///
   /// @return              HDF5 error code
@@ -43,7 +45,7 @@ namespace ngh5
    const std::string& file_name,
    const std::vector<std::string> prj_names,
    const size_T Nparts,
-   std::vector< std::vector<NODE_IDX_T> > &parts
+   std::vector< NODE_IDX_T > &parts
    );
 
   

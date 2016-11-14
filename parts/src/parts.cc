@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file reader.cc
+///  @file parts.cc
 ///
 ///  Driver program for graph partitioning functions.
 ///
@@ -14,9 +14,7 @@
 
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
-#include "graph_reader.hh"
-
-#include "hdf5.h"
+#include "graph_parts.hh"
 
 #include <getopt.h>
 #include <cassert>
@@ -56,59 +54,10 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s [graphfile] [options]\n\n", argv[0]);
+  printf("Usage: %s [graphfile] [nparts] [options]\n\n", argv[0]);
   printf("Options:\n");
-  printf("\t-a:\n");
-  printf("\t\tInclude edge attribute information\n");
-  printf("\t-s:\n");
-  printf("\t\tPrint only edge summary\n");
-  printf("\t--verbose:\n");
-  printf("\t\tPrint verbose diagnostic information\n");
 }
 
-
-/*****************************************************************************
- * Prints out projection content
- *****************************************************************************/
-
-void output_projection(string outfilename,
-                       const prj_tuple_t& projection)
-{
-  DEBUG("output_projection: outfilename is ",outfilename,"\n");
-  
-  const vector<NODE_IDX_T>& src_list = get<0>(projection);
-  const vector<NODE_IDX_T>& dst_list = get<1>(projection);
-  const EdgeAttr&  edge_attr_values  = get<2>(projection);
-
-  ofstream outfile;
-  outfile.open(outfilename);
-
-  for (size_t i = 0; i < src_list.size(); i++)
-    {
-      outfile << i << " " << src_list[i] << " " << dst_list[i];
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-        {
-          outfile << " " << setprecision(9) << edge_attr_values.at<float>(j,i); 
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-        {
-          outfile << " " << edge_attr_values.at<uint8_t>(j,i); 
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-        {
-          outfile << " " << edge_attr_values.at<uint16_t>(j,i);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-        {
-          outfile << " " << edge_attr_values.at<uint32_t>(j,i);
-        }
-
-      outfile << std::endl;
-    }
-
-  outfile.close();
-
-}
 
 
 
@@ -118,7 +67,8 @@ void output_projection(string outfilename,
 
 int main(int argc, char** argv)
 {
-  std::string input_file_name;
+  std::string input_file_name, output;
+  size_t nparts, iosize = 0;
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -129,46 +79,72 @@ int main(int argc, char** argv)
   debug_enabled = false;
   
   // parse arguments
-  int optflag_summary = 0;
-  int optflag_verbose = 0;
-  bool opt_summary = false;
-  bool opt_attrs = false;
+  int optflag_nparts = 0;
+  int optflag_iosize = 0;
+  int optflag_output = 0;
+  bool opt_nparts = false,
+    opt_iosize = false,
+    opt_output = false;
+
   static struct option long_options[] = {
-    {"summary",  no_argument, &optflag_summary,  1 },
+    {"output",    required_argument, &optflag_output,  1 },
+    {"nparts",    required_argument, &optflag_nparts,  1 },
+    {"iosize",    required_argument, &optflag_iosize,  1 },
     {"verbose",  no_argument, &optflag_verbose,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "ahs",
+  while ((c = getopt_long (argc, argv, "hi:n:o:",
 			   long_options, &option_index)) != -1)
     {
       switch (c)
         {
         case 0:
-          if (optflag_summary == 1) {
-            opt_summary = true;
-          }
           if (optflag_verbose == 1) {
             debug_enabled = true;
           }
+          if (optflag_nparts == 1) {
+            opt_noparts = true;
+            ss << string(optarg);
+            ss >> nparts;
+          }
+          if (optflag_iosize == 1) {
+            opt_iosize = true;
+            ss << string(optarg);
+            ss >> iosize;
+          }
+          if (optflag_output == 1) {
+            opt_output = true;
+            ss << string(optarg);
+            ss >> output;
+          }
           break;
-        case 'a':
-          opt_attrs = true;
+        case 'o':
+          opt_output = true;
+          ss << string(optarg);
+          ss >> output;
+          break;
+        case 'n':
+          opt_nparts = true;
+          ss << string(optarg);
+          ss >> nparts;
+          break;
+        case 'i':
+          opt_iosize = true;
+          ss << string(optarg);
+          ss >> iosize;
           break;
         case 'h':
           print_usage_full(argv);
           exit(0);
-          break;
-        case 's':
-          opt_summary = true;
           break;
         default:
           throw_err("Input argument format error");
         }
     }
 
-  if (optind < argc)
+  if (opt_nparts && (optind < argc))
     {
       input_file_name = std::string(argv[optind]);
     }
@@ -177,7 +153,8 @@ int main(int argc, char** argv)
       print_usage_full(argv);
       exit(1);
     }
- 
+
+  if (!opt_iosize) iosize = 4;
 
   vector<string> prj_names;
   assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
@@ -186,40 +163,34 @@ int main(int argc, char** argv)
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
   
   // read the edges
-  read_graph (MPI_COMM_WORLD,
-              input_file_name,
-              opt_attrs,
-              prj_names,
-              prj_list,
-              total_num_nodes,
-              local_num_edges,
-              total_num_edges);
+  std::vector<NODE_IDX_T> &parts;
+  
+  partition_graph
+  (
+   comm,
+   input_file_name,
+   prj_names,
+   iosize,
+   nparts,
+   parts
+   );
 
-  
-  printf("Task %d has read a total of %lu projections\n", rank,  prj_list.size());
-  printf("Task %d has read a total of %lu edges\n", rank,  local_num_edges);
-  printf("Task %d: total number of edges is %lu\n", rank,  total_num_edges);
-  
-  size_t sum_local_num_edges = 0;
-  MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
-	     MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
-  if (rank == 0)
+  if (!opt_output)
     {
-      assert(sum_local_num_edges == total_num_edges);
     }
-
-  
-  if (!opt_summary)
+  else
     {
-      if (prj_list.size() > 0) 
+      ofstream outfile;
+      stringstream outfilename;
+      outfilename << output << "." << rank;
+      outfile.open(outfilename.str().c_str());
+
+      for (size_t i = 0; i < parts.size(); i++)
         {
-          for (size_t i = 0; i < prj_list.size(); i++)
-            {
-              stringstream outfilename;
-              outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
-              output_projection(outfilename.str(), prj_list[i]);
-            }
+          outfile << parts[i] << std::endl;
         }
+      outfile.flush();
+      outfile.close();
     }
 
   MPI_Finalize();

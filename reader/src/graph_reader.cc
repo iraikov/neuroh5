@@ -505,7 +505,9 @@ namespace ngh5
    // A vector that maps nodes to compute ranks
    const vector<rank_t> node_rank_vector,
    vector < edge_map_t > & prj_vector,
-   size_t &total_num_nodes
+   size_t &total_num_nodes,
+   size_t &local_num_edges,
+   size_t &total_num_edges
    )
   {
     int ierr = 0;
@@ -553,7 +555,7 @@ namespace ngh5
         rank_edge_map_t prj_rank_edge_map;
         edge_map_t prj_edge_map;
         vector<size_t> edge_attr_num;
-        size_t num_edges = 0, total_prj_num_edges = 0, num_recv_edges = 0;
+        size_t local_prj_num_edges = 0, total_prj_num_edges = 0, num_recv_edges = 0;
       
         sendcounts.resize(size,0);
         sdispls.resize(size,0);
@@ -594,10 +596,10 @@ namespace ngh5
 
             // append to the edge map
             assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                   edge_attr_values, node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
+                                   edge_attr_values, node_rank_vector, local_prj_num_edges, prj_rank_edge_map) >= 0);
       
             // ensure that all edges in the projection have been read and appended to edge_list
-            assert(num_edges == src_idx.size());
+            assert(local_prj_num_edges == src_idx.size());
 
           } // rank < io_size
 
@@ -639,10 +641,13 @@ namespace ngh5
               }
             
             // ensure the correct number of edges is being packed
-            assert(num_packed_edges == num_edges);
+            assert(num_packed_edges == local_prj_num_edges);
             
             DEBUG("scatter: finished packing edge data from projection ", i, "(", prj_names[i], ")");
           }
+
+        // Broadcast the total number of edges in this projection
+        assert(MPI_Bcast(&total_prj_num_edges, 1, MPI_UINT32_T, 0, all_comm) >= 0);
 
         // 0. Broadcast the number of attributes of each type to all ranks
         edge_attr_num.resize(4);
@@ -700,6 +705,9 @@ namespace ngh5
               }
           }
         DEBUG("scatter: finished unpacking edges for projection ", i, "(", prj_names[i], ")");
+
+        total_num_edges = total_num_edges + total_prj_num_edges;
+        local_num_edges = local_num_edges + num_recv_edges;
 
         prj_vector.push_back(prj_edge_map);
       }

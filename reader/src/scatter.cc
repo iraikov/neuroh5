@@ -81,6 +81,7 @@ int main(int argc, char** argv)
   assert(MPI_Init(&argc, &argv) >= 0);
 
   int rank, size, io_size; size_t n_nodes;
+  size_t local_num_edges, total_num_edges;
   assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
 
@@ -215,7 +216,9 @@ int main(int argc, char** argv)
                  prj_names,
                  node_rank_vector,
                  prj_vector,
-                 n_nodes);
+                 n_nodes,
+                 local_num_edges,
+                 total_num_edges);
 
   
   if (opt_output)
