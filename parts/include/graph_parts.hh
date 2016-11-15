@@ -44,8 +44,9 @@ namespace ngh5
    MPI_Comm comm,
    const std::string& file_name,
    const std::vector<std::string> prj_names,
-   const size_T Nparts,
-   std::vector< NODE_IDX_T > &parts
+   const size_t Nparts,
+   const size_t io_size,
+   std::vector< idx_t > &parts
    );
 
   

@@ -112,7 +112,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
                 NODE_IDX_T dst   = it->first;
                 edge_tuple_t& et = it->second;
                 
-                const vector<NODE_IDX_T> src_vect = get<0>(et);
+                const vector<NODE_IDX_T> src_vector = get<0>(et);
                 
                 if (edge_map.find(dst) == edge_map.end())
                   {
@@ -120,7 +120,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
                   }
                 else
                   {
-                    vector<NODE_IDX_T> &v = prj_edge_map[dst];
+                    vector<NODE_IDX_T> &v = edge_map[dst];
                     v.insert(v.end(),src_vector.begin(),src_vector.end());
                     edge_map[dst] = v;
                   }
@@ -136,18 +136,18 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
   int partition_graph
   (
    MPI_Comm comm,
-   const std::string& file_name,
+   const std::string& input_file_name,
    const std::vector<std::string> prj_names,
    const size_t io_size,
    const size_t Nparts,
-   std::vector<NODE_IDX_T> &parts
+   std::vector<idx_t> &parts
    )
   {
     int status;
     
     int rank, size;
-    assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
-    assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) >= 0);
+    assert(MPI_Comm_rank(comm, &rank) >= 0);
 
     
     // Read population info to determine total_num_nodes
@@ -161,13 +161,10 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     // A vector that maps nodes to compute ranks
     vector<rank_t> node_rank_vector;
     compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
-
-    vector<string> prj_names;
-    assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
     
     // read the edges
     vector < edge_map_t > prj_vector;
-    scatter_graph (all_comm,
+    scatter_graph (comm,
                    input_file_name,
                    io_size,
                    false,
@@ -179,7 +176,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
                    total_num_edges);
 
     // Combine the edges from all projections into a single edge map
-    map<NODE_IDX_T, vector<NODE_IDX_T> > &edge_map;
+    map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
     merge_edge_map (prj_vector, edge_map);
 
     
@@ -210,7 +207,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
         NODE_IDX_T dst   = it->first;
         const vector<NODE_IDX_T> src_vector = it->second;
 
-        xadj.push_back(offset);
+        xadj.push_back(xadj_offset);
         adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
 
         xadj_offset = xadj_offset + src_vector.size();
@@ -221,7 +218,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     status = ParMETIS_V3_PartKway (&vtxdist[0],&xadj[0],&adjncy[0],
                                    vwgt,adjwgt,&wgtflag,&numflag,&ncon,&nparts,
                                    tpwgts,&ubvec,options,&edgecut,&parts[0],
-                                   comm);
+                                   &comm);
     if (status != METIS_OK)
       {
         throw_err("ParMETIS error");

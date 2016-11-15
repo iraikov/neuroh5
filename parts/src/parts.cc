@@ -69,6 +69,7 @@ int main(int argc, char** argv)
 {
   std::string input_file_name, output;
   size_t nparts, iosize = 0;
+  stringstream ss;
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -90,7 +91,6 @@ int main(int argc, char** argv)
     {"output",    required_argument, &optflag_output,  1 },
     {"nparts",    required_argument, &optflag_nparts,  1 },
     {"iosize",    required_argument, &optflag_iosize,  1 },
-    {"verbose",  no_argument, &optflag_verbose,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
@@ -101,11 +101,8 @@ int main(int argc, char** argv)
       switch (c)
         {
         case 0:
-          if (optflag_verbose == 1) {
-            debug_enabled = true;
-          }
           if (optflag_nparts == 1) {
-            opt_noparts = true;
+            opt_nparts = true;
             ss << string(optarg);
             ss >> nparts;
           }
@@ -163,11 +160,11 @@ int main(int argc, char** argv)
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
   
   // read the edges
-  std::vector<NODE_IDX_T> &parts;
+  std::vector<idx_t> parts;
   
   partition_graph
   (
-   comm,
+   MPI_COMM_WORLD,
    input_file_name,
    prj_names,
    iosize,
