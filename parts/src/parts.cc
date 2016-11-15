@@ -113,14 +113,12 @@ int main(int argc, char** argv)
           }
           if (optflag_output == 1) {
             opt_output = true;
-            ss << string(optarg);
-            ss >> output;
+            output = string(optarg);
           }
           break;
         case 'o':
           opt_output = true;
-          ss << string(optarg);
-          ss >> output;
+          output = string(optarg);
           break;
         case 'n':
           opt_nparts = true;
@@ -183,9 +181,8 @@ int main(int argc, char** argv)
     {
       ofstream outfile;
       stringstream outfilename;
-      outfilename << output << "." << rank;
+      outfilename << output << "." << nparts << "." << rank;
       outfile.open(outfilename.str().c_str());
-
       for (size_t i = 0; i < parts.size(); i++)
         {
           outfile << parts[i] << std::endl;
