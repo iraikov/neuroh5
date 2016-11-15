@@ -196,7 +196,6 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     // Common for every rank:
     // determines which graph nodes are assigned to which MPI rank
     compute_vtxdist(size, total_num_nodes, vtxdist);
-    printf("total_num_nodes = %lu\n", total_num_nodes);
 
     // Specific to each rank:
     //
@@ -206,13 +205,10 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     size_t adjncy_offset = 0;
     for (idx_t i = vtxdist[rank]; i<vtxdist[rank+1]; i++)
       {
-        printf("i = %lu\n", i);
-        
         auto it = edge_map.find(i);
         if (it != edge_map.end())
           {
             NODE_IDX_T dst = it->first;
-            printf("dst = %lu\n", dst);
             const vector<NODE_IDX_T> src_vector = it->second;
             
             xadj.push_back(adjncy_offset);
@@ -226,7 +222,6 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
           }
       }
     xadj.push_back(adjncy.size());
-    printf("xadj.size() = %lu\n", xadj.size());
 
     tpwgts.resize(Nparts); // fraction of vertex weight that should be distributed to each partition
     for (size_t i = 0; i < Nparts; i++)
