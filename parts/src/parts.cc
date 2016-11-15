@@ -174,6 +174,10 @@ int main(int argc, char** argv)
 
   if (!opt_output)
     {
+      for (size_t i = 0; i < parts.size(); i++)
+        {
+          cout << parts[i] << std::endl;
+        }
     }
   else
     {

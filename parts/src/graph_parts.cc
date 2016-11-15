@@ -187,37 +187,57 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     idx_t *vwgt=NULL, *adjwgt=NULL;
     idx_t wgtflag = 0; // indicates if the graph is weighted (0 = no weights)
     idx_t numflag = 0; // indicates array numbering scheme (0: C-style; 1: Fortran-style)
-    idx_t ncon    = 0; // number of weights per vertex
+    idx_t ncon    = 1; // number of weights per vertex
     idx_t nparts  = Nparts;
-    real_t *tpwgts = NULL, ubvec = 1.05; 
+    vector <real_t> tpwgts;
+    real_t ubvec = 1.05; 
     idx_t options[4], edgecut;
     
     // Common for every rank:
     // determines which graph nodes are assigned to which MPI rank
     compute_vtxdist(size, total_num_nodes, vtxdist);
+    printf("total_num_nodes = %lu\n", total_num_nodes);
 
     // Specific to each rank:
     //
     // the adjacency list of vertex i is stored in array adjncy
     // starting at index xadj[i] and ending at (but not including)
     // index xadj[i + 1]
-    size_t xadj_offset = 0;
-    for (auto it = edge_map.begin(); it != edge_map.end(); it++)
+    size_t adjncy_offset = 0;
+    for (idx_t i = vtxdist[rank]; i<vtxdist[rank+1]; i++)
       {
-        NODE_IDX_T dst   = it->first;
-        const vector<NODE_IDX_T> src_vector = it->second;
-
-        xadj.push_back(xadj_offset);
-        adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
-
-        xadj_offset = xadj_offset + src_vector.size();
+        printf("i = %lu\n", i);
+        
+        auto it = edge_map.find(i);
+        if (it != edge_map.end())
+          {
+            NODE_IDX_T dst = it->first;
+            printf("dst = %lu\n", dst);
+            const vector<NODE_IDX_T> src_vector = it->second;
+            
+            xadj.push_back(adjncy_offset);
+            adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
+        
+            adjncy_offset = adjncy_offset + src_vector.size();
+          }
+        else
+          {
+            xadj.push_back(adjncy_offset);
+          }
       }
     xadj.push_back(adjncy.size());
-                   
+    printf("xadj.size() = %lu\n", xadj.size());
+
+    tpwgts.resize(Nparts); // fraction of vertex weight that should be distributed to each partition
+    for (size_t i = 0; i < Nparts; i++)
+      {
+        tpwgts[i] = 1.0/Nparts;
+      }
+    
     parts.resize (vtxdist[rank+1]-vtxdist[rank]); // resize to number of locally stored vertices
     status = ParMETIS_V3_PartKway (&vtxdist[0],&xadj[0],&adjncy[0],
                                    vwgt,adjwgt,&wgtflag,&numflag,&ncon,&nparts,
-                                   tpwgts,&ubvec,options,&edgecut,&parts[0],
+                                   &tpwgts[0],&ubvec,options,&edgecut,&parts[0],
                                    &comm);
     if (status != METIS_OK)
       {
