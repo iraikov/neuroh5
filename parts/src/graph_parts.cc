@@ -175,10 +175,12 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
                    local_num_edges,
                    total_num_edges);
 
+    printf("parts: rank %d: finished scatter_graph\n", rank);
     // Combine the edges from all projections into a single edge map
     map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
     merge_edge_map (prj_vector, edge_map);
-
+    printf("parts: rank %d: finished merging map\n", rank);
+    prj_vector.clear();
     
     // Needed by parmetis
     vector<idx_t> vtxdist;
