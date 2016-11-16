@@ -223,6 +223,8 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
       }
     xadj.push_back(adjncy.size());
 
+    edge_map.clear();
+
     tpwgts.resize(Nparts); // fraction of vertex weight that should be distributed to each partition
     for (size_t i = 0; i < Nparts; i++)
       {

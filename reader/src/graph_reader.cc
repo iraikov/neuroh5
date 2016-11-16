@@ -354,11 +354,14 @@ namespace ngh5
   {
     int ierr = 0;
     uint32_t dst_numitems;
-    int recvbuf_size = recvbuf.size();
-    
+    size_t recvbuf_size = recvbuf.size();
+    assert(recvbuf_size > 0);    
+    assert(recvpos >= 0);
+
     assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst, 1, NODE_IDX_MPI_T, comm) >= 0);
 
     MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst_numitems, 1, MPI_UINT32_T, comm);
+
     src_vector.resize(dst_numitems);
     MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
                &src_vector[0], dst_numitems, NODE_IDX_MPI_T,
@@ -642,7 +645,8 @@ namespace ngh5
             
             // ensure the correct number of edges is being packed
             assert(num_packed_edges == local_prj_num_edges);
-            
+
+            prj_rank_edge_map.clear();
             DEBUG("scatter: finished packing edge data from projection ", i, "(", prj_names[i], ")");
           }
 
@@ -679,31 +683,37 @@ namespace ngh5
         assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
                              &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
                              all_comm) >= 0);
+        sendbuf.clear();
         DEBUG("scatter: after MPI_Alltoallv for projection ", i, "(", prj_names[i], ")");
+        DEBUG("scatter: recvbuf.size() = ", recvbuf.size());
 
-        while ((unsigned int)recvpos < recvbuf.size()-1)
+        if (recvbuf.size() > 0)
           {
-            NODE_IDX_T dst; 
-            vector<NODE_IDX_T> src_vector;
-            EdgeAttr           edge_attr_values;
-          
-            unpack_edge(all_comm, dst, src_vector, edge_attr_values, recvpos, recvbuf, edge_attr_num);
-            num_recv_edges = num_recv_edges + src_vector.size();
-
-            if (prj_edge_map.find(dst) == prj_edge_map.end())
+            while ((unsigned int)recvpos < recvbuf.size()-1)
               {
-                prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
-              }
-            else
-              {
-                edge_tuple_t et = prj_edge_map[dst];
-                vector<NODE_IDX_T> &v = get<0>(et);
-                EdgeAttr &a = get<1>(et);
-                v.insert(v.end(),src_vector.begin(),src_vector.end());
-                a.append(edge_attr_values);
-                prj_edge_map[dst] = make_tuple(v,a);
+                NODE_IDX_T dst; 
+                vector<NODE_IDX_T> src_vector;
+                EdgeAttr           edge_attr_values;
+                
+                unpack_edge(all_comm, dst, src_vector, edge_attr_values, recvpos, recvbuf, edge_attr_num);
+                num_recv_edges = num_recv_edges + src_vector.size();
+                
+                if (prj_edge_map.find(dst) == prj_edge_map.end())
+                  {
+                    prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
+                  }
+                else
+                  {
+                    edge_tuple_t et = prj_edge_map[dst];
+                    vector<NODE_IDX_T> &v = get<0>(et);
+                    EdgeAttr &a = get<1>(et);
+                    v.insert(v.end(),src_vector.begin(),src_vector.end());
+                    a.append(edge_attr_values);
+                    prj_edge_map[dst] = make_tuple(v,a);
+                  }
               }
           }
+        recvbuf.clear();
         DEBUG("scatter: finished unpacking edges for projection ", i, "(", prj_names[i], ")");
 
         total_num_edges = total_num_edges + total_prj_num_edges;

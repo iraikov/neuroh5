@@ -18,8 +18,8 @@
 ### Get darsan profile data
 #PBS -lgres=darshan
 
-module swap PrgEnv-intel PrgEnv-gnu
 module load cray-hdf5-parallel
+module load gcc/4.9.3
 
 set -x
 
@@ -30,8 +30,8 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 512 ./reader/scatter  -a -i 64 -n 1121600  \
-      /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5
+aprun -n 512 ./reader/src/scatter  -a -i 64  \
+      /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_dbs.h5
 
 
 
