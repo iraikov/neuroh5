@@ -21,16 +21,6 @@ using namespace std;
 
 namespace ngh5
 {
-  
-  /// @brief Specifies the path to edge attributes
-  ///
-  /// @param proj_name          Projection data set name
-  ///
-  /// @param attr_name         Edge attribute name
-  ///
-  /// @return                  A string containing the full path to the attribute data set 
-  std::string ngh5_edge_attr_path (const std::string& proj_name, const std::string& attr_name);
-
   /// @brief Discovers the list of edge attributes.
   ///
   /// @param file_name      Input file name

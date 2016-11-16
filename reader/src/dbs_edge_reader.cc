@@ -12,7 +12,7 @@
 
 #include "dbs_edge_reader.hh"
 #include "dbs_read_template.hh"
-#include "ngh5paths.hh"
+#include "hdf5_path_names.hh"
 
 #include <cstdio>
 #include <cstdlib>
@@ -28,6 +28,7 @@
 #define MAX_EDGE_ATTR_NAME 1024
 
 using namespace std;
+using namespace ngh5::io::hdf5;
 
 namespace ngh5
 {
@@ -50,128 +51,6 @@ namespace ngh5
         offset    += bins[i].second;
       }
 
-  }
-
-
-  /*****************************************************************************
-   * Read projection names
-   *****************************************************************************/
-
-  herr_t iterate_cb
-  (
-   hid_t             grp,
-   const char*       name,
-   const H5L_info_t* info,
-   void*             op_data
-   )
-  {
-    vector<string>* ptr = (vector<string>*)op_data;
-    ptr->push_back(string(name));
-    return 0;
-  }
-
-  herr_t read_projection_names
-  (
-   MPI_Comm             comm,
-   const std::string&   file_name,
-   vector<string>&      prj_vector
-   )
-  {
-    herr_t ierr = 0;
-
-    int rank, size;
-
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
-
-    // MPI rank 0 reads and broadcasts the number of ranges
-    hsize_t num_projections, i;
-    hid_t file = -1, grp = -1;
-
-    char* prj_names_buf;
-    size_t prj_names_total_length = 0;
-
-    // process 0 reads the names of projections and broadcasts
-    if (rank == 0)
-      {
-        file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        assert(file >= 0);
-        DEBUG("file = ",file,"\n");
-
-        grp = H5Gopen(file, H5PathNames::PRJ.c_str(), H5P_DEFAULT);
-        assert(grp >= 0);
-        assert(H5Gget_num_objs(grp, &num_projections)>=0);
-      }
-
-    assert(MPI_Bcast(&num_projections, 1, MPI_UINT64_T, 0, comm) >= 0);
-    DEBUG("num_projections = ",num_projections,"\n");
-
-    // allocate buffer
-    vector<uint64_t> prj_name_lengths(num_projections);
-    prj_vector.resize(num_projections);
-
-    // MPI rank 0 reads and broadcasts the projection names
-    if (rank == 0)
-      {
-        hsize_t idx = 0;
-        vector<string> op_data;
-        assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                          &iterate_cb, (void*)&op_data ) >= 0);
-
-        assert(op_data.size() == num_projections);
-
-        for (size_t i = 0; i < op_data.size(); ++i)
-          {
-            DEBUG("Projection ",i," is named ",op_data[i],"\n");
-            prj_vector[i] = op_data[i];
-            size_t len = op_data[i].size();
-            prj_name_lengths[i] = len;
-            prj_names_total_length += len;
-          }
-
-        assert(H5Gclose(grp) >= 0);
-        assert(H5Fclose(file) >= 0);
-      }
-
-    DEBUG("prj_names_total_length = ",prj_names_total_length,"\n");
-    // Broadcast projection name lengths
-    assert(MPI_Bcast(&prj_names_total_length, 1, MPI_UINT64_T, 0, comm) >= 0);
-    assert(MPI_Bcast(&prj_name_lengths[0], num_projections, MPI_UINT64_T, 0,
-                     comm) >= 0);
-
-    // Broadcast projection names
-    size_t offset = 0;
-    prj_names_buf = new char [prj_names_total_length];
-    assert(prj_names_buf != NULL);
-
-    if (rank == 0)
-      {
-        for (i = 0; i < num_projections; i++)
-          {
-            memcpy(prj_names_buf+offset, prj_vector[i].c_str(),
-                   prj_name_lengths[i]);
-            offset = offset + prj_name_lengths[i];
-          }
-      }
-
-    assert(MPI_Bcast(prj_names_buf, prj_names_total_length, MPI_BYTE, 0, comm)
-           >= 0);
-
-    // Copy projection names into prj_vector
-    char prj_name[MAX_PRJ_NAME];
-    offset = 0;
-    for (i = 0; i < num_projections; i++)
-      {
-        size_t len = prj_name_lengths[i];
-        memcpy(prj_name, prj_names_buf+offset, len);
-        prj_name[len] = '\0';
-        prj_vector[i] = string((const char*)prj_name);
-        offset = offset + len;
-      }
-
-    delete [] prj_names_buf;
-
-    return ierr;
   }
 
   /*****************************************************************************
@@ -219,8 +98,8 @@ namespace ngh5
         // determine number of blocks in projection
         file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
         assert(file >= 0);
-        dset = H5Dopen2(file, ngh5_prj_path(proj_name,
-                                            H5PathNames::DST_BLK_PTR).c_str(),
+        dset = H5Dopen2(file, projection_path_join(proj_name,
+                                                   DST_BLK_PTR).c_str(),
                         H5P_DEFAULT);
         assert(dset >= 0);
         fspace = H5Dget_space(dset);
@@ -231,8 +110,7 @@ namespace ngh5
         assert(H5Dclose(dset) >= 0);
 
         // determine number of edges in projection
-        dset = H5Dopen2(file, ngh5_prj_path(proj_name,
-                                            H5PathNames::SRC_IDX).c_str(),
+        dset = H5Dopen2(file, projection_path_join(proj_name, SRC_IDX).c_str(),
                         H5P_DEFAULT);
         assert(dset >= 0);
         fspace = H5Dget_space(dset);
@@ -248,8 +126,7 @@ namespace ngh5
         ierr = H5Sselect_all(mspace);
         assert(ierr >= 0);
 
-        dset = H5Dopen2(file, ngh5_prj_path(proj_name,
-                                            H5PathNames::DST_POP).c_str(),
+        dset = H5Dopen2(file, projection_path_join(proj_name, DST_POP).c_str(),
                         H5P_DEFAULT);
         assert(dset >= 0);
         fspace = H5Dget_space(dset);
@@ -271,8 +148,7 @@ namespace ngh5
         ierr = H5Sselect_all(mspace);
         assert(ierr >= 0);
 
-        dset = H5Dopen2(file, ngh5_prj_path(proj_name,
-                                            H5PathNames::SRC_POP).c_str(),
+        dset = H5Dopen2(file, projection_path_join(proj_name, SRC_POP).c_str(),
                         H5P_DEFAULT);
         assert(dset >= 0);
         fspace = H5Dget_space(dset);
@@ -345,7 +221,7 @@ namespace ngh5
         ierr = dbs_read<DST_BLK_PTR_T>
           (
            file,
-           ngh5_prj_path(proj_name, H5PathNames::DST_BLK_PTR),
+           projection_path_join(proj_name, DST_BLK_PTR),
            start,
            block,
            DST_BLK_PTR_H5_NATIVE_T,
@@ -383,7 +259,7 @@ namespace ngh5
         ierr = dbs_read<NODE_IDX_T>
           (
            file,
-           ngh5_prj_path(proj_name, H5PathNames::DST_BLK_IDX),
+           projection_path_join(proj_name, DST_BLK_IDX),
            start,
            block,
            NODE_IDX_H5_NATIVE_T,
@@ -422,7 +298,7 @@ namespace ngh5
         ierr = dbs_read<DST_PTR_T>
           (
            file,
-           ngh5_prj_path(proj_name, H5PathNames::DST_PTR),
+           projection_path_join(proj_name, DST_PTR),
            start,
            block,
            DST_PTR_H5_NATIVE_T,
@@ -463,7 +339,7 @@ namespace ngh5
             ierr = dbs_read<NODE_IDX_T>
               (
                file,
-               ngh5_prj_path(proj_name, H5PathNames::SRC_IDX),
+               projection_path_join(proj_name, SRC_IDX),
                start,
                block,
                NODE_IDX_H5_NATIVE_T,

@@ -21,24 +21,6 @@
 
 namespace ngh5
 {
-
-  /// @brief Reads the names of projections
-  ///
-  /// @param comm          MPI communicator
-  ///
-  /// @param file_name     Input file name
-  ///
-  /// @param prj_vector    Vector of projection names
-  ///
-  /// @return              HDF5 error code
-  extern herr_t read_projection_names
-  (
-   MPI_Comm                 comm,
-   const std::string&       file_name,
-   std::vector<std::string> &prj_vector
-   );
-
-
   /// @brief Reads the projections
   ///
   /// @param comm          MPI communicator

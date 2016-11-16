@@ -8,11 +8,11 @@
 //==============================================================================
 
 #include "debug.hh"
-#include "ngh5paths.hh"
 #include "ngh5types.hh"
 
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
+#include "projection_names.hh"
 #include "graph_reader.hh"
 
 #include <getopt.h>
@@ -206,7 +206,8 @@ int main(int argc, char** argv)
       infile.close();
     }
 
-  assert(read_projection_names(all_comm, input_file_name, prj_names) >= 0);
+  assert(io::hdf5::read_projection_names(all_comm, input_file_name,
+                                               prj_names) >= 0);
   
   scatter_graph (all_comm,
                  input_file_name,

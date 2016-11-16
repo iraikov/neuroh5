@@ -9,11 +9,11 @@
 
 
 #include "debug.hh"
-#include "ngh5paths.hh"
 #include "ngh5types.hh"
 
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
+#include "projection_names.hh"
 #include "graph_reader.hh"
 
 #include "hdf5.h"
@@ -180,7 +180,8 @@ int main(int argc, char** argv)
  
 
   vector<string> prj_names;
-  assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
+  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name,
+                                         prj_names) >= 0);
 
   vector<prj_tuple_t> prj_list;
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;

@@ -9,6 +9,8 @@
 
 #include "attributes.hh"
 
+#include "hdf5_path_names.hh"
+
 #include <cassert>
 #include <iostream>
 
@@ -16,20 +18,6 @@ using namespace std;
 
 namespace ngh5
 {
-  string ngh5_edge_attr_prefix (const std::string& proj_name)
-  {
-    string result;
-    result = string("/Projections/") + proj_name + "/Attributes/Edge/";
-    return result;
-  }
-
-  string ngh5_edge_attr_path (const std::string& proj_name, const std::string& attr_name)
-  {
-    string result;
-    result = ngh5_edge_attr_prefix(proj_name) + attr_name;
-    return result;
-  }
-
   //////////////////////////////////////////////////////////////////////////////
   // Callback for H5Literate
   static herr_t edge_attribute_cb
@@ -72,8 +60,7 @@ namespace ngh5
     assert(in_file >= 0);
     out_attributes.clear();
 
-    // TODO: Don't hardcode this!
-    string path = ngh5_edge_attr_prefix(proj_name);
+    string path = io::hdf5::edge_attribute_path(proj_name);
 
     // TODO: Be more gentle if the group is not found!
     hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
@@ -90,7 +77,6 @@ namespace ngh5
   }
 
 
-  
   herr_t num_edge_attributes
   (
    const vector< pair<string,hid_t> >& attributes,
@@ -180,7 +166,10 @@ namespace ngh5
         ierr = H5Sselect_all(mspace);
         assert(ierr >= 0);
         
-        hid_t dset = H5Dopen2(file, ngh5_edge_attr_path(proj_name, attr_name).c_str(), H5P_DEFAULT);
+        hid_t dset = H5Dopen2(file,
+                              io::hdf5::edge_attribute_path(proj_name,
+                                                            attr_name).c_str(),
+                              H5P_DEFAULT);
         assert(dset >= 0);
         
         // make hyperslab selection

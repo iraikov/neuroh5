@@ -11,7 +11,7 @@
 #include "debug.hh"
 #include "population_reader.hh"
 
-#include "ngh5paths.hh"
+#include "hdf5_path_names.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -21,6 +21,7 @@
 #include <cassert>
 
 using namespace std;
+using namespace ngh5::io::hdf5;
 
 namespace ngh5
 {
@@ -55,7 +56,7 @@ herr_t read_population_combos
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
 
-      dset = H5Dopen2(file, ngh5_pop_path (H5PathNames::POP_COMB).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, h5types_path_join(POP_COMB).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -134,7 +135,7 @@ herr_t read_population_ranges
     {
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(file >= 0);
-      dset = H5Dopen2(file, ngh5_pop_path (H5PathNames::POP).c_str(), H5P_DEFAULT);
+      dset = H5Dopen2(file, h5types_path_join(POP).c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
