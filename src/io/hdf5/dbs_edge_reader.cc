@@ -64,9 +64,8 @@ namespace ngh5
        MPI_Comm                   comm,
        const std::string&         file_name,
        const std::string&         proj_name,
-       const vector<pop_range_t>& pop_vector,
-       NODE_IDX_T&                dst_start,
-       NODE_IDX_T&                src_start,
+       const NODE_IDX_T&          dst_start,
+       const NODE_IDX_T&          src_start,
        uint64_t&                  nedges,
        DST_BLK_PTR_T&             block_base,
        DST_PTR_T&                 edge_base,
@@ -93,10 +92,8 @@ namespace ngh5
         // populations
         if (rank == 0)
           {
-            uint32_t dst_pop, src_pop;
-            hid_t file, fspace, mspace, dset;
-            hsize_t one = 1;
-
+            hid_t file, fspace, dset;
+            
             // determine number of blocks in projection
             file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
             assert(file >= 0);
@@ -123,6 +120,7 @@ namespace ngh5
             assert(H5Sclose(fspace) >= 0);
             assert(H5Dclose(dset) >= 0);
 
+            /*
             // determine source and destination populations
             mspace = H5Screate_simple(1, &one, NULL);
             assert(mspace >= 0);
@@ -172,12 +170,13 @@ namespace ngh5
                   " dst_start = ", dst_start,
                   " src_start = ", src_start,
                   "\n");
+            */
           }
 
         assert(MPI_Bcast(&nedges, 1, MPI_UINT64_T, 0, comm) >= 0);
         assert(MPI_Bcast(&num_blocks, 1, MPI_UINT64_T, 0, comm) >= 0);
-        assert(MPI_Bcast(&dst_start, 1, MPI_UINT32_T, 0, comm) >= 0);
-        assert(MPI_Bcast(&src_start, 1, MPI_UINT32_T, 0, comm) >= 0);
+        //assert(MPI_Bcast(&dst_start, 1, MPI_UINT32_T, 0, comm) >= 0);
+        //assert(MPI_Bcast(&src_start, 1, MPI_UINT32_T, 0, comm) >= 0);
 
         /************************************************************************
          * read the connectivity in DBS format

@@ -11,9 +11,9 @@
 #ifndef DBS_GRAPH_READER_HH
 #define DBS_GRAPH_READER_HH
 
-#include "ngh5types.hh"
+#include "hdf5_types.hh"
 
-#include "mpi.h"
+#include <mpi.h>
 
 #include <map>
 #include <string>
@@ -32,8 +32,6 @@ namespace ngh5
       /// @param file_name     Input file name
       ///
       /// @param proj_name     Projection name
-      ///
-      /// @param pop_vector    Population ranges
       ///
       /// @param dst_start     Updated with global starting index of destination
       ///                      population
@@ -65,9 +63,8 @@ namespace ngh5
        MPI_Comm                        comm,
        const std::string&              file_name,
        const std::string&              proj_name,
-       const std::vector<pop_range_t>& pop_vector,
-       NODE_IDX_T&                     dst_start,
-       NODE_IDX_T&                     src_start,
+       const NODE_IDX_T&               dst_start,
+       const NODE_IDX_T&               src_start,
        uint64_t&                       nedges,
        DST_BLK_PTR_T&                  block_base,
        DST_PTR_T&                      edge_base,
