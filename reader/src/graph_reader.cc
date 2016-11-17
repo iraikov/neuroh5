@@ -31,6 +31,8 @@
 
 using namespace std;
 
+using namespace ngh5::io::hdf5;
+
 namespace ngh5
 {
 
@@ -141,9 +143,7 @@ namespace ngh5
                   {
                     NODE_IDX_T dst = dst_base + ii + dst_start;
                     rank_t dstrank = node_rank_vector[dst];
-                    pair<rank_edge_map_iter_t,bool> r = rank_edge_map.insert(make_pair(dstrank, edge_map_t()));
-                    pair<edge_map_iter_t,bool> n = rank_edge_map[dstrank].insert(make_pair(dst, edge_tuple_t()));
-
+                    
                     edge_tuple_t& et = rank_edge_map[dstrank][dst];
 
                     vector<NODE_IDX_T> &my_srcs = get<0>(et);
