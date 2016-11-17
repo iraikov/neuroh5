@@ -1,5 +1,5 @@
 #ifndef HDF5_PATH_NAMES_HH
-#define HDF5_PATh_NAMES_HH
+#define HDF5_PATH_NAMES_HH
 
 #include <string>
 
