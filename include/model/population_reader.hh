@@ -11,7 +11,8 @@
 #ifndef POPULATION_READER_HH
 #define POPULATION_READER_HH
 
-#include "ngh5types.hh"
+#include "model_types.hh"
+#include "hdf5_types.hh"
 
 #include <map>
 #include <set>
@@ -36,7 +37,7 @@ namespace ngh5
   (
    MPI_Comm                             comm,
    const std::string&                   file_name, 
-   std::set< std::pair<pop_t,pop_t> >&  pop_pairs
+   std::set< std::pair<model::pop_t,model::pop_t> >&  pop_pairs
    );
 
   /// @brief Reads the id ranges of each population
@@ -56,8 +57,8 @@ namespace ngh5
   (
    MPI_Comm           comm,
    const std::string& file_name, 
-   pop_range_map_t&   pop_ranges,
-   std::vector<pop_range_t> &pop_vector,
+   model::pop_range_map_t&   pop_ranges,
+   std::vector<model::pop_range_t> &pop_vector,
    size_t &total_num_nodes
    );
 
@@ -88,8 +89,8 @@ namespace ngh5
    std::vector<NODE_IDX_T>& dst_idx,
    std::vector<DST_PTR_T>&  dst_ptr,
    std::vector<NODE_IDX_T>& src_idx,
-   const pop_range_map_t&           pop_ranges,
-   const std::set< std::pair<pop_t, pop_t> >& pop_pairs
+   const model::pop_range_map_t&           pop_ranges,
+   const std::set< std::pair<model::pop_t, model::pop_t> >& pop_pairs
    );
 
 }

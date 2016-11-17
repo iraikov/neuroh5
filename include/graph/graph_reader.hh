@@ -11,7 +11,7 @@
 #ifndef GRAPH_SCATTER_HH
 #define GRAPH_SCATTER_HH
 
-#include "ngh5types.hh"
+#include "model_types.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -47,7 +47,7 @@ namespace ngh5
    const std::string& file_name,
    const bool opt_attrs,
    const std::vector<std::string> prj_names,
-   std::vector<prj_tuple_t> &prj_list,
+   std::vector<model::prj_tuple_t> &prj_list,
    size_t &total_num_nodes,
    size_t &local_prj_num_edges,
    size_t &total_prj_num_edges
@@ -78,8 +78,8 @@ namespace ngh5
    const bool opt_attrs,
    const std::vector<std::string> prj_names,
    // A vector that maps nodes to compute ranks
-   const std::vector<rank_t> node_rank_vector,
-   std::vector < edge_map_t > & prj_vector,
+   const std::vector<model::rank_t> node_rank_vector,
+   std::vector < model::edge_map_t > & prj_vector,
    size_t &total_num_nodes
    );
 

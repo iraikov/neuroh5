@@ -21,6 +21,7 @@
 #include <cassert>
 
 using namespace std;
+using namespace ngh5::model;
 using namespace ngh5::io::hdf5;
 
 namespace ngh5

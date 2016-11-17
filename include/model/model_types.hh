@@ -11,6 +11,7 @@
 #define NGH5TYPES_HH
 
 #include "edge_attr.hh"
+#include "ngh5_types.hh"
 
 #include <map>
 #include <tuple>

@@ -10,8 +10,11 @@
 #ifndef ATTRIBUTES_HH
 #define ATTRIBUTES_HH
 
+#include "edge_attr.hh"
+#include "hdf5_types.hh"
+#include "ngh5_types.hh"
+
 #include "hdf5.h"
-#include "ngh5types.hh"
 
 #include <string>
 #include <utility>

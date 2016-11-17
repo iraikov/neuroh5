@@ -30,7 +30,7 @@
 #define MAX_EDGE_ATTR_NAME 1024
 
 using namespace std;
-
+using namespace ngh5::model;
 using namespace ngh5::io::hdf5;
 
 namespace ngh5
@@ -448,8 +448,10 @@ namespace ngh5
       
         //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
+        // TODO: initialize dst_start and src_start
+
         assert(read_dbs_projection(comm, file_name, prj_names[i], 
-                                   pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
+                                   dst_start, src_start, total_prj_num_edges, block_base, edge_base,
                                    dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
         DEBUG("reader: projection ", i, " has a total of ", total_prj_num_edges, " edges");
         DEBUG("reader: validating projection ", i, "(", prj_names[i], ")");
@@ -570,9 +572,11 @@ namespace ngh5
             vector< pair<string,hid_t> > edge_attr_info;
             EdgeNamedAttr edge_attr_values;
 
+            // TODO: initialize dst_start and src_startx
+
             DEBUG("scatter: reading projection ", i, "(", prj_names[i], ")");
             assert(read_dbs_projection(io_comm, file_name, prj_names[i], 
-                                       pop_vector, dst_start, src_start, total_prj_num_edges,
+                                       dst_start, src_start, total_prj_num_edges,
                                        block_base, edge_base, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
       
             DEBUG("scatter: validating projection ", i, "(", prj_names[i], ")");

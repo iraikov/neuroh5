@@ -9,7 +9,8 @@
 
 
 #include "debug.hh"
-#include "ngh5types.hh"
+#include "ngh5_types.hh"
+#include "model_types.hh"
 
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
@@ -34,6 +35,7 @@
 
 using namespace std;
 using namespace ngh5;
+using namespace ngh5::model;
 
 void throw_err(char const* err_message)
 {
