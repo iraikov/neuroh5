@@ -10,6 +10,8 @@
 
 #include "debug.hh"
 
+#include "hdf5_path_names.hh"
+#include "read_singleton_dataset.hh"
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
 #include "graph_reader.hh"
@@ -307,7 +309,7 @@ namespace ngh5
           model::edge_map_t prj_edge_map;
           vector<size_t> edge_attr_num;
           size_t num_edges = 0, total_prj_num_edges = 0, num_recv_edges = 0;
-      
+
           sendcounts.resize(size,0);
           sdispls.resize(size,0);
           recvcounts.resize(size,0);
@@ -325,7 +327,26 @@ namespace ngh5
               vector< pair<string,hid_t> > edge_attr_info;
               model::EdgeNamedAttr edge_attr_values;
 
-              // TODO: initialize dst_start and src_startx
+              uint32_t dst_pop, src_pop;
+
+              io::hdf5::read_singleton_dataset
+                (io_comm, file_name,
+                 io::hdf5::projection_path_join(prj_names[i],
+                                                io::hdf5::DST_POP),
+                 H5T_NATIVE_UINT, MPI_UINT32_T, dst_pop);
+
+              io::hdf5::read_singleton_dataset
+                (io_comm, file_name,
+                 io::hdf5::projection_path_join(prj_names[i],
+                                                io::hdf5::SRC_POP),
+                 H5T_NATIVE_UINT, MPI_UINT32_T, src_pop);
+
+              dst_start = pop_vector[dst_pop].start;
+              src_start = pop_vector[src_pop].start;
+
+              DEBUG(" dst_start = ", dst_start,
+                    " src_start = ", src_start,
+                    "\n");
 
               DEBUG("scatter: reading projection ", i, "(", prj_names[i], ")");
               assert(io::hdf5::read_dbs_projection(io_comm, file_name, prj_names[i], 

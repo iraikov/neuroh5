@@ -58,13 +58,13 @@ namespace ngh5
        const std::string& attr_name
        );
 
-      extern std::string projection_path_join
+      std::string projection_path_join
       (
        const std::string& proj_name,
        const std::string& name
        );
 
-      extern std::string h5types_path_join(const std::string& name);
+      std::string h5types_path_join(const std::string& name);
 
     }
   }
