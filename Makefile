@@ -1,6 +1,6 @@
-CC        := g++
-AR				:= ar
-LD        := g++
+AR					:= ar
+CC        	:= g++
+LD        	:= g++
 
 HDF5_DIR 		:= $(HOME)/.local
 HDF5_INCDIR := $(HDF5_DIR)/include
@@ -10,14 +10,14 @@ MPI_DIR			:= /mnt/hdf/packages/mpich/new/x86_64/EL7
 MPI_INCDIR	:= $(MPI_DIR)/include
 MPI_LIBDIR	:= $(MPI_DIR)/lib
 
-MODULES   := driver graph io/hdf5 model
-INC_DIR   := $(addprefix include/,$(MODULES))
-SRC_DIR   := $(addprefix src/,$(MODULES))
-BUILD_DIR := $(addprefix build/,$(MODULES))
+MODULES  	 	:= driver graph io/hdf5 model
+INC_DIR   	:= $(addprefix include/,$(MODULES))
+SRC_DIR   	:= $(addprefix src/,$(MODULES))
+BUILD_DIR		:= $(addprefix build/,$(MODULES))
 
-SRC       := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
-OBJ       := $(patsubst src/%.cc,build/%.o,$(SRC))
-INCLUDES  := $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR))
+SRC      		:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
+INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR))
 
 vpath %.cc $(SRC_DIR)
 
@@ -30,10 +30,13 @@ endef
 
 all: checkdirs build/reader
 
-build/reader: build/libngh5.io.hdf5.a
+build/reader: build/libngh5.graph.a build/libngh5.io.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -lhdf5 -lmpi
 
 build/libngh5.io.hdf5.a: $(OBJ)
+	$(AR) cr $@ $^
+
+build/libngh5.graph.a: $(OBJ)
 	$(AR) cr $@ $^
 
 checkdirs: $(BUILD_DIR)

@@ -15,4 +15,10 @@ typedef unsigned int NODE_IDX_T;
 // MPI type of node indexes
 #define NODE_IDX_MPI_T MPI_UINT32_T
 
+// DBS offset type
+typedef uint64_t DST_PTR_T;
+
+// Block offset type
+typedef uint64_t DST_BLK_PTR_T;
+
 #endif
