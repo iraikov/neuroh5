@@ -116,9 +116,8 @@ namespace ngh5
           // append to the vectors representing a projection (sources,
           // destinations, edge attributes)
           assert(append_prj_list(dst_start, src_start, dst_blk_ptr, dst_idx,
-                                 dst_ptr, src_idx, edge_attr_info,
-                                 edge_attr_values, local_prj_num_edges,
-                                 prj_list) >= 0);
+                                 dst_ptr, src_idx, edge_attr_values,
+                                 local_prj_num_edges, prj_list) >= 0);
 
           // ensure that all edges in the projection have been read and
           // appended to edge_list
@@ -146,7 +145,6 @@ namespace ngh5
      const vector<NODE_IDX_T>&           dst_idx,
      const vector<DST_PTR_T>&            dst_ptr,
      const vector<NODE_IDX_T>&           src_idx,
-     const vector< pair<string,hid_t> >& edge_attr_info,
      const EdgeNamedAttr&                edge_attr_values,
      size_t&                             num_edges,
      vector<prj_tuple_t>&                prj_list

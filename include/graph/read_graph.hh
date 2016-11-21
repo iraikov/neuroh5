@@ -55,7 +55,6 @@ const NODE_IDX_T&                                    dst_start,
   const std::vector<NODE_IDX_T>&                     dst_idx,
   const std::vector<DST_PTR_T>&                      dst_ptr,
   const std::vector<NODE_IDX_T>&                     src_idx,
-  const std::vector< std::pair<std::string,hid_t> >& edge_attr_info,
   const model::EdgeNamedAttr&                        edge_attr_values,
   size_t&                                            num_edges,
   std::vector<model::prj_tuple_t>&                   prj_list
