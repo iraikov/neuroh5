@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Run the reader to generated *.edges files per projection and per rank
-mpirun -n 4 ./reader/src/reader -a ./data/dentate_test.h5
+mpiexec -n 4 ./build/reader -a ./data/dentate_test.h5
 
 ## Concatenate all results into one file per projection and remove first column 
 cat data/dentate_test.h5.0.[0-9]*.edges | cut -d' ' -f2,3 | sort -s -k 2n,1n > data/dentate_test.h5.0.test.edges
