@@ -10,8 +10,7 @@
 
 #include "debug.hh"
 
-#include "hdf5_path_names.hh"
-#include "read_singleton_dataset.hh"
+#include "read_population.hh"
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
 #include "read_graph.hh"
@@ -20,7 +19,6 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace ngh5::io::hdf5;
 using namespace ngh5::model;
 using namespace std;
 
@@ -67,15 +65,9 @@ namespace ngh5
 
           uint32_t dst_pop, src_pop;
 
-          io::hdf5::read_singleton_dataset
-            (comm, file_name, io::hdf5::projection_path_join(prj_names[i],
-                                                             io::hdf5::DST_POP),
-             H5T_NATIVE_UINT, MPI_UINT32_T, dst_pop);
-
-          io::hdf5::read_singleton_dataset
-            (comm, file_name, io::hdf5::projection_path_join(prj_names[i],
-                                                             io::hdf5::SRC_POP),
-             H5T_NATIVE_UINT, MPI_UINT32_T, src_pop);
+          io::read_destination_population(comm, file_name, prj_names[i],
+                                          dst_pop);
+          io::read_source_population(comm, file_name, prj_names[i], src_pop);
 
           dst_start = pop_vector[dst_pop].start;
           src_start = pop_vector[src_pop].start;
@@ -102,13 +94,12 @@ namespace ngh5
           if (opt_attrs)
             {
               edge_count = src_idx.size();
-              assert(get_edge_attributes(file_name, prj_names[i],
-                                         edge_attr_info) >= 0);
+              assert(io::hdf5::get_edge_attributes(file_name, prj_names[i],
+                                                   edge_attr_info) >= 0);
 
-              assert(read_all_edge_attributes(comm, file_name, prj_names[i],
-                                              edge_base, edge_count,
-                                              edge_attr_info, edge_attr_values)
-                     >= 0);
+              assert(io::hdf5::read_all_edge_attributes
+                     (comm, file_name, prj_names[i], edge_base, edge_count,
+                      edge_attr_info, edge_attr_values) >= 0);
             }
 
           DEBUG("reader: ", i, "(", prj_names[i], ") attributes read");
@@ -304,37 +295,6 @@ namespace ngh5
                     }
                 }
             }
-        }
-
-      return ierr;
-    }
-
-    /**************************************************************************
-     * Read edge attributes
-     **************************************************************************/
-
-    int read_all_edge_attributes
-    (
-     MPI_Comm                            comm,
-     const string&                       file_name,
-     const string&                       prj_name,
-     const DST_PTR_T                     edge_base,
-     const DST_PTR_T                     edge_count,
-     const vector< pair<string,hid_t> >& edge_attr_info,
-     EdgeNamedAttr&                      edge_attr_values
-     )
-    {
-      int ierr = 0;
-      vector<NODE_IDX_T> src_vec, dst_vec;
-
-      for (size_t j = 0; j < edge_attr_info.size(); j++)
-        {
-          string attr_name   = edge_attr_info[j].first;
-          hid_t  attr_h5type = edge_attr_info[j].second;
-          assert ((ierr = read_edge_attributes(comm, file_name, prj_name,
-                                               attr_name, edge_base, edge_count,
-                                               attr_h5type, edge_attr_values))
-                  >= 0);
         }
 
       return ierr;

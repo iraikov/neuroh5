@@ -96,6 +96,18 @@ namespace ngh5
        const hid_t           attr_h5type,
        model::EdgeNamedAttr& attr_values
        );
+
+      extern int read_all_edge_attributes
+      (
+       MPI_Comm                                           comm,
+       const std::string&                                 file_name,
+       const std::string&                                 prj_name,
+       const DST_PTR_T                                    edge_base,
+       const DST_PTR_T                                    edge_count,
+       const std::vector< std::pair<std::string,hid_t> >& edge_attr_info,
+       model::EdgeNamedAttr&                              edge_attr_values
+       );
+
     }
   }
 }

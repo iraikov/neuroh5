@@ -364,7 +364,7 @@ namespace ngh5
                   edge_count = src_idx.size();
                   assert(io::hdf5::get_edge_attributes(file_name, prj_names[i], edge_attr_info) >= 0);
                   assert(io::hdf5::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
-                  assert(read_all_edge_attributes(io_comm, file_name, prj_names[i], edge_base, edge_count,
+                  assert(io::hdf5::read_all_edge_attributes(io_comm, file_name, prj_names[i], edge_base, edge_count,
                                                   edge_attr_info, edge_attr_values) >= 0);
                 }
 

@@ -248,6 +248,34 @@ namespace ngh5
 
         return ierr;
       }
+
+      /////////////////////////////////////////////////////////////////////////
+      int read_all_edge_attributes
+      (
+       MPI_Comm                            comm,
+       const string&                       file_name,
+       const string&                       prj_name,
+       const DST_PTR_T                     edge_base,
+       const DST_PTR_T                     edge_count,
+       const vector< pair<string,hid_t> >& edge_attr_info,
+       model::EdgeNamedAttr&               edge_attr_values
+       )
+      {
+        int ierr = 0;
+        vector<NODE_IDX_T> src_vec, dst_vec;
+
+        for (size_t j = 0; j < edge_attr_info.size(); j++)
+          {
+            string attr_name   = edge_attr_info[j].first;
+            hid_t  attr_h5type = edge_attr_info[j].second;
+            assert ((ierr = read_edge_attributes(comm, file_name, prj_name,
+                                                 attr_name, edge_base, edge_count,
+                                                 attr_h5type, edge_attr_values))
+                    >= 0);
+          }
+
+        return ierr;
+      }
     }
   }
 }

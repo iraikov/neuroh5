@@ -10,7 +10,8 @@
 #ifndef PROJECTION_NAMES_HH
 #define PROJECTION_NAMES_HH
 
-#include "mpi.h"
+#include <hdf5.h>
+#include <mpi.h>
 
 #include <string>
 #include <vector>
