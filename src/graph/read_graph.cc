@@ -20,6 +20,7 @@
 #undef NDEBUG
 #include <cassert>
 
+using namespace ngh5::io::hdf5;
 using namespace ngh5::model;
 using namespace std;
 
