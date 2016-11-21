@@ -18,7 +18,6 @@
 #include "read_graph.hh"
 #include "read_population.hh"
 #include "validate_edge_list.hh"
-//#include "read_singleton_dataset.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -31,9 +30,6 @@
 
 #undef NDEBUG
 #include <cassert>
-
-//#define MAX_PRJ_NAME 1024
-//#define MAX_EDGE_ATTR_NAME 1024
 
 using namespace std;
 using namespace ngh5;
@@ -254,15 +250,15 @@ namespace ngh5
 
     int scatter_graph
     (
-     MPI_Comm all_comm,
-     const std::string& file_name,
-     const int io_size,
-     const bool opt_attrs,
-     const vector<string> prj_names,
+     MPI_Comm                      all_comm,
+     const std::string&            file_name,
+     const int                     io_size,
+     const bool                    opt_attrs,
+     const vector<string>&         prj_names,
      // A vector that maps nodes to compute ranks
-     const vector<model::rank_t> node_rank_vector,
-     vector < model::edge_map_t > & prj_vector,
-     size_t &total_num_nodes
+     const vector<model::rank_t>&  node_rank_vector,
+     vector < model::edge_map_t >& prj_vector,
+     size_t&                       total_num_nodes
      )
     {
       int ierr = 0;

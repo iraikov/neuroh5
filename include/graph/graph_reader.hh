@@ -15,7 +15,6 @@
 #include "model_types.hh"
 
 #include <mpi.h>
-#include <hdf5.h>
 
 #include <map>
 #include <vector>
@@ -49,15 +48,15 @@ namespace ngh5
     /// @return              HDF5 error code
     int scatter_graph
     (
-     MPI_Comm all_comm,
-     const std::string& file_name,
-     const int io_size,
-     const bool opt_attrs,
-     const std::vector<std::string> prj_names,
+     MPI_Comm                           all_comm,
+     const std::string&                 file_name,
+     const int                          io_size,
+     const bool                         opt_attrs,
+     const std::vector<std::string>&    prj_names,
      // A vector that maps nodes to compute ranks
-     const std::vector<model::rank_t> node_rank_vector,
-     std::vector < model::edge_map_t > & prj_vector,
-     size_t &total_num_nodes
+     const std::vector<model::rank_t>&  node_rank_vector,
+     std::vector < model::edge_map_t >& prj_vector,
+     size_t&                            total_num_nodes
      );
   }
 }

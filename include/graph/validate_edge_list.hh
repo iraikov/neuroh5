@@ -4,6 +4,7 @@
 #include "model_types.hh"
 
 #include <set>
+#include <vector>
 
 namespace ngh5
 {
@@ -42,13 +43,13 @@ namespace ngh5
       /// @return              True if the edges are valid, false otherwise
       extern bool validate_edge_list
       (
-       NODE_IDX_T&         dst_start,
-       NODE_IDX_T&         src_start,
-       std::vector<DST_BLK_PTR_T>&  dst_blk_ptr,
-       std::vector<NODE_IDX_T>& dst_idx,
-       std::vector<DST_PTR_T>&  dst_ptr,
-       std::vector<NODE_IDX_T>& src_idx,
-       const model::pop_range_map_t&           pop_ranges,
+       NODE_IDX_T&                                              dst_start,
+       NODE_IDX_T&                                              src_start,
+       std::vector<DST_BLK_PTR_T>&                              dst_blk_ptr,
+       std::vector<NODE_IDX_T>&                                 dst_idx,
+       std::vector<DST_PTR_T>&                                  dst_ptr,
+       std::vector<NODE_IDX_T>&                                 src_idx,
+       const model::pop_range_map_t&                            pop_ranges,
        const std::set< std::pair<model::pop_t, model::pop_t> >& pop_pairs
        );
   }
