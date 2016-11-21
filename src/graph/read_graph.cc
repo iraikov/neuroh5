@@ -10,11 +10,13 @@
 
 #include "debug.hh"
 
-#include "read_population.hh"
+#include "attributes.hh"
+
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
 #include "read_graph.hh"
-#include "attributes.hh"
+#include "read_population.hh"
+#include "validate_edge_list.hh"
 
 #undef NDEBUG
 #include <cassert>
@@ -42,9 +44,9 @@ namespace ngh5
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       set< pair<pop_t, pop_t> > pop_pairs;
-      assert(read_population_combos(comm, file_name, pop_pairs) >= 0);
-      assert(read_population_ranges(comm, file_name, pop_ranges, pop_vector,
-                                    total_num_nodes) >= 0);
+      assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
+      assert(io::hdf5::read_population_ranges
+             (comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // read the edges
       for (size_t i = 0; i < prj_names.size(); i++)

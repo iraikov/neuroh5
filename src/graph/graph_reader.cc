@@ -10,13 +10,15 @@
 
 #include "debug.hh"
 
-#include "hdf5_path_names.hh"
-#include "read_singleton_dataset.hh"
 #include "dbs_edge_reader.hh"
-#include "population_reader.hh"
-#include "graph_reader.hh"
-#include "read_graph.hh"
+
 #include "attributes.hh"
+#include "graph_reader.hh"
+#include "population_reader.hh"
+#include "read_graph.hh"
+#include "read_population.hh"
+#include "validate_edge_list.hh"
+//#include "read_singleton_dataset.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -30,8 +32,8 @@
 #undef NDEBUG
 #include <cassert>
 
-#define MAX_PRJ_NAME 1024
-#define MAX_EDGE_ATTR_NAME 1024
+//#define MAX_PRJ_NAME 1024
+//#define MAX_EDGE_ATTR_NAME 1024
 
 using namespace std;
 using namespace ngh5;
@@ -286,8 +288,11 @@ namespace ngh5
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
       
           // read the population info
-          assert(read_population_combos(io_comm, file_name, pop_pairs) >= 0);
-          assert(read_population_ranges(io_comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+          assert(io::hdf5::read_population_combos(io_comm, file_name, pop_pairs)
+                 >= 0);
+          assert(io::hdf5::read_population_ranges
+                 (io_comm, file_name, pop_ranges, pop_vector, total_num_nodes)
+                 >= 0);
           prj_size = prj_names.size();
         }
       else
@@ -328,18 +333,10 @@ namespace ngh5
               model::EdgeNamedAttr edge_attr_values;
 
               uint32_t dst_pop, src_pop;
-
-              io::hdf5::read_singleton_dataset
-                (io_comm, file_name,
-                 io::hdf5::projection_path_join(prj_names[i],
-                                                io::hdf5::DST_POP),
-                 H5T_NATIVE_UINT, MPI_UINT32_T, dst_pop);
-
-              io::hdf5::read_singleton_dataset
-                (io_comm, file_name,
-                 io::hdf5::projection_path_join(prj_names[i],
-                                                io::hdf5::SRC_POP),
-                 H5T_NATIVE_UINT, MPI_UINT32_T, src_pop);
+              io::read_destination_population(all_comm, file_name, prj_names[i],
+                                              dst_pop);
+              io::read_source_population(all_comm, file_name, prj_names[i],
+                                         src_pop);
 
               dst_start = pop_vector[dst_pop].start;
               src_start = pop_vector[src_pop].start;
