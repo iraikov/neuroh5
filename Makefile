@@ -33,6 +33,9 @@ all: checkdirs build/reader
 build/reader: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -lhdf5 -lmpi
 
+build/scatter: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -lhdf5 -lmpi
+
 build/libngh5.io.a: $(OBJ)
 	$(AR) cr $@ $^
 

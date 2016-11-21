@@ -8,28 +8,22 @@
 //==============================================================================
 
 #include "debug.hh"
-#include "ngh5types.hh"
 
-#include "dbs_edge_reader.hh"
+#include "graph_reader.hh"
+#include "read_graph.hh"
+#include "model_types.hh"
 #include "population_reader.hh"
 #include "projection_names.hh"
-#include "graph_reader.hh"
+
+#include <mpi.h>
 
 #include <getopt.h>
-#include <cassert>
-#include <cstdio>
+
 #include <cstdlib>
 #include <cstring>
-#include <map>
-#include <vector>
-#include <string>
-#include <iostream>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
-
-#include <hdf5.h>
-#include <mpi.h>
 
 using namespace std;
 using namespace ngh5;
@@ -71,11 +65,11 @@ int main(int argc, char** argv)
   // MPI Communicator for I/O ranks
   MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
-  vector<rank_t> node_rank_vector;
-  vector<pop_range_t> pop_vector;
-  map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+  vector<model::rank_t> node_rank_vector;
+  vector<model::pop_range_t> pop_vector;
+  map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
   vector<string> prj_names;
-  vector < edge_map_t > prj_vector;
+  vector < model::edge_map_t > prj_vector;
   stringstream ss;
 
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -85,7 +79,7 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
 
   debug_enabled = false;
-  
+
   // parse arguments
   int optflag_verbose = 0;
   int optflag_output = 0;
@@ -175,8 +169,9 @@ int main(int argc, char** argv)
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
   // Read population info to determine n_nodes
-  assert(read_population_ranges(all_comm, input_file_name, pop_ranges, pop_vector, n_nodes) >= 0);
-  
+  assert(io::hdf5::read_population_ranges(all_comm, input_file_name, pop_ranges,
+                                          pop_vector, n_nodes) >= 0);
+
   // Determine which nodes are assigned to which compute ranks
   node_rank_vector.resize(n_nodes);
   if (!opt_rankfile)
@@ -196,29 +191,28 @@ int main(int argc, char** argv)
       while (getline(infile, line))
         {
           istringstream iss(line);
-          rank_t n;
-          
+          model::rank_t n;
+
           assert (iss >> n);
           node_rank_vector[i] = n;
           i++;
         }
-      
+
       infile.close();
     }
 
   assert(io::hdf5::read_projection_names(all_comm, input_file_name,
-                                               prj_names) >= 0);
-  
-  scatter_graph (all_comm,
-                 input_file_name,
-                 io_size,
-                 opt_attrs,
-                 prj_names,
-                 node_rank_vector,
-                 prj_vector,
-                 n_nodes);
+                                         prj_names) >= 0);
 
-  
+  graph::scatter_graph (all_comm,
+                        input_file_name,
+                        io_size,
+                        opt_attrs,
+                        prj_names,
+                        node_rank_vector,
+                        prj_vector,
+                        n_nodes);
+
   if (opt_output)
     {
       if (opt_binary)
@@ -226,41 +220,47 @@ int main(int argc, char** argv)
           for (size_t i = 0; i < prj_vector.size(); i++)
             {
               DEBUG("scatter: outputting edges ", i);
-              edge_map_t prj_edge_map = prj_vector[i];
+              model::edge_map_t prj_edge_map = prj_vector[i];
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
                   stringstream outfilename;
-                  outfilename << output_file_name << "." << i << "." << rank << ".edges.bin";
+                  outfilename << output_file_name << "." << i << "." <<
+                    rank << ".edges.bin";
                   outfile.open(outfilename.str().c_str(), ios::binary);
 
-                  for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
+                  for (auto it = prj_edge_map.begin(); it != prj_edge_map.end();
+                       it++)
                     {
                       NODE_IDX_T dst   = it->first;
-                      edge_tuple_t& et = it->second;
-                      
+                      model::edge_tuple_t& et = it->second;
+
                       vector<NODE_IDX_T> src_vect = get<0>(et);
-                      const EdgeAttr&   edge_attr_values = get<1>(et);
-                      
+                      const model::EdgeAttr&   edge_attr_values = get<1>(et);
+
                       for (size_t j = 0; j < src_vect.size(); j++)
                         {
                           NODE_IDX_T src = src_vect[j];
                           outfile << src << dst;
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<float>(); k++)
                             {
-                              outfile << edge_attr_values.at<float>(k,j); 
+                              outfile << edge_attr_values.at<float>(k,j);
                             }
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<uint8_t>(); k++)
                             {
-                              outfile << edge_attr_values.at<uint8_t>(k,j); 
+                              outfile << edge_attr_values.at<uint8_t>(k,j);
                             }
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<uint16_t>(); k++)
                             {
-                              outfile << edge_attr_values.at<uint16_t>(k,j); 
+                              outfile << edge_attr_values.at<uint16_t>(k,j);
                             }
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<uint32_t>(); k++)
                             {
-                              outfile << edge_attr_values.at<uint32_t>(k,j); 
+                              outfile << edge_attr_values.at<uint32_t>(k,j);
                             }
 
                         }
@@ -273,43 +273,53 @@ int main(int argc, char** argv)
         {
           for (size_t i = 0; i < prj_vector.size(); i++)
             {
-              edge_map_t prj_edge_map = prj_vector[i];
+              model::edge_map_t prj_edge_map = prj_vector[i];
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
                   stringstream outfilename;
-                  outfilename << output_file_name << "." << i << "." << rank << ".edges";
+                  outfilename << output_file_name << "." << i << "."
+                              << rank << ".edges";
                   outfile.open(outfilename.str().c_str());
 
-                  for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
+                  for (auto it = prj_edge_map.begin(); it != prj_edge_map.end();
+                       it++)
                     {
                       NODE_IDX_T dst   = it->first;
-                      edge_tuple_t& et = it->second;
+                      model::edge_tuple_t& et = it->second;
 
                       const vector<NODE_IDX_T> src_vect = get<0>(et);
-                      const EdgeAttr&   edge_attr_values = get<1>(et);
+                      const model::EdgeAttr&   edge_attr_values = get<1>(et);
 
                       for (size_t j = 0; j < src_vect.size(); j++)
                         {
                           NODE_IDX_T src = src_vect[j];
                           outfile << src << " " << dst;
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<float>(); k++)
                             {
-                              outfile << " " << setprecision(9) << edge_attr_values.at<float>(k,j); 
+                              outfile << " " << setprecision(9) <<
+                                edge_attr_values.at<float>(k,j);
                             }
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<uint8_t>(); k++)
                             {
-                              outfile << " " << edge_attr_values.at<uint8_t>(k,j); 
+                              outfile << " " <<
+                                edge_attr_values.at<uint8_t>(k,j);
                             }
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<uint16_t>(); k++)
                             {
-                              outfile << " " << edge_attr_values.at<uint16_t>(k,j); 
+                              outfile << " " <<
+                                edge_attr_values.at<uint16_t>(k,j);
                             }
-                          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
+                          for (size_t k = 0; k <
+                                 edge_attr_values.size_attr_vec<uint32_t>(); k++)
                             {
-                              outfile << " " << edge_attr_values.at<uint32_t>(k,j); 
+                              outfile << " " <<
+                                edge_attr_values.at<uint32_t>(k,j);
                             }
-                          
+
                           outfile << std::endl;
                         }
                     }
@@ -322,7 +332,7 @@ int main(int argc, char** argv)
 
   MPI_Barrier(all_comm);
   MPI_Comm_free(&all_comm);
-  
+
   MPI_Finalize();
   return 0;
 }
