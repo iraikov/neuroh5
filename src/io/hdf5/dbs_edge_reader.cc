@@ -8,27 +8,21 @@
 ///  Copyright (C) 2016 Project Neurograph.
 //==============================================================================
 
-#include "debug.hh"
-
 #include "dbs_edge_reader.hh"
+
+#include "dataset_num_elements.hh"
+#include "debug.hh"
 #include "dbs_read_template.hh"
 #include "hdf5_path_names.hh"
 
-#include <cstdio>
-#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <cstring>
 
 #undef NDEBUG
 #include <cassert>
 
-#define MAX_PRJ_NAME 1024
-#define MAX_EDGE_ATTR_NAME 1024
-
 using namespace std;
-using namespace ngh5::io::hdf5;
 
 namespace ngh5
 {
@@ -39,9 +33,9 @@ namespace ngh5
       // Calculate the starting and end block for each rank
       void compute_bins
       (
-       size_t                           num_blocks,
-       size_t                           size,
-       vector< pair<hsize_t,hsize_t> > &bins
+       const size_t&                    num_blocks,
+       const size_t&                    size,
+       vector< pair<hsize_t,hsize_t> >& bins
        )
       {
         hsize_t remainder=0, offset=0, buckets=0;
@@ -82,101 +76,13 @@ namespace ngh5
         assert(MPI_Comm_size(comm, (int*)&size) >= 0);
         assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
-        /************************************************************************
-         * MPI rank 0 reads and broadcasts the number of nodes
-         ***********************************************************************/
+        // determine number of blocks in projection
+        uint64_t num_blocks = dataset_num_elements
+          (comm, file_name, projection_path_join(proj_name, DST_BLK_PTR)) - 1;
 
-        uint64_t num_blocks;
-
-        // process 0 reads the size of dst_blk_ptr and the source and target
-        // populations
-        if (rank == 0)
-          {
-            hid_t file, fspace, dset;
-            
-            // determine number of blocks in projection
-            file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-            assert(file >= 0);
-            dset = H5Dopen2(file, projection_path_join(proj_name,
-                                                       DST_BLK_PTR).c_str(),
-                            H5P_DEFAULT);
-            assert(dset >= 0);
-            fspace = H5Dget_space(dset);
-            assert(fspace >= 0);
-            num_blocks = (uint64_t) H5Sget_simple_extent_npoints(fspace) - 1;
-            assert(num_blocks > 0);
-            assert(H5Sclose(fspace) >= 0);
-            assert(H5Dclose(dset) >= 0);
-
-            // determine number of edges in projection
-            dset = H5Dopen2(file,
-                            projection_path_join(proj_name, SRC_IDX).c_str(),
-                            H5P_DEFAULT);
-            assert(dset >= 0);
-            fspace = H5Dget_space(dset);
-            assert(fspace >= 0);
-            nedges = (uint64_t) H5Sget_simple_extent_npoints(fspace);
-            assert(nedges > 0);
-            assert(H5Sclose(fspace) >= 0);
-            assert(H5Dclose(dset) >= 0);
-
-            /*
-            // determine source and destination populations
-            mspace = H5Screate_simple(1, &one, NULL);
-            assert(mspace >= 0);
-            ierr = H5Sselect_all(mspace);
-            assert(ierr >= 0);
-
-            dset = H5Dopen2(file,
-                            projection_path_join(proj_name, DST_POP).c_str(),
-                            H5P_DEFAULT);
-            assert(dset >= 0);
-            fspace = H5Dget_space(dset);
-            assert(fspace >= 0);
-
-            ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
-                           H5P_DEFAULT, &dst_pop);
-            assert(ierr >= 0);
-
-            assert(H5Sclose(fspace) >= 0);
-            assert(H5Dclose(dset) >= 0);
-            assert(H5Sclose(mspace) >= 0);
-
-            mspace = H5Screate_simple(1, &one, NULL);
-            assert(mspace >= 0);
-            ierr = H5Sselect_all(mspace);
-            assert(ierr >= 0);
-
-            dset = H5Dopen2(file,
-                            projection_path_join(proj_name, SRC_POP).c_str(),
-                            H5P_DEFAULT);
-            assert(dset >= 0);
-            fspace = H5Dget_space(dset);
-            assert(fspace >= 0);
-
-            ierr = H5Dread(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
-                           H5P_DEFAULT, &src_pop);
-            assert(ierr >= 0);
-
-            assert(H5Sclose(fspace) >= 0);
-            assert(H5Dclose(dset) >= 0);
-            assert(H5Sclose(mspace) >= 0);
-            assert(H5Fclose(file) >= 0);
-
-            dst_start = pop_vector[dst_pop].start;
-            src_start = pop_vector[src_pop].start;
-
-            DEBUG("num_blocks = ", num_blocks,
-                  " dst_start = ", dst_start,
-                  " src_start = ", src_start,
-                  "\n");
-            */
-          }
-
-        assert(MPI_Bcast(&nedges, 1, MPI_UINT64_T, 0, comm) >= 0);
-        assert(MPI_Bcast(&num_blocks, 1, MPI_UINT64_T, 0, comm) >= 0);
-        //assert(MPI_Bcast(&dst_start, 1, MPI_UINT32_T, 0, comm) >= 0);
-        //assert(MPI_Bcast(&src_start, 1, MPI_UINT32_T, 0, comm) >= 0);
+        // determine number of edges in projection
+        nedges = dataset_num_elements
+          (comm, file_name, projection_path_join(proj_name, SRC_IDX));
 
         /************************************************************************
          * read the connectivity in DBS format

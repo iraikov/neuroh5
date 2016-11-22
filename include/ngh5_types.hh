@@ -9,6 +9,8 @@
 #ifndef NGH5_TYPES_HH
 #define NGH5_TYPES_HH
 
+#include <cstdint>
+
 // node index type
 typedef unsigned int NODE_IDX_T;
 

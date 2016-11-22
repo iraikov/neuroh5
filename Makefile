@@ -1,21 +1,21 @@
-AR					:= ar
-CC        	:= g++
+AR		:= ar
+CC		:= g++
 LD        	:= g++
 
-HDF5_DIR 		:= $(HOME)/.local
-HDF5_INCDIR := $(HDF5_DIR)/include
-HDF5_LIBDIR := $(HDF5_DIR)/lib
+HDF5_DIR	:= $(HOME)/.local
+HDF5_INCDIR 	:= $(HDF5_DIR)/include
+HDF5_LIBDIR 	:= $(HDF5_DIR)/lib
 
-MPI_DIR			:= /mnt/hdf/packages/mpich/new/x86_64/EL7
+MPI_DIR		:= /mnt/hdf/packages/mpich/new/x86_64/EL7
 MPI_INCDIR	:= $(MPI_DIR)/include
 MPI_LIBDIR	:= $(MPI_DIR)/lib
 
-MODULES  	 	:= driver graph io io/hdf5 model
+MODULES   	:= driver graph io io/hdf5 model
 INC_DIR   	:= $(addprefix include/,$(MODULES))
 SRC_DIR   	:= $(addprefix src/,$(MODULES))
-BUILD_DIR		:= $(addprefix build/,$(MODULES))
+BUILD_DIR	:= $(addprefix build/,$(MODULES))
 
-SRC      		:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+SRC      	:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
 OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
 INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR))
 
