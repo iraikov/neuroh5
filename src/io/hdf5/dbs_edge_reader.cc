@@ -69,10 +69,8 @@ namespace ngh5
        vector<NODE_IDX_T>&        src_idx
        )
       {
-        hid_t fapl, file;
         herr_t ierr = 0;
         unsigned int rank, size;
-
         assert(MPI_Comm_size(comm, (int*)&size) >= 0);
         assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
@@ -84,11 +82,6 @@ namespace ngh5
         nedges = dataset_num_elements
           (comm, file_name, projection_path_join(proj_name, SRC_IDX));
 
-        /************************************************************************
-         * read the connectivity in DBS format
-         ***********************************************************************/
-
-        hsize_t start, stop, block;
         vector< pair<hsize_t,hsize_t> > bins;
 
         // determine which blocks of block_ptr are read by which rank
@@ -96,21 +89,21 @@ namespace ngh5
         compute_bins(num_blocks, size, bins);
 
         // determine start and stop block for the current rank
-        start = bins[rank].first;
-        stop  = bins[rank].first + bins[rank].second + 1;
+        hsize_t start = bins[rank].first;
+        hsize_t stop  = bins[rank].first + bins[rank].second + 1;
         block_base = start;
 
-        block = stop - start;
+        hsize_t block = stop - start;
 
         DEBUG("Task ",rank,": ","num_blocks = ", num_blocks, "\n");
         DEBUG("Task ",rank,": ","start = ", start, " stop = ", stop, "\n");
         DEBUG("Task ",rank,": ","block = ", block, "\n");
 
-        fapl = H5Pcreate(H5P_FILE_ACCESS);
+        hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
         assert(fapl >= 0);
         assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
-        file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+        hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
         assert(file >= 0);
 
         DST_BLK_PTR_T block_rebase = 0;
