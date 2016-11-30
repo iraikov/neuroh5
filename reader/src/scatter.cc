@@ -209,16 +209,16 @@ int main(int argc, char** argv)
 
   assert(read_projection_names(all_comm, input_file_name, prj_names) >= 0);
   
-  scatter_graph (all_comm,
-                 input_file_name,
-                 io_size,
-                 opt_attrs,
-                 prj_names,
-                 node_rank_vector,
-                 prj_vector,
-                 n_nodes,
-                 local_num_edges,
-                 total_num_edges);
+  scatter_graph_dst (all_comm,
+                     input_file_name,
+                     io_size,
+                     opt_attrs,
+                     prj_names,
+                     node_rank_vector,
+                     prj_vector,
+                     n_nodes,
+                     local_num_edges,
+                     total_num_edges);
 
   
   if (opt_output)
