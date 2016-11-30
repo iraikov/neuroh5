@@ -81,7 +81,7 @@ void output_projection(string outfilename,
   const EdgeAttr&  edge_attr_values  = get<2>(projection);
 
   ofstream outfile;
-  outfile.open(outfilename);
+  outfile.open(outfilename.c_str());
 
   for (size_t i = 0; i < src_list.size(); i++)
     {

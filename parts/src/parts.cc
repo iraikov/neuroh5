@@ -68,8 +68,7 @@ void print_usage_full(char** argv)
 int main(int argc, char** argv)
 {
   std::string input_file_name, output;
-  size_t nparts, iosize = 0;
-  stringstream ss;
+  size_t nparts = 0, iosize = 0;
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -98,6 +97,7 @@ int main(int argc, char** argv)
   while ((c = getopt_long (argc, argv, "hi:n:o:",
 			   long_options, &option_index)) != -1)
     {
+      stringstream ss;
       switch (c)
         {
         case 0:
@@ -138,6 +138,9 @@ int main(int argc, char** argv)
           throw_err("Input argument format error");
         }
     }
+
+  printf("nparts = %lu\n", nparts);
+  printf("iosize = %lu\n", iosize);
 
   if (opt_nparts && (optind < argc))
     {

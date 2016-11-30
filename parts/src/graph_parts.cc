@@ -29,6 +29,7 @@
 #include <vector>
 
 #include <mpi.h>
+#include <metis.h>
 #include <parmetis.h>
 
 using namespace std;
@@ -149,6 +150,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     assert(MPI_Comm_size(comm, &size) >= 0);
     assert(MPI_Comm_rank(comm, &rank) >= 0);
 
+    printf("parts: rank %d: io_size = %lu Nparts = %lu\n", rank, io_size, Nparts);
     
     // Read population info to determine total_num_nodes
     size_t local_num_nodes, total_num_nodes,
@@ -176,28 +178,54 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
                    total_num_edges);
 
     printf("parts: rank %d: finished scatter_graph\n", rank);
+    MPI_Barrier(comm);
+    printf("parts: rank %d: after barrier 6\n", rank);
+
     // Combine the edges from all projections into a single edge map
     map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
     merge_edge_map (prj_vector, edge_map);
     printf("parts: rank %d: finished merging map\n", rank);
     prj_vector.clear();
+
+    MPI_Barrier(comm);
+    printf("parts: rank %d: after barrier 5\n", rank);
     
     // Needed by parmetis
     vector<idx_t> vtxdist;
-    vector<idx_t> xadj;
-    vector<idx_t> adjncy;
     idx_t *vwgt=NULL, *adjwgt=NULL;
     idx_t wgtflag = 0; // indicates if the graph is weighted (0 = no weights)
     idx_t numflag = 0; // indicates array numbering scheme (0: C-style; 1: Fortran-style)
     idx_t ncon    = 1; // number of weights per vertex
     idx_t nparts  = Nparts;
-    vector <real_t> tpwgts;
+
+    printf("parts: rank %d: nparts = %u\n", rank, nparts);
+    MPI_Barrier(comm);
+    printf("parts: rank %d: after barrier 4\n", rank);
+
+    // fraction of vertex weight that should be distributed to each partition
+    vector <real_t> tpwgts(nparts, 1.0/(real_t)nparts);
     real_t ubvec = 1.05; 
     idx_t options[4], edgecut;
-    
+
+    options[0] = 1; // use user-supplied options 
+    options[1] = PARMETIS_DBGLVL_TIME | PARMETIS_DBGLVL_INFO | PARMETIS_DBGLVL_PROGRESS; // debug level
+    options[2] = 0;
+
+    printf("parts: rank %d: tpwgts.size() = %lu\n", rank, tpwgts.size());
+
+    real_t sum = 0;
+    for (size_t i = 0; i<tpwgts.size(); i++)
+      {
+        sum = sum + tpwgts[i];
+      }
+    printf("parts: rank %d: sum = %g\n", rank, sum);
+
     // Common for every rank:
     // determines which graph nodes are assigned to which MPI rank
     compute_vtxdist(size, total_num_nodes, vtxdist);
+    printf("parts: rank %d: building parmetis structure\n", rank);
+    MPI_Barrier(comm);
+    printf("parts: rank %d: after barrier 3\n", rank);
 
     // Specific to each rank:
     //
@@ -205,38 +233,47 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     // starting at index xadj[i] and ending at (but not including)
     // index xadj[i + 1]
     size_t adjncy_offset = 0;
-    for (idx_t i = vtxdist[rank]; i<vtxdist[rank+1]; i++)
+    vector<idx_t> xadj, adjncy;
+    printf("parts: rank %d: vtxdist[rank] = %u vtxdist[rank+1] = %u edge_map.size() = %lu\n", 
+           rank, vtxdist[rank], vtxdist[rank+1], edge_map.size());
+    for (NODE_IDX_T i = vtxdist[rank]; i<vtxdist[rank+1]; i++)
       {
         auto it = edge_map.find(i);
-        if (it != edge_map.end())
+        if (it == edge_map.end())
           {
-            NODE_IDX_T dst = it->first;
-            const vector<NODE_IDX_T> src_vector = it->second;
-            
             xadj.push_back(adjncy_offset);
-            adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
-        
-            adjncy_offset = adjncy_offset + src_vector.size();
           }
         else
           {
+            NODE_IDX_T dst = it->first;
+            const vector<NODE_IDX_T> &src_vector = it->second;
+            printf("parts: rank %d: dst = %u\n", rank, dst);
+            
             xadj.push_back(adjncy_offset);
+            for (size_t j = 0; j<src_vector.size(); j++)
+              {
+                adjncy.push_back(src_vector[j]);
+              }
+            adjncy_offset = adjncy_offset + src_vector.size();
           }
       }
+    printf("parts: rank %d: adjncy.size() = %lu\n", rank, adjncy.size());
+    //assert(adjncy.size() > 0);
     xadj.push_back(adjncy.size());
-
+    MPI_Barrier(comm);
+    printf("parts: rank %d: after barrier 2\n", rank);
     edge_map.clear();
-
-    tpwgts.resize(Nparts); // fraction of vertex weight that should be distributed to each partition
-    for (size_t i = 0; i < Nparts; i++)
-      {
-        tpwgts[i] = 1.0/Nparts;
-      }
-    
-    parts.resize (vtxdist[rank+1]-vtxdist[rank]); // resize to number of locally stored vertices
-    status = ParMETIS_V3_PartKway (&vtxdist[0],&xadj[0],&adjncy[0],
+    printf("parts: rank %d: cleared edge_map\n", rank);
+    size_t num_local_vtxs = vtxdist[rank+1]-vtxdist[rank];
+    printf("parts: rank %d: num_local_vtxs = %lu\n", rank, num_local_vtxs);
+    assert(num_local_vtxs > 0);
+    parts.resize (num_local_vtxs); // resize to number of locally stored vertices
+    printf("parts: rank %d: resized parts\n", rank);
+    MPI_Barrier(comm);
+    printf("parts: rank %d: after barrier 1\n", rank);
+    status = ParMETIS_V3_PartKway (vtxdist.data(),xadj.data(),adjncy.data(),
                                    vwgt,adjwgt,&wgtflag,&numflag,&ncon,&nparts,
-                                   &tpwgts[0],&ubvec,options,&edgecut,&parts[0],
+                                   tpwgts.data(),&ubvec,options,&edgecut,parts.data(),
                                    &comm);
     if (status != METIS_OK)
       {

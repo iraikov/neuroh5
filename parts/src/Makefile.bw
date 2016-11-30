@@ -3,18 +3,20 @@ CC=cc
 
 HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/lib
 HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/include/
+#HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/GNU/4.9/lib
+#HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/GNU/4.9/include
 HDF5_LIB        = hdf5
 
-PARMETIS_INCDIR = /usr/include/
-PARMETIS_LIBDIR = /usr/lib/
+PARMETIS_INCDIR = $(HOME)/bin/parmetis/include/
+PARMETIS_LIBDIR = $(HOME)/bin/parmetis/lib/
 
-CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(PARMETIS_INCDIR) -I../include -I../../reader/include
-LDFLAGS		= -L$(HDF5_LIBDIR) -L$(PARMETIS_LIBDIR)
+CFLAGS		= -Wall -g -I$(PARMETIS_INCDIR) -I$(HDF5_INCDIR) -I../include -I../../reader/include 
+LDFLAGS		= -L$(PARMETIS_LIBDIR) -L$(HDF5_LIBDIR)
 
 all: parts
 
 parts: parts.o graph_parts.o ../../reader/src/graph_reader.o ../../reader/src/dbs_edge_reader.o ../../reader/src/population_reader.o ../../reader/src/attributes.o ../../reader/src/ngh5paths.o
-	$(CXX) -std=c++11 -o parts $(LDFLAGS) $^ $(PARMETIS_LIBDIR)/libparmetis.a $(PARMETIS_LIBDIR)/libmetis.a -l$(HDF5_LIB) 
+	$(CXX) -std=c++11 -o parts $(LDFLAGS) $^ -l$(HDF5_LIB) -lparmetis 
 
 .cc.o:
 	$(CXX) -std=c++11 $(CFLAGS) -c $< -o $@

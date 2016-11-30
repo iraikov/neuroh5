@@ -190,7 +190,7 @@ int main(int argc, char** argv)
     }
   else
     {
-      ifstream infile(rank_file_name);
+      ifstream infile(rank_file_name.c_str());
       string line;
       size_t i = 0;
       // reads node to rank assignment from file

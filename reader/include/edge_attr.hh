@@ -11,7 +11,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
-#include <typeindex>
+#include <typeinfo>
 
 struct EdgeAttr
 {
@@ -22,7 +22,7 @@ struct EdgeAttr
   
 
   template<class T>
-  const size_t size_attr_vec () const
+  size_t size_attr_vec () const
   {
     size_t result = 0;
     if (typeid(T) == typeid(float))
@@ -30,15 +30,15 @@ struct EdgeAttr
         result = float_values.size();
       }
     else
-      if (std::type_index(typeid(T)) == std::type_index(typeid(uint8_t)))
+      if (typeid(T) == typeid(uint8_t))
         {
           result = uint8_values.size();
         }
-      else if (std::type_index(typeid(T)) == std::type_index(typeid(uint16_t)))
+      else if (typeid(T) == typeid(uint16_t))
         {
           result = uint16_values.size();
         }
-      else if (std::type_index(typeid(T)) == std::type_index(typeid(uint32_t)))
+      else if (typeid(T) == typeid(uint32_t))
         {
           result = uint32_values.size();
         }
@@ -48,7 +48,7 @@ struct EdgeAttr
   }
 
   template<class T>
-  const void resize (size_t size) 
+  void resize (size_t size) 
   {
     if (typeid(T) == typeid(float))
       float_values.resize(size);
