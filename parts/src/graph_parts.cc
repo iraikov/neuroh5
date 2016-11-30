@@ -110,20 +110,20 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
           {
             for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
               {
-                NODE_IDX_T dst   = it->first;
+                NODE_IDX_T src   = it->first;
                 edge_tuple_t& et = it->second;
                 
-                const vector<NODE_IDX_T> src_vector = get<0>(et);
+                const vector<NODE_IDX_T> dst_vector = get<0>(et);
                 
                 if (edge_map.find(dst) == edge_map.end())
                   {
-                    edge_map.insert(make_pair(dst,src_vector));
+                    edge_map.insert(make_pair(src,dst_vector));
                   }
                 else
                   {
                     vector<NODE_IDX_T> &v = edge_map[dst];
-                    v.insert(v.end(),src_vector.begin(),src_vector.end());
-                    edge_map[dst] = v;
+                    v.insert(v.end(),dst_vector.begin(),dst_vector.end());
+                    edge_map[src] = v;
                   }
               }
           }
@@ -166,16 +166,16 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     
     // read the edges
     vector < edge_map_t > prj_vector;
-    scatter_graph (comm,
-                   input_file_name,
-                   io_size,
-                   false,
-                   prj_names,
-                   node_rank_vector,
-                   prj_vector,
-                   total_num_nodes,
-                   local_num_edges,
-                   total_num_edges);
+    scatter_graph_src (comm,
+                       input_file_name,
+                       io_size,
+                       false,
+                       prj_names,
+                       node_rank_vector,
+                       prj_vector,
+                       total_num_nodes,
+                       local_num_edges,
+                       total_num_edges);
 
     printf("parts: rank %d: finished scatter_graph\n", rank);
     MPI_Barrier(comm);
@@ -245,16 +245,16 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
           }
         else
           {
-            NODE_IDX_T dst = it->first;
-            const vector<NODE_IDX_T> &src_vector = it->second;
+            NODE_IDX_T src = it->first;
+            const vector<NODE_IDX_T> &dst_vector = it->second;
             printf("parts: rank %d: dst = %u\n", rank, dst);
             
             xadj.push_back(adjncy_offset);
-            for (size_t j = 0; j<src_vector.size(); j++)
+            for (size_t j = 0; j<dst_vector.size(); j++)
               {
-                adjncy.push_back(src_vector[j]);
+                adjncy.push_back(dst_vector[j]);
               }
-            adjncy_offset = adjncy_offset + src_vector.size();
+            adjncy_offset = adjncy_offset + dst_vector.size();
           }
       }
     printf("parts: rank %d: adjncy.size() = %lu\n", rank, adjncy.size());
