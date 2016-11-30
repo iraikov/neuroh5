@@ -166,16 +166,16 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
     
     // read the edges
     vector < edge_map_t > prj_vector;
-    scatter_graph_src (comm,
-                       input_file_name,
-                       io_size,
-                       false,
-                       prj_names,
-                       node_rank_vector,
-                       prj_vector,
-                       total_num_nodes,
-                       local_num_edges,
-                       total_num_edges);
+    scatter_graph (comm,
+                   input_file_name,
+                   io_size,
+                   false,
+                   prj_names,
+                   node_rank_vector,
+                   prj_vector,
+                   total_num_nodes,
+                   local_num_edges,
+                   total_num_edges);
 
     printf("parts: rank %d: finished scatter_graph\n", rank);
     MPI_Barrier(comm);
