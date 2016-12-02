@@ -45,7 +45,7 @@ namespace ngh5
         assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
         assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-        hsize_t num_links;
+        hsize_t num_links=0;
 
         if (rank == 0)
           {

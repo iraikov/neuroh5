@@ -8,8 +8,6 @@
 //==============================================================================
 
 #include "debug.hh"
-#include "ngh5paths.hh"
-#include "ngh5types.hh"
 
 #include <Python.h>
 #include <numpy/numpyconfig.h>
@@ -33,13 +31,17 @@
 #undef NDEBUG
 #include <cassert>
 
+#include "model_types.hh"
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"
-#include "attributes.hh"
+#include "read_graph.hh"
 #include "graph_reader.hh"
+#include "read_population.hh"
+#include "projection_names.hh"
 
 using namespace std;
 using namespace ngh5;
+using namespace ngh5::model;
 
 void throw_err(char const* err_message)
 {
@@ -78,9 +80,9 @@ extern "C"
     if (!PyArg_ParseTuple(args, "ks", &commptr, &input_file_name))
       return NULL;
 
-    assert(read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+    assert(io::hdf5::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
 
-    read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name), true,
+    graph::read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name), true,
                prj_names, prj_vector,
                total_num_nodes, local_num_edges, total_num_edges);
     
@@ -215,10 +217,10 @@ extern "C"
 
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
 
-    assert(read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+    assert(io::hdf5::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
-    assert(read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+    assert(io::hdf5::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
     // Determine which nodes are assigned to which compute ranks
     node_rank_vector.resize(total_num_nodes);
@@ -228,9 +230,9 @@ extern "C"
         node_rank_vector[i] = i%size;
       }
 
-    scatter_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
-                  io_size, true, prj_names, node_rank_vector, prj_vector,
-                  total_num_nodes);
+    graph::scatter_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
+                         io_size, true, prj_names, node_rank_vector, prj_vector,
+                         total_num_nodes, local_num_edges, total_num_edges);
 
     for (size_t i = 0; i < prj_vector.size(); i++)
       {

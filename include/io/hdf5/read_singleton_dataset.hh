@@ -24,7 +24,7 @@ namespace ngh5
        T&                 result
        )
       {
-        int rank, size;
+        int rank=0, size;
 
         assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
         assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
