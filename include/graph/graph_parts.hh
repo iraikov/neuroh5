@@ -11,7 +11,8 @@
 #ifndef GRAPH_PARTS_HH
 #define GRAPH_PARTS_HH
 
-#include "ngh5types.hh"
+#include "model_types.hh"
+
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -22,6 +23,8 @@
 
 namespace ngh5
 {
+  namespace graph
+  {
   /// @brief Partitions the given projections to minimize the edge cut for each MPI rank
   ///
   /// @param comm          MPI communicator
@@ -48,7 +51,7 @@ namespace ngh5
    const size_t io_size,
    std::vector< idx_t > &parts
    );
-
+  }
   
 }
 

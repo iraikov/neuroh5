@@ -9,12 +9,11 @@
 
 
 #include "debug.hh"
-#include "ngh5paths.hh"
-#include "ngh5types.hh"
 
-#include "dbs_edge_reader.hh"
-#include "population_reader.hh"
+#include "read_graph.hh"
 #include "graph_parts.hh"
+#include "model_types.hh"
+#include "projection_names.hh"
 
 #include <getopt.h>
 #include <cassert>
@@ -29,6 +28,7 @@
 #include <vector>
 
 #include <mpi.h>
+#include <parmetis.h>
 
 using namespace std;
 using namespace ngh5;
@@ -155,15 +155,15 @@ int main(int argc, char** argv)
   if (!opt_iosize) iosize = 4;
 
   vector<string> prj_names;
-  assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
+  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
-  vector<prj_tuple_t> prj_list;
+  vector<model::prj_tuple_t> prj_list;
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
   
   // read the edges
   std::vector<idx_t> parts;
   
-  partition_graph
+  graph::partition_graph
   (
    MPI_COMM_WORLD,
    input_file_name,
