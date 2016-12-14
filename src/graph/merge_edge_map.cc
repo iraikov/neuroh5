@@ -35,7 +35,7 @@ namespace ngh5
                   NODE_IDX_T dst   = it->first;
                   edge_tuple_t& et = it->second;
                 
-                  const vector<NODE_IDX_T> src_vector = get<0>(et);
+                  const vector<NODE_IDX_T>& src_vector = get<0>(et);
                 
                   if (edge_map.find(dst) == edge_map.end())
                     {

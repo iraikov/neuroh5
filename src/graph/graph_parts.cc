@@ -14,6 +14,7 @@
 #include "population_reader.hh"
 #include "graph_reader.hh"
 #include "merge_edge_map.hh"
+#include "vertex_degree.hh"
 #include "read_population.hh"
 #include "validate_edge_list.hh"
 
@@ -154,7 +155,11 @@ namespace ngh5
       merge_edge_map (prj_vector, edge_map);
 
       prj_vector.clear();
-    
+
+      uint32_t global_max_indegree=0, global_min_indegree=0;
+      std::map<NODE_IDX_T, size_t> vertex_indegrees;
+      vertex_degree (comm, edge_map, vertex_indegrees, global_max_indegree, global_min_indegree);
+      
       // Needed by parmetis
       vector<idx_t> vtxdist;
       vector<idx_t> xadj;
@@ -162,7 +167,9 @@ namespace ngh5
       idx_t *vwgt=NULL, *adjwgt=NULL;
       idx_t wgtflag = 0; // indicates if the graph is weighted (0 = no weights)
       idx_t numflag = 0; // indicates array numbering scheme (0: C-style; 1: Fortran-style)
-      idx_t ncon    = 1; // number of weights per vertex
+      idx_t ncon    = 2; // number of weights per vertex; the second
+                         // weight is calculated from the in-degree of
+                         // each vertex
       idx_t nparts  = Nparts;
       vector <real_t> tpwgts;
       real_t ubvec = 1.05; 
@@ -187,7 +194,17 @@ namespace ngh5
               const vector<NODE_IDX_T> src_vector = it->second;
             
               xadj.push_back(adjncy_offset);
-              adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
+              if (src_vector.size() > 0)
+                {
+                  adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
+                }
+              else
+                {
+                  // insert fake self-edges to avoid situations where
+                  // some ranks have an empty set of edges, which
+                  // makes ParMETIS unhappy
+                  adjncy.push_back(dst);
+                }
         
               adjncy_offset = adjncy_offset + src_vector.size();
             }
@@ -200,10 +217,18 @@ namespace ngh5
 
       edge_map.clear();
 
-      tpwgts.resize(Nparts); // fraction of vertex weight that should be distributed to each partition
+      tpwgts.resize(ncon*Nparts); // fraction of vertex weight that should be distributed to each partition
+      
+      size_t iwgt = 0, ibase = iwgt*Nparts;
       for (size_t i = 0; i < Nparts; i++)
         {
-          tpwgts[i] = 1.0/Nparts;
+          tpwgts[ibase+i] = 1.0/Nparts;
+        }
+      iwgt = 1;
+      ibase = iwgt*Nparts;
+      for (size_t i = 0; i < Nparts; i++)
+        {
+          tpwgts[ibase+i] = vertex_indegrees[i] / global_max_indegree;
         }
     
       parts.resize (vtxdist[rank+1]-vtxdist[rank]); // resize to number of locally stored vertices
