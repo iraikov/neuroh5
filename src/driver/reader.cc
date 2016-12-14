@@ -9,28 +9,18 @@
 
 
 #include "debug.hh"
-#include "ngh5paths.hh"
-#include "ngh5types.hh"
 
-#include "dbs_edge_reader.hh"
-#include "population_reader.hh"
-#include "graph_reader.hh"
-
-#include "hdf5.h"
-
-#include <getopt.h>
-#include <cassert>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <map>
-#include <set>
-#include <vector>
+#include "read_graph.hh"
+#include "model_types.hh"
+#include "projection_names.hh"
 
 #include <mpi.h>
+
+#include <getopt.h>
+
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 
 using namespace std;
 using namespace ngh5;
@@ -72,13 +62,13 @@ void print_usage_full(char** argv)
  *****************************************************************************/
 
 void output_projection(string outfilename,
-                       const prj_tuple_t& projection)
+                       const model::prj_tuple_t& projection)
 {
   DEBUG("output_projection: outfilename is ",outfilename,"\n");
-  
+
   const vector<NODE_IDX_T>& src_list = get<0>(projection);
   const vector<NODE_IDX_T>& dst_list = get<1>(projection);
-  const EdgeAttr&  edge_attr_values  = get<2>(projection);
+  const model::EdgeAttr&  edge_attr_values  = get<2>(projection);
 
   ofstream outfile;
   outfile.open(outfilename.c_str());
@@ -88,11 +78,11 @@ void output_projection(string outfilename,
       outfile << i << " " << src_list[i] << " " << dst_list[i];
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
         {
-          outfile << " " << setprecision(9) << edge_attr_values.at<float>(j,i); 
+          outfile << " " << setprecision(9) << edge_attr_values.at<float>(j,i);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
         {
-          outfile << " " << edge_attr_values.at<uint8_t>(j,i); 
+          outfile << " " << edge_attr_values.at<uint8_t>(j,i);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
         {
@@ -103,7 +93,7 @@ void output_projection(string outfilename,
           outfile << " " << edge_attr_values.at<uint32_t>(j,i);
         }
 
-      outfile << std::endl;
+      outfile << endl;
     }
 
   outfile.close();
@@ -118,8 +108,8 @@ void output_projection(string outfilename,
 
 int main(int argc, char** argv)
 {
-  std::string input_file_name;
-  
+  string input_file_name;
+
   assert(MPI_Init(&argc, &argv) >= 0);
 
   int rank, size;
@@ -127,7 +117,7 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
 
   debug_enabled = false;
-  
+
   // parse arguments
   int optflag_summary = 0;
   int optflag_verbose = 0;
@@ -141,7 +131,7 @@ int main(int argc, char** argv)
   char c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "ahs",
-			   long_options, &option_index)) != -1)
+                           long_options, &option_index)) != -1)
     {
       switch (c)
         {
@@ -170,53 +160,53 @@ int main(int argc, char** argv)
 
   if (optind < argc)
     {
-      input_file_name = std::string(argv[optind]);
+      input_file_name = string(argv[optind]);
     }
   else
     {
       print_usage_full(argv);
       exit(1);
     }
- 
 
   vector<string> prj_names;
-  assert(read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
+  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name,
+                                         prj_names) >= 0);
 
-  vector<prj_tuple_t> prj_list;
+  vector<model::prj_tuple_t> prj_list;
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
-  
-  // read the edges
-  read_graph (MPI_COMM_WORLD,
-              input_file_name,
-              opt_attrs,
-              prj_names,
-              prj_list,
-              total_num_nodes,
-              local_num_edges,
-              total_num_edges);
 
-  
-  printf("Task %d has read a total of %lu projections\n", rank,  prj_list.size());
+  // read the edges
+  graph::read_graph (MPI_COMM_WORLD,
+                     input_file_name,
+                     opt_attrs,
+                     prj_names,
+                     prj_list,
+                     total_num_nodes,
+                     local_num_edges,
+                     total_num_edges);
+
+  printf("Task %d has read a total of %lu projections\n", rank,
+         prj_list.size());
   printf("Task %d has read a total of %lu edges\n", rank,  local_num_edges);
   printf("Task %d: total number of edges is %lu\n", rank,  total_num_edges);
-  
+
   size_t sum_local_num_edges = 0;
   MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
-	     MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+             MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
   if (rank == 0)
     {
       assert(sum_local_num_edges == total_num_edges);
     }
 
-  
   if (!opt_summary)
     {
-      if (prj_list.size() > 0) 
+      if (prj_list.size() > 0)
         {
           for (size_t i = 0; i < prj_list.size(); i++)
             {
               stringstream outfilename;
-              outfilename << string(input_file_name) << "." << i << "." << rank << ".edges";
+              outfilename << string(input_file_name) << "." << i << "." << rank
+                          << ".edges";
               output_projection(outfilename.str(), prj_list[i]);
             }
         }

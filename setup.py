@@ -11,7 +11,6 @@ setup(
     maintainer_email = "ivan.g.raikov@gmail.com",
     description = "Neurograph library",
     url = "http://github.com/gheber/neurographdf5",
-    py_modules=['importdbs','importpairs'],
     include_package_data=True,
     install_requires=[
         'click', 'h5py', 
@@ -24,14 +23,29 @@ setup(
     ext_package = 'neurograph',
     ext_modules = [
         Extension('reader',
-                  extra_compile_args = ["-std=c++11", "-Ireader/include", "-g"],
+                  extra_compile_args = ["-std=c++11",
+                                        "-U NDEBUG",
+                                        "-I/usr/include/hdf5/mpich",
+                                        "-I/usr/include/mpich", "-Iinclude",
+                                        "-Iinclude/graph", "-Iinclude/io", "-Iinclude/model",
+                                        "-Iinclude/io/hdf5",
+                                        "-g"],
                   libraries = ['hdf5_mpich', 'mpich'],
                   sources = [
-                      'reader/src/graph_reader.cc',
-                      'reader/src/dbs_edge_reader.cc',
-                      'reader/src/population_reader.cc',
-                      'reader/src/attributes.cc',
-                      'reader/src/readermodule.cc',
+                      'src/io/hdf5/attributes.cc',
+                      'src/io/hdf5/dbs_edge_reader.cc',
+                      'src/io/hdf5/ngh5.io.hdf5.cc',
+                      'src/io/hdf5/projection_names.cc',
+                      'src/io/hdf5/dataset_num_elements.cc',
+                      'src/io/hdf5/hdf5_path_names.cc',
+                      'src/io/hdf5/population_reader.cc',
+                      'src/io/hdf5/read_link_names.cc',
+                      'src/io/ngh5.io.cc',
+                      'src/io/read_population.cc',
+                      'src/graph/read_graph.cc',
+                      'src/graph/scatter_graph.cc',
+                      'src/graph/validate_edge_list.cc',
+                      'src/python/readermodule.cc'
                   ])
         ]
     )
