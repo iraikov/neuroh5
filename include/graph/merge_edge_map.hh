@@ -20,7 +20,7 @@ namespace ngh5
   namespace graph
   {
 
-    void merge_edge_map (const std::vector < edge_map_t > &prj_vector,
+    void merge_edge_map (const std::vector < model::edge_map_t > &prj_vector,
                          std::map<NODE_IDX_T, std::vector<NODE_IDX_T> > &edge_map);
   }
 }
