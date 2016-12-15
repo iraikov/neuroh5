@@ -17,7 +17,7 @@ namespace ngh5
       // The datatype handle returned by this function MUST be freed
       // (via H5Tclose) by the caller or a resource leak will occur.
 
-      template <class T>
+      template <typename T>
       hid_t create_H5Tenum
       (
        const std::vector< std::pair<T, std::string> > enumeration,
