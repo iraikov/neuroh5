@@ -1,5 +1,5 @@
-#ifndef NODE_ATTRIBUTES_HH
-#define NODE_ATTRIBUTES_HH
+#ifndef EDGE_ATTRIBUTES_HH
+#define EDGE_ATTRIBUTES_HH
 
 #include "infer_datatype.hh"
 #include "ngh5_types.hh"
@@ -10,7 +10,6 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 namespace ngh5
@@ -20,15 +19,15 @@ namespace ngh5
     namespace hdf5
     {
       template <typename T>
-      void write_node_attribute
+      void write_edge_attribute
       (
-       hid_t                     loc,
-       const std::string&        path,
-       std::vector<NODE_IDX_T>&  node_id,
-       std::vector<T>&           value
+       hid_t                    loc,
+       const std::string&       path,
+       std::vector<NODE_IDX_T>& edge_id,
+       std::vector<T>&          value
        )
       {
-        assert(node_id.size() == value.size());
+        assert(edge_id.size() == 2*value.size());
 
         // get a file handle and retrieve the MPI info
         hid_t file = H5Iget_file_id(loc);
@@ -42,7 +41,7 @@ namespace ngh5
         assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
         assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-        uint32_t my_count = (uint32_t)node_id.size();
+        uint32_t my_count = (uint32_t)edge_id.size();
         std::vector<uint32_t> all_counts(size);
         assert(MPI_Allgather(&my_count, 1, MPI_UINT32_T, &all_counts[0], 1,
                              MPI_UINT32_T, comm) == MPI_SUCCESS);
@@ -77,36 +76,51 @@ namespace ngh5
 
         // Ready to roll!
 
+        // we write the values first
+        // everything needs to be scaled by 2 for the edge IDs
+
         hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
         assert(lcpl >= 0);
         assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
-        hid_t dset = H5Dcreate(loc, (path + "/node_id").c_str(), H5T_STD_U32LE,
-                               fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
-        assert(dset >= 0);
-        assert(H5Dwrite(dset, H5T_NATIVE_UINT32, mspace, fspace, H5P_DEFAULT,
-                        &node_id[0]) >= 0);
-        assert(H5Dclose(dset) >= 0);
-
-        dset = H5Dcreate(loc, (path + "/value").c_str(), ftype, fspace, lcpl,
-                         H5P_DEFAULT, H5P_DEFAULT);
+        hid_t dset = H5Dcreate(loc, (path + "/value").c_str(), ftype, fspace,
+                               lcpl, H5P_DEFAULT, H5P_DEFAULT);
         assert(dset >= 0);
         assert(H5Dwrite(dset, mtype, mspace, fspace, H5P_DEFAULT, &value[0])
                >= 0);
+
         assert(H5Dclose(dset) >= 0);
-
-        // clean house
-
-        assert(H5Pclose(lcpl) >= 0);
         assert(H5Tclose(mtype) >= 0);
         assert(H5Tclose(ftype) >= 0);
         assert(H5Sclose(fspace) >= 0);
         assert(H5Sclose(mspace) >= 0);
+
+        // scale by factor 2
+        block *= 2;
+        mspace = H5Screate_simple(1, &block, &block);
+        assert(mspace >= 0);
+        assert(H5Sselect_all(mspace) >= 0);
+        total *= 2;
+        fspace = H5Screate_simple(1, &total, &total);
+        assert(fspace >= 0);
+        start *= 2;
+        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                   &count, &block) >= 0);
+
+        dset = H5Dcreate(loc, (path + "/edge_id").c_str(), H5T_STD_U32LE,
+                         fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
+        assert(dset >= 0);
+        assert(H5Dwrite(dset, H5T_NATIVE_UINT32, mspace, fspace, H5P_DEFAULT,
+                        &edge_id[0]) >= 0);
+
+        assert(H5Dclose(dset) >= 0);
+        assert(H5Sclose(fspace) >= 0);
+        assert(H5Sclose(mspace) >= 0);
+        assert(H5Pclose(lcpl) >= 0);
       }
 
     }
   }
 }
-
 
 #endif
