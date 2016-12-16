@@ -33,6 +33,8 @@ namespace ngh5
         vector<double> bar(10);
 
         write_node_attribute(loc, path, foo, bar);
+
+        read_edge_attribute(loc, path, foo, bar);
       }
 
       void test_node_attribute_write()
@@ -43,6 +45,8 @@ namespace ngh5
         vector<double> bar(10);
 
         write_node_attribute(loc, path, foo, bar);
+
+        read_node_attribute(loc, path, foo, bar);
       }
     }
   }

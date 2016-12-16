@@ -119,6 +119,49 @@ namespace ngh5
         assert(H5Pclose(lcpl) >= 0);
       }
 
+      template <typename T>
+      void read_edge_attribute
+      (
+       hid_t                    loc,
+       const std::string&       path,
+       std::vector<NODE_IDX_T>& edge_id,
+       std::vector<T>&          value
+       )
+      {
+        // read node IDs
+
+        hid_t dset = H5Dopen(loc, (path + "/edge_id").c_str(), H5P_DEFAULT);
+        assert(dset >= 0);
+        hid_t fspace = H5Dget_space(dset);
+        assert(fspace >= 0);
+        hssize_t size = H5Sget_simple_extent_npoints(fspace);
+        assert(size > 0);
+        edge_id.resize(size);
+        assert(H5Dread(dset, H5T_NATIVE_UINT32, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                       &edge_id[0]) >= 0);
+        assert(H5Sclose(fspace) >= 0);
+        assert(H5Dclose(dset) >= 0);
+
+        // read values
+
+        dset = H5Dopen(loc, (path + "/value").c_str(), H5P_DEFAULT);
+        assert(dset >= 0);
+        fspace = H5Dget_space(dset);
+        assert(fspace >= 0);
+        size = H5Sget_simple_extent_npoints(fspace);
+        assert(size > 0 && 2*size == edge_id.size());
+        value.resize(size);
+
+        hid_t ftype = H5Dget_type(dset);
+        assert(ftype >= 0);
+        hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
+        assert(H5Dread(dset, ntype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                       &value[0]) >= 0);
+        assert(H5Tclose(ntype) >= 0);
+        assert(H5Tclose(ftype) >= 0);
+        assert(H5Sclose(fspace) >= 0);
+        assert(H5Dclose(dset) >= 0);
+      }
     }
   }
 }
