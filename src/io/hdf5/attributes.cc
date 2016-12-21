@@ -97,15 +97,15 @@ namespace ngh5
             switch (H5Tget_class(attr_h5type))
               {
               case H5T_INTEGER:
-                if (attr_size == 32)
+                if (attr_size == 4)
                   {
                     num_attrs[3]++;
                   }
-                else if (attr_size == 16)
+                else if (attr_size == 2)
                   {
                     num_attrs[2]++;
                   }
-                else if (attr_size == 8)
+                else if (attr_size == 1)
                   {
                     num_attrs[1]++;
                   }
@@ -118,7 +118,7 @@ namespace ngh5
                 num_attrs[0]++;
                 break;
               case H5T_ENUM:
-                if (attr_size == 8)
+                if (attr_size == 1)
                   {
                     num_attrs[1]++;
                   }
@@ -187,21 +187,21 @@ namespace ngh5
             switch (H5Tget_class(attr_h5type))
               {
               case H5T_INTEGER:
-                if (attr_size == 32)
+                if (attr_size == 4)
                   {
                     attr_values_uint32.resize(edge_count);
                     ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
                                    &attr_values_uint32[0]);
                     attr_values.insert(string(attr_name), attr_values_uint32);
                   }
-                else if (attr_size == 16)
+                else if (attr_size == 2)
                   {
                     attr_values_uint16.resize(edge_count);
                     ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
                                    &attr_values_uint16[0]);
                     attr_values.insert(string(attr_name), attr_values_uint16);
                   }
-                else if (attr_size == 8)
+                else if (attr_size == 1)
                   {
                     attr_values_uint8.resize(edge_count);
                     ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
@@ -220,7 +220,7 @@ namespace ngh5
                 attr_values.insert(string(attr_name), attr_values_float);
                 break;
               case H5T_ENUM:
-                if (attr_size == 8)
+                if (attr_size == 1)
                   {
                     attr_values_uint8.resize(edge_count);
                     ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
