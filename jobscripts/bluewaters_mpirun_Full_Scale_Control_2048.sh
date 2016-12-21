@@ -32,7 +32,7 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 2048 ./build/scatter  -a -i 64 -n 1121600  \
+aprun -n 2048 ./build/scatter  -a -i 64  \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5
 
 
