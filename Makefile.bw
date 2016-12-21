@@ -58,9 +58,12 @@ build/libngh5.io.hdf5.a: $(OBJ)
 build/libngh5.graph.a: $(OBJ)
 	$(AR) cr $@ $^
 
-checkdirs: $(BUILD_DIR)
+checkdirs: $(BUILD_DIR) $(DRIVER_BUILD_DIR)
 
 $(BUILD_DIR):
+	@mkdir -p $@
+
+$(DRIVER_BUILD_DIR):
 	@mkdir -p $@
 
 clean:
