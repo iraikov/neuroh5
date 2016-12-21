@@ -1,23 +1,63 @@
 CXX=CC
 CC=cc
 
+AR		:= ar
+LD        	:= cc
+
 HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/lib
 HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/include/
 HDF5_LIB        = hdf5
 
-CFLAGS		= -Wall -I$(HDF5_INCDIR) -I../include
-LDFLAGS		= -L$(HDF5_LIBDIR) 
+PARMETIS_INCDIR := $(HOME)/bin/parmetis/include
+PARMETIS_LIBDIR := $(HOME)/bin/parmetis/lib
 
-all: reader scatter
+CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(PARMETIS_INCDIR) -I../include
+LDFLAGS		= -L$(HDF5_LIBDIR)
 
-reader: reader.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o ngh5paths.o
-	$(CXX) -std=c++11 -o reader $(LDFLAGS) $^ -l$(HDF5_LIB) 
+MODULES   	:= driver graph io io/hdf5 model
+INC_DIR   	:= $(addprefix include/,$(MODULES))
+SRC_DIR   	:= $(addprefix src/,$(MODULES))
+BUILD_DIR	:= $(addprefix build/,$(MODULES))
 
-scatter: scatter.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o ngh5paths.o
-	$(CXX) -std=c++11 -o scatter $(LDFLAGS) $^ -l$(HDF5_LIB) 
+SRC      	:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
+INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(PARMETIS_INCDIR))
 
-.cc.o:
-	$(CXX) -std=c++11 $(CFLAGS) -c $< -o $@
+vpath %.cc $(SRC_DIR)
+
+define make-goal
+$1/%.o: %.cc
+	$(CC) -std=c++11 -Wall $(INCLUDES) -O2 -c $$< -o $$@
+endef
+
+.PHONY: all checkdirs clean
+
+all: checkdirs build/reader build/scatter build/parts
+
+build/parts: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
+
+build/reader: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
+
+build/scatter: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
+
+build/libngh5.io.a: $(OBJ)
+	$(AR) cr $@ $^
+
+build/libngh5.io.hdf5.a: $(OBJ)
+	$(AR) cr $@ $^
+
+build/libngh5.graph.a: $(OBJ)
+	$(AR) cr $@ $^
+
+checkdirs: $(BUILD_DIR)
+
+$(BUILD_DIR):
+	@mkdir -p $@
 
 clean:
-	-rm *.o reader scatter *.edges
+	@rm -rf $(BUILD_DIR)
+
+$(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))
