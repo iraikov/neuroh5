@@ -68,7 +68,6 @@ namespace ngh5
           {
             file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
             assert(file >= 0);
-            DEBUG("file = ",file,"\n");
 
             grp = H5Gopen(file, PRJ.c_str(), H5P_DEFAULT);
             assert(grp >= 0);
@@ -76,13 +75,12 @@ namespace ngh5
           }
 
         assert(MPI_Bcast(&num_projections, 1, MPI_UINT64_T, 0, comm) >= 0);
-        DEBUG("num_projections = ",num_projections,"\n");
 
         // allocate buffer
         vector<uint64_t> prj_name_lengths(num_projections);
         prj_names.resize(num_projections);
 
-        size_t prj_names_total_length = 0;
+        uint64_t prj_names_total_length = 0;
 
         // MPI rank 0 reads and broadcasts the projection names
         if (rank == 0)
@@ -107,12 +105,9 @@ namespace ngh5
             assert(H5Fclose(file) >= 0);
           }
 
-        DEBUG("prj_names_total_length = ",prj_names_total_length,"\n");
         // Broadcast projection name lengths
-        assert(MPI_Bcast(&prj_names_total_length, 1, MPI_UINT64_T, 0, comm)
-               >= 0);
-        assert(MPI_Bcast(&prj_name_lengths[0], num_projections, MPI_UINT64_T, 0,
-                         comm) >= 0);
+        assert(MPI_Bcast(&prj_names_total_length, 1, MPI_UINT64_T, 0, comm) >= 0);
+        assert(MPI_Bcast(&prj_name_lengths[0], num_projections, MPI_UINT64_T, 0, comm) >= 0);
 
         // Broadcast projection names
         size_t offset = 0;
@@ -123,14 +118,13 @@ namespace ngh5
           {
             for (size_t i = 0; i < num_projections; i++)
               {
-                memcpy(prj_names_buf+offset, prj_names[i].c_str(),
-                       prj_name_lengths[i]);
+                size_t len = prj_name_lengths[i];
+                memcpy(prj_names_buf+offset, prj_names[i].c_str(), len);
                 offset = offset + prj_name_lengths[i];
               }
           }
 
-        assert(MPI_Bcast(prj_names_buf, prj_names_total_length, MPI_BYTE, 0,
-                         comm) >= 0);
+        assert(MPI_Bcast(prj_names_buf, prj_names_total_length, MPI_CHAR, 0, comm) >= 0);
 
         // Copy projection names into prj_names
         char prj_name[MAX_PRJ_NAME];
@@ -144,7 +138,7 @@ namespace ngh5
             offset = offset + len;
           }
 
-        delete [] prj_names_buf;
+        //delete [] prj_names_buf;
 
         return ierr;
       }

@@ -273,7 +273,7 @@ namespace ngh5
       set< pair<model::pop_t, model::pop_t> > pop_pairs;
       vector<model::pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
-      size_t prj_size = 0;
+      uint64_t prj_size = 0;
   
       int rank, size;
       assert(MPI_Comm_size(all_comm, &size) >= 0);
@@ -301,6 +301,7 @@ namespace ngh5
 
   
       assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) >= 0);
+      DEBUG("rank ", rank, ": scatter: after bcast: prj_size = ", prj_size);
 
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_size; i++)
@@ -331,10 +332,8 @@ namespace ngh5
               model::EdgeNamedAttr edge_attr_values;
 
               uint32_t dst_pop, src_pop;
-              io::read_destination_population(all_comm, file_name, prj_names[i],
-                                              dst_pop);
-              io::read_source_population(all_comm, file_name, prj_names[i],
-                                         src_pop);
+              io::read_destination_population(io_comm, file_name, prj_names[i], dst_pop);
+              io::read_source_population(io_comm, file_name, prj_names[i], src_pop);
 
               dst_start = pop_vector[dst_pop].start;
               src_start = pop_vector[src_pop].start;
@@ -415,6 +414,8 @@ namespace ngh5
               DEBUG("scatter: finished packing edge data from projection ", i, "(", prj_names[i], ")");
             }
 
+          //MPI_Barrier(all_comm);
+          
           // 0. Broadcast the number of attributes of each type to all ranks
           edge_attr_num.resize(4);
           assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) >= 0);

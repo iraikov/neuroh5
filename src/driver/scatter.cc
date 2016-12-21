@@ -202,9 +202,14 @@ int main(int argc, char** argv)
       infile.close();
     }
 
-  assert(io::hdf5::read_projection_names(all_comm, input_file_name,
-                                         prj_names) >= 0);
+  DEBUG("scatter: reading projection names");
 
+  assert(io::hdf5::read_projection_names(all_comm, input_file_name, prj_names) >= 0);
+  MPI_Barrier(all_comm);
+  DEBUG("scatter: finished reading projection names");
+
+  
+  DEBUG("scatter: calling scatter_graph");
   graph::scatter_graph (all_comm,
                         input_file_name,
                         io_size,

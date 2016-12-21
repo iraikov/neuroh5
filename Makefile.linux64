@@ -14,6 +14,10 @@ MPI_DIR		:= /usr
 MPI_INCDIR	:= $(MPI_DIR)/include/mpich
 MPI_LIBDIR	:= $(MPI_DIR)/lib/x86_64-linux-gnu/
 
+PARMETIS_DIR	:= /usr
+PARMETIS_INCDIR	:= $(PARMETIS_DIR)/include
+PARMETIS_LIBDIR	:= $(PARMETIS_DIR)/lib
+
 MODULES   	:= driver graph io io/hdf5 model
 INC_DIR   	:= $(addprefix include/,$(MODULES))
 SRC_DIR   	:= $(addprefix src/,$(MODULES))
@@ -21,7 +25,7 @@ BUILD_DIR	:= $(addprefix build/,$(MODULES))
 
 SRC      	:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
 OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
-INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR))
+INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR) $(PARMETIS_INCDIR))
 
 vpath %.cc $(SRC_DIR)
 

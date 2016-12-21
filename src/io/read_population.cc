@@ -18,11 +18,8 @@ namespace ngh5
      uint32_t&     pop
      )
     {
-      io::hdf5::read_singleton_dataset
-        (comm, file_name, io::hdf5::projection_path_join(prj_name,
-                                                         io::hdf5::DST_POP),
-         H5T_NATIVE_UINT, MPI_UINT32_T, pop);
-
+      io::hdf5::read_singleton_dataset<uint32_t>(comm, file_name, io::hdf5::projection_path_join(prj_name, io::hdf5::DST_POP),
+                                                 H5T_NATIVE_UINT, MPI_UINT32_T, pop);
     };
 
     void read_source_population
@@ -33,11 +30,8 @@ namespace ngh5
      uint32_t&     pop
      )
     {
-      io::hdf5::read_singleton_dataset
-        (comm, file_name, io::hdf5::projection_path_join(prj_name,
-                                                         io::hdf5::SRC_POP),
-         H5T_NATIVE_UINT, MPI_UINT32_T, pop);
-
+      io::hdf5::read_singleton_dataset<uint32_t>(comm, file_name, io::hdf5::projection_path_join(prj_name, io::hdf5::SRC_POP),
+                                                 H5T_NATIVE_UINT, MPI_UINT32_T, pop);
     };
   }
 }

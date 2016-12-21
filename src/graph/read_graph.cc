@@ -67,9 +67,10 @@ namespace ngh5
 
           uint32_t dst_pop, src_pop;
 
-          io::read_destination_population(comm, file_name, prj_names[i],
-                                          dst_pop);
+          io::read_destination_population(comm, file_name, prj_names[i], dst_pop);
           io::read_source_population(comm, file_name, prj_names[i], src_pop);
+
+          DEBUG("reader: after reading destination and source population");
 
           dst_start = pop_vector[dst_pop].start;
           src_start = pop_vector[src_pop].start;
