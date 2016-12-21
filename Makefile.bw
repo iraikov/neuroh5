@@ -14,7 +14,13 @@ PARMETIS_LIBDIR := $(HOME)/bin/parmetis/lib
 CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(PARMETIS_INCDIR) -I../include
 LDFLAGS		= -L$(HDF5_LIBDIR)
 
-MODULES   	:= driver graph io io/hdf5 model
+DRIVER_SRC_DIR   	:= src/driver
+DRIVER_BUILD_DIR	:= build/driver
+DRIVER_SRC      	:= $(foreach sdir,$(DRIVER_SRC_DIR),$(wildcard $(sdir)/*.cc))
+DRIVER_OBJ       	:= $(patsubst src/%.cc,build/%.o,$(DRIVER_SRC))
+DRIVER_INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR) $(PARMETIS_INCDIR))
+
+MODULES   	:= graph io io/hdf5 model
 INC_DIR   	:= $(addprefix include/,$(MODULES))
 SRC_DIR   	:= $(addprefix src/,$(MODULES))
 BUILD_DIR	:= $(addprefix build/,$(MODULES))
@@ -23,7 +29,7 @@ SRC      	:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
 OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
 INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(PARMETIS_INCDIR))
 
-vpath %.cc $(SRC_DIR)
+vpath %.cc $(SRC_DIR):$(DRIVER_SRC_DIR)
 
 define make-goal
 $1/%.o: %.cc
@@ -34,14 +40,14 @@ endef
 
 all: checkdirs build/reader build/scatter build/parts
 
-build/parts: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
+build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis -lmetis
 
-build/reader: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
+build/reader: build/driver/reader.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) 
 
-build/scatter: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
+build/scatter: build/driver/scatter.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) 
 
 build/libngh5.io.a: $(OBJ)
 	$(AR) cr $@ $^
@@ -61,3 +67,4 @@ clean:
 	@rm -rf $(BUILD_DIR)
 
 $(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))
+$(foreach bdir,$(DRIVER_BUILD_DIR),$(eval $(call make-goal,$(bdir))))
