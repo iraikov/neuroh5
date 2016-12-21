@@ -18,19 +18,21 @@
 ### Get darsan profile data
 #PBS -lgres=darshan
 
-module swap PrgEnv-intel PrgEnv-gnu
 module load cray-hdf5-parallel
+module load gcc/4.9.3
 
 set -x
 
 cd $PBS_O_WORKDIR
+
+export LD_LIBRARY_PATH=$HOME/bin/parmetis/lib:$LD_LIBRARY_PATH
 
 results_path=./results/Full_Scale_Control_$PBS_JOBID
 export results_path
 
 mkdir -p $results_path
 
-aprun -n 2048 ./reader/scatter  -a -i 64 -n 1121600  \
+aprun -n 2048 ./build/scatter  -a -i 64 -n 1121600  \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5
 
 

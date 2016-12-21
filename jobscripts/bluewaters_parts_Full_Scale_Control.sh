@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### set the number of nodes and the number of PEs per node
-#PBS -l nodes=24:ppn=16:xe
+#PBS -l nodes=128:ppn=16:xe
 ### which queue to use
 #PBS -q debug
 ### set the wallclock time
@@ -18,6 +18,7 @@
 
 #module load cray-tpsl
 module load cray-hdf5-parallel
+module load gcc/4.9.3
 
 set -x
 
@@ -30,9 +31,9 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 256 ./parts/src/parts \
+aprun -n 2048 ./build/parts \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5 \
-      -i 64 -n 4096 -o ${results_path}/parts
+      -i 256 -n 4096 -o ${results_path}/parts
 
 
 
