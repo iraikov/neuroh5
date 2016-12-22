@@ -110,11 +110,11 @@ namespace ngh5
              == MPI_SUCCESS);
       sendsize += packsize;
 
-      //pack_size_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_values,
-      //                                  sendsize);
-      /*
+      pack_size_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_values,
+                                        sendsize);
       pack_size_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_values,
                                         sendsize);
+      /*
       pack_size_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_values,
                                            sendsize);
       pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_values,
@@ -136,11 +136,11 @@ namespace ngh5
                       &sendbuf[0], sendbuf_size, &sendpos, comm) ==
              MPI_SUCCESS);
 
-      //pack_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_values,
-      //                             sendbuf_size, sendpos, sendbuf);
-      /*
+      pack_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_values,
+                                   sendbuf_size, sendpos, sendbuf);
       pack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_values,
                                      sendbuf_size, sendpos, sendbuf);
+      /*
       pack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_values,
                                       sendbuf_size, sendpos, sendbuf);
       pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_values,
@@ -162,6 +162,7 @@ namespace ngh5
      MPI_Comm comm,
      MPI_Datatype mpi_type,
      const vector<size_t> &edge_attr_num,
+     const size_t edge_attr_idx,
      const vector<uint8_t> &recvbuf,
      const int recvbuf_size,
      model::EdgeAttr& edge_attr_values,
@@ -169,7 +170,7 @@ namespace ngh5
      )
     {
       int ierr;
-      for (size_t k = 0; k < edge_attr_num[0]; k++)
+      for (size_t k = 0; k < edge_attr_num[edge_attr_idx]; k++)
         {
           uint32_t numitems=0;
           vector<T> vec;
@@ -197,12 +198,11 @@ namespace ngh5
      )
     {
       int ierr = 0;
-      uint32_t numitems;
+      uint32_t numitems = 0;
       const int recvbuf_size = recvbuf.size();
 
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst, 1, NODE_IDX_MPI_T, comm);
       assert(ierr == MPI_SUCCESS);
-
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &numitems, 1, MPI_UINT32_T, comm);
       assert(ierr == MPI_SUCCESS);
       src_vector.resize(numitems);
@@ -211,20 +211,19 @@ namespace ngh5
                         comm);
       assert(ierr == MPI_SUCCESS);
 
-      //unpack_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_num,
-      //                               recvbuf, recvbuf_size, 
-      //                               edge_attr_values, recvpos);
-      /*
-      unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_num,
+      unpack_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_num, 0,
+                                     recvbuf, recvbuf_size, 
+                                     edge_attr_values, recvpos);
+      unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_num, 1,
                                        recvbuf, recvbuf_size, 
                                        edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_num,
+      unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_num, 2,
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_num,
+      unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_num, 3,
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
-      */
+
       return ierr;
     }
 
@@ -253,7 +252,6 @@ namespace ngh5
       // MPI group color value used for I/O ranks
       int io_color = 1;
       // The set of compute ranks for which the current I/O rank is responsible
-      model::rank_edge_map_t rank_edge_map;
       set< pair<model::pop_t, model::pop_t> > pop_pairs;
       vector<model::pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
@@ -291,7 +289,7 @@ namespace ngh5
         {
           vector<uint8_t> sendbuf; int sendpos = 0;
           vector<int> sendcounts, sdispls, recvcounts, rdispls;
-          vector<NODE_IDX_T> recv_edges, total_recv_edges;
+          vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
           model::rank_edge_map_t prj_rank_edge_map;
           model::edge_map_t prj_edge_map;
           vector<size_t> edge_attr_num;
@@ -354,6 +352,7 @@ namespace ngh5
                 }
 
               // append to the edge map
+              
               assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                      edge_attr_values, node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
       
@@ -369,12 +368,12 @@ namespace ngh5
               printf("scatter: rank %d: packing edge data for projection %lu\n", rank, i);
               DEBUG("scatter: packing edge data from projection ", i, "(", prj_names[i], ")");
             
-              for (size_t dst_rank = 0; dst_rank < size; dst_rank++)
+              for (size_t dst_rank = 0; dst_rank < (size_t)size; dst_rank++)
                 {
                   auto it1 = prj_rank_edge_map.find(dst_rank); 
                   uint32_t rank_numitems=0;
                   sdispls[dst_rank] = sendpos;
-                  if (it1 == prj_rank_edge_map.end())
+                  if (it1 != prj_rank_edge_map.end())
                     {
                       rank_numitems = it1->second.size();
                     }
@@ -385,6 +384,7 @@ namespace ngh5
                   sendbuf.resize(sendbuf.size() + packsize);
                   assert(MPI_Pack(&rank_numitems, 1, MPI_UINT32_T, &sendbuf[0], (int)sendbuf.size(),
                                   &sendpos, all_comm) == MPI_SUCCESS);
+                  sendcounts[dst_rank] += packsize;
 
                   if (rank_numitems > 0)
                     {
@@ -392,15 +392,14 @@ namespace ngh5
                         {
                           int sendsize;
                           NODE_IDX_T dst = it2->first;
-                  
+
                           const vector<NODE_IDX_T>  src_vector = get<0>(it2->second);
                           const model::EdgeAttr&      my_edge_attrs = get<1>(it2->second);
 
                           num_packed_edges = num_packed_edges + src_vector.size();
-                        
+
                           if (src_vector.size() > 0)
                             {
-                      
                               assert(pack_edge(all_comm, dst, src_vector, my_edge_attrs,
                                                sendpos, sendsize, sendbuf) == 0);
                       
@@ -408,12 +407,13 @@ namespace ngh5
                             }
                         }
                     }
-          
+
                 }
-            
+
               // ensure the correct number of edges is being packed
+              printf("rank %d: scatter: finished packing edges for projection %lu: num_edges = %lu num_packed_edges = %lu\n",
+                     rank, i, num_edges, num_packed_edges);
               assert(num_packed_edges == num_edges);
-              printf("rank %d: scatter: finished packing edges for projection %lu: num_packed_edges = %lu\n", rank, i, num_packed_edges);
               DEBUG("scatter: finished packing edge data from projection ", i, "(", prj_names[i], ")");
             }
 
@@ -456,36 +456,40 @@ namespace ngh5
                  rank, i, recvbuf.size());
 
           int recvpos = 0; size_t num_recv_items=0;
-          // Unpack total number of received blocks for this rank
-          assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
-                            &recvpos, &num_recv_items, 1, MPI_UINT32_T, all_comm) ==
-                 MPI_SUCCESS);
-
-          printf("rank %d: scatter projection %lu: num_recv_items = %lu\n", rank, i, num_recv_items);
-          
           size_t num_recv_edges=0;
-          for (size_t j = 0; j<num_recv_items; j++)
+          while ((size_t)recvpos < recvbuf_size)
             {
-              NODE_IDX_T dst; 
-              vector<NODE_IDX_T> src_vector;
-              model::EdgeAttr           edge_attr_values;
+              // Unpack number of received blocks for this rank
+              assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
+                                &recvpos, &num_recv_items, 1, MPI_UINT32_T, all_comm) ==
+                     MPI_SUCCESS);
               
-              unpack_edge(all_comm, recvbuf, edge_attr_num, 
-                          dst, src_vector, edge_attr_values, recvpos);
-              num_recv_edges = num_recv_edges + src_vector.size();
+              printf("rank %d: scatter projection %lu: recvbuf_size = %lu num_recv_items = %lu\n",
+                     rank, i, recvbuf_size, num_recv_items);
               
-              if (prj_edge_map.find(dst) == prj_edge_map.end())
+              for (size_t j = 0; j<num_recv_items; j++)
                 {
-                  prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
-                }
-              else
-                {
-                  model::edge_tuple_t et = prj_edge_map[dst];
-                  vector<NODE_IDX_T> &v = get<0>(et);
-                  model::EdgeAttr &a = get<1>(et);
-                  v.insert(v.end(),src_vector.begin(),src_vector.end());
-                  a.append(edge_attr_values);
-                  prj_edge_map[dst] = make_tuple(v,a);
+                  NODE_IDX_T dst; 
+                  vector<NODE_IDX_T> src_vector;
+                  model::EdgeAttr           edge_attr_values;
+                  
+                  unpack_edge(all_comm, recvbuf, edge_attr_num, 
+                              dst, src_vector, edge_attr_values, recvpos);
+                  num_recv_edges = num_recv_edges + src_vector.size();
+                  
+                  if (prj_edge_map.find(dst) == prj_edge_map.end())
+                    {
+                      prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
+                    }
+                  else
+                    {
+                      model::edge_tuple_t et = prj_edge_map[dst];
+                      vector<NODE_IDX_T> &v = get<0>(et);
+                      model::EdgeAttr &a = get<1>(et);
+                      v.insert(v.end(),src_vector.begin(),src_vector.end());
+                      a.append(edge_attr_values);
+                      prj_edge_map[dst] = make_tuple(v,a);
+                    }
                 }
             }
           printf("rank %d: scatter: after step 4 projection %lu: num_recv_edges = %lu recvpos = %d\n", rank, i, num_recv_edges, recvpos);

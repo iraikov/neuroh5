@@ -247,53 +247,55 @@ namespace ngh5
                   if (i < dst_ptr_size-1)
                     {
                       NODE_IDX_T dst = dst_base + ii + dst_start;
-                      rank_t dstrank = node_rank_vector[dst];
-
-                      edge_tuple_t& et = rank_edge_map[dstrank][dst];
-
-                      vector<NODE_IDX_T> &my_srcs = get<0>(et);
-                      EdgeAttr &edge_attr_vec = get<1>(et);
-
-                      edge_attr_vec.resize<float>
-                        (edge_attr_values.size_attr_vec<float>());
-                      edge_attr_vec.resize<uint8_t>
-                        (edge_attr_values.size_attr_vec<uint8_t>());
-                      edge_attr_vec.resize<uint16_t>
-                        (edge_attr_values.size_attr_vec<uint16_t>());
-                      edge_attr_vec.resize<uint32_t>
-                        (edge_attr_values.size_attr_vec<uint32_t>());
-
                       size_t low = dst_ptr[i], high = dst_ptr[i+1];
-                      for (size_t j = low; j < high; ++j)
+                      if (high > low)
                         {
-                          NODE_IDX_T src = src_idx[j] + src_start;
-                          my_srcs.push_back (src);
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<float>(); k++)
+                          rank_t dstrank = node_rank_vector[dst];
+                          edge_tuple_t& et = rank_edge_map[dstrank][dst];
+                      
+                          vector<NODE_IDX_T> &my_srcs = get<0>(et);
+                          EdgeAttr &edge_attr_vec = get<1>(et);
+                      
+                          edge_attr_vec.resize<float>
+                            (edge_attr_values.size_attr_vec<float>());
+                          edge_attr_vec.resize<uint8_t>
+                            (edge_attr_values.size_attr_vec<uint8_t>());
+                          edge_attr_vec.resize<uint16_t>
+                            (edge_attr_values.size_attr_vec<uint16_t>());
+                          edge_attr_vec.resize<uint32_t>
+                            (edge_attr_values.size_attr_vec<uint32_t>());
+                          
+                          for (size_t j = low; j < high; ++j)
                             {
-                              edge_attr_vec.push_back<float>
-                                (k, edge_attr_values.at<float>(k,j));
+                              NODE_IDX_T src = src_idx[j] + src_start;
+                              my_srcs.push_back (src);
+                              for (size_t k = 0;
+                                   k < edge_attr_vec.size_attr_vec<float>(); k++)
+                                {
+                                  edge_attr_vec.push_back<float>
+                                    (k, edge_attr_values.at<float>(k,j));
+                                }
+                              for (size_t k = 0;
+                                   k < edge_attr_vec.size_attr_vec<uint8_t>(); k++)
+                                {
+                                  edge_attr_vec.push_back<uint8_t>
+                                    (k, edge_attr_values.at<uint8_t>(k,j));
+                                }
+                              for (size_t k = 0;
+                                   k < edge_attr_vec.size_attr_vec<uint16_t>(); k++)
+                                {
+                                  edge_attr_vec.push_back<uint16_t>
+                                    (k, edge_attr_values.at<uint16_t>(k,j));
+                                }
+                              for (size_t k = 0;
+                                   k < edge_attr_vec.size_attr_vec<uint32_t>(); k++)
+                                {
+                                  edge_attr_vec.push_back<uint32_t>
+                                    (k, edge_attr_values.at<uint32_t>(k,j));
+                                }
+                              
+                              num_edges++;
                             }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<uint8_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<uint8_t>
-                                (k, edge_attr_values.at<uint8_t>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<uint16_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<uint16_t>
-                                (k, edge_attr_values.at<uint16_t>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<uint32_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<uint32_t>
-                                (k, edge_attr_values.at<uint32_t>(k,j));
-                            }
-
-                          num_edges++;
                         }
                     }
                 }
