@@ -33,7 +33,7 @@ vpath %.cc $(SRC_DIR):$(DRIVER_SRC_DIR)
 
 define make-goal
 $1/%.o: %.cc
-	$(CC) -std=c++11 -Wall $(INCLUDES) -O2 -c $$< -o $$@
+	$(CC) -std=c++11 -Wall $(INCLUDES) -g -c $$< -o $$@
 endef
 
 .PHONY: all checkdirs clean
@@ -67,7 +67,7 @@ $(DRIVER_BUILD_DIR):
 	@mkdir -p $@
 
 clean:
-	@rm -rf $(BUILD_DIR)
+	@rm -rf $(BUILD_DIR) $(DRIVER_BUILD_DIR)
 
 $(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))
 $(foreach bdir,$(DRIVER_BUILD_DIR),$(eval $(call make-goal,$(bdir))))

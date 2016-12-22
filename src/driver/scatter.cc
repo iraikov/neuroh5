@@ -81,11 +81,6 @@ int main(int argc, char** argv)
 
   debug_enabled = false;
 
-  for (int i = 0; i<argc; i++)
-    {
-      printf("scatter: argv[%d] = %s\n", i, argv[i]);
-    }
-
   // parse arguments
   int optflag_verbose = 0;
   int optflag_output = 0;

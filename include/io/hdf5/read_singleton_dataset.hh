@@ -42,6 +42,7 @@ namespace ngh5
             assert(H5Fclose(file) >= 0);
 
           }
+
         assert(MPI_Bcast(&result, 1, mpi_type, 0, comm) == MPI_SUCCESS);
       }
     }
