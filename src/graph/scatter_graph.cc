@@ -471,12 +471,18 @@ namespace ngh5
                 {
                   NODE_IDX_T dst; 
                   vector<NODE_IDX_T> src_vector;
-                  model::EdgeAttr           edge_attr_values;
+                  model::EdgeAttr edge_attr_values;
                   
                   unpack_edge(all_comm, recvbuf, edge_attr_num, 
                               dst, src_vector, edge_attr_values, recvpos);
                   num_recv_edges = num_recv_edges + src_vector.size();
-                  
+                  if ((size_t)recvpos > recvbuf_size)
+                    {
+                      printf("rank %d: unpacking projection %lu has reached end of buffer; "
+                             "recvpos = %d recvbuf_size = %lu\n", rank, i, recvpos, recvbuf_size);
+                    }
+                  assert((size_t)recvpos < recvbuf_size);
+
                   if (prj_edge_map.find(dst) == prj_edge_map.end())
                     {
                       prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
