@@ -481,7 +481,7 @@ namespace ngh5
                       printf("rank %d: unpacking projection %lu has reached end of buffer; "
                              "recvpos = %d recvbuf_size = %lu\n", rank, i, recvpos, recvbuf_size);
                     }
-                  assert((size_t)recvpos < recvbuf_size);
+                  assert((size_t)recvpos <= recvbuf_size);
 
                   if (prj_edge_map.find(dst) == prj_edge_map.end())
                     {
