@@ -47,6 +47,7 @@ namespace ngh5
     (
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
+     const size_t num_edges,
      const model::EdgeAttr& edge_attr_values,
      int &sendsize
      )
@@ -55,6 +56,7 @@ namespace ngh5
         {
           int packsize=0;
           uint32_t numitems = edge_attr_values.size_attr<T>(k);
+          assert(numitems == num_edges);
           assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
           sendsize += packsize;
           assert(MPI_Pack_size(numitems, mpi_type, comm, &packsize) ==
@@ -68,6 +70,7 @@ namespace ngh5
     (
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
+     const uint32_t num_edges,
      const model::EdgeAttr& edge_attr_values,
      const int &sendbuf_size,
      int &sendpos,
@@ -77,6 +80,8 @@ namespace ngh5
       for (size_t k = 0; k < edge_attr_values.size_attr_vec<T>(); k++)
         {
           uint32_t numitems = edge_attr_values.size_attr<T>(k);
+          printf("pack_edge_attr_values: numitems = %lu\n", numitems); 
+          assert(num_edges == numitems);
           assert(MPI_Pack(&numitems, 1, MPI_UINT32_T, &sendbuf[0],
                           sendbuf_size, &sendpos, comm) == MPI_SUCCESS);
           assert(MPI_Pack(edge_attr_values.attr_ptr<T>(k), numitems,
@@ -98,7 +103,7 @@ namespace ngh5
     {
       int ierr = 0;
       int packsize;
-
+      uint32_t num_edges = src_vector.size();
       sendsize = 0;
 
       assert(MPI_Pack_size(1, NODE_IDX_MPI_T, comm, &packsize) == MPI_SUCCESS);
@@ -106,43 +111,40 @@ namespace ngh5
 
       assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
-      assert(MPI_Pack_size(src_vector.size(), NODE_IDX_MPI_T, comm, &packsize)
+      assert(MPI_Pack_size(num_edges, NODE_IDX_MPI_T, comm, &packsize)
              == MPI_SUCCESS);
       sendsize += packsize;
 
-      pack_size_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_values,
-                                        sendsize);
-      pack_size_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_values,
-                                        sendsize);
-      pack_size_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_values,
-                                           sendsize);
-      pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_values,
-                                           sendsize);
+      pack_size_edge_attr_values<float>(comm, MPI_FLOAT, num_edges, 
+                                        edge_attr_values, sendsize);
+      pack_size_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, num_edges,
+                                          edge_attr_values, sendsize);
+      pack_size_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, num_edges,
+                                           edge_attr_values, sendsize);
+      pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges,
+                                           edge_attr_values, sendsize);
       sendbuf.resize(sendbuf.size() + sendsize);
 
       int sendbuf_size = sendbuf.size();
-      uint32_t numitems = 0;
 
       // Create MPI_PACKED object with all the source vertices and edge attributes
       assert(MPI_Pack(&dst, 1, NODE_IDX_MPI_T, &sendbuf[0], sendbuf_size,
                       &sendpos, comm) == MPI_SUCCESS);
 
-      numitems = src_vector.size();
-      assert(MPI_Pack(&numitems, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size,
+      assert(MPI_Pack(&num_edges, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size,
                       &sendpos, comm) == MPI_SUCCESS);
       assert(MPI_Pack(&src_vector[0], src_vector.size(), NODE_IDX_MPI_T,
                       &sendbuf[0], sendbuf_size, &sendpos, comm) ==
              MPI_SUCCESS);
 
-      pack_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_values,
+      pack_edge_attr_values<float>(comm, MPI_FLOAT, num_edges, edge_attr_values,
                                    sendbuf_size, sendpos, sendbuf);
-      pack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_values,
+      pack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, num_edges, edge_attr_values, 
                                      sendbuf_size, sendpos, sendbuf);
-      pack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_values,
+      pack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, num_edges, edge_attr_values, 
                                       sendbuf_size, sendpos, sendbuf);
-      pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_values,
+      pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges, edge_attr_values, 
                                       sendbuf_size, sendpos, sendbuf);
-
       return ierr;
     }
 
@@ -157,8 +159,8 @@ namespace ngh5
     (
      MPI_Comm comm,
      MPI_Datatype mpi_type,
-     const vector<size_t> &edge_attr_num,
-     const size_t edge_attr_idx,
+     const uint32_t num_edges,
+     const size_t edge_attr_num,
      const vector<uint8_t> &recvbuf,
      const int recvbuf_size,
      model::EdgeAttr& edge_attr_values,
@@ -166,15 +168,21 @@ namespace ngh5
      )
     {
       int ierr;
-      for (size_t k = 0; k < edge_attr_num[edge_attr_idx]; k++)
+      for (size_t k = 0; k < edge_attr_num; k++)
         {
           uint32_t numitems=0;
           vector<T> vec;
           ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &numitems, 1, MPI_UINT32_T, comm);
           assert(ierr == MPI_SUCCESS);
-          vec.resize(numitems);
+          if (numitems != num_edges)
+            {
+              printf("unpack_edge_attr_values: recvpos = %d recvbuf_size = %d numitems = %lu num_edges = %lu\n",
+                     recvpos, recvbuf_size, numitems, num_edges);
+            }
+          assert(numitems == num_edges);
+          vec.resize(num_edges);
           ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-                            &vec[0], numitems, mpi_type,
+                            &vec[0], num_edges, mpi_type,
                             comm);
           assert(ierr == MPI_SUCCESS);
           edge_attr_values.insert(vec);
@@ -207,19 +215,18 @@ namespace ngh5
                         comm);
       assert(ierr == MPI_SUCCESS);
 
-      unpack_edge_attr_values<float>(comm, MPI_FLOAT, edge_attr_num, 0,
+      unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[0],
                                      recvbuf, recvbuf_size, 
                                      edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_num, 1,
+      unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems, edge_attr_num[1],
                                        recvbuf, recvbuf_size, 
                                        edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_num, 2,
+      unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems, edge_attr_num[2],
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_num, 3,
+      unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[3],
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
-
       return ierr;
     }
 
@@ -345,6 +352,11 @@ namespace ngh5
                   assert(io::hdf5::read_all_edge_attributes(io_comm, file_name, prj_names[i], 
                                                             edge_base, edge_count,
                                                             edge_attr_info, edge_attr_values) >= 0);
+                  for (size_t e = 0; e < edge_attr_num.size(); e++)
+                    {
+                      printf("rank %d: edge_attr_num[%lu] = %lu\n", rank, e, edge_attr_num[e]);
+
+                    }
                 }
 
               // append to the edge map
