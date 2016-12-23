@@ -114,12 +114,10 @@ namespace ngh5
                                         sendsize);
       pack_size_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_values,
                                         sendsize);
-      /*
       pack_size_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_values,
                                            sendsize);
       pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_values,
                                            sendsize);
-      */
       sendbuf.resize(sendbuf.size() + sendsize);
 
       int sendbuf_size = sendbuf.size();
@@ -140,12 +138,10 @@ namespace ngh5
                                    sendbuf_size, sendpos, sendbuf);
       pack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, edge_attr_values,
                                      sendbuf_size, sendpos, sendbuf);
-      /*
       pack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, edge_attr_values,
                                       sendbuf_size, sendpos, sendbuf);
       pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, edge_attr_values,
                                       sendbuf_size, sendpos, sendbuf);
-      */
 
       return ierr;
     }
