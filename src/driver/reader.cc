@@ -82,7 +82,7 @@ void output_projection(string outfilename,
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
         {
-          outfile << " " << edge_attr_values.at<uint8_t>(j,i);
+          outfile << " " << (uint32_t)edge_attr_values.at<uint8_t>(j,i);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
         {

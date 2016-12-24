@@ -85,7 +85,7 @@ namespace ngh5
       herr_t num_edge_attributes
       (
        const vector< pair<string,hid_t> >& attributes,
-       vector <size_t> &num_attrs
+       vector <uint32_t> &num_attrs
        )
       {
         herr_t ierr = 0;

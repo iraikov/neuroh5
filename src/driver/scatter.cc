@@ -315,7 +315,7 @@ int main(int argc, char** argv)
                                  edge_attr_values.size_attr_vec<uint8_t>(); k++)
                             {
                               outfile << " " <<
-                                edge_attr_values.at<uint8_t>(k,j);
+                                (unsigned int)edge_attr_values.at<uint8_t>(k,j);
                             }
                           for (size_t k = 0; k <
                                  edge_attr_values.size_attr_vec<uint16_t>(); k++)
