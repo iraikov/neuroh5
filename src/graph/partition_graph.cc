@@ -80,6 +80,27 @@ namespace ngh5
         }
       vtxdist[num_ranks] = num_nodes;
     }
+
+    // Calculate the starting and end graph node index for each partition
+    void compute_partdist
+    (
+     size_t num_parts,
+     size_t num_nodes,
+     vector< NODE_IDX_T > &partdist
+     )
+    {
+      hsize_t remainder=0, offset=0, buckets=0;
+    
+      partdist.resize(num_parts+1);
+      for (size_t i=0; i<num_parts; i++)
+        {
+          remainder  = num_nodes - offset;
+          buckets    = num_parts - i;
+          partdist[i] = offset;
+          offset    += remainder / buckets;
+        }
+      partdist[num_parts] = num_nodes;
+    }
   
     // Assign each node to a rank 
     void compute_node_rank_vector
@@ -103,6 +124,7 @@ namespace ngh5
           offset    += remainder / buckets;
         }
     }
+
   
     /*****************************************************************************
      * Main partitioning routine
@@ -149,92 +171,106 @@ namespace ngh5
                      total_num_nodes,
                      local_num_edges,
                      total_num_edges);
-
+      
+      DEBUG("rank ", rank, ": parts: after scatter");
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
       merge_edge_map (prj_vector, edge_map);
 
+      DEBUG("rank ", rank, ": parts: after merge");
+
       prj_vector.clear();
 
-      uint32_t global_max_indegree=0, global_min_indegree=0;
-      std::map<NODE_IDX_T, size_t> vertex_indegrees;
-      vertex_degree (comm, edge_map, vertex_indegrees, global_max_indegree, global_min_indegree);
+      uint64_t sum_indegree=0;
+      std::vector<uint32_t> vertex_indegrees;
+      std::vector<float> vertex_indegree_fractions;
+      vertex_degree (comm, total_num_nodes, edge_map, vertex_indegrees);
+      for(size_t v; v<total_num_nodes; v++)
+        {
+          uint32_t degree = vertex_indegrees[v];
+          sum_indegree = sum_indegree + degree;
+        }
+      
+      // normalize vertex indegrees by sum_indegree
+      vertex_indegree_fractions.resize(total_num_nodes,0.0);
+      for(size_t v; v<total_num_nodes; v++)
+        {
+          uint32_t degree = vertex_indegrees[v];
+          float fraction = (float)degree / (float)sum_indegree;
+          vertex_indegree_fractions[v] = fraction;
+        }
+      // global_max_indegree, global_min_indegree
+      DEBUG("rank ", rank, ": parts: after vertex_degree: sum_indegree = ", sum_indegree);
       
       // Needed by parmetis
       vector<idx_t> vtxdist;
       vector<idx_t> xadj;
       vector<idx_t> adjncy;
-      idx_t *vwgt=NULL, *adjwgt=NULL;
-      idx_t wgtflag = 0; // indicates if the graph is weighted (0 = no weights)
+      vector<idx_t> vwgts;
+      idx_t *adjwgts=NULL;
+      idx_t wgtflag = 2; // indicates if the graph is weighted (2 = vertex weights only)
       idx_t numflag = 0; // indicates array numbering scheme (0: C-style; 1: Fortran-style)
       idx_t ncon    = 2; // number of weights per vertex; the second
                          // weight is calculated from the in-degree of
                          // each vertex
       idx_t nparts  = Nparts;
       vector <real_t> tpwgts;
-      real_t ubvec = 1.05; 
+      real_t ubvec[2] = {1.5, 1.5}; 
       idx_t options[4], edgecut;
-    
+      options[0] = 1;
+      options[1] = 3;
+
       // Common for every rank:
       // determines which graph nodes are assigned to which MPI rank
       compute_vtxdist(size, total_num_nodes, vtxdist);
+      DEBUG("rank ", rank, ": parts: after compute_vtxdist");
 
       // Specific to each rank:
       //
       // the adjacency list of vertex i is stored in array adjncy
       // starting at index xadj[i] and ending at (but not including)
       // index xadj[i + 1]
-      size_t adjncy_offset = 0;
+      idx_t adjncy_offset = 0;
       for (idx_t i = vtxdist[rank]; i<vtxdist[rank+1]; i++)
         {
+          xadj.push_back(adjncy_offset);
           auto it = edge_map.find(i);
           if (it != edge_map.end())
             {
               NODE_IDX_T dst = it->first;
               const vector<NODE_IDX_T> src_vector = it->second;
             
-              xadj.push_back(adjncy_offset);
-              if (src_vector.size() > 0)
-                {
-                  adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
-                }
-              else
-                {
-                  // insert fake self-edges to avoid situations where
-                  // some ranks have an empty set of edges, which
-                  // makes ParMETIS unhappy
-                  adjncy.push_back(dst);
-                }
-        
+              adjncy.insert(adjncy.end(),src_vector.begin(),src_vector.end());
               adjncy_offset = adjncy_offset + src_vector.size();
             }
-          else
-            {
-              xadj.push_back(adjncy_offset);
-            }
+          vwgts.push_back(vertex_indegrees[i]);
         }
-      xadj.push_back(adjncy.size());
-
+      xadj.push_back(adjncy_offset);
+      DEBUG("rank ", rank, ": parts: after xadj");
       edge_map.clear();
 
-      tpwgts.resize(ncon*Nparts); // fraction of vertex weight that should be distributed to each partition
-      
-      size_t iwgt = 0, ibase = iwgt*Nparts;
-      for (size_t i = 0; i < Nparts; i++)
+      tpwgts.resize(ncon*Nparts,0.0); // fraction of vertex weight that should be distributed to each partition
+
+      vector<NODE_IDX_T> partdist;
+      // determines which graph nodes are assigned to which partition
+      // compute_partdist(Nparts, total_num_nodes, partdist);
+      for (size_t i = 0, p = 0; i < ncon*Nparts; i+=ncon, p++)
         {
-          tpwgts[ibase+i] = 1.0/Nparts;
-        }
-      iwgt = 1;
-      ibase = iwgt*Nparts;
-      for (size_t i = 0; i < Nparts; i++)
-        {
-          tpwgts[ibase+i] = vertex_indegrees[i] / global_max_indegree;
+          tpwgts[i+0] = 1.0/(float)Nparts;
+          NODE_IDX_T start = partdist[p];
+          NODE_IDX_T end   = partdist[p+1];
+          for (NODE_IDX_T j=start; j<end; j++)
+            {
+              tpwgts[i+1] += vertex_indegree_fractions[j];
+            }
         }
     
+      DEBUG("rank ", rank, ": parts: before parts.resize");
       parts.resize (vtxdist[rank+1]-vtxdist[rank]); // resize to number of locally stored vertices
+      DEBUG("rank ", rank, ": calling parmetis");
       status = ParMETIS_V3_PartKway (&vtxdist[0],&xadj[0],&adjncy[0],
-                                     vwgt,adjwgt,&wgtflag,&numflag,&ncon,&nparts,
-                                     &tpwgts[0],&ubvec,options,&edgecut,&parts[0],
+                                     &vwgts[0],adjwgts,&wgtflag,&numflag,&ncon,&nparts,
+                                     &tpwgts[0],ubvec,options,&edgecut,&parts[0],
                                      &comm);
       if (status != METIS_OK)
         {

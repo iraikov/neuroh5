@@ -20,12 +20,10 @@ namespace ngh5
 {
   namespace graph
   {
-
     int vertex_degree (MPI_Comm comm,
+                       const size_t total_num_nodes,
                        const std::map<NODE_IDX_T, std::vector<NODE_IDX_T> > &edge_map,
-                       std::map< NODE_IDX_T, size_t > &degree_map,
-                       uint32_t global_max_degree,
-                       uint32_t global_min_degree);
+                       std::vector< uint32_t > &degree_map);
   }
 }
 

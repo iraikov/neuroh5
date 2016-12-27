@@ -30,9 +30,7 @@ export LD_LIBRARY_PATH=$HOME/bin/parmetis/lib:$LD_LIBRARY_PATH
 results_path=./results/Full_Scale_Control_$PBS_JOBID
 export results_path
 
-mkdir -p $results_path
-
-aprun -n 2048 ./build/scatter  -a -i 64  \
+aprun -n 2048 ./build/scatter -a -i 64  \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5
 
 

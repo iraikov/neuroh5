@@ -139,9 +139,6 @@ int main(int argc, char** argv)
         }
     }
 
-  printf("nparts = %lu\n", nparts);
-  printf("iosize = %lu\n", iosize);
-
   if (opt_nparts && (optind < argc))
     {
       input_file_name = std::string(argv[optind]);
