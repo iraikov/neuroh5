@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### set the number of nodes and the number of PEs per node
-#PBS -l nodes=32:ppn=16:xe
+#PBS -l nodes=16:ppn=16:xe
 ### which queue to use
 #PBS -q debug
 ### set the wallclock time
@@ -18,6 +18,9 @@
 
 module load cray-hdf5-parallel
 module load gcc/4.9.3
+#module load cray-tpsl
+export LD_LIBRARY_PATH=$HOME/bin/parmetis/lib:$LD_LIBRARY_PATH
+
 set -x
 
 cd $PBS_O_WORKDIR
@@ -27,7 +30,7 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 512 ./parts/src/parts \
+aprun -n 256 ./build/parts \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_dbs.h5 \
       -i 64 -n 4096 -o ${results_path}/parts
 

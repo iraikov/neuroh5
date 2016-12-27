@@ -1,23 +1,77 @@
 CXX=CC
 CC=cc
 
+AR		:= ar
+LD        	:= cc
+
 HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/lib
 HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/include/
 HDF5_LIB        = hdf5
 
-CFLAGS		= -Wall -I$(HDF5_INCDIR) -I../include
-LDFLAGS		= -L$(HDF5_LIBDIR) 
+PARMETIS_INCDIR := $(HOME)/bin/parmetis/include
+PARMETIS_LIBDIR := $(HOME)/bin/parmetis/lib
 
-all: reader scatter
+CFLAGS		= -Wall  -I../include -I$(HDF5_INCDIR) -I$(PARMETIS_INCDIR)
+#CFLAGS		= -Wall  -I../include -I$(HDF5_INCDIR)
+LDFLAGS		= -L$(HDF5_LIBDIR)
 
-reader: reader.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o ngh5paths.o
-	$(CXX) -std=c++11 -o reader $(LDFLAGS) $^ -l$(HDF5_LIB) 
+DRIVER_SRC_DIR   	:= src/driver
+DRIVER_BUILD_DIR	:= build/driver
+DRIVER_SRC      	:= $(foreach sdir,$(DRIVER_SRC_DIR),$(wildcard $(sdir)/*.cc))
+DRIVER_OBJ       	:= $(patsubst src/%.cc,build/%.o,$(DRIVER_SRC))
+DRIVER_INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR) $(PARMETIS_INCDIR))
+#DRIVER_INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR))
 
-scatter: scatter.o graph_reader.o dbs_edge_reader.o population_reader.o attributes.o ngh5paths.o
-	$(CXX) -std=c++11 -o scatter $(LDFLAGS) $^ -l$(HDF5_LIB) 
+MODULES   	:= graph io io/hdf5 model
+INC_DIR   	:= $(addprefix include/,$(MODULES))
+SRC_DIR   	:= $(addprefix src/,$(MODULES))
+BUILD_DIR	:= $(addprefix build/,$(MODULES))
 
-.cc.o:
-	$(CXX) -std=c++11 $(CFLAGS) -c $< -o $@
+SRC      	:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
+INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(PARMETIS_INCDIR))
+#INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR))
+
+vpath %.cc $(SRC_DIR):$(DRIVER_SRC_DIR)
+
+define make-goal
+$1/%.o: %.cc
+	$(CC) -std=c++11 -Wall $(INCLUDES) -g -c $$< -o $$@
+endef
+
+.PHONY: all checkdirs clean
+
+all: checkdirs build/reader build/scatter build/parts
+
+build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
+#	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB)
+
+build/reader: build/driver/reader.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) 
+
+build/scatter: build/driver/scatter.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) 
+
+build/libngh5.io.a: $(OBJ)
+	$(AR) cr $@ $^
+
+build/libngh5.io.hdf5.a: $(OBJ)
+	$(AR) cr $@ $^
+
+build/libngh5.graph.a: $(OBJ)
+	$(AR) cr $@ $^
+
+checkdirs: $(BUILD_DIR) $(DRIVER_BUILD_DIR)
+
+$(BUILD_DIR):
+	@mkdir -p $@
+
+$(DRIVER_BUILD_DIR):
+	@mkdir -p $@
 
 clean:
-	-rm *.o reader scatter *.edges
+	@rm -rf $(BUILD_DIR) $(DRIVER_BUILD_DIR)
+
+$(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))
+$(foreach bdir,$(DRIVER_BUILD_DIR),$(eval $(call make-goal,$(bdir))))

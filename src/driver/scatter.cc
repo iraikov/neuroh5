@@ -128,6 +128,7 @@ int main(int argc, char** argv)
             opt_output = true;
             output_file_name = std::string(strdup(optarg));
           }
+          break;
         case 'a':
           opt_attrs = true;
           break;
@@ -185,7 +186,7 @@ int main(int argc, char** argv)
     }
   else
     {
-      ifstream infile(rank_file_name);
+      ifstream infile(rank_file_name.c_str());
       string line;
       size_t i = 0;
       // reads node to rank assignment from file
@@ -202,9 +203,14 @@ int main(int argc, char** argv)
       infile.close();
     }
 
-  assert(io::hdf5::read_projection_names(all_comm, input_file_name,
-                                         prj_names) >= 0);
+  DEBUG("scatter: reading projection names");
 
+  assert(io::hdf5::read_projection_names(all_comm, input_file_name, prj_names) >= 0);
+  MPI_Barrier(all_comm);
+  DEBUG("scatter: finished reading projection names");
+
+  
+  DEBUG("scatter: calling scatter_graph");
   graph::scatter_graph (all_comm,
                         input_file_name,
                         io_size,
@@ -309,7 +315,7 @@ int main(int argc, char** argv)
                                  edge_attr_values.size_attr_vec<uint8_t>(); k++)
                             {
                               outfile << " " <<
-                                edge_attr_values.at<uint8_t>(k,j);
+                                (unsigned int)edge_attr_values.at<uint8_t>(k,j);
                             }
                           for (size_t k = 0; k <
                                  edge_attr_values.size_attr_vec<uint16_t>(); k++)

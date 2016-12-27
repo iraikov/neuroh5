@@ -14,30 +14,43 @@ MPI_DIR		:= /usr
 MPI_INCDIR	:= $(MPI_DIR)/include/mpich
 MPI_LIBDIR	:= $(MPI_DIR)/lib/x86_64-linux-gnu/
 
-MODULES   	:= driver graph io io/hdf5 model
+PARMETIS_DIR	:= /usr
+PARMETIS_INCDIR	:= $(PARMETIS_DIR)/include
+PARMETIS_LIBDIR	:= $(PARMETIS_DIR)/lib
+
+DRIVER_SRC_DIR   	:= src/driver
+DRIVER_BUILD_DIR	:= build/driver
+DRIVER_SRC      	:= $(foreach sdir,$(DRIVER_SRC_DIR),$(wildcard $(sdir)/*.cc))
+DRIVER_OBJ       	:= $(patsubst src/%.cc,build/%.o,$(DRIVER_SRC))
+DRIVER_INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR) $(PARMETIS_INCDIR))
+
+MODULES   	:= graph io io/hdf5 model
 INC_DIR   	:= $(addprefix include/,$(MODULES))
 SRC_DIR   	:= $(addprefix src/,$(MODULES))
 BUILD_DIR	:= $(addprefix build/,$(MODULES))
 
 SRC      	:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
 OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
-INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR))
+INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR) $(PARMETIS_INCDIR))
 
-vpath %.cc $(SRC_DIR)
+vpath %.cc $(SRC_DIR):$(DRIVER_SRC_DIR)
 
 define make-goal
 $1/%.o: %.cc
-	$(CC) -std=c++11 -Wall $(INCLUDES) -O2 -c $$< -o $$@
+	$(CC) -std=c++11 -Wall $(INCLUDES) -g -c $$< -o $$@
 endef
 
 .PHONY: all checkdirs clean
 
-all: checkdirs build/reader build/scatter
+all: checkdirs $(DRIVER_OBJ) build/reader build/scatter build/parts 
 
-build/reader: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -L$(PARMETIS_LIBDIR) -l$(HDF5_LIB) -lmpi -lparmetis -lmetis
+
+build/reader: build/driver/reader.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
 
-build/scatter: build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+build/scatter: build/driver/scatter.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
 
 build/libngh5.io.a: $(OBJ)
@@ -49,12 +62,16 @@ build/libngh5.io.hdf5.a: $(OBJ)
 build/libngh5.graph.a: $(OBJ)
 	$(AR) cr $@ $^
 
-checkdirs: $(BUILD_DIR)
+checkdirs: $(BUILD_DIR) $(DRIVER_BUILD_DIR)
 
 $(BUILD_DIR):
 	@mkdir -p $@
 
+$(DRIVER_BUILD_DIR):
+	@mkdir -p $@
+
 clean:
-	@rm -rf $(BUILD_DIR)
+	@rm -rf $(BUILD_DIR) $(DRIVER_BUILD_DIR)
 
 $(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))
+$(foreach bdir,$(DRIVER_BUILD_DIR),$(eval $(call make-goal,$(bdir))))

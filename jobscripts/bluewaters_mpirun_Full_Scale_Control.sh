@@ -19,6 +19,7 @@
 #PBS -lgres=darshan
 
 module load cray-hdf5-parallel
+module load cray-tpsl
 
 set -x
 
@@ -29,7 +30,7 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 8192 ./reader/scatter  -a -i 64 -n 1121600  \
+aprun -n 8192 ./build/scatter -a -i 64  \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5
 
 

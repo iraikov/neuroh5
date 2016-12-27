@@ -30,7 +30,7 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 512 ./reader/src/scatter  -a -i 64  \
+aprun -n 512 ./reader/src/scatter -a -i 64  \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_dbs.h5
 
 
