@@ -253,7 +253,7 @@ namespace ngh5
 
       vector<NODE_IDX_T> partdist;
       // determines which graph nodes are assigned to which partition
-      // compute_partdist(Nparts, total_num_nodes, partdist);
+      compute_partdist(Nparts, total_num_nodes, partdist);
       for (size_t i = 0, p = 0; i < ncon*Nparts; i+=ncon, p++)
         {
           tpwgts[i+0] = 1.0/(float)Nparts;

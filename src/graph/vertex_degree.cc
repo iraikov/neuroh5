@@ -10,7 +10,8 @@
 #include "debug.hh"
 
 #include "model_types.hh"
-
+#include <map>
+#include <vector>
 #include <mpi.h>
 
 #undef NDEBUG

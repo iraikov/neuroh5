@@ -53,6 +53,9 @@ build/reader: build/driver/reader.o build/libngh5.graph.a build/libngh5.io.a bui
 build/scatter: build/driver/scatter.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) 
 
+build/balance_indegree: build/driver/balance_indegree.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
+
 build/libngh5.io.a: $(OBJ)
 	$(AR) cr $@ $^
 

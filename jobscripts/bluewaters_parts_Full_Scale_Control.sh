@@ -18,8 +18,6 @@
 
 module load cray-hdf5-parallel
 module load gcc/4.9.3
-#module load cray-tpsl
-export LD_LIBRARY_PATH=$HOME/bin/parmetis/lib:$LD_LIBRARY_PATH
 
 set -x
 
@@ -30,8 +28,8 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 256 ./build/parts \
-      /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_dbs.h5 \
+aprun -n 256 ./build/balance_indegree \
+      /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5 \
       -i 64 -n 4096 -o ${results_path}/parts
 
 
