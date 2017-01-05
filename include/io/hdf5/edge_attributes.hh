@@ -3,6 +3,7 @@
 
 #include "infer_datatype.hh"
 #include "ngh5_types.hh"
+#include "edge_attr.hh"
 
 #include "hdf5.h"
 #include "mpi.h"

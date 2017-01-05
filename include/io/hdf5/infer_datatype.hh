@@ -1,6 +1,7 @@
 #ifndef INFER_DATATYPE
 #define INFER_DATATYPE
 
+#include <cassert>
 #include "hdf5.h"
 
 #include <type_traits>

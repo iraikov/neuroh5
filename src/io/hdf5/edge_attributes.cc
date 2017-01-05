@@ -7,7 +7,7 @@
 ///  Copyright (C) 2016 Project Neurograph.
 //==============================================================================
 
-#include "attributes.hh"
+#include "edge_attributes.hh"
 
 #include "hdf5_path_names.hh"
 
