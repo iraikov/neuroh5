@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file readermodule.cc
+///  @file iomodule.cc
 ///
 ///  Python module for reading edge information in DBS (Destination Block Sparse) format.
 ///
@@ -363,9 +363,9 @@ extern "C"
 }
 
 PyMODINIT_FUNC
-initreader(void) {
+initio(void) {
   import_array();
-  Py_InitModule3("reader", module_methods, "HDF5 graph reader");
+  Py_InitModule3("io", module_methods, "HDF5 graph I/O module");
 }
 
   

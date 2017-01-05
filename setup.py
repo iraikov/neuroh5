@@ -22,7 +22,7 @@ setup(
     ''',
     ext_package = 'neurograph',
     ext_modules = [
-        Extension('reader',
+        Extension('io',
                   extra_compile_args = ["-std=c++11",
                                         "-U NDEBUG",
                                         "-I/usr/include/hdf5/mpich",
@@ -45,7 +45,7 @@ setup(
                       'src/graph/read_graph.cc',
                       'src/graph/scatter_graph.cc',
                       'src/graph/validate_edge_list.cc',
-                      'src/python/readermodule.cc'
+                      'src/python/iomodule.cc'
                   ])
         ]
     )
