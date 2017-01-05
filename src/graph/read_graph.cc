@@ -10,7 +10,7 @@
 
 #include "debug.hh"
 
-#include "attributes.hh"
+#include "edge_attributes.hh"
 
 #include "dbs_edge_reader.hh"
 #include "population_reader.hh"

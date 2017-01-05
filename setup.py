@@ -32,7 +32,8 @@ setup(
                                         "-g"],
                   libraries = ['hdf5_mpich', 'mpich'],
                   sources = [
-                      'src/io/hdf5/attributes.cc',
+                      'src/io/hdf5/node_attributes.cc',
+                      'src/io/hdf5/edge_attributes.cc',
                       'src/io/hdf5/dbs_edge_reader.cc',
                       'src/io/hdf5/ngh5.io.hdf5.cc',
                       'src/io/hdf5/projection_names.cc',

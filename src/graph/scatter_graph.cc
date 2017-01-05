@@ -12,7 +12,7 @@
 
 #include "dbs_edge_reader.hh"
 
-#include "attributes.hh"
+#include "edge_attributes.hh"
 #include "graph_reader.hh"
 #include "population_reader.hh"
 #include "read_graph.hh"
