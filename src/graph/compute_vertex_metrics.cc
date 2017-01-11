@@ -87,7 +87,7 @@ namespace ngh5
     int compute_vertex_metrics
     (
      MPI_Comm comm,
-     const std::string& input_file_name,
+     const std::string& file_name,
      const std::vector<std::string> prj_names,
      const size_t io_size
      )
@@ -105,7 +105,7 @@ namespace ngh5
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      assert(io::hdf5::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      assert(io::hdf5::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       vector<rank_t> node_rank_vector;
@@ -114,7 +114,7 @@ namespace ngh5
       // read the edges
       vector < edge_map_t > prj_vector;
       scatter_graph (comm,
-                     input_file_name,
+                     file_name,
                      io_size,
                      false,
                      prj_names,
@@ -167,10 +167,20 @@ namespace ngh5
               vertex_norm_indegree_value.push_back(vertex_norm_indegrees[i]);
             }
         }
+
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      assert(fapl >= 0);
+      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+      assert(file >= 0);
       
-      write_node_attribute (file, "Vertex indegree", node_id, vertex_indegree_value);
-      write_node_attribute (file, "Vertex norm indegree", node_id, vertex_norm indegree_value);
-      
+      ngh5::io::hdf5::write_node_attribute (file, "Vertex indegree", node_id, vertex_indegree_value);
+      ngh5::io::hdf5::write_node_attribute (file, "Vertex norm indegree", node_id, vertex_norm_indegree_value);
+
+      assert(H5Fclose(file) >= 0);
+      assert(H5Pclose(fapl) >= 0);
+
       return status;
     }
   
