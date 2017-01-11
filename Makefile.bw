@@ -41,7 +41,7 @@ endef
 
 .PHONY: all checkdirs clean
 
-all: checkdirs build/reader build/scatter build/parts build/balance_indegree
+all: checkdirs build/reader build/scatter build/parts build/balance_indegree build/vertex_metrics
 
 build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
