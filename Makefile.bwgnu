@@ -4,8 +4,8 @@ CC=cc
 AR		:= ar
 LD        	:= cc
 
-HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/lib
-HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/include/
+HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/gnu/5.1/lib
+HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/gnu/5.1/include/
 HDF5_LIB        = hdf5
 
 PARMETIS_INCDIR := $(HOME)/bin/parmetis/include
@@ -41,7 +41,7 @@ endef
 
 .PHONY: all checkdirs clean
 
-all: checkdirs build/reader build/scatter build/parts build/balance_indegree build/vertex_metrics
+all: checkdirs build/reader build/scatter build/balance_indegree build/vertex_metrics
 
 build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) -L$(PARMETIS_LIBDIR) -lparmetis
