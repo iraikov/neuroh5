@@ -182,7 +182,7 @@ namespace ngh5
 
         hsize_t part = dsize / size;
         hsize_t start = rank*part, stop = (rank+1)*part;
-        if (rank == 0)
+        if (rank == size-1)
           {
             stop = dsize;
           }

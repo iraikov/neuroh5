@@ -35,6 +35,8 @@ namespace ngh5
         write_node_attribute(loc, path, foo, bar);
 
         read_edge_attribute(loc, path, foo, bar);
+
+        read_edge_attribute_bal(loc, path, foo, bar);
       }
 
       void test_node_attribute_write()
