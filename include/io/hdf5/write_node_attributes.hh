@@ -166,7 +166,7 @@ namespace ngh5
         assert(lcpl >= 0);
         assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
-        hid_t node_id, dset;
+        hid_t hnd_node_id, dset;
 
         for (size_t iname = 0; iname < names.size(); ++iname)
           {
@@ -174,11 +174,11 @@ namespace ngh5
             // hard-link otherwise
             if (iname == 0)
               {
-                node_id = H5Dcreate(loc, (names[iname] + "/node_id").c_str(),
-                                    H5T_STD_U32LE, fspace, lcpl, H5P_DEFAULT,
-                                    H5P_DEFAULT);
-                assert(node_id >= 0);
-                assert(H5Dwrite(node_idx, H5T_NATIVE_UINT32, mspace, fspace,
+                hnd_node_id = H5Dcreate(loc, (names[iname] + "/node_id").c_str(),
+                                        H5T_STD_U32LE, fspace, lcpl, H5P_DEFAULT,
+                                        H5P_DEFAULT);
+                assert(hnd_node_id >= 0);
+                assert(H5Dwrite(hnd_node_id, H5T_NATIVE_UINT32, mspace, fspace,
                                 H5P_DEFAULT, &node_id[0]) >= 0);
               }
             else
@@ -192,13 +192,13 @@ namespace ngh5
                              fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
             assert(dset >= 0);
             assert(H5Dwrite(dset, mtype, mspace, fspace, H5P_DEFAULT,
-                            value[iname]) >= 0);
+                            values[iname]) >= 0);
             assert(H5Dclose(dset) >= 0);
           }
 
         if (names.size() > 0)
           {
-            assert(H5Dclose(node_id) >= 0);
+            assert(H5Dclose(hnd_node_id) >= 0);
           }
 
         // clean house
