@@ -47,6 +47,8 @@ namespace ngh5
         write_node_attribute(loc, path, foo, bar);
 
         read_node_attribute(loc, path, foo, bar);
+
+        read_node_attribute_bal(loc, path, foo, bar);
       }
     }
   }
