@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file dbs_edge_reader.cc
+///  @file read_dbs_projection.cc
 ///
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
@@ -8,8 +8,8 @@
 ///  Copyright (C) 2016 Project Neurograph.
 //==============================================================================
 
-#ifndef DBS_GRAPH_READER_HH
-#define DBS_GRAPH_READER_HH
+#ifndef READ_DBS_PROJECTION_HH
+#define READ_DBS_PROJECTION_HH
 
 #include "hdf5_types.hh"
 

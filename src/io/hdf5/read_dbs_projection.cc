@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file dbs_edge_reader.cc
+///  @file read_dbs_projection.cc
 ///
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
@@ -8,11 +8,11 @@
 ///  Copyright (C) 2016 Project Neurograph.
 //==============================================================================
 
-#include "dbs_edge_reader.hh"
+#include "read_dbs_projection.hh"
 
 #include "dataset_num_elements.hh"
 #include "debug.hh"
-#include "dbs_read_template.hh"
+#include "hdf5_read_template.hh"
 #include "hdf5_path_names.hh"
 
 #include <iostream>
@@ -115,7 +115,7 @@ namespace ngh5
             // allocate buffer and memory dataspace
             dst_blk_ptr.resize(block);
 
-            ierr = dbs_read<DST_BLK_PTR_T>
+            ierr = hdf5_read<DST_BLK_PTR_T>
               (
                file,
                projection_path_join(proj_name, DST_BLK_PTR),
@@ -153,7 +153,7 @@ namespace ngh5
             DEBUG("Task ",rank,": ", "dst_idx: block = ", block, "\n");
             DEBUG("Task ",rank,": ", "dst_idx: start = ", start, "\n");
 
-            ierr = dbs_read<NODE_IDX_T>
+            ierr = hdf5_read<NODE_IDX_T>
               (
                file,
                projection_path_join(proj_name, DST_BLK_IDX),
@@ -192,7 +192,7 @@ namespace ngh5
             DEBUG("Task ",rank,": ", "dst_ptr: start = ", start, "\n");
             DEBUG("Task ",rank,": ", "dst_ptr: block = ", block, "\n");
 
-            ierr = dbs_read<DST_PTR_T>
+            ierr = hdf5_read<DST_PTR_T>
               (
                file,
                projection_path_join(proj_name, DST_PTR),
@@ -233,7 +233,7 @@ namespace ngh5
                 src_idx.resize(block);
                 assert(src_idx.size() > 0);
 
-                ierr = dbs_read<NODE_IDX_T>
+                ierr = hdf5_read<NODE_IDX_T>
                   (
                    file,
                    projection_path_join(proj_name, SRC_IDX),

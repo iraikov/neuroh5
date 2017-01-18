@@ -1,5 +1,5 @@
-#ifndef DBS_READ_TEMPLATE
-#define DBS_READ_TEMPLATE
+#ifndef HDF5_READ_TEMPLATE
+#define HDF5_READ_TEMPLATE
 
 #include "hdf5.h"
 
@@ -13,7 +13,7 @@ namespace ngh5
     namespace hdf5
     {
       template<class T>
-      herr_t dbs_read
+      herr_t hdf5_read
       (
        hid_t              file,
        const std::string& name,

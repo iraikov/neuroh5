@@ -10,7 +10,7 @@
 
 #include "debug.hh"
 
-#include "dbs_edge_reader.hh"
+#include "read_dbs_projection.hh"
 #include "population_reader.hh"
 #include "graph_reader.hh"
 #include "merge_edge_map.hh"

@@ -32,7 +32,7 @@
 #include <cassert>
 
 #include "model_types.hh"
-#include "dbs_edge_reader.hh"
+#include "read_dbs_projection.hh"
 #include "population_reader.hh"
 #include "read_graph.hh"
 #include "graph_reader.hh"
