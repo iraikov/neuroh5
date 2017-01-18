@@ -39,11 +39,13 @@ setup(
                       'src/io/hdf5/hdf5_path_names.cc',
                       'src/io/hdf5/population_reader.cc',
                       'src/io/hdf5/read_link_names.cc',
+                      'src/io/hdf5/edge_attributes.cc',
                       'src/io/ngh5.io.cc',
                       'src/io/read_population.cc',
                       'src/graph/read_graph.cc',
                       'src/graph/scatter_graph.cc',
                       'src/graph/validate_edge_list.cc',
+                      'src/model/edge_attr.cc',
                       'src/python/iomodule.cc'
                   ])
         ]
