@@ -80,7 +80,9 @@ namespace ngh5
 
         MPI_Comm comm;
         MPI_Info info;
-        assert(H5Pget_fapl_mpio(file, &comm, &info) >= 0);
+        /* Get the file's file access roperty list */
+        hid_t fapl = H5Fget_access_plist(file);
+        assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
 
         int size, rank;
         assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
