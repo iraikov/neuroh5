@@ -100,7 +100,6 @@ namespace ngh5
 
         assert(H5Pclose(lcpl) >= 0);
         assert(H5Tclose(mtype) >= 0);
-        assert(H5Tclose(ftype) >= 0);
         assert(H5Sclose(fspace) >= 0);
         assert(H5Sclose(mspace) >= 0);
       }
