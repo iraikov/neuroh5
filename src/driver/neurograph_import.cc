@@ -1,14 +1,22 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file neurotrees_import.cc
+///  @file neurograph_import.cc
 ///
 ///  Driver program for various import procedures.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 
 #include "debug.hh"
+
+#include "graph_reader.hh"
+#include "read_graph.hh"
+#include "model_types.hh"
+#include "population_reader.hh"
+#include "projection_names.hh"
+#include "read_syn_projection.hh"
+#include "write_connectivity.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -26,20 +34,9 @@
 #include <set>
 #include <vector>
 
-#include "neurotrees_types.hh"
-#include "read_layer_swc.hh"
-#include "dataset_num_elements.hh"
-#include "rank_range.hh"
-#include "write_tree.hh"
-#include "hdf5_types.hh"
-#include "hdf5_path_names.hh"
-#include "hdf5_create_tree_file.hh"
-#include "hdf5_create_tree_dataset.hh"
-#include "hdf5_exists_tree_dataset.hh"
-
 
 using namespace std;
-using namespace neurotrees;
+using namespace ngh5;
 
 
 void throw_err(char const* err_message)
@@ -64,7 +61,52 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s population-name hdf-file swc-file...\n\n", argv[0]);
+  printf("Usage: %s population-name hdf-file ...\n\n", argv[0]);
+}
+
+
+int append_edge_list
+(
+ const NODE_IDX_T&          dst_start,
+ const NODE_IDX_T&          src_start,
+ const vector<NODE_IDX_T>&  dst_idx,
+ const vector<DST_PTR_T>&   src_idx_ptr,
+ const vector<NODE_IDX_T>&  src_idx,
+ const vector<DST_PTR_T>&   syn_idx_ptr,
+ const vector<NODE_IDX_T>&  syn_idx,
+ size_t&                    num_edges,
+ vector<NODE_IDX_T>&        edge_list
+ EdgeNamedAttr&             edge_attr_values
+ )
+{
+  int ierr = 0; size_t src_idx_ptr_size;
+  num_edges = 0;
+
+  if (dst_idx.size() > 0)
+    {
+      for (size_t d = 0; d < dst_idx.size()-1; d++)
+        {
+          NODE_IDX_T dst = dst_idx[d] + dst_start;
+          
+          size_t low_src_ptr = src_idx_ptr[d],
+            high_src_ptr = src_idx_ptr[d+1];
+          size_t low_syn_ptr = syn_idx_ptr[d],
+            high_syn_ptr = syn_idx_ptr[d+1];
+
+          for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
+            {
+              assert(ii < high_syn_ptr);
+              NODE_IDX_T src = src_idx[i] + src_start;
+              NODE_IDX_T syn_id = syn_idx[ii];
+              edge_list.push_back(src);
+              edge_list.push_back(dst);
+              edge_attr_values.push_back<uint32_t>(0, syn_id);
+              num_edges++;
+            }
+        }
+    }
+
+  return ierr;
 }
 
 
@@ -75,11 +117,10 @@ void print_usage_full(char** argv)
 
 int main(int argc, char** argv)
 {
-  int status;
+  int status=0;
   std::string projection_name;
   std::string output_file_name;
-  std::string hdf5_input_filename, hdf5_input_attrpath;
-  std::vector<TREE_IDX_T> gid_list;
+  std::string hdf5_input_filename, hdf5_input_dsetpath;
   MPI_Comm all_comm;
   
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -105,13 +146,15 @@ int main(int argc, char** argv)
         case 0:
           break;
         case 'f':
-          opt_hdf5 = true;
-          string arg = string(optarg);
-          string delimiter = ":";
-          size_t pos = arg.find(delimiter);
-          hdf5_input_filename = arg.substr(0, pos); 
-          hdf5_input_dsetpath = arg.substr(pos + delimiter.length(),
-                                           arg.find(delimiter, pos + delimiter.length())); 
+          {
+            opt_hdf5 = true;
+            string arg = string(optarg);
+            string delimiter = ":";
+            size_t pos = arg.find(delimiter);
+            hdf5_input_filename = arg.substr(0, pos); 
+            hdf5_input_dsetpath = arg.substr(pos + delimiter.length(),
+                                             arg.find(delimiter, pos + delimiter.length()));
+          }
           break;
         case 'h':
           print_usage_full(argv);
@@ -141,17 +184,31 @@ int main(int argc, char** argv)
   printf("Task %d: Projection name is %s\n", rank, projection_name.c_str());
   printf("Task %d: Output file name is %s\n", rank, output_file_name.c_str());
 
-  // Populations/GC/Connectivity Group
-  // /Populations/GC/Connectivity/source_gid Group
-  // /Populations/GC/Connectivity/source_gid/gid Dataset {1000000/Inf}
-  // /Populations/GC/Connectivity/source_gid/ptr Dataset {1000001/Inf}
-  // /Populations/GC/Connectivity/source_gid/value Dataset {2399360031/Inf}
-  // /Populations/GC/Connectivity/syn_id Group
-  // /Populations/GC/Connectivity/syn_id/gid Dataset {1000000/Inf}
-  // /Populations/GC/Connectivity/syn_id/ptr Dataset {1000001/Inf}
-  // /Populations/GC/Connectivity/syn_id/value Dataset {2399360031/Inf}
-  
+  vector<NODE_IDX_T>  dst_idx;
+  vector<DST_PTR_T>   src_idx_ptr;
+  vector<NODE_IDX_T>  src_idx;
+  vector<DST_PTR_T>   syn_idx_ptr;
+  vector<NODE_IDX_T>  syn_idx;
 
+  status = ngh5::io::hdf5::read_syn_projection (all_comm,
+                                                hdf5_input_filename,
+                                                hdf5_input_dsetpath,
+                                                dst_idx,
+                                                src_idx_ptr,
+                                                src_idx,
+                                                syn_idx_ptr,
+                                                syn_idx);
+  vector<NODE_IDX_T>  edges;
+  size_t num_edges;
+  
+  status = append_edge_list (dst_start, src_start,
+                             dst_idx,
+                             src_idx_ptr, src_idx,
+                             syn_idx_ptr, syn_idx,
+                             num_edges,
+                             edges);
+
+  ngh5::io::hdf5::write_connectivity (file, dst_start, dst_end, edges);
 
   MPI_Comm_free(&all_comm);
   

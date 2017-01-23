@@ -7,15 +7,15 @@
 ///  Copyright (C) 2017 Project Neurograph.
 //==============================================================================
 
-#include "read_syn_projection.hh"
-
-#include "dataset_num_elements.hh"
 #include "debug.hh"
+
+#include "ngh5_types.hh"
+#include "hdf5_types.hh"
+#include "dataset_num_elements.hh"
 #include "hdf5_read_template.hh"
 #include "hdf5_path_names.hh"
+#include "read_syn_projection.hh"
 
-#include <iostream>
-#include <sstream>
 #include <string>
 
 #undef NDEBUG
@@ -65,15 +65,14 @@ namespace ngh5
       
       herr_t read_syn_projection
       (
-       MPI_Comm                   comm,
-       const std::string&         file_name,
-       const std::string&         prefix,
-       uint64_t&                  nedges,
-       vector<NODE_IDX_T>&        dst_gid,
-       vector<DST_PTR_T>&         src_gid_ptr,
-       vector<NODE_IDX_T>&        src_gid,
-       vector<DST_PTR_T>&         syn_id_ptr,
-       vector<NODE_IDX_T>&        syn_id,
+       MPI_Comm              comm,
+       const string&         file_name,
+       const string&         prefix,
+       vector<NODE_IDX_T>&   dst_gid,
+       vector<DST_PTR_T>&    src_gid_ptr,
+       vector<NODE_IDX_T>&   src_gid,
+       vector<DST_PTR_T>&    syn_id_ptr,
+       vector<NODE_IDX_T>&   syn_id
        )
       {
         herr_t ierr = 0;
@@ -164,8 +163,8 @@ namespace ngh5
         hsize_t src_gid_start = (hsize_t)src_gid_rebase;
 
         // allocate buffer and memory dataspace
-        src_idx.resize(src_gid_block);
-        assert(src_idx.size() > 0);
+        src_gid.resize(src_gid_block);
+        assert(src_gid.size() > 0);
 
         ierr = hdf5_read<NODE_IDX_T>
           (
@@ -202,7 +201,7 @@ namespace ngh5
           }
 
         // read synapse indices
-        hsize_t syn_id_block = (hsize_t)(syn_gid_ptr.back() - syn_gid_ptr.front());
+        hsize_t syn_id_block = (hsize_t)(syn_id_ptr.back() - syn_id_ptr.front());
         hsize_t syn_id_start = (hsize_t)syn_id_rebase;
 
         // allocate buffer and memory dataspace
