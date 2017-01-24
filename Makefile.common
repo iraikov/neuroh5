@@ -22,7 +22,7 @@ endef
 
 .PHONY: all checkdirs clean
 
-all: checkdirs $(DRIVER_OBJ) build/reader build/scatter build/parts build/balance_indegree build/vertex_metrics
+all: checkdirs $(DRIVER_OBJ) build/reader build/scatter build/parts build/balance_indegree build/vertex_metrics build/neurograph_import
 
 build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a build/libngh5.mpi.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -L$(PARMETIS_LIBDIR) -l$(HDF5_LIB) -lmpi -lparmetis -lmetis
@@ -37,6 +37,9 @@ build/balance_indegree: build/driver/balance_indegree.o build/libngh5.graph.a bu
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
 
 build/vertex_metrics: build/driver/vertex_metrics.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
+
+build/neurograph_import: build/driver/neurograph_import.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a build/libngh5.mpi.a 
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
 
 build/libngh5.io.a: $(OBJ)

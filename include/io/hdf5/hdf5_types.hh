@@ -32,4 +32,10 @@
 // In-file HDF5 datatype of node indexes
 #define NODE_IDX_H5_FILE_T   H5T_STD_U32LE
 
+// In-memory HDF5 datatype of destination indices
+#define POP_IDX_H5_NATIVE_T H5T_NATIVE_UINT16
+
+// In-file HDF5 datatype of population indices
+#define POP_IDX_H5_FILE_T H5T_NATIVE_UINT16
+
 #endif

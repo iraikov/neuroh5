@@ -70,21 +70,22 @@ namespace ngh5
             file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
             assert(file >= 0);
 
+
             grp = H5Gopen(file, PRJ.c_str(), H5P_DEFAULT);
             assert(grp >= 0);
             assert(H5Gget_num_objs(grp, &num_projections)>=0);
-
             hsize_t idx = 0;
             vector<string> op_data;
             assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                               &iterate_cb, (void*)&op_data ) >= 0);
 
             assert(op_data.size() == num_projections);
-
+            
             for (size_t i = 0; i < op_data.size(); ++i)
               {
+                assert(op_data[i].size() > 0);
                 DEBUG("Projection ",i," is named ",op_data[i],"\n");
-                prj_names[i] = op_data[i];
+                prj_names.push_back(op_data[i]);
               }
 
             assert(H5Gclose(grp) >= 0);
@@ -92,7 +93,7 @@ namespace ngh5
           }
 
         // Broadcast projection names
-        ierr = mpi::bcast_string_vector(comm, MAX_PRJ_NAME, prj_names);
+        ierr = mpi::bcast_string_vector(comm, 0, MAX_PRJ_NAME, prj_names);
 
         return ierr;
       }

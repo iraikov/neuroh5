@@ -19,7 +19,7 @@ namespace ngh5
   namespace mpi
   {
 
-    int bcast_string_vector (MPI_Comm comm,
+    int bcast_string_vector (MPI_Comm comm, int root,
                              const size_t max_string_len,
                              std::vector<std::string> &string_vector);
   }

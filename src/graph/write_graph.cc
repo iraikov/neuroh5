@@ -34,7 +34,7 @@ namespace ngh5
      const std::string&    dst_pop_name,
      const std::string&    prj_name,
      const bool            opt_attrs,
-     const vector<NODE_IDX_T>    edges,
+     const vector<NODE_IDX_T>  edges,
      const model::EdgeNamedAttr& edge_attr_values
      )
     {
@@ -47,7 +47,7 @@ namespace ngh5
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
       size_t total_num_nodes;
       
-      assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
+      //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(io::hdf5::read_population_ranges(comm, file_name,
                                               pop_ranges, pop_vector, total_num_nodes) >= 0);
       assert(io::hdf5::read_population_labels(comm, file_name, pop_labels) >= 0);
@@ -73,15 +73,16 @@ namespace ngh5
       
       size_t src_start = pop_vector[src_pop_idx].start;
       size_t src_end = src_start + pop_vector[src_pop_idx].count;
-
+      
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
       assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(file >= 0);
-      
-      io::hdf5::write_connectivity (file, dst_start, dst_end, edges);
+
+      io::hdf5::write_connectivity (file, prj_name, src_pop_idx, dst_pop_idx,
+                                    src_start, src_end, dst_start, dst_end, edges);
 
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);

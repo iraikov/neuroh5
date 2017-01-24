@@ -225,7 +225,7 @@ namespace ngh5
             grp_h5types = H5Gopen2(file, H5_TYPES.c_str(), H5P_DEFAULT);
             assert(grp_h5types >= 0);
 
-            pop_labels_type = H5Topen(file, POP_LABELS.c_str(), H5P_DEFAULT);
+            pop_labels_type = H5Topen(grp_h5types, POP_LABELS.c_str(), H5P_DEFAULT);
             assert(pop_labels_type >= 0);
 
             size_t num_labels = H5Tget_nmembers(pop_labels_type);
@@ -245,8 +245,8 @@ namespace ngh5
             
           }
 
-        
-        ierr = mpi::bcast_string_vector(comm, MAX_POP_NAME, pop_name_vector);
+
+        ierr = mpi::bcast_string_vector(comm, 0, MAX_POP_NAME, pop_name_vector);
 
         for (uint16_t i=0; i<pop_name_vector.size(); i++)
           {
