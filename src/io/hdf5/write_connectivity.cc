@@ -1,5 +1,6 @@
 
 #include "write_connectivity.hh"
+#include "hdf5_types.hh"
 
 #include <algorithm>
 #include <cassert>
@@ -98,27 +99,155 @@ namespace ngh5
         // write destination block index (= first_node)
 
         string path = "/Connectivity/Destination Block Index";
+        hsize_t dims = (hsize_t)size, one = 1;
+        hid_t fspace = H5Screate_simple(1, &dims, &dims);
+        assert(fspace >= 0);
+        hid_t dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
+                                lcpl, H5P_DEFAULT, H5P_DEFAULT);
+        assert(dset >= 0);
+        dims = 1;
+        hid_t mspace = H5Screate_simple(1, &dims, &dims);
+        assert(mspace >= 0);
+        assert(H5Sselect_all(mspace) >= 0);
+        hsize_t start = (hsize_t)rank, block = dims;
+        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                   &one, &block) >= 0);
+        assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
+                        &first_node) >= 0);
+        assert(H5Dclose(dset) >= 0);
+        assert(H5Sclose(mspace) >= 0);
+        assert(H5Sclose(fspace) >= 0);
 
         // write destination block pointer
-        // TODO: correct the destination block pointers by their global offset
 
         path = "/Connectivity/Destination Block Pointer";
+        dims = (hsize_t)(size + 1);
+        fspace = H5Screate_simple(1, &dims, &dims);
+        assert(fspace >= 0);
+        dset = H5Dcreate2(file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
+                          fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
+        assert(dset >= 0);
+
+        dims = 1;
+        if (rank == size-1) // the last rank writes an extra element
+          {
+            dims = 2;
+          }
+        mspace = H5Screate_simple(1, &dims, &dims);
+        assert(mspace >= 0);
+        assert(H5Sselect_all(mspace) >= 0);
+        start = (hsize_t)rank;
+        block = dims;
+        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                   &one, &block) >= 0);
+
+        vector<uint64_t> dbp(2,0); // only the last rank writes two elements
+
+        for (int p = 0; p < rank; ++p)
+          {
+            dbp[0] += recvbuf_num_dest[p];
+          }
+
+        if (rank == size-1) // last rank writes the total destination count
+          {
+            dbp[1] = dbp[0] + recvbuf_num_dest[rank];
+          }
+
+        assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
+                        H5P_DEFAULT, &dbp[0]) >= 0);
+
+        assert(H5Dclose(dset) >= 0);
+        assert(H5Sclose(mspace) >= 0);
+        assert(H5Sclose(fspace) >= 0);
 
         // write destination pointers
-        // # dest. pointers = number of destinations
-        // TODO: correct the destination pointers by their global offset
+        // # dest. pointers = number of destinations + 1
 
         path = "/Connectivity/Destination Pointer";
+        dims = 0;
+        for (int p = 0; p < size; ++p)
+          {
+            dims += recvbuf_num_dest[p];
+          }
+        ++dims; // one extra element
+
+        fspace = H5Screate_simple(1, &dims, &dims);
+        assert(fspace >= 0);
+        dset = H5Dcreate2(file, path.c_str(), DST_PTR_H5_FILE_T,
+                          fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
+        assert(dset >= 0);
+
+        uint64_t s = 0;
+        for (int p = 0; p < rank; ++p)
+          {
+            s += recvbuf_num_edge[p];
+          }
+
+        for (size_t idst = 0; idst < dst_ptr.size(); ++idst)
+          {
+            dst_ptr[idst] += s;
+          }
+
+        if (rank == size-1) // only the last rank writes an additional element
+          {
+            dst_ptr.back() += recvbuf_num_edge[rank];
+          }
+        else
+          {
+            dst_ptr.resize(num_dest);
+          }
+
+        dims = (hsize_t) dst_ptr.size();
+        mspace = H5Screate_simple(1, &dims, &dims);
+        assert(mspace >= 0);
+        assert(H5Sselect_all(mspace) >= 0);
+        start = (hsize_t)dbp[0];
+        block = dims;
+        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                   &one, &block) >= 0);
+
+        assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
+                        H5P_DEFAULT, &dst_ptr[0]) >= 0);
+
+        assert(H5Dclose(dset) >= 0);
+        assert(H5Sclose(mspace) >= 0);
+        assert(H5Sclose(fspace) >= 0);
 
         // write source index
         // # source indexes = number of edges
 
         path = "/Connectivity/Source Index";
 
+        dims = 0;
+        for (int p = 0; p < size; ++p)
+          {
+            dims += recvbuf_num_edge[p];
+          }
+
+        fspace = H5Screate_simple(1, &dims, &dims);
+        assert(fspace >= 0);
+        dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T,
+                          fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
+        assert(dset >= 0);
+
+        dims = (hsize_t) src_idx.size();
+        mspace = H5Screate_simple(1, &dims, &dims);
+        assert(mspace >= 0);
+        assert(H5Sselect_all(mspace) >= 0);
+        start = (hsize_t)dst_ptr[0];
+        block = dims;
+        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                   &one, &block) >= 0);
+
+        assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
+                        H5P_DEFAULT, &src_idx[0]) >= 0);
+
+        assert(H5Dclose(dset) >= 0);
+        assert(H5Sclose(mspace) >= 0);
+        assert(H5Sclose(fspace) >= 0);
 
         // clean-up
         assert(H5Pclose(lcpl) >= 0);
-
       }
     }
   }
