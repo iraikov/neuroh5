@@ -71,6 +71,13 @@ namespace ngh5
        std::vector<model::pop_range_t>& pop_vector,
        size_t&                          total_num_nodes
        );
+
+      extern herr_t read_population_labels
+      (
+       MPI_Comm                         comm,
+       const std::string&               file_name,
+       std::vector< std::pair<model::pop_t, std::string> > & pop_labels
+       );
     }
   }
 }

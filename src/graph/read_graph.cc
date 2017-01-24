@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file graph_reader.cc
+///  @file read_graph.cc
 ///
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.

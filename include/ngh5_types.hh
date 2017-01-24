@@ -14,6 +14,9 @@
 // node index type
 typedef unsigned int NODE_IDX_T;
 
+// population index type
+typedef uint16_t POP_IDX_T;
+
 // MPI type of node indexes
 #define NODE_IDX_MPI_T MPI_UINT32_T
 

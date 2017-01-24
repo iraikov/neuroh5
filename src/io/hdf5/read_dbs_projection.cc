@@ -249,6 +249,7 @@ namespace ngh5
           }
 
         assert(H5Fclose(file) >= 0);
+        assert(H5Pclose(fapl) >= 0);
 
         DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
         return ierr;

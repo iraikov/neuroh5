@@ -23,6 +23,8 @@ namespace ngh5
 
       const std::string POP         = "Populations";
 
+      const std::string POP_LABELS  = "Population labels";
+
       const std::string PRJ         = "Projections";
 
       const std::string POP_COMB    = "Valid population projections";

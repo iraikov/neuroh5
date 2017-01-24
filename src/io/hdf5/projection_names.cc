@@ -6,15 +6,16 @@
 ///
 ///  Copyright (C) 2016 Project Neurograph.
 //==============================================================================
-
-#include "debug.hh"
-
-#include "hdf5_path_names.hh"
-
-#include "hdf5.h"
+#include <mpi.h>
+#include <hdf5.h>
 
 #include <cstring>
 #include <vector>
+
+#include "debug.hh"
+#include "hdf5_path_names.hh"
+#include "bcast_string_vector.hh"
+
 
 #undef NDEBUG
 #include <cassert>
@@ -63,7 +64,7 @@ namespace ngh5
         hsize_t num_projections;
         hid_t file = -1, grp = -1;
 
-        // process 0 reads the names of projections and broadcasts
+        // MPI rank 0 reads and broadcasts the projection names
         if (rank == 0)
           {
             file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -72,19 +73,7 @@ namespace ngh5
             grp = H5Gopen(file, PRJ.c_str(), H5P_DEFAULT);
             assert(grp >= 0);
             assert(H5Gget_num_objs(grp, &num_projections)>=0);
-          }
 
-        assert(MPI_Bcast(&num_projections, 1, MPI_UINT64_T, 0, comm) >= 0);
-
-        // allocate buffer
-        vector<uint64_t> prj_name_lengths(num_projections);
-        prj_names.resize(num_projections);
-
-        uint64_t prj_names_total_length = 0;
-
-        // MPI rank 0 reads and broadcasts the projection names
-        if (rank == 0)
-          {
             hsize_t idx = 0;
             vector<string> op_data;
             assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
@@ -96,49 +85,14 @@ namespace ngh5
               {
                 DEBUG("Projection ",i," is named ",op_data[i],"\n");
                 prj_names[i] = op_data[i];
-                size_t len = op_data[i].size();
-                prj_name_lengths[i] = len;
-                prj_names_total_length += len;
               }
 
             assert(H5Gclose(grp) >= 0);
             assert(H5Fclose(file) >= 0);
           }
 
-        // Broadcast projection name lengths
-        assert(MPI_Bcast(&prj_names_total_length, 1, MPI_UINT64_T, 0, comm) >= 0);
-        assert(MPI_Bcast(&prj_name_lengths[0], num_projections, MPI_UINT64_T, 0, comm) >= 0);
-
         // Broadcast projection names
-        size_t offset = 0;
-        char* prj_names_buf = new char [prj_names_total_length];
-        assert(prj_names_buf != NULL);
-
-        if (rank == 0)
-          {
-            for (size_t i = 0; i < num_projections; i++)
-              {
-                size_t len = prj_name_lengths[i];
-                memcpy(prj_names_buf+offset, prj_names[i].c_str(), len);
-                offset = offset + prj_name_lengths[i];
-              }
-          }
-
-        assert(MPI_Bcast(prj_names_buf, prj_names_total_length, MPI_CHAR, 0, comm) >= 0);
-
-        // Copy projection names into prj_names
-        char prj_name[MAX_PRJ_NAME];
-        offset = 0;
-        for (size_t i = 0; i < num_projections; i++)
-          {
-            size_t len = prj_name_lengths[i];
-            memcpy(prj_name, prj_names_buf+offset, len);
-            prj_name[len] = '\0';
-            prj_names[i] = string((const char*)prj_name);
-            offset = offset + len;
-          }
-
-        //delete [] prj_names_buf;
+        ierr = mpi::bcast_string_vector(comm, MAX_PRJ_NAME, prj_names);
 
         return ierr;
       }

@@ -8,14 +8,16 @@
 ///  Copyright (C) 2016 Project Neurograph.
 //==============================================================================
 
-#include "debug.hh"
-#include "population_reader.hh"
-
-#include "hdf5_path_names.hh"
+#include <mpi.h>
 
 #include <cstdio>
 #include <iostream>
 #include <vector>
+
+#include "debug.hh"
+#include "population_reader.hh"
+#include "hdf5_path_names.hh"
+#include "bcast_string_vector.hh"
 
 #undef NDEBUG
 #include <cassert>
@@ -23,6 +25,8 @@
 using namespace std;
 using namespace ngh5::model;
 using namespace ngh5::io::hdf5;
+
+#define MAX_POP_NAME 1024
 
 namespace ngh5
 {
@@ -187,6 +191,72 @@ namespace ngh5
 
         return ierr;
       }
+
+
+      /*************************************************************************
+       * Read the population labels
+       *************************************************************************/
+
+      herr_t read_population_labels
+      (
+       MPI_Comm comm,
+       const string& file_name,
+       vector< pair<pop_t, string> > & pop_labels
+       )
+      {
+        herr_t ierr = 0;
+
+        int rank, size;
+        assert(MPI_Comm_size(comm, &size) >= 0);
+        assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+        // MPI rank 0 reads and broadcasts the number of ranges
+
+        vector <string> pop_name_vector;
+
+        // process 0 reads the number of populations and broadcasts
+        if (rank == 0)
+          {
+            hid_t file = -1, pop_labels_type = -1, grp_h5types = -1;
+            
+            file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+            assert(file >= 0);
+
+            grp_h5types = H5Gopen2(file, H5_TYPES.c_str(), H5P_DEFAULT);
+            assert(grp_h5types >= 0);
+
+            pop_labels_type = H5Topen(file, POP_LABELS.c_str(), H5P_DEFAULT);
+            assert(pop_labels_type >= 0);
+
+            size_t num_labels = H5Tget_nmembers(pop_labels_type);
+            assert(num_labels > 0);
+
+            for (size_t i=0; i<num_labels; i++)
+              {
+                char namebuf[MAX_POP_NAME];
+                ierr = H5Tenum_nameof(pop_labels_type, &i, namebuf, MAX_POP_NAME);
+                pop_name_vector.push_back(string(namebuf));
+                assert(ierr >= 0);
+              }
+            
+            assert(H5Tclose(pop_labels_type) >= 0);
+            assert(H5Gclose(grp_h5types) >= 0);
+            assert(H5Fclose(file) >= 0);
+            
+          }
+
+        
+        ierr = mpi::bcast_string_vector(comm, MAX_POP_NAME, pop_name_vector);
+
+        for (uint16_t i=0; i<pop_name_vector.size(); i++)
+          {
+            pop_labels.push_back(make_pair(i, pop_name_vector[i]));
+          }
+        
+        return ierr;
+      }
+
+
     }
   }
 
