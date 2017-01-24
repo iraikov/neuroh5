@@ -15,6 +15,8 @@
 #include "read_population.hh"
 #include "write_graph.hh"
 #include "write_connectivity.hh"
+#include "write_edge_attributes.hh"
+#include "hdf5_path_names.hh"
 
 #undef NDEBUG
 #include <cassert>
@@ -84,6 +86,42 @@ namespace ngh5
       io::hdf5::write_connectivity (file, prj_name, src_pop_idx, dst_pop_idx,
                                     src_start, src_end, dst_start, dst_end, edges);
 
+      for (auto const& elem: edge_attr_values.float_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <float>& values = edge_attr_values.attr_vec<float>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<float>(file, path, values);
+        }
+
+      for (auto const& elem: edge_attr_values.uint8_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <uint8_t>& values = edge_attr_values.attr_vec<uint8_t>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<uint8_t>(file, path, values);
+        }
+
+      for (auto const& elem: edge_attr_values.uint16_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <uint16_t>& values = edge_attr_values.attr_vec<uint16_t>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<uint16_t>(file, path, values);
+        }
+
+      for (auto const& elem: edge_attr_values.uint32_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <uint32_t>& values = edge_attr_values.attr_vec<uint32_t>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<uint32_t>(file, path, values);
+        }
+      
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);
 
