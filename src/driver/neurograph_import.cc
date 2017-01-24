@@ -66,6 +66,7 @@ void print_usage_full(char** argv)
 
 int append_edge_list
 (
+ const int src_offset, const int dst_offset,
  const vector<NODE_IDX_T>&  dst_idx,
  const vector<DST_PTR_T>&   src_idx_ptr,
  const vector<NODE_IDX_T>&  src_idx,
@@ -79,13 +80,12 @@ int append_edge_list
   int ierr = 0; 
   num_edges = 0;
 
-  
   if (dst_idx.size() > 0)
     {
       for (size_t d = 0; d < dst_idx.size()-1; d++)
         {
-          NODE_IDX_T dst = dst_idx[d];
-          
+          NODE_IDX_T dst = dst_idx[d] + dst_offset;
+
           size_t low_src_ptr = src_idx_ptr[d],
             high_src_ptr = src_idx_ptr[d+1];
           size_t low_syn_ptr = syn_idx_ptr[d],
@@ -94,17 +94,16 @@ int append_edge_list
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
             {
               assert(ii < high_syn_ptr);
-              NODE_IDX_T src = src_idx[i];
+              NODE_IDX_T src = src_idx[i] + src_offset;
               NODE_IDX_T syn_id = syn_idx[ii];
               edge_list.push_back(src);
               edge_list.push_back(dst);
-              edge_attr_values.push_back<uint32_t>(src, syn_id);
+              edge_attr_values.push_back<uint32_t>(0, syn_id);
               num_edges++;
             }
         }
     }
 
-  edge_attr_values.uint32_names.insert(make_pair("syn_id", 0));
 
   return ierr;
 }
@@ -132,9 +131,17 @@ int main(int argc, char** argv)
   assert(MPI_Comm_size(all_comm, &size) >= 0);
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
+  int dst_offset=0, src_offset=0;
   bool opt_hdf5 = false;
+  int optflag_dst_offset = 0;
+  int optflag_src_offset = 0;
+  bool opt_dst_offset = false,
+    opt_src_offset = false;
+
   // parse arguments
   static struct option long_options[] = {
+    {"dst-offset",    required_argument, &optflag_dst_offset,  1 },
+    {"src-offset",    required_argument, &optflag_src_offset,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
@@ -145,6 +152,18 @@ int main(int argc, char** argv)
       switch (c)
         {
         case 0:
+          if (optflag_dst_offset == 1) {
+            stringstream ss;
+            opt_dst_offset = true;
+            ss << string(optarg);
+            ss >> dst_offset;
+          }
+          if (optflag_src_offset == 1) {
+            stringstream ss;
+            opt_src_offset = true;
+            ss << string(optarg);
+            ss >> src_offset;
+          }
           break;
         case 'f':
           {
@@ -170,10 +189,10 @@ int main(int argc, char** argv)
     {
       
       
-      output_file_name = std::string(argv[optind]);
-      src_pop_name     = std::string(argv[optind+1]);
-      dst_pop_name     = std::string(argv[optind+2]);
-      prj_name         = std::string(argv[optind+3]);
+      src_pop_name     = std::string(argv[optind]);
+      dst_pop_name     = std::string(argv[optind+1]);
+      prj_name         = std::string(argv[optind+2]);
+      output_file_name = std::string(argv[optind+3]);
       if (!opt_hdf5)
         {
           print_usage_full(argv);
@@ -203,16 +222,17 @@ int main(int argc, char** argv)
   vector<NODE_IDX_T>  edges;
   size_t num_edges;
   model::EdgeNamedAttr edge_attr_values;
+  edge_attr_values.uint32_values.resize(1);
+  edge_attr_values.uint32_names.insert(make_pair("syn_id", 0));
   
-  status = append_edge_list (dst_idx,
-                             src_idx_ptr, src_idx,
+  status = append_edge_list (src_offset, dst_offset,
+                             dst_idx, src_idx_ptr, src_idx,
                              syn_idx_ptr, syn_idx,
                              num_edges,
                              edges,
                              edge_attr_values);
 
-  status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name,
-                               true, edges, edge_attr_values);
+  status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name, true, edges, edge_attr_values);
 
   MPI_Comm_free(&all_comm);
   

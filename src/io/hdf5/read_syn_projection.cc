@@ -80,6 +80,7 @@ namespace ngh5
         assert(MPI_Comm_size(comm, (int*)&size) >= 0);
         assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
+        printf("prefix = %s\n", prefix.c_str());
         // determine number of edges in projection
         uint64_t num_blocks = dataset_num_elements
           (comm, file_name, prefix+"/source_gid/gid");

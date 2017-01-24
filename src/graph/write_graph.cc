@@ -15,6 +15,8 @@
 #include "read_population.hh"
 #include "write_graph.hh"
 #include "write_connectivity.hh"
+#include "write_edge_attributes.hh"
+#include "hdf5_path_names.hh"
 
 #undef NDEBUG
 #include <cassert>
@@ -34,7 +36,7 @@ namespace ngh5
      const std::string&    dst_pop_name,
      const std::string&    prj_name,
      const bool            opt_attrs,
-     const vector<NODE_IDX_T>    edges,
+     const vector<NODE_IDX_T>  edges,
      const model::EdgeNamedAttr& edge_attr_values
      )
     {
@@ -47,7 +49,7 @@ namespace ngh5
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
       size_t total_num_nodes;
       
-      assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
+      //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(io::hdf5::read_population_ranges(comm, file_name,
                                               pop_ranges, pop_vector, total_num_nodes) >= 0);
       assert(io::hdf5::read_population_labels(comm, file_name, pop_labels) >= 0);
@@ -73,16 +75,53 @@ namespace ngh5
       
       size_t src_start = pop_vector[src_pop_idx].start;
       size_t src_end = src_start + pop_vector[src_pop_idx].count;
-
+      
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
       assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(file >= 0);
-      
-      io::hdf5::write_connectivity (file, dst_start, dst_end, edges);
 
+      io::hdf5::write_connectivity (file, prj_name, src_pop_idx, dst_pop_idx,
+                                    src_start, src_end, dst_start, dst_end, edges);
+
+      for (auto const& elem: edge_attr_values.float_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <float>& values = edge_attr_values.attr_vec<float>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<float>(file, path, values);
+        }
+
+      for (auto const& elem: edge_attr_values.uint8_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <uint8_t>& values = edge_attr_values.attr_vec<uint8_t>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<uint8_t>(file, path, values);
+        }
+
+      for (auto const& elem: edge_attr_values.uint16_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <uint16_t>& values = edge_attr_values.attr_vec<uint16_t>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<uint16_t>(file, path, values);
+        }
+
+      for (auto const& elem: edge_attr_values.uint32_names)
+        {
+          const string& attr_name = elem.first;
+          const size_t k = elem.second;
+          const vector <uint32_t>& values = edge_attr_values.attr_vec<uint32_t>(k);
+          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
+          io::hdf5::write_sparse_edge_attribute<uint32_t>(file, path, values);
+        }
+      
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);
 

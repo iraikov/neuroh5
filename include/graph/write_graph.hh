@@ -32,7 +32,7 @@ namespace ngh5
      const std::string&    prj_name,
      const bool            opt_attrs,
      const std::vector<NODE_IDX_T> edges,
-     model::EdgeNamedAttr& edge_attr_values
+     const model::EdgeNamedAttr& edge_attr_values
      );
   }
 }
