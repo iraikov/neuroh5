@@ -22,22 +22,22 @@ endef
 
 .PHONY: all checkdirs clean
 
-all: checkdirs $(DRIVER_OBJ) build/reader build/scatter build/parts build/balance_indegree build/vertex_metrics
+all: checkdirs $(DRIVER_OBJ) build/reader build/scatter build/balance_indegree build/vertex_metrics
 
-build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a build/libngh5.mpi.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -L$(PARMETIS_LIBDIR) -l$(HDF5_LIB) -lmpi -lparmetis -lmetis
+#build/parts: build/driver/parts.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a build/libngh5.mpi.a
+#	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -L$(PARMETIS_LIBDIR) -l$(HDF5_LIB)  -lparmetis -lmetis $(LINK_MPI)
 
 build/reader: build/driver/reader.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
 
 build/scatter: build/driver/scatter.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
 
 build/balance_indegree: build/driver/balance_indegree.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
 
 build/vertex_metrics: build/driver/vertex_metrics.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) -lmpi
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(MPI_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
 
 build/libngh5.io.a: $(OBJ)
 	$(AR) cr $@ $^
