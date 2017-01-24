@@ -30,7 +30,8 @@ mkdir -p $results_path
 
 aprun -n 256 ./build/vertex_metrics \
       /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5 \
-      -i 64 -n 4096 
+      -i 64
+
 
 
 
