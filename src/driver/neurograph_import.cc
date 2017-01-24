@@ -73,12 +73,13 @@ int append_edge_list
  const vector<NODE_IDX_T>&  syn_idx,
  size_t&                    num_edges,
  vector<NODE_IDX_T>&        edge_list,
- model::EdgeNamedAttr&             edge_attr_values
+ model::EdgeNamedAttr&      edge_attr_values
  )
 {
   int ierr = 0; 
   num_edges = 0;
 
+  
   if (dst_idx.size() > 0)
     {
       for (size_t d = 0; d < dst_idx.size()-1; d++)
@@ -97,11 +98,13 @@ int append_edge_list
               NODE_IDX_T syn_id = syn_idx[ii];
               edge_list.push_back(src);
               edge_list.push_back(dst);
-              edge_attr_values.push_back<uint32_t>(0, syn_id);
+              edge_attr_values.push_back<uint32_t>(src, syn_id);
               num_edges++;
             }
         }
     }
+
+  edge_attr_values.uint32_names.insert(make_pair("syn_id", 0));
 
   return ierr;
 }
@@ -209,7 +212,7 @@ int main(int argc, char** argv)
                              edge_attr_values);
 
   status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name,
-                               false, edges, edge_attr_values);
+                               true, edges, edge_attr_values);
 
   MPI_Comm_free(&all_comm);
   
