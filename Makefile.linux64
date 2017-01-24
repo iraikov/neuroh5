@@ -2,6 +2,8 @@ AR		:= ar
 CC		:= g++
 LD        	:= g++
 
+LINK_MPI        = -lmpi
+
 HDF5_DIR	:= /usr
 HDF5_INCDIR 	:= $(HDF5_DIR)/include/hdf5/mpich
 HDF5_LIBDIR 	:= $(HDF5_DIR)/lib/x86_64-linux-gnu/
