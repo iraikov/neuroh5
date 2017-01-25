@@ -23,8 +23,6 @@ namespace ngh5
         int rank, size;
         assert(MPI_Comm_size(comm, &size) >= 0);
         assert(MPI_Comm_rank(comm, &rank) >= 0);
-
-        printf("path = %s\n", path.c_str());
         hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
         assert(file >= 0);
         hid_t dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
