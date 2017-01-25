@@ -14,7 +14,6 @@ PARMETIS_INCDIR := $(HOME)/bin/parmetis/include
 PARMETIS_LIBDIR := $(HOME)/bin/parmetis/lib
 
 CFLAGS		= -Wall  -I../include -I$(HDF5_INCDIR) -I$(PARMETIS_INCDIR)
-#CFLAGS		= -Wall  -I../include -I$(HDF5_INCDIR)
 LDFLAGS		= -L$(HDF5_LIBDIR)
 
 include Makefile.common
