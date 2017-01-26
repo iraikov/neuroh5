@@ -15,7 +15,7 @@
 #include "projection_names.hh"
 #include "read_syn_projection.hh"
 #include "write_graph.hh"
-#include "edge_attr.hh"
+#include "attr_map.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -60,7 +60,13 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s src-population-name dst-population-name projection-name output-file -f input\n\n", argv[0]);
+  printf("Usage: %s  <SRC-POP> <DST-POP> <PRJ-NAME> <OUTPUT-FILE> \n\n", argv[0]);
+  printf("Options:\n");
+  printf("\t-i <FILE>:\n");
+  printf("\t\tImport from given file\n");
+  printf("\t-f <FORMAT>:\n");
+  printf("\t\tInput format\n");
+
 }
 
 
@@ -74,7 +80,7 @@ int append_edge_list
  const vector<NODE_IDX_T>&  syn_idx,
  size_t&                    num_edges,
  vector<NODE_IDX_T>&        edge_list,
- model::EdgeNamedAttr&      edge_attr_values
+ model::NamedAttrMap&       edge_attr_map
  )
 {
   int ierr = 0; 
@@ -98,7 +104,7 @@ int append_edge_list
               NODE_IDX_T syn_id = syn_idx[ii];
               edge_list.push_back(src);
               edge_list.push_back(dst);
-              edge_attr_values.push_back<uint32_t>(0, syn_id);
+              edge_attr_map.push_back<uint32_t>(0, syn_id);
               num_edges++;
             }
         }
@@ -132,7 +138,8 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
   int dst_offset=0, src_offset=0;
-  bool opt_hdf5 = false;
+  bool opt_hdf5 = true;
+  int optflag_input_format = 0;
   int optflag_dst_offset = 0;
   int optflag_src_offset = 0;
   bool opt_dst_offset = false,
@@ -142,11 +149,12 @@ int main(int argc, char** argv)
   static struct option long_options[] = {
     {"dst-offset",    required_argument, &optflag_dst_offset,  1 },
     {"src-offset",    required_argument, &optflag_src_offset,  1 },
+    {"format",        required_argument, &optflag_input_format,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hf:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "hf:i:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
@@ -164,10 +172,25 @@ int main(int argc, char** argv)
             ss << string(optarg);
             ss >> src_offset;
           }
+          if (optflag_input_format == 1) {
+            string input_format = string(optarg);
+            if (input_format == "hdf5:syn")
+              {
+                opt_hdf5 = true;
+              }
+          }
           break;
         case 'f':
           {
-            opt_hdf5 = true;
+            string input_format = string(optarg);
+            if (input_format == "hdf5:syn")
+              {
+                opt_hdf5 = true;
+              }
+          }
+          break;
+        case 'i':
+          {
             string arg = string(optarg);
             string delimiter = ":";
             size_t pos = arg.find(delimiter);
@@ -187,8 +210,6 @@ int main(int argc, char** argv)
 
   if (optind < argc-3)
     {
-      
-      
       src_pop_name     = std::string(argv[optind]);
       dst_pop_name     = std::string(argv[optind+1]);
       prj_name         = std::string(argv[optind+2]);
@@ -221,18 +242,18 @@ int main(int argc, char** argv)
                                           syn_idx);
   vector<NODE_IDX_T>  edges;
   size_t num_edges;
-  model::EdgeNamedAttr edge_attr_values;
-  edge_attr_values.uint32_values.resize(1);
-  edge_attr_values.uint32_names.insert(make_pair("syn_id", 0));
+  model::NamedAttrMap edge_attr_map;
+  edge_attr_map.uint32_values.resize(1);
+  edge_attr_map.uint32_names.insert(make_pair("syn_id", 0));
   
   status = append_edge_list (src_offset, dst_offset,
                              dst_idx, src_idx_ptr, src_idx,
                              syn_idx_ptr, syn_idx,
                              num_edges,
                              edges,
-                             edge_attr_values);
+                             edge_attr_map);
 
-  status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name, true, edges, edge_attr_values);
+  status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name, true, edges, edge_attr_map);
 
   MPI_Comm_free(&all_comm);
   

@@ -25,7 +25,7 @@ namespace ngh5
        const NODE_IDX_T&         src_end,
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
-       const vector<NODE_IDX_T>& edges
+       const map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map
        )
       {
         // do a sanity check on the input
@@ -36,42 +36,18 @@ namespace ngh5
         uint64_t num_edges = edges.size()/2;
         assert(num_edges > 0);
 
-        // build destination->source(s) map as a side-effect
-        map<NODE_IDX_T, vector<NODE_IDX_T> > dst_src_map;
-        for (NODE_IDX_T inode = dst_start; inode < dst_end; inode++)
-          {
-            dst_src_map.insert(make_pair(inode, vector<NODE_IDX_T>()));
-          }
-
-        map<NODE_IDX_T, vector<NODE_IDX_T> >::iterator iter;
-
-        for (size_t i = 1; i < edges.size(); i += 2)
-          {
-            // all source/destination node IDs must be in range
-            assert(dst_start <= edges[i] && edges[i] < dst_end);
-            assert(src_start <= edges[i-1] && edges[i-1] < src_end);
-
-            iter = dst_src_map.find(edges[i] - dst_start);
-            assert (iter != dst_src_map.end());
-            iter->second.push_back(edges[i-1] - src_start);
-          }
-
         uint64_t num_dest = dst_src_map.size();
         assert(num_dest > 0 && num_dest < (dst_end - dst_start + 1));
 
-        // sort the source arrays and create relative destination pointers
-        // and source index
+        // create relative destination pointers and source index
         vector<uint64_t> dst_ptr(1, 0);
         vector<uint32_t> src_idx;
         size_t pos = 0;
         for (iter = dst_src_map.begin(); iter != dst_src_map.end(); ++iter)
           {
-            sort(iter->second.begin(), iter->second.end());
             dst_ptr.push_back(dst_ptr[pos++] + iter->second.size());
             copy(iter->second.begin(), iter->second.end(),
                  back_inserter(src_idx));
-            // save memory
-            iter->second.clear();
           }
 
         // get the I/O communicator

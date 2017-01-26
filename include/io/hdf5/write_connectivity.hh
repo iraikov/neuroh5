@@ -24,8 +24,7 @@ namespace ngh5
        const NODE_IDX_T&         src_end,
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
-       const std::vector<NODE_IDX_T>& edges
-       );
+       const map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map
     }
   }
 }

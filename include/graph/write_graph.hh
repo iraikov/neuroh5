@@ -12,9 +12,9 @@
 #define WRITE_GRAPH_HH
 
 #include "model_types.hh"
+#include "attr_map.hh"
 
 #include <mpi.h>
-
 #include <vector>
 
 namespace ngh5
@@ -32,7 +32,7 @@ namespace ngh5
      const std::string&    prj_name,
      const bool            opt_attrs,
      const std::vector<NODE_IDX_T> edges,
-     const model::EdgeNamedAttr& edge_attr_values
+     const model::NamedAttrMap& edge_attrs
      );
   }
 }
