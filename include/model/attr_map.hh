@@ -4,7 +4,7 @@
 ///
 ///  Functions for storing attributes in vectors of different types.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 #ifndef ATTR_MAP_HH
@@ -32,21 +32,13 @@ namespace ngh5
       static const size_t attr_index_int32  = 5;
       
       std::set<NODE_IDX_T> idx_set;
-      std::vector <std::map < NODE_IDX_T, std::vector <float> > >    float_values;
-      std::vector <std::map < NODE_IDX_T, std::vector <uint8_t> > >  uint8_values;
-      std::vector <std::map < NODE_IDX_T, std::vector <int8_t> > >   int8_values;
-      std::vector <std::map < NODE_IDX_T, std::vector <uint16_t> > > uint16_values;
-      std::vector <std::map < NODE_IDX_T, std::vector <uint32_t> > > uint32_values;
-      std::vector <std::map < NODE_IDX_T, std::vector <int32_t> > >  int32_values;
+      std::vector <std::map < NODE_IDX_T, float > >    float_values;
+      std::vector <std::map < NODE_IDX_T, uint8_t > >  uint8_values;
+      std::vector <std::map < NODE_IDX_T, int8_t > >   int8_values;
+      std::vector <std::map < NODE_IDX_T, uint16_t > > uint16_values;
+      std::vector <std::map < NODE_IDX_T, uint32_t > > uint32_values;
+      std::vector <std::map < NODE_IDX_T, int32_t > >  int32_values;
 
-      template<class T>
-      size_t insert (const std::vector<NODE_IDX_T> &idx,
-                     const std::vector<ATTR_PTR_T> &ptr,
-                     const std::vector<T> &value);
-      template<class T>
-      size_t insert (const size_t index,
-                     const NODE_IDX_T &idx,
-                     const std::vector<T> &value);
       template<class T>
       size_t insert (const size_t index,
                      const NODE_IDX_T &idx,
@@ -54,39 +46,17 @@ namespace ngh5
 
       
       template<class T>
-      const std::map<NODE_IDX_T, std::vector<T> >& attr_map (size_t i) const; 
+      const std::map<NODE_IDX_T, T >& attr_map (size_t i) const; 
       template<class T>
-      const vector< std::map<NODE_IDX_T, std::vector<T> > >& attr_maps () const; 
+      const std::vector< std::map<NODE_IDX_T, T > >& attr_maps () const; 
 
-      void num_attrs (vector<size_t> &v) const;
+      void num_attrs (std::vector<size_t> &v) const;
 
       template<class T>
       size_t num_attr () const;
 
       template<class T>
-      const vector<vector<T>> find (NODE_IDX_T idx);
-
-      void append (AttrMap a)
-      {
-        float_values.insert(float_values.end(),
-                            a.float_values.begin(),
-                            a.float_values.end());
-        uint8_values.insert(uint8_values.end(),
-                            a.uint8_values.begin(),
-                            a.uint8_values.end());
-        int8_values.insert(int8_values.end(),
-                           a.int8_values.begin(),
-                           a.int8_values.end());
-        uint16_values.insert(uint16_values.end(),
-                             a.uint16_values.begin(),
-                             a.uint16_values.end());
-        uint32_values.insert(uint32_values.end(),
-                             a.uint32_values.begin(),
-                             a.uint32_values.end());
-        int32_values.insert(int32_values.end(),
-                            a.int32_values.begin(),
-                            a.int32_values.end());
-      }
+      const std::vector<T> find (NODE_IDX_T idx);
     };
 
     
@@ -110,14 +80,9 @@ namespace ngh5
       void insert_name (std::string, size_t); 
 
       template<class T>
-      size_t insert (std::string name,
-                     const std::vector<NODE_IDX_T> &idx,
-                     const std::vector<ATTR_PTR_T> &ptr,
-                     const std::vector<T> &value);
-      template<class T>
       size_t insert (const size_t index,
                      const NODE_IDX_T &idx,
-                     const std::vector<T> &value);
+                     const T &value);
 
     };
   }

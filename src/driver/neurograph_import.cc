@@ -104,7 +104,7 @@ int append_edge_list
               NODE_IDX_T syn_id = syn_idx[ii];
               edge_list.push_back(src);
               edge_list.push_back(dst);
-              edge_attr_map.push_back<uint32_t>(0, syn_id);
+              edge_attr_map.insert<uint32_t>(0, num_edges, syn_id);
               num_edges++;
             }
         }

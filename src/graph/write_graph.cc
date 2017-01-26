@@ -41,7 +41,10 @@ namespace ngh5
      const model::NamedAttrMap& edge_attrs
      )
     {
+      assert(edges.size()%2 == 0);
 
+      uint64_t num_edges = edges.size()/2;
+      
       // read the population info
       set< pair<model::pop_t, model::pop_t> > pop_pairs;
       vector<model::pop_range_t> pop_vector;
@@ -84,7 +87,7 @@ namespace ngh5
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(file >= 0);
 
-      map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map;
+      map<NODE_IDX_T, vector<NODE_IDX_T> > dst_src_map;
         
       for (NODE_IDX_T inode = dst_start; inode < dst_end; inode++)
         {
@@ -104,79 +107,91 @@ namespace ngh5
         }
 
       // compute sort permutations for the source arrays
+      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       vector<vector<size_t>> src_sort_permutations;
       for (size_t i = 0; i < dst_src_map.size(); i++)
         {
           iter = dst_src_map.find(i);
-          const vector<size_t> p = sort_permutation(iter->second,
-                                                    [](NODE_IDX_T const& a, NODE_IDX_T const& b){ return a < b; });
+          const vector<size_t> p = sort_permutation(iter->second, compare_nodes);
           apply_permutation_in_place(iter->second, p);
           src_sort_permutations.push_back(p);
         }
       
       io::hdf5::write_connectivity (file, prj_name, src_pop_idx, dst_pop_idx,
                                     src_start, src_end, dst_start, dst_end,
-                                    dst_src_map);
+                                    num_edges, dst_src_map);
 
       dst_src_map.clear();
-      vector< map<NODE_IDX_T, vector<float> > >& float_attrs = edge_attrs.attr_maps<float>();
-      for (auto const& elem: edge_attrs.float_names)
+      const vector< map<NODE_IDX_T, float > >& float_attrs = edge_attrs.attr_maps<float>();
+      for (auto & elem: edge_attrs.float_names)
         {
           const string& attr_name = elem.first;
           const size_t k = elem.second;
-          map<NODE_IDX_T, vector<float> >& values = float_attrs[k];
-          for (auto& val: values)
+          const map<NODE_IDX_T, float >& value_map = float_attrs[k];
+          vector<float> values;
+          for (const auto& val: value_map)
             {
+              vector<float> v(val.second);
               const vector<size_t>& p = src_sort_permutations[val.first];
-              apply_permutation_in_place(val.second, p);
+              apply_permutation_in_place(v, p);
+              values.insert(values.end(),v.begin(),v.end());
             }
           string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          io::hdf5::write_edge_attribute_map<float>(file, path, values);
+          io::hdf5::write_sparse_edge_attribute<float>(file, path, values);
         }
 
-      vector< map<NODE_IDX_T, vector<uint8_t> > >& uint8_attrs = edge_attrs.attr_maps<uint8_t>();
-      for (auto const& elem: edge_attrs.uint8_names)
+      const vector< map<NODE_IDX_T, uint8_t > >& uint8_attrs = edge_attrs.attr_maps<uint8_t>();
+      for (auto & elem: edge_attrs.uint8_names)
         {
           const string& attr_name = elem.first;
           const size_t k = elem.second;
-          map<NODE_IDX_T, vector<uint8_t> >& values = uint8_attrs[k];
-          for (auto& val: values)
+          const map<NODE_IDX_T, uint8_t >& value_map = uint8_attrs[k];
+          vector<uint8_t> values;
+          for (const auto& val: value_map)
             {
+              vector<uint8_t> v(val.second);
               const vector<size_t>& p = src_sort_permutations[val.first];
-              apply_permutation_in_place(val.second, p);
+              apply_permutation_in_place(v, p);
+              values.insert(values.end(),v.begin(),v.end());
             }
           string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          io::hdf5::write_edge_attribute_map<uint8_t>(file, path, values);
+          io::hdf5::write_sparse_edge_attribute<uint8_t>(file, path, values);
         }
 
-      vector< map<NODE_IDX_T, vector<uint16_t> > >& uint16_attrs = edge_attrs.attr_maps<uint16_t>();
-      for (auto const& elem: edge_attrs.uint16_names)
+      const vector< map<NODE_IDX_T, uint16_t > >& uint16_attrs = edge_attrs.attr_maps<uint16_t>();
+      for (const auto& elem: edge_attrs.uint16_names)
         {
           const string& attr_name = elem.first;
           const size_t k = elem.second;
-          map <NODE_IDX_T, vector<uint16_t> >& values = uint16_attrs[k];
+          const map <NODE_IDX_T, uint16_t >& value_map = uint16_attrs[k];
           string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          for (auto& val: values)
+          vector<uint16_t> values;
+          for (auto& val: value_map)
             {
+              vector<uint16_t> v(val.second);
               const vector<size_t>& p = src_sort_permutations[val.first];
-              apply_permutation_in_place(val.second, p);
+              apply_permutation_in_place(v, p);
+              values.insert(values.end(),v.begin(),v.end());
             }
-          io::hdf5::write_edge_attribute_map<uint16_t>(file, path, values);
+          io::hdf5::write_sparse_edge_attribute<uint16_t>(file, path, values);
         }
 
-      vector< map<NODE_IDX_T, vector<uint32_t> > >& uint32_attrs = edge_attrs.attr_maps<uint32_t>();
-      for (auto const& elem: edge_attrs.uint32_names)
+      const vector< map<NODE_IDX_T, uint32_t > >& uint32_attrs = edge_attrs.attr_maps<uint32_t>();
+      for (const auto& elem: edge_attrs.uint32_names)
         {
           const string& attr_name = elem.first;
           const size_t k = elem.second;
-          map <NODE_IDX_T, vector<uint32_t> >& values = uint32_attrs[k];
+          const map <NODE_IDX_T, uint32_t >& value_map = uint32_attrs[k];
           string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          for (auto& val: values)
+          vector<uint32_t> values;
+          for (auto& val: value_map)
             {
+              vector<uint32_t> v(val.second);
               const vector<size_t>& p = src_sort_permutations[val.first];
-              apply_permutation_in_place(val.second, p);
+              apply_permutation_in_place(v, p);
+              values.insert(values.end(),v.begin(),v.end());
             }
-          io::hdf5::write_edge_attribute_map<uint32_t>(file, path, values);
+          io::hdf5::write_sparse_edge_attribute<uint32_t>(file, path, values);
         }
       
       assert(H5Fclose(file) >= 0);

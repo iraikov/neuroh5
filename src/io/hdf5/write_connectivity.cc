@@ -25,16 +25,13 @@ namespace ngh5
        const NODE_IDX_T&         src_end,
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
+       const uint64_t&           num_edges,
        const map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map
        )
       {
         // do a sanity check on the input
         assert(src_start < src_end);
         assert(dst_start < dst_end);
-        assert(edges.size()%2 == 0);
-
-        uint64_t num_edges = edges.size()/2;
-        assert(num_edges > 0);
 
         uint64_t num_dest = dst_src_map.size();
         assert(num_dest > 0 && num_dest < (dst_end - dst_start + 1));
@@ -43,7 +40,7 @@ namespace ngh5
         vector<uint64_t> dst_ptr(1, 0);
         vector<uint32_t> src_idx;
         size_t pos = 0;
-        for (iter = dst_src_map.begin(); iter != dst_src_map.end(); ++iter)
+        for (auto iter = dst_src_map.begin(); iter != dst_src_map.end(); ++iter)
           {
             dst_ptr.push_back(dst_ptr[pos++] + iter->second.size());
             copy(iter->second.begin(), iter->second.end(),

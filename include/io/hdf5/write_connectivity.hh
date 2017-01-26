@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <hdf5.h>
 
 #include "ngh5_types.hh"
@@ -24,7 +25,9 @@ namespace ngh5
        const NODE_IDX_T&         src_end,
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
-       const map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map
+       const uint64_t&           num_edges,
+       const std::map<NODE_IDX_T, std::vector<NODE_IDX_T> >& dst_src_map
+       );
     }
   }
 }
