@@ -4,7 +4,7 @@
 ///
 ///  Python module for reading edge information in DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 #include "debug.hh"
@@ -35,6 +35,7 @@
 #include "read_dbs_projection.hh"
 #include "population_reader.hh"
 #include "read_graph.hh"
+#include "write_graph.hh"
 #include "graph_reader.hh"
 #include "read_population.hh"
 #include "projection_names.hh"
@@ -67,6 +68,107 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 extern "C"
 {
 
+  static PyObject *py_append_connections (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status; 
+    PyObject *gid_values;
+    const unsigned long default_cache_size = 4*1024*1024;
+    const unsigned long default_chunk_size = 4000;
+    const unsigned long default_value_chunk_size = 4000;
+    unsigned long commptr;
+    unsigned long chunk_size = default_chunk_size;
+    unsigned long value_chunk_size = default_value_chunk_size;
+    unsigned long cache_size = default_cache_size;
+    char *file_name_arg, *prj_name_arg, *src_pop_arg, *dst_pop_arg;
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "src_pop_name",
+                                   "dst_pop_name",
+                                   "prj_name",
+                                   "edges",
+                                   "attributes",
+                                   "chunk_size",
+                                   "value_chunk_size",
+                                   "cache_size",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|skkk", (char **)kwlist,
+                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
+                                     &name_space_arg, &chunk_size, &value_chunk_size, &cache_size))
+        return NULL;
+
+    string file_name      = string(file_name_arg);
+    string pop_name       = string(pop_name_arg);
+    string attr_namespace = string(name_space_arg);
+    
+    int npy_type=0;
+    
+    vector<string> attr_names;
+    vector<int> attr_types;
+        
+    vector< map<TREE_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<TREE_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<TREE_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
+    
+
+    create_value_maps(gid_values,
+                      attr_names,
+                      attr_types,
+                      all_attr_values_uint32,
+                      all_attr_values_uint16,
+                      all_attr_values_uint8,
+                      all_attr_values_float);
+
+    size_t attr_idx=0;
+    vector<size_t> attr_type_idx(AttrMap::num_attr_types);
+    for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
+      {
+        const string attr_name = *it;
+        npy_type=attr_types[attr_idx];
+
+        switch (npy_type)
+          {
+          case NPY_UINT32:
+            {
+              append_tree_attribute_map<uint32_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                  attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
+              attr_type_idx[AttrMap::attr_index_uint32]++;
+              break;
+            }
+          case NPY_UINT16:
+            {
+              append_tree_attribute_map<uint16_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                  attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
+              attr_type_idx[AttrMap::attr_index_uint16]++;
+              break;
+            }
+          case NPY_UINT8:
+            {
+              append_tree_attribute_map<uint8_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                 attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
+              attr_type_idx[AttrMap::attr_index_uint8]++;
+              break;
+            }
+          case NPY_FLOAT:
+            {
+              append_tree_attribute_map<float> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
+              attr_type_idx[AttrMap::attr_index_float]++;
+              break;
+            }
+          default:
+            throw runtime_error("Unsupported attribute type");
+            break;
+          }
+      }
+    
+    return Py_None;
+  }
+
+
+  
   static PyObject *py_read_graph (PyObject *self, PyObject *args)
   {
     int status;
@@ -198,7 +300,7 @@ extern "C"
   }
 
   
-  static PyObject *py_scatter_graph (PyObject *self, PyObject *args)
+  static PyObject *py_scatter_read_graph (PyObject *self, PyObject *args)
   {
     int status;
     // A vector that maps nodes to compute ranks
@@ -356,7 +458,7 @@ extern "C"
   static PyMethodDef module_methods[] = {
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
       "Reads graph connectivity in Destnation Block Sparse format." },
-    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS,
+    { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS,
       "Reads and scatters graph connectivity in Destnation Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };
