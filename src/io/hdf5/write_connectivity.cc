@@ -2,6 +2,7 @@
 #include "write_connectivity.hh"
 #include "hdf5_types.hh"
 #include "hdf5_path_names.hh"
+#include "write_template.hh"
 
 #include <algorithm>
 #include <cassert>
@@ -73,13 +74,14 @@ namespace ngh5
                              &recvbuf_num_edge[0], 1, MPI_UINT64_T, comm)
                == MPI_SUCCESS);
 
-        hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-        assert(lcpl >= 0);
-        assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+        //hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+        //assert(lcpl >= 0);
+        //assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
         // write destination block index (= first_node)
 
         string path = io::hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Index");
+        /*
         hsize_t dims = (hsize_t)size, one = 1;
         hid_t fspace = H5Screate_simple(1, &dims, &dims);
         assert(fspace >= 0);
@@ -98,10 +100,14 @@ namespace ngh5
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
+        */
+        vector<NODE_IDX_T> v_dst_start(1, dst_start);         
+        write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
 
         // write destination block pointer
 
         path = projection_path_join(projection_name, "/Connectivity/Destination Block Pointer");
+        /*
         dims = (hsize_t)(size + 1);
         fspace = H5Screate_simple(1, &dims, &dims);
         assert(fspace >= 0);
@@ -121,8 +127,8 @@ namespace ngh5
         block = dims;
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
-
-        vector<uint64_t> dbp(2,0); // only the last rank writes two elements
+        */
+        vector<uint64_t> dbp(1,0); // only the last rank writes two elements
 
         for (int p = 0; p < rank; ++p)
           {
@@ -131,20 +137,25 @@ namespace ngh5
 
         if (rank == size-1) // last rank writes the total destination count
           {
-            dbp[1] = dbp[0] + recvbuf_num_dest[rank];
+            dbp.push_back(dbp[0] + recvbuf_num_dest[rank]);
           }
 
+        /*
         assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
                         H5P_DEFAULT, &dbp[0]) >= 0);
 
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
+        */
+
+        write(file, path, DST_BLK_PTR_H5_FILE_T, dbp);
 
         // write destination pointers
         // # dest. pointers = number of destinations + 1
 
         path = projection_path_join(projection_name, "/Connectivity/Destination Pointer");
+        /*
         dims = 0;
         for (int p = 0; p < size; ++p)
           {
@@ -157,7 +168,7 @@ namespace ngh5
         dset = H5Dcreate2(file, path.c_str(), DST_PTR_H5_FILE_T,
                           fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
         assert(dset >= 0);
-
+        */
         uint64_t s = 0;
         for (int p = 0; p < rank; ++p)
           {
@@ -178,6 +189,7 @@ namespace ngh5
             dst_ptr.resize(num_dest);
           }
 
+        /*
         dims = (hsize_t) dst_ptr.size();
         mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
@@ -193,11 +205,14 @@ namespace ngh5
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
+        */
+        write(file, path, DST_PTR_H5_FILE_T, dst_ptr);
 
         // write source index
         // # source indexes = number of edges
 
         path = projection_path_join(projection_name, "/Connectivity/Source Index");
+        /*
         dims = 0;
         for (int p = 0; p < size; ++p)
           {
@@ -225,10 +240,13 @@ namespace ngh5
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
+        */
+        write(file, path, NODE_IDX_H5_FILE_T, src_idx);
 
         // write out source and destination population indices
-        dims = 1;
+        //dims = 1;
         path = projection_path_join(projection_name, "Source Population");
+/*
         mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
         fspace = H5Screate_simple(1, &dims, &dims);
@@ -243,8 +261,12 @@ namespace ngh5
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
+        */
+        vector<POP_IDX_T> v_src_pop_idx(1, src_pop_idx);         
+        write(file, path, POP_IDX_H5_FILE_T, v_src_pop_idx);
 
         path = projection_path_join(projection_name, "Destination Population");
+        /*
         mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
         fspace = H5Screate_simple(1, &dims, &dims);
@@ -259,10 +281,13 @@ namespace ngh5
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
+        */
 
+        vector<POP_IDX_T> v_dst_pop_idx(1, dst_pop_idx);         
+        write(file, path, POP_IDX_H5_FILE_T, v_dst_pop_idx);
         
         // clean-up
-        assert(H5Pclose(lcpl) >= 0);
+        //assert(H5Pclose(lcpl) >= 0);
       }
     }
   }
