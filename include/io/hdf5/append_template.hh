@@ -1,5 +1,5 @@
-#ifndef HDF5_WRITE_TEMPLATE
-#define HDF5_WRITE_TEMPLATE
+#ifndef APPEND_TEMPLATE
+#define APPEND_TEMPLATE
 
 #include "hdf5.h"
 
@@ -14,8 +14,8 @@ namespace ngh5
   {
     namespace hdf5
     {
-    template<class T>
-      herr_t hdf5_write
+      template<class T>
+      herr_t append
       (
        hid_t&             file,
        const std::string& name,
@@ -48,7 +48,8 @@ namespace ngh5
 
         if (len > 0)
           {
-            ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &len);
+            ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                       &one, &len);
             assert(ierr >= 0);
             ierr = H5Sselect_all(mspace);
             assert(ierr >= 0);
@@ -71,7 +72,8 @@ namespace ngh5
 
         return ierr;
       }
-
+    }
+  }
 }
 
 #endif

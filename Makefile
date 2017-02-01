@@ -14,7 +14,7 @@ PARMETIS_DIR	:= $(HOME)/work/packages/parmetis-4.0.3
 PARMETIS_INCDIR	:= $(PARMETIS_DIR)/include
 PARMETIS_LIBDIR	:= $(PARMETIS_DIR)/lib
 
-MODULES   	:= driver graph io io/hdf5 model
+MODULES   	:= driver graph io io/hdf5 model mpi
 INC_DIR   	:= $(addprefix include/,$(MODULES))
 SRC_DIR   	:= $(addprefix src/,$(MODULES))
 BUILD_DIR	:= $(addprefix build/,$(MODULES))
