@@ -46,7 +46,7 @@ namespace ngh5
     ///                         (vertices) in the graph
     ///
     /// @return              HDF5 error code
-    int scatter_graph
+    int scatter_read_graph
     (
      MPI_Comm                           all_comm,
      const std::string&                 file_name,
