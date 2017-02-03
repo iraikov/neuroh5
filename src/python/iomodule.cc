@@ -4,7 +4,7 @@
 ///
 ///  Python module for reading edge information in DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 #include "debug.hh"
@@ -198,7 +198,7 @@ extern "C"
   }
 
   
-  static PyObject *py_scatter_graph (PyObject *self, PyObject *args)
+  static PyObject *py_scatter_read_graph (PyObject *self, PyObject *args)
   {
     int status;
     // A vector that maps nodes to compute ranks
@@ -230,9 +230,9 @@ extern "C"
         node_rank_vector[i] = i%size;
       }
 
-    graph::scatter_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
-                         io_size, true, prj_names, node_rank_vector, prj_vector,
-                         total_num_nodes, local_num_edges, total_num_edges);
+    graph::scatter_read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
+                              io_size, true, prj_names, node_rank_vector, prj_vector,
+                              total_num_nodes, local_num_edges, total_num_edges);
 
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
@@ -356,7 +356,7 @@ extern "C"
   static PyMethodDef module_methods[] = {
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
       "Reads graph connectivity in Destnation Block Sparse format." },
-    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS,
+    { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS,
       "Reads and scatters graph connectivity in Destnation Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };
