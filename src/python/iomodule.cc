@@ -454,12 +454,58 @@ extern "C"
     return py_prj_dict;
   }
 
+  static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    PyObject *gid_values;
+    unsigned long commptr;
+    char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg, *prj_name_arg;
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "src_pop_name",
+                                   "dst_pop_name",
+                                   "prj_name",
+                                   "edges",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|s", (char **)kwlist,
+                                     &commptr, &file_name_arg,
+                                     &src_pop_name_arg, &dst_pop_name_arg,
+                                     &prj_name_arg, 
+                                     &edge_values_arg,
+                                     &attributes_arg))
+        return NULL;
+
+    string file_name = string(file_name_arg);
+    string pop_name = string(pop_name_arg);
+    string attr_namespace = string(name_space_arg);
+    
+    int npy_type=0;
+    
+    vector<string> attr_names;
+    vector<int> attr_types;
+        
+    vector< map<TREE_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<TREE_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<TREE_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
+    
+
+    create_value_maps(gid_values,
+                      attr_names,
+                      attr_types,
+                      all_attr_values_uint32,
+                      all_attr_values_uint16,
+                      all_attr_values_uint8,
+                      all_attr_values_float);
+  }
+  
   
   static PyMethodDef module_methods[] = {
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
-      "Reads graph connectivity in Destnation Block Sparse format." },
+      "Reads graph connectivity in Destination Block Sparse format." },
     { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS,
-      "Reads and scatters graph connectivity in Destnation Block Sparse format." },
+      "Reads and scatters graph connectivity in Destination Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };
 }
