@@ -67,7 +67,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 extern "C"
 {
-
+  /*
   static PyObject *py_append_connections (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
@@ -166,7 +166,7 @@ extern "C"
     
     return Py_None;
   }
-
+  */
 
   
   static PyObject *py_read_graph (PyObject *self, PyObject *args)
@@ -454,6 +454,7 @@ extern "C"
     return py_prj_dict;
   }
 
+  /*
   static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
     PyObject *gid_values;
@@ -499,7 +500,7 @@ extern "C"
                       all_attr_values_uint8,
                       all_attr_values_float);
   }
-  
+  */
   
   static PyMethodDef module_methods[] = {
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
