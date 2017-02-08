@@ -106,52 +106,6 @@ namespace ngh5
         }
     }
 
-    int pack_edge
-    (
-     MPI_Comm comm,
-     const NODE_IDX_T &dst,
-     const vector<NODE_IDX_T>& src_vector,
-     const model::EdgeAttr& edge_attr_values,
-     int &sendpos,
-     vector<uint8_t> &sendbuf
-     )
-    {
-      int ierr = 0;
-      int packsize = 0;
-      uint32_t num_edges = src_vector.size();
-      int sendsize = 0;
-
-      int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
-
-      int sendbuf_size = sendbuf.size();
-      assert(sendpos < sendbuf_size);
-
-      // Create MPI_PACKED object with all the source vertices and edge attributes
-      assert(MPI_Pack(&dst, 1, NODE_IDX_MPI_T, &sendbuf[0], sendbuf_size,
-                      &sendpos, comm) == MPI_SUCCESS);
-      assert(MPI_Pack(&num_edges, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size,
-                      &sendpos, comm) == MPI_SUCCESS);
-      assert(MPI_Pack(&src_vector[0], src_vector.size(), NODE_IDX_MPI_T,
-                      &sendbuf[0], sendbuf_size, &sendpos, comm) ==
-             MPI_SUCCESS);
-
-      /*
-      pack_edge_attr_values<float>(comm, MPI_FLOAT, num_edges, edge_attr_values,
-                                   sendbuf_size, sendpos, sendbuf);
-      pack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, num_edges, edge_attr_values, 
-                                     sendbuf_size, sendpos, sendbuf);
-      pack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, num_edges, edge_attr_values, 
-                                      sendbuf_size, sendpos, sendbuf);
-      pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges, edge_attr_values, 
-                                      sendbuf_size, sendpos, sendbuf);
-      */
-      return ierr;
-
-    }
-
-
     int pack_size_edge
     (
      MPI_Comm comm,
@@ -177,7 +131,6 @@ namespace ngh5
              == MPI_SUCCESS);
       sendsize += packsize;
 
-      /*
       pack_size_edge_attr_values<float>(comm, MPI_FLOAT, num_edges, 
                                         edge_attr_values, sendsize);
       pack_size_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, num_edges,
@@ -186,10 +139,103 @@ namespace ngh5
                                            edge_attr_values, sendsize);
       pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges,
                                            edge_attr_values, sendsize);
-      */
+
       return ierr;
 
     }
+
+    int pack_edge
+    (
+     MPI_Comm comm,
+     const NODE_IDX_T &dst,
+     const vector<NODE_IDX_T>& src_vector,
+     const model::EdgeAttr& edge_attr_values,
+     int &sendpos,
+     vector<uint8_t> &sendbuf
+     )
+    {
+      int ierr = 0;
+      uint32_t num_edges = src_vector.size();
+
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) >= 0);
+      assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+      int sendbuf_size = sendbuf.size();
+      assert(sendpos < sendbuf_size);
+
+      // Create MPI_PACKED object with all the source vertices and edge attributes
+      assert(MPI_Pack(&dst, 1, NODE_IDX_MPI_T, &sendbuf[0], sendbuf_size,
+                      &sendpos, comm) == MPI_SUCCESS);
+      assert(MPI_Pack(&num_edges, 1, MPI_UINT32_T, &sendbuf[0], sendbuf_size,
+                      &sendpos, comm) == MPI_SUCCESS);
+      assert(MPI_Pack(&src_vector[0], src_vector.size(), NODE_IDX_MPI_T,
+                      &sendbuf[0], sendbuf_size, &sendpos, comm) ==
+             MPI_SUCCESS);
+
+      pack_edge_attr_values<float>(comm, MPI_FLOAT, num_edges, edge_attr_values,
+                                   sendbuf_size, sendpos, sendbuf);
+      pack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, num_edges, edge_attr_values, 
+                                     sendbuf_size, sendpos, sendbuf);
+      pack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, num_edges, edge_attr_values, 
+                                      sendbuf_size, sendpos, sendbuf);
+      pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges, edge_attr_values, 
+                                      sendbuf_size, sendpos, sendbuf);
+      return ierr;
+
+    }
+
+    
+    int pack_edge_map
+    (
+     MPI_Comm comm,
+     const model::edge_map_t& edge_map,
+     size_t &num_packed_edges,
+     int &sendpos,
+     vector<uint8_t> &sendbuf
+     )
+    {
+      int ierr=0;
+      // Create MPI_PACKED object with the number of dst vertices for this rank
+      int packsize=0, sendsize=0;
+      uint32_t rank_numitems=edge_map.size();
+      assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+      for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
+        {
+          NODE_IDX_T dst = it->first;
+          
+          const vector<NODE_IDX_T>  src_vector = get<0>(it->second);
+          const model::EdgeAttr&      my_edge_attrs = get<1>(it->second);
+          
+          num_packed_edges += src_vector.size();
+          
+          ierr = pack_size_edge(comm, dst, src_vector, my_edge_attrs,
+                                sendsize);
+          assert(ierr == 0);
+        }
+      sendbuf.resize(sendbuf.size() + sendsize);
+      
+      assert(MPI_Pack(&rank_numitems, 1, MPI_UINT32_T, &sendbuf[0],
+                      (int)sendbuf.size(), &sendpos, comm) == MPI_SUCCESS);
+      if (rank_numitems > 0)
+        {
+          for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
+            {
+              NODE_IDX_T dst = it->first;
+              
+              const vector<NODE_IDX_T>  src_vector = get<0>(it->second);
+              const model::EdgeAttr&      my_edge_attrs = get<1>(it->second);
+              
+              ierr = pack_edge(comm, dst, src_vector, my_edge_attrs,
+                               sendpos, sendbuf);
+              assert(ierr == 0);
+            }
+        }
+
+      return ierr;
+    }
+
 
 
     /**************************************************************************
@@ -270,7 +316,6 @@ namespace ngh5
                         comm);
       assert(ierr == MPI_SUCCESS);
 
-      /*
       printf("rank %d: dst: %lu : unpacking float attrs\n", rank, dst);
       unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[0],
                                      recvbuf, recvbuf_size, 
@@ -287,7 +332,7 @@ namespace ngh5
       unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[3],
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
-      */
+
       return ierr;
     }
 
@@ -434,50 +479,11 @@ namespace ngh5
               for (size_t dst_rank = 0; dst_rank < (size_t)size; dst_rank++)
                 {
                   auto it1 = prj_rank_edge_map.find(dst_rank); 
-                  uint32_t rank_numitems=0;
+                  
                   sdispls[dst_rank] = sendpos;
-                  if (it1 != prj_rank_edge_map.end())
-                    {
-                      rank_numitems = it1->second.size();
-                    }
 
-                  // Create MPI_PACKED object with the number of dst vertices for this rank
-                  int packsize=0, sendsize=0;
-                  assert(MPI_Pack_size(1, MPI_UINT32_T, all_comm, &packsize) == MPI_SUCCESS);
-                  sendsize += packsize;
-                  for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
-                    {
-                      NODE_IDX_T dst = it2->first;
-                      
-                      const vector<NODE_IDX_T>  src_vector = get<0>(it2->second);
-                      const model::EdgeAttr&      my_edge_attrs = get<1>(it2->second);
-                      
-                      num_packed_edges = num_packed_edges + src_vector.size();
-                      
-                      ierr = pack_size_edge(all_comm, dst, src_vector, my_edge_attrs,
-                                            sendsize);
-                      assert(ierr == 0);
-                    }
-                  sendbuf.resize(sendbuf.size() + sendsize);
-
-                  assert(MPI_Pack(&rank_numitems, 1, MPI_UINT32_T, &sendbuf[0],
-                                  (int)sendbuf.size(), &sendpos, all_comm) == MPI_SUCCESS);
-                  if (rank_numitems > 0)
-                    {
-                      for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
-                        {
-                          NODE_IDX_T dst = it2->first;
-
-                          const vector<NODE_IDX_T>  src_vector = get<0>(it2->second);
-                          const model::EdgeAttr&      my_edge_attrs = get<1>(it2->second);
-
-                          num_packed_edges = num_packed_edges + src_vector.size();
-
-                          ierr = pack_edge(all_comm, dst, src_vector, my_edge_attrs,
-                                           sendpos, sendbuf);
-                          assert(ierr == 0);
-                        }
-                    }
+                  pack_edge_map (all_comm, it1->second, num_packed_edges, sendpos, sendbuf);
+                  
                   sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
                 }
 
