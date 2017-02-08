@@ -211,16 +211,16 @@ int main(int argc, char** argv)
 
   
   DEBUG("scatter: calling scatter_graph");
-  graph::scatter_read_graph (all_comm,
-                             input_file_name,
-                             io_size,
-                             opt_attrs,
-                             prj_names,
-                             node_rank_vector,
-                             prj_vector,
-                             n_nodes,
-                             local_num_edges,
-                             total_num_edges);
+  graph::scatter_graph (all_comm,
+                        input_file_name,
+                        io_size,
+                        opt_attrs,
+                        prj_names,
+                        node_rank_vector,
+                        prj_vector,
+                        n_nodes,
+                        local_num_edges,
+                        total_num_edges);
 
 
   if (opt_output)
