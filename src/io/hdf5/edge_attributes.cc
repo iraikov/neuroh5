@@ -160,7 +160,11 @@ namespace ngh5
         vector <uint8_t>  attr_values_uint8;
         size_t attr_size = H5Tget_size(attr_h5type);
 
-        file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+        hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+        assert(fapl >= 0);
+        assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+
+        file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
         assert(file >= 0);
 
         if (edge_count > 0)
@@ -245,6 +249,7 @@ namespace ngh5
           }
 
         assert(H5Fclose(file) >= 0);
+        assert(H5Pclose(fapl) >= 0);
 
         return ierr;
       }
