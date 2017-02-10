@@ -17,6 +17,7 @@
 #include "read_graph.hh"
 #include "read_population.hh"
 #include "validate_edge_list.hh"
+#include "make_edge_datatype.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -358,6 +359,8 @@ namespace ngh5
       int ierr = 0;
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
+      // MPI datatype for edges
+      MPI_Datatype mpi_edge_type;
       // MPI group color value used for I/O ranks
       int io_color = 1;
       // The set of compute ranks for which the current I/O rank is responsible
@@ -365,7 +368,8 @@ namespace ngh5
       vector<model::pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
       uint64_t prj_size = 0;
-  
+      
+      
       int rank, size;
       assert(MPI_Comm_size(all_comm, &size) >= 0);
       assert(MPI_Comm_rank(all_comm, &rank) >= 0);
@@ -461,18 +465,18 @@ namespace ngh5
                 }
 
               // append to the edge map
-              
               assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                      edge_attr_values, node_rank_vector, num_edges, prj_rank_edge_map) >= 0);
       
               // ensure that all edges in the projection have been read and appended to edge_list
               assert(num_edges == src_idx.size());
 
-            } // rank < io_size
-
-
-          if (rank < io_size)
-            {
+              // create an MPI datatype to represent edges
+              mpi_edge_type = make_edge_datatype (edge_attr_num[0],
+                                                  edge_attr_num[1],
+                                                  edge_attr_num[2],
+                                                  edge_attr_num[3]);
+              
               size_t num_packed_edges = 0;
               DEBUG("scatter: packing edge data from projection ", i, "(", prj_names[i], ")");
             
