@@ -266,10 +266,6 @@ namespace ngh5
           vector <uint32_t> numitems_vector(edge_attr_num,0);
           ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &numitems_vector[0], edge_attr_num, MPI_UINT32_T, comm);
           assert(ierr == MPI_SUCCESS);
-          for (size_t i=0; i<numitems_vector.size(); i++)
-            {
-              printf("unpack: numitems_vector[%u] = %u\n", i, numitems_vector[i]);
-            }
       
           for (size_t k = 0; k < edge_attr_num; k++)
             {
@@ -304,6 +300,7 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
+      printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u\n", rank, recvpos, recvbuf_size);
       assert(recvpos < recvbuf_size);
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst, 1, NODE_IDX_MPI_T, comm);
       assert(ierr == MPI_SUCCESS);
@@ -496,14 +493,6 @@ namespace ngh5
           //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
           //    and creates sendcounts and sdispls arrays
       
-          if (rank < io_size)
-            {
-              for (size_t r=0; r<size; r++)
-                {
-                  printf("I/O rank %d: sendcounts[%u] = %d\n", rank, r, sendcounts[r]);
-                }
-            }
-
           assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) >= 0);
           DEBUG("scatter: after MPI_Alltoall sendcounts for projection ", i, "(", prj_names[i], ")");
 
@@ -531,10 +520,12 @@ namespace ngh5
           for (size_t displidx = 0; displidx < rdispls.size(); displidx++)
             {
               int recvpos = rdispls[displidx];
-              printf("rank %d: recvpos = %d recvbuf_size = %lu\n", rank, recvpos, recvbuf_size);
-              size_t num_recv_items=0; size_t num_recv_edges=0;
-              while ((size_t)recvpos < recvbuf_size)
+              printf("rank %d: displidx = %d recvpos = %d recvbuf_size = %lu\n", rank, displidx, recvpos, recvbuf_size);
+              
+              if ((size_t)recvpos < recvbuf_size)
                 {
+                  size_t num_recv_items=0; size_t num_recv_edges=0;
+                  
                   // Unpack number of received blocks for this rank
                   assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
                                     &recvpos, &num_recv_items, 1, MPI_UINT32_T, all_comm) ==
@@ -548,7 +539,7 @@ namespace ngh5
                       
                       unpack_edge(all_comm, recvbuf, edge_attr_num, 
                                   dst, src_vector, edge_attr_values, recvpos);
-                      num_recv_edges = num_recv_edges + src_vector.size();
+                      num_recv_edges = src_vector.size();
                       if ((size_t)recvpos > recvbuf_size)
                         {
                           printf("rank %d: unpacking projection %lu has reached end of buffer; "
@@ -572,12 +563,12 @@ namespace ngh5
                         }
                     }
                 }
-              recvbuf.clear();
-              DEBUG("scatter: finished unpacking edges for projection ", i, "(", prj_names[i], ")");
-              
-              prj_vector.push_back(prj_edge_map);
-              assert(MPI_Barrier(all_comm) == MPI_SUCCESS);
             }
+          recvbuf.clear();
+          DEBUG("scatter: finished unpacking edges for projection ", i, "(", prj_names[i], ")");
+              
+          prj_vector.push_back(prj_edge_map);
+          assert(MPI_Barrier(all_comm) == MPI_SUCCESS);
         }
       MPI_Comm_free(&io_comm);
       return ierr;
