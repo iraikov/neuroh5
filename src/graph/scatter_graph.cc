@@ -228,7 +228,7 @@ namespace ngh5
               ierr = pack_edge(comm, dst, src_vector, my_edge_attrs,
                                sendpos, sendbuf);
               assert(ierr == 0);
-              assert(sendpos <= sendbuf.size());
+              assert((size_t)sendpos <= sendbuf.size());
             }
         }
 
@@ -306,6 +306,7 @@ namespace ngh5
       assert(ierr == MPI_SUCCESS);
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &numitems, 1, MPI_UINT32_T, comm);
       assert(ierr == MPI_SUCCESS);
+      printf("rank %d: unpack_edge: recvpos = %d numitems = %u\n", rank, recvpos, numitems);
       src_vector.resize(numitems);
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
                         &src_vector[0], numitems, NODE_IDX_MPI_T,
@@ -481,7 +482,7 @@ namespace ngh5
 
               // ensure the correct number of edges is being packed
               assert(num_packed_edges == num_edges);
-              assert(sendpos <= sendbuf.size());
+              assert((size_t)sendpos <= sendbuf.size());
               DEBUG("scatter: finished packing edge data from projection ", i, "(", prj_names[i], ")");
             }
 
@@ -517,12 +518,13 @@ namespace ngh5
                                all_comm) >= 0);
           sendbuf.clear();
 
-          for (size_t displidx = 0; displidx < rdispls.size(); displidx++)
+          for (size_t ridx = 0; ridx < rdispls.size(); ridx++)
             {
-              int recvpos = rdispls[displidx];
-              printf("rank %d: displidx = %d recvpos = %d recvbuf_size = %lu\n", rank, displidx, recvpos, recvbuf_size);
+              int recvpos = rdispls[ridx];
+              printf("rank %d: ridx = %lu recvcounts[%lu] = %d recvpos = %d recvbuf_size = %lu\n", 
+                     rank, ridx, ridx, recvcounts[ridx], recvpos, recvbuf_size);
               
-              if ((size_t)recvpos < recvbuf_size)
+              if (recvcounts[ridx] > 0)
                 {
                   size_t num_recv_items=0; size_t num_recv_edges=0;
                   
