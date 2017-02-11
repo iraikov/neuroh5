@@ -474,10 +474,13 @@ namespace ngh5
                   auto it1 = prj_rank_edge_map.find(dst_rank); 
                   
                   sdispls[dst_rank] = sendpos;
-
-                  pack_edge_map (all_comm, it1->second, num_packed_edges, sendpos, sendbuf);
                   
-                  sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
+                  int dst_sendpos=0; vector<uint8_t> dst_sendbuf; 
+                  pack_edge_map (all_comm, it1->second, num_packed_edges, dst_sendpos, dst_sendbuf);
+
+                  sendbuf.insert(std::end(sendbuf), std::begin(dst_sendbuf), std::end(dst_sendbuf));
+
+                  sendcounts[dst_rank] = dst_sendpos;
                 }
 
               // ensure the correct number of edges is being packed
