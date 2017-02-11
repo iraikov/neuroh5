@@ -333,7 +333,7 @@ extern "C"
       }
 
     graph::scatter_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
-                         io_size, true, prj_names, node_rank_vector, prj_vector,
+                         io_size, false, prj_names, node_rank_vector, prj_vector,
                          total_num_nodes, local_num_edges, total_num_edges);
 
     for (size_t i = 0; i < prj_vector.size(); i++)

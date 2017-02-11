@@ -300,13 +300,14 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
-      printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u\n", rank, recvpos, recvbuf_size);
+      //printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u\n", rank, recvpos, recvbuf_size);
       assert(recvpos < recvbuf_size);
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst, 1, NODE_IDX_MPI_T, comm);
       assert(ierr == MPI_SUCCESS);
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &numitems, 1, MPI_UINT32_T, comm);
       assert(ierr == MPI_SUCCESS);
-      printf("rank %d: unpack_edge: recvpos = %d numitems = %u\n", rank, recvpos, numitems);
+      //printf("rank %d: unpack_edge: recvpos = %d dst = %u numitems = %u\n", 
+      //       rank, recvpos, dst, numitems);
       src_vector.resize(numitems);
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
                         &src_vector[0], numitems, NODE_IDX_MPI_T,
@@ -524,8 +525,8 @@ namespace ngh5
           for (size_t ridx = 0; ridx < rdispls.size(); ridx++)
             {
               int recvpos = rdispls[ridx];
-              printf("rank %d: ridx = %lu recvcounts[%lu] = %d recvpos = %d recvbuf_size = %lu\n", 
-                     rank, ridx, ridx, recvcounts[ridx], recvpos, recvbuf_size);
+              //printf("rank %d: ridx = %lu recvcounts[%lu] = %d recvpos = %d recvbuf_size = %lu\n", 
+              //       rank, ridx, ridx, recvcounts[ridx], recvpos, recvbuf_size);
               
               if (recvcounts[ridx] > 0)
                 {
