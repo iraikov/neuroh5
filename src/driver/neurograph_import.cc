@@ -14,6 +14,7 @@
 #include "population_reader.hh"
 #include "projection_names.hh"
 #include "read_syn_projection.hh"
+//#include "read_txt_projection.hh"
 #include "write_graph.hh"
 #include "attr_map.hh"
 
@@ -138,7 +139,8 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
   int dst_offset=0, src_offset=0;
-  bool opt_hdf5 = true;
+  bool opt_txt = true;
+  bool opt_hdf5_syn = true;
   int optflag_input_format = 0;
   int optflag_dst_offset = 0;
   int optflag_src_offset = 0;
@@ -176,7 +178,11 @@ int main(int argc, char** argv)
             string input_format = string(optarg);
             if (input_format == "hdf5:syn")
               {
-                opt_hdf5 = true;
+                opt_hdf5_syn = true;
+              }
+            if (input_format == "txt")
+              {
+                opt_txt = true;
               }
           }
           break;
@@ -185,7 +191,11 @@ int main(int argc, char** argv)
             string input_format = string(optarg);
             if (input_format == "hdf5:syn")
               {
-                opt_hdf5 = true;
+                opt_hdf5_syn = true;
+              }
+            if (input_format == "txt")
+              {
+                opt_txt = true;
               }
           }
           break;
@@ -214,7 +224,7 @@ int main(int argc, char** argv)
       dst_pop_name     = std::string(argv[optind+1]);
       prj_name         = std::string(argv[optind+2]);
       output_file_name = std::string(argv[optind+3]);
-      if (!opt_hdf5)
+      if (!opt_hdf5_syn || (!opt_txt))
         {
           print_usage_full(argv);
           exit(1);
@@ -231,15 +241,26 @@ int main(int argc, char** argv)
   vector<NODE_IDX_T>  src_idx;
   vector<DST_PTR_T>   syn_idx_ptr;
   vector<NODE_IDX_T>  syn_idx;
+
+  if (opt_hdf5_syn)
+    status = io::hdf5::read_syn_projection (all_comm,
+                                            hdf5_input_filename,
+                                            hdf5_input_dsetpath,
+                                            dst_idx,
+                                            src_idx_ptr,
+                                            src_idx,
+                                            syn_idx_ptr,
+                                            syn_idx);
+  /*
+  if (opt_txt)
+    status = io::read_txt_projection (txt_input_filename,
+                                      dst_idx,
+                                      src_idx_ptr,
+                                      src_idx,
+                                      syn_idx_ptr,
+                                      syn_idx);
+  */
   
-  status = io::hdf5::read_syn_projection (all_comm,
-                                          hdf5_input_filename,
-                                          hdf5_input_dsetpath,
-                                          dst_idx,
-                                          src_idx_ptr,
-                                          src_idx,
-                                          syn_idx_ptr,
-                                          syn_idx);
   vector<NODE_IDX_T>  edges;
   size_t num_edges;
   model::NamedAttrMap edge_attr_map;
