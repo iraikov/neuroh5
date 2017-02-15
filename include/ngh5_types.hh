@@ -26,4 +26,10 @@ typedef uint64_t DST_PTR_T;
 // Block offset type
 typedef uint64_t DST_BLK_PTR_T;
 
+// Size type used for indicating structure size in packed edge data
+struct Size
+{
+  uint32_t size;
+};
+
 #endif
