@@ -379,7 +379,6 @@ namespace ngh5
       assert(ierr == MPI_SUCCESS);
       dst = header.dst;
       size_t numitems = header.size;
-      printf("rank %d: unpack_edge: dst = %u numitems = %u\n", rank, dst, numitems);
       if (numitems > 0)
         {
           src_vector.resize(numitems,0);
@@ -614,12 +613,6 @@ namespace ngh5
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
                            all_comm) >= 0);
       sendbuf.clear();
-      
-      for (size_t r=0; r<(size_t)size; r++)
-        {
-          printf("rank %d: recvcounts[%lu] = %d rdispls[%lu] = %d\n", 
-                 rank, r, recvcounts[r], r, rdispls[r]);
-        }
       
       unpack_rank_edge_map (all_comm, header_type, size_type, recvbuf, recvcounts, rdispls, edge_attr_num, prj_edge_map);
       
