@@ -381,15 +381,16 @@ namespace ngh5
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &dst, 1, NODE_IDX_MPI_T, comm);
       assert(ierr == MPI_SUCCESS);
 
-      Size numitems;
-      ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &numitems, 1, size_type, comm);
+      Size sizeval;
+      ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &sizeval, 1, size_type, comm);
       assert(ierr == MPI_SUCCESS);
-      printf("rank %d: unpack_edge: dst = %u numitems = %u\n", rank, dst, numitems.size);
+      size_t numitems = sizeval.size;
+      printf("rank %d: unpack_edge: dst = %u numitems = %u\n", rank, dst, numitems);
       if (numitems > 0)
         {
-          src_vector.resize(numitems.size,0);
+          src_vector.resize(numitems,0);
           ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-                            &src_vector[0], numitems.size, NODE_IDX_MPI_T,
+                            &src_vector[0], numitems, NODE_IDX_MPI_T,
                             comm);
           assert(ierr == MPI_SUCCESS);
         }
@@ -398,19 +399,19 @@ namespace ngh5
       if (!(recvpos < recvbuf_size))
         {
           printf("rank %d: unpack_edge: recvbuf_size = %u recvpos = %d dst = %u numitems = %u\n", 
-                 rank, recvbuf_size, recvpos, dst, numitems.size);
+                 rank, recvbuf_size, recvpos, dst, numitems);
         }
       assert(recvpos <= recvbuf_size);
-      unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems.size, edge_attr_num[0],
+      unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[0],
                                      recvbuf, recvbuf_size, 
                                      edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems.size, edge_attr_num[1],
+      unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems, edge_attr_num[1],
                                        recvbuf, recvbuf_size, 
                                        edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems.size, edge_attr_num[2],
+      unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems, edge_attr_num[2],
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems.size, edge_attr_num[3],
+      unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[3],
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
 #ifdef USE_EDGE_DELIM
@@ -677,7 +678,7 @@ namespace ngh5
       disp[0] = reinterpret_cast<const unsigned char*>(&sizeval.size) - 
         reinterpret_cast<const unsigned char*>(&sizeval);
       assert(MPI_Type_create_struct(1, blocklen, disp, fld_types, &size_type) == MPI_SUCCESS);
-      assert(MPI_Type_commit(&sizetype) == MPI_SUCCESS);
+      assert(MPI_Type_commit(&size_type) == MPI_SUCCESS);
       
       // Am I an I/O rank?
       if (rank < io_size)
@@ -711,7 +712,7 @@ namespace ngh5
                              
         }
       MPI_Comm_free(&io_comm);
-      MPI_Type_free(&sizetype);
+      MPI_Type_free(&size_type);
       return ierr;
     }
 
