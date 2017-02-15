@@ -14,9 +14,10 @@
 #include "population_reader.hh"
 #include "projection_names.hh"
 #include "read_syn_projection.hh"
-//#include "read_txt_projection.hh"
+#include "read_txt_projection.hh"
 #include "write_graph.hh"
 #include "attr_map.hh"
+#include "edge_attr.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -127,6 +128,7 @@ int main(int argc, char** argv)
   std::string dst_pop_name, src_pop_name;
   std::string prj_name;
   std::string output_file_name;
+  std::string txt_input_filename;
   std::string hdf5_input_filename, hdf5_input_dsetpath;
   MPI_Comm all_comm;
   
@@ -156,7 +158,7 @@ int main(int argc, char** argv)
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hf:i:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "hf:i:d:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
@@ -199,7 +201,7 @@ int main(int argc, char** argv)
               }
           }
           break;
-        case 'i':
+        case 'd':
           {
             string arg = string(optarg);
             string delimiter = ":";
@@ -207,6 +209,11 @@ int main(int argc, char** argv)
             hdf5_input_filename = arg.substr(0, pos); 
             hdf5_input_dsetpath = arg.substr(pos + delimiter.length(),
                                              arg.find(delimiter, pos + delimiter.length()));
+          }
+          break;
+        case 'i':
+          {
+            txt_input_filename = string(optarg);
           }
           break;
         case 'h':
@@ -251,15 +258,12 @@ int main(int argc, char** argv)
                                             src_idx,
                                             syn_idx_ptr,
                                             syn_idx);
-  /*
+  vector<NODE_IDX_T>  dst, src;
+  model::EdgeAttr edge_attrs;
+  vector <size_t> num_attrs;
   if (opt_txt)
-    status = io::read_txt_projection (txt_input_filename,
-                                      dst_idx,
-                                      src_idx_ptr,
-                                      src_idx,
-                                      syn_idx_ptr,
-                                      syn_idx);
-  */
+    status = io::read_txt_projection (txt_input_filename, num_attrs,
+                                      dst, src, edge_attrs);
   
   vector<NODE_IDX_T>  edges;
   size_t num_edges;
