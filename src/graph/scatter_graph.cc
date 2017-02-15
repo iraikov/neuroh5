@@ -586,13 +586,13 @@ namespace ngh5
     
       // 0. Broadcast the number of attributes of each type to all ranks
       edge_attr_num.resize(4);
-      assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) >= 0);
+      assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
       //    and creates sendcounts and sdispls arrays
       
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) >= 0);
+      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
       DEBUG("scatter: after MPI_Alltoall sendcounts for projection ", prj_name);
       
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
@@ -611,7 +611,7 @@ namespace ngh5
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
-                           all_comm) >= 0);
+                           all_comm) == MPI_SUCCESS);
       sendbuf.clear();
       
       unpack_rank_edge_map (all_comm, header_type, size_type, recvbuf, recvcounts, rdispls, edge_attr_num, prj_edge_map);
@@ -703,7 +703,7 @@ namespace ngh5
         }
       MPI_Barrier(all_comm);
   
-      assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) >= 0);
+      assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) == MPI_SUCCESS);
       DEBUG("rank ", rank, ": scatter: after bcast: prj_size = ", prj_size);
 
       // For each projection, I/O ranks read the edges and scatter
