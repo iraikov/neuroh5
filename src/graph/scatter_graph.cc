@@ -665,18 +665,19 @@ namespace ngh5
 
       // Create an MPI datatype to describe the sizes of edge structures
       Size sizeval;
-      MPI_Datatype size_type;
+      MPI_Datatype size_type, size_struct_type;
       MPI_Datatype size_fld_types[1] = { MPI_UINT32_T };
       int size_blocklen[1] = { 1 };
       MPI_Aint size_disp[1];
       
       size_disp[0] = reinterpret_cast<const unsigned char*>(&sizeval.size) - 
         reinterpret_cast<const unsigned char*>(&sizeval);
-      assert(MPI_Type_create_struct(1, size_blocklen, size_disp, size_fld_types, &size_type) == MPI_SUCCESS);
+      assert(MPI_Type_create_struct(1, size_blocklen, size_disp, size_fld_types, &size_struct_type) == MPI_SUCCESS);
+      assert(MPI_Type_create_resized(size_struct_type, 0, sizeof(sizeval), &size_type) == MPI_SUCCESS);
       assert(MPI_Type_commit(&size_type) == MPI_SUCCESS);
-
+      
       EdgeHeader header;
-      MPI_Datatype header_type;
+      MPI_Datatype header_type, header_struct_type;
       MPI_Datatype header_fld_types[2] = { NODE_IDX_MPI_T, MPI_UINT32_T };
       int header_blocklen[2] = { 1, 1 };
       MPI_Aint header_disp[2];
@@ -685,7 +686,8 @@ namespace ngh5
         reinterpret_cast<const unsigned char*>(&header);
       header_disp[1] = reinterpret_cast<const unsigned char*>(&header.size) - 
         reinterpret_cast<const unsigned char*>(&header);
-      assert(MPI_Type_create_struct(2, header_blocklen, header_disp, header_fld_types, &header_type) == MPI_SUCCESS);
+      assert(MPI_Type_create_struct(2, header_blocklen, header_disp, header_fld_types, &header_struct_type) == MPI_SUCCESS);
+      assert(MPI_Type_create_resized(header_struct_type, 0, sizeof(header), &header_type) == MPI_SUCCESS);
       assert(MPI_Type_commit(&header_type) == MPI_SUCCESS);
       
       // Am I an I/O rank?
