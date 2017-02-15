@@ -292,9 +292,16 @@ namespace ngh5
       for (size_t dst_rank = 0; dst_rank < (size_t)size; dst_rank++)
         {
           auto it1 = prj_rank_edge_map.find(dst_rank); 
-          
           sdispls[dst_rank] = sendpos;
-          
+#ifdef USE_EDGE_DELIM      
+      int packsize=0;
+      assert(MPI_Pack_size(1, MPI_INT, comm, &packsize) == MPI_SUCCESS);
+      sendbuf.resize(sendbuf.size() + packsize);
+      int delim=-3;
+      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                      &sendpos, comm) == MPI_SUCCESS);
+
+#endif
           pack_edge_map (comm, header_type, size_type, dst_rank, it1->second, num_packed_edges, sendpos, sendbuf);
 
           sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
@@ -447,6 +454,18 @@ namespace ngh5
             {
               Size sizeval;
               size_t num_recv_items=0; size_t num_recv_edges=0;
+
+#ifdef USE_EDGE_DELIM
+      int delim=0;
+      int ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
+      assert(ierr == MPI_SUCCESS);
+      if (delim != -3)
+        {
+          printf("rank %d: unpack_rank_edge_map: recvpos = %d recvbuf_size = %u delim = %d\n", 
+                 rank, recvpos, recvbuf_size, delim);
+        }
+      assert(delim == -3);
+#endif
               
               // Unpack number of received blocks for this rank
               assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
@@ -605,6 +624,12 @@ namespace ngh5
           recvbuf_size += recvcounts[p];
         }
       assert(recvbuf_size > 0);
+
+      for (size_t p=0; p<size; p++)
+        {
+          printf("rank %d: recvcounts[%u] = %d rdispls[%u] = %u\n", 
+                 rank, p, recvcounts[p], p, rdispls[p]);
+        }
 
       vector<uint8_t> recvbuf(recvbuf_size,0);
       
