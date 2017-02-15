@@ -613,6 +613,7 @@ namespace ngh5
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
                            all_comm) >= 0);
+      sendbuf.clear();
       
       for (size_t r=0; r<(size_t)size; r++)
         {
@@ -622,7 +623,6 @@ namespace ngh5
       
       unpack_rank_edge_map (all_comm, header_type, size_type, recvbuf, recvcounts, rdispls, edge_attr_num, prj_edge_map);
       
-      sendbuf.clear();
       recvbuf.clear();
       DEBUG("scatter: finished unpacking edges for projection ", prj_name);
       
