@@ -149,8 +149,6 @@ namespace ngh5
       sendsize += packsize;
 #endif
 
-      sendsize += MPI_BSEND_OVERHEAD;
-
       return ierr;
 
     }
@@ -213,7 +211,6 @@ namespace ngh5
                       &sendpos, comm) == MPI_SUCCESS);
 #endif
 
-      sendpos += MPI_BSEND_OVERHEAD;
       return ierr;
 
     }
@@ -295,6 +292,7 @@ namespace ngh5
       int sendpos = 0;
       for (size_t dst_rank = 0; dst_rank < (size_t)size; dst_rank++)
         {
+          sendpos = sendbuf.size();
           sdispls[dst_rank] = sendpos;
           printf("rank %d: pack_rank_edge_map: dst_rank = %u sendpos = %d\n", rank, dst_rank, sendpos);
 #ifdef USE_EDGE_DELIM      
@@ -311,7 +309,6 @@ namespace ngh5
                          it1->second, num_packed_edges, sendpos, sendbuf);
 
           sendcounts[dst_rank] = sendbuf.size() - sdispls[dst_rank];
-          sendpos = sendbuf.size();
         }
       
     }
@@ -375,7 +372,7 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
-      //printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u\n", rank, recvpos, recvbuf_size);
+      printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u\n", rank, recvpos, recvbuf_size);
       assert(recvpos < recvbuf_size);
 #ifdef USE_EDGE_DELIM
       int delim=0;
@@ -440,6 +437,7 @@ namespace ngh5
     void unpack_rank_edge_map (MPI_Comm comm,
                                MPI_Datatype header_type,
                                MPI_Datatype size_type,
+                               const size_t io_size,
                                const vector<uint8_t> &recvbuf,
                                const vector<int>& recvcounts,
                                const vector<int>& rdispls,
@@ -452,7 +450,7 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
-      for (size_t ridx = 0; ridx < rdispls.size(); ridx++)
+      for (size_t ridx = 0; ridx < io_size; ridx++)
         {
           int recvpos = rdispls[ridx];
           
@@ -476,7 +474,7 @@ namespace ngh5
                         &recvpos, &sizeval, 1, size_type, comm) ==
              MPI_SUCCESS);
       num_recv_items = sizeval.size;
-      
+      printf("rank %d: num_recv_items = %u\n", rank, num_recv_items);
       for (size_t j = 0; j<num_recv_items; j++)
         {
           NODE_IDX_T dst; 
@@ -517,7 +515,7 @@ namespace ngh5
      * Load and scatter edge data structures 
      *****************************************************************************/
 
-    int scatter_projection (MPI_Comm all_comm, MPI_Comm io_comm, const size_t io_size,
+    int scatter_projection (MPI_Comm all_comm, MPI_Comm io_comm, const int io_size,
                             MPI_Datatype header_type, MPI_Datatype size_type, 
                             const string& file_name, const string& prj_name, 
                             const bool opt_attrs,
@@ -642,7 +640,7 @@ namespace ngh5
                            all_comm) == MPI_SUCCESS);
       sendbuf.clear();
       
-      unpack_rank_edge_map (all_comm, header_type, size_type, recvbuf, recvcounts, rdispls, edge_attr_num, prj_edge_map);
+      unpack_rank_edge_map (all_comm, header_type, size_type, io_size, recvbuf, recvcounts, rdispls, edge_attr_num, prj_edge_map);
       
       recvbuf.clear();
       DEBUG("scatter: finished unpacking edges for projection ", prj_name);
