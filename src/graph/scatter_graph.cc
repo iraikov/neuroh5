@@ -122,10 +122,6 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
-#ifdef USE_EDGE_DELIM      
-      assert(MPI_Pack_size(1, MPI_INT, comm, &packsize) == MPI_SUCCESS);
-      sendsize += packsize;
-#endif
       assert(MPI_Pack_size(1, header_type, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
       if (num_edges > 0)
@@ -143,11 +139,6 @@ namespace ngh5
           pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges,
                                                edge_attr_values, sendsize);
         }
-
-#ifdef USE_EDGE_DELIM      
-      assert(MPI_Pack_size(1, MPI_INT, comm, &packsize) == MPI_SUCCESS);
-      sendsize += packsize;
-#endif
 
       return ierr;
 
@@ -176,11 +167,6 @@ namespace ngh5
       assert(src_vector.size() > 0);
 
       // Create MPI_PACKED object with all the source vertices and edge attributes
-#ifdef USE_EDGE_DELIM      
-      int delim=-1;
-      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf_size,
-                      &sendpos, comm) == MPI_SUCCESS);
-#endif
       size_t num_edges = src_vector.size();
       EdgeHeader header;
       
@@ -205,11 +191,6 @@ namespace ngh5
           pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges, edge_attr_values, 
                                           sendbuf_size, sendpos, sendbuf);
         }
-#ifdef USE_EDGE_DELIM      
-      delim=-2;
-      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf_size,
-                      &sendpos, comm) == MPI_SUCCESS);
-#endif
 
       return ierr;
 
@@ -294,16 +275,6 @@ namespace ngh5
         {
           sendpos = sendbuf.size();
           sdispls[dst_rank] = sendpos;
-          printf("rank %d: pack_rank_edge_map: dst_rank = %u sendpos = %d\n", rank, dst_rank, sendpos);
-#ifdef USE_EDGE_DELIM      
-      int packsize=0;
-      assert(MPI_Pack_size(1, MPI_INT, comm, &packsize) == MPI_SUCCESS);
-      sendbuf.resize(sendbuf.size() + packsize);
-      int delim=-3;
-      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
-                      &sendpos, comm) == MPI_SUCCESS);
-
-#endif
           auto it1 = prj_rank_edge_map.find(dst_rank); 
           pack_edge_map (comm, header_type, size_type, dst_rank, 
                          it1->second, num_packed_edges, sendpos, sendbuf);
@@ -372,19 +343,7 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
-      printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u\n", rank, recvpos, recvbuf_size);
       assert(recvpos < recvbuf_size);
-#ifdef USE_EDGE_DELIM
-      int delim=0;
-      ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
-      assert(ierr == MPI_SUCCESS);
-      if (delim != -1)
-        {
-          printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u delim = %d\n", 
-                 rank, recvpos, recvbuf_size, delim);
-        }
-      assert(delim == -1);
-#endif
       EdgeHeader header;
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &header, 1, header_type, comm);
       assert(ierr == MPI_SUCCESS);
@@ -418,17 +377,6 @@ namespace ngh5
       unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[3],
                                         recvbuf, recvbuf_size, 
                                         edge_attr_values, recvpos);
-#ifdef USE_EDGE_DELIM
-      delim=0;
-      ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
-      assert(ierr == MPI_SUCCESS);
-      if (delim != -2)
-        {
-          printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u delim = %d\n", 
-                 rank, recvpos, recvbuf_size, delim);
-        }
-      assert(delim == -2);
-#endif
 
       return ierr;
     }
@@ -456,58 +404,45 @@ namespace ngh5
           
           Size sizeval;
           size_t num_recv_items=0; size_t num_recv_edges=0;
-
-#ifdef USE_EDGE_DELIM
-      int delim=0;
-      int ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
-      assert(ierr == MPI_SUCCESS);
-      if (delim != -3)
-        {
-          printf("rank %d: unpack_rank_edge_map: recvcounts[%u] = %d rdispls[%u] = %d recvpos = %d recvbuf_size = %u delim = %d\n", 
-                 rank, ridx, recvcounts[ridx], ridx, rdispls[ridx], recvpos, recvbuf_size, delim);
-        }
-      assert(delim == -3);
-#endif
               
-      // Unpack number of received blocks for this rank
-      assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
-                        &recvpos, &sizeval, 1, size_type, comm) ==
-             MPI_SUCCESS);
-      num_recv_items = sizeval.size;
-      printf("rank %d: num_recv_items = %u\n", rank, num_recv_items);
-      for (size_t j = 0; j<num_recv_items; j++)
-        {
-          NODE_IDX_T dst; 
-          vector<NODE_IDX_T> src_vector;
-          model::EdgeAttr edge_attr_values;
-          
-          unpack_edge(comm, header_type, recvbuf, edge_attr_num, 
-                      dst, src_vector, edge_attr_values, recvpos);
-          num_recv_edges = src_vector.size();
-          if ((size_t)recvpos > recvbuf_size)
+          // Unpack number of received blocks for this rank
+          assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
+                            &recvpos, &sizeval, 1, size_type, comm) ==
+                 MPI_SUCCESS);
+          num_recv_items = sizeval.size;
+          for (size_t j = 0; j<num_recv_items; j++)
             {
-              printf("rank %d: unpacking projection has reached end of buffer; "
-                     "recvpos = %d recvbuf_size = %lu j = %lu num_recv_items = %lu\n", 
-                     rank, recvpos, recvbuf_size, j, num_recv_items);
+              NODE_IDX_T dst; 
+              vector<NODE_IDX_T> src_vector;
+              model::EdgeAttr edge_attr_values;
+              
+              unpack_edge(comm, header_type, recvbuf, edge_attr_num, 
+                          dst, src_vector, edge_attr_values, recvpos);
+              num_recv_edges = src_vector.size();
+              if ((size_t)recvpos > recvbuf_size)
+                {
+                  printf("rank %d: unpacking projection has reached end of buffer; "
+                         "recvpos = %d recvbuf_size = %lu j = %lu num_recv_items = %lu\n", 
+                         rank, recvpos, recvbuf_size, j, num_recv_items);
             }
-          assert((size_t)recvpos <= recvbuf_size);
-          
-          if (prj_edge_map.find(dst) == prj_edge_map.end())
-            {
-              prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
-            }
-          else
-            {
-              model::edge_tuple_t et = prj_edge_map[dst];
-              vector<NODE_IDX_T> &v = get<0>(et);
-              model::EdgeAttr &a = get<1>(et);
-              v.insert(v.end(),src_vector.begin(),src_vector.end());
-              a.append(edge_attr_values);
-              prj_edge_map[dst] = make_tuple(v,a);
+              assert((size_t)recvpos <= recvbuf_size);
+              
+              if (prj_edge_map.find(dst) == prj_edge_map.end())
+                {
+                  prj_edge_map.insert(make_pair(dst,make_tuple(src_vector, edge_attr_values)));
+                }
+              else
+                {
+                  model::edge_tuple_t et = prj_edge_map[dst];
+                  vector<NODE_IDX_T> &v = get<0>(et);
+                  model::EdgeAttr &a = get<1>(et);
+                  v.insert(v.end(),src_vector.begin(),src_vector.end());
+                  a.append(edge_attr_values);
+                  prj_edge_map[dst] = make_tuple(v,a);
+                }
             }
         }
     }
-  }
   
 
     
@@ -625,12 +560,6 @@ namespace ngh5
           recvbuf_size += recvcounts[p];
         }
       assert(recvbuf_size > 0);
-
-      for (size_t p=0; p<size; p++)
-        {
-          printf("rank %d: recvcounts[%u] = %d rdispls[%u] = %u\n", 
-                 rank, p, recvcounts[p], p, rdispls[p]);
-        }
 
       vector<uint8_t> recvbuf(recvbuf_size,0);
       
