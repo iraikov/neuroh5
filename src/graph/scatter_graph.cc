@@ -606,6 +606,8 @@ namespace ngh5
           
           pack_rank_edge_map (all_comm, header_type, size_type, prj_rank_edge_map, num_packed_edges, 
                               sendcounts, sendbuf, sdispls);
+
+          prj_rank_edge_map.clear();
           
           // ensure the correct number of edges is being packed
           assert(num_packed_edges == num_edges);

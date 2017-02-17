@@ -11,6 +11,7 @@
 #ifndef EDGE_ATTR_HH
 #define EDGE_ATTR_HH
 
+#include <cassert>
 #include <map>
 #include <vector>
 
@@ -77,14 +78,34 @@ namespace ngh5
 
       void append (EdgeAttr a)
       {
-        float_values.insert(float_values.end(),a.float_values.begin(),
-                            a.float_values.end());
-        uint8_values.insert(uint8_values.end(),a.uint8_values.begin(),
-                            a.uint8_values.end());
-        uint16_values.insert(uint16_values.end(),a.uint16_values.begin(),
-                             a.uint16_values.end());
-        uint32_values.insert(uint32_values.end(),a.uint32_values.begin(),
-                             a.uint32_values.end());
+        assert(float_values.size() == a.float_values.size());
+        assert(uint8_values.size() == a.uint8_values.size());
+        assert(uint16_values.size() == a.uint16_values.size());
+        assert(uint32_values.size() == a.uint32_values.size());
+        for (size_t i=0; i<float_values.size(); i++)
+          {
+            float_values[i].insert(float_values[i].end(),
+                                   a.float_values[i].begin(),
+                                   a.float_values[i].end());
+          }
+        for (size_t i=0; i<uint8_values.size(); i++)
+          {
+            uint8_values[i].insert(uint8_values[i].end(),
+                                   a.uint8_values[i].begin(),
+                                   a.uint8_values[i].end());
+          }
+        for (size_t i=0; i<uint16_values.size(); i++)
+          {
+            uint16_values[i].insert(uint16_values[i].end(),
+                                   a.uint16_values[i].begin(),
+                                   a.uint16_values[i].end());
+          }
+        for (size_t i=0; i<uint32_values.size(); i++)
+          {
+            uint32_values[i].insert(uint32_values[i].end(),
+                                   a.uint32_values[i].begin(),
+                                   a.uint32_values[i].end());
+          }
       }
     };
 

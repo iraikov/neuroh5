@@ -341,6 +341,8 @@ extern "C"
         PyObject *py_edge_dict = PyDict_New();
         edge_map_t prj_edge_map = prj_vector[i];
         
+        printf("projection %s\n", prj_names[i].c_str());
+
         if (prj_edge_map.size() > 0)
           {
             for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
