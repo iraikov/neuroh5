@@ -318,7 +318,7 @@ namespace ngh5
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
-          assert(sendpos < sendbuf.size());
+          assert(sendpos <= sendbuf.size());
           sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
         }
       
