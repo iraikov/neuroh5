@@ -349,10 +349,14 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
-      assert(recvpos < recvbuf_size);
-
       if (edge_attr_num > 0)
         {
+          if (!(recvpos < recvbuf_size))
+            {
+              printf("recvbuf_size = %u recvpos = %d\n", recvbuf_size, recvpos);
+            }
+          assert(recvpos < recvbuf_size);
+
           for (size_t k = 0; k < edge_attr_num; k++)
             {
               assert(recvpos < recvbuf_size);
@@ -423,12 +427,15 @@ namespace ngh5
           unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[0],
                                          recvbuf, recvbuf_size, 
                                          edge_attr_values, recvpos);
+          assert(recvpos <= recvbuf_size);
           unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems, edge_attr_num[1],
                                            recvbuf, recvbuf_size, 
                                            edge_attr_values, recvpos);
+          assert(recvpos <= recvbuf_size);
           unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems, edge_attr_num[2],
                                             recvbuf, recvbuf_size, 
                                             edge_attr_values, recvpos);
+          assert(recvpos <= recvbuf_size);
           unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[3],
                                             recvbuf, recvbuf_size, 
                                             edge_attr_values, recvpos);
