@@ -479,7 +479,7 @@ namespace ngh5
               if (delim != -3)
                 {
                   printf("rank %d: unpack_rank_edge_map: ridx = %u recvcounts[%u] = %d recvpos = %d recvbuf_size = %u delim = %d\n", 
-                         rank, ridx, recvcounts[ridx], recvpos, recvbuf_size, delim);
+                         rank, ridx, ridx, recvcounts[ridx], recvpos, recvbuf_size, delim);
                 }
               assert(delim == -3);
 #endif
