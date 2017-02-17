@@ -294,7 +294,6 @@ namespace ngh5
         {
           sendpos = sendbuf.size();
           sdispls[dst_rank] = sendpos;
-          printf("rank %d: pack_rank_edge_map: dst_rank = %u sendpos = %d\n", rank, dst_rank, sendpos);
 #ifdef USE_EDGE_DELIM      
       int packsize=0;
       assert(MPI_Pack_size(1, MPI_INT, comm, &packsize) == MPI_SUCCESS);
@@ -338,6 +337,8 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
+      assert(recvpos < recvbuf_size);
+
       if (edge_attr_num > 0)
         {
           for (size_t k = 0; k < edge_attr_num; k++)
@@ -372,7 +373,6 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
-      printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u\n", rank, recvpos, recvbuf_size);
       assert(recvpos < recvbuf_size);
 #ifdef USE_EDGE_DELIM
       int delim=0;
@@ -397,27 +397,29 @@ namespace ngh5
                             &src_vector[0], numitems, NODE_IDX_MPI_T,
                             comm);
           assert(ierr == MPI_SUCCESS);
+
+          
+          if (!(recvpos <= recvbuf_size))
+            {
+              printf("rank %d: unpack_edge: recvbuf_size = %u recvpos = %d dst = %u numitems = %u\n", 
+                     rank, recvbuf_size, recvpos, dst, numitems);
+            }
+          assert(recvpos <= recvbuf_size);
+          unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[0],
+                                         recvbuf, recvbuf_size, 
+                                         edge_attr_values, recvpos);
+          unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems, edge_attr_num[1],
+                                           recvbuf, recvbuf_size, 
+                                           edge_attr_values, recvpos);
+          unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems, edge_attr_num[2],
+                                            recvbuf, recvbuf_size, 
+                                            edge_attr_values, recvpos);
+          unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[3],
+                                            recvbuf, recvbuf_size, 
+                                            edge_attr_values, recvpos);
+
         }
 
-
-      if (!(recvpos < recvbuf_size))
-        {
-          printf("rank %d: unpack_edge: recvbuf_size = %u recvpos = %d dst = %u numitems = %u\n", 
-                 rank, recvbuf_size, recvpos, dst, numitems);
-        }
-      assert(recvpos <= recvbuf_size);
-      unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[0],
-                                     recvbuf, recvbuf_size, 
-                                     edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems, edge_attr_num[1],
-                                       recvbuf, recvbuf_size, 
-                                       edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems, edge_attr_num[2],
-                                        recvbuf, recvbuf_size, 
-                                        edge_attr_values, recvpos);
-      unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[3],
-                                        recvbuf, recvbuf_size, 
-                                        edge_attr_values, recvpos);
 #ifdef USE_EDGE_DELIM
       delim=0;
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
@@ -474,7 +476,6 @@ namespace ngh5
                         &recvpos, &sizeval, 1, size_type, comm) ==
              MPI_SUCCESS);
       num_recv_items = sizeval.size;
-      printf("rank %d: num_recv_items = %u\n", rank, num_recv_items);
       for (size_t j = 0; j<num_recv_items; j++)
         {
           NODE_IDX_T dst; 
@@ -625,12 +626,6 @@ namespace ngh5
           recvbuf_size += recvcounts[p];
         }
       assert(recvbuf_size > 0);
-
-      for (size_t p=0; p<size; p++)
-        {
-          printf("rank %d: recvcounts[%u] = %d rdispls[%u] = %u\n", 
-                 rank, p, recvcounts[p], p, rdispls[p]);
-        }
 
       vector<uint8_t> recvbuf(recvbuf_size,0);
       

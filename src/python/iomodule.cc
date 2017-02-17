@@ -402,6 +402,8 @@ extern "C"
                         src_ptr[j] = src_vector[j];
                         for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
                           {
+                            printf ("edge_attr_values.at<float>(%u,%u) = ", 
+                                    k, j, edge_attr_values.at<float>(k,j));
                             py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
                           }
                         for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
