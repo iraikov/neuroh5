@@ -462,7 +462,7 @@ namespace ngh5
                                model::edge_map_t& prj_edge_map
                               )
     {
-      size_t recvbuf_size = recvbuf.size();
+      const int recvbuf_size = recvbuf.size();
       int rank, size;
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
@@ -472,7 +472,7 @@ namespace ngh5
           if (recvcounts[ridx] > 0)
             {
               int recvpos = rdispls[ridx];
-
+              assert(recvpos < recvbuf_size);
 #ifdef USE_EDGE_DELIM
               int delim=0;
               assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm) == MPI_SUCCESS);
@@ -660,7 +660,8 @@ namespace ngh5
         }
       assert(recvbuf_size > 0);
 
-      vector<uint8_t> recvbuf(recvbuf_size,0);
+      vector<uint8_t> recvbuf;
+      recvbuf.resize(recvbuf_size, 0);
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
@@ -670,7 +671,6 @@ namespace ngh5
       
       unpack_rank_edge_map (all_comm, header_type, size_type, io_size, recvbuf, recvcounts, rdispls, edge_attr_num, prj_edge_map);
       
-      recvbuf.clear();
       DEBUG("scatter: finished unpacking edges for projection ", prj_name);
       
       prj_vector.push_back(prj_edge_map);
