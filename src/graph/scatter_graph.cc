@@ -144,7 +144,10 @@ namespace ngh5
                                                edge_attr_values, sendsize);
           pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges,
                                                edge_attr_values, sendsize);
+
         }
+
+      sendsize+=MPI_BSEND_OVERHEAD;
 
       return ierr;
 
@@ -294,12 +297,11 @@ namespace ngh5
       int sendpos = 0;
       for (size_t dst_rank = 0; (int)dst_rank < size; dst_rank++)
         {
-          sendpos = sendbuf.size();
           sdispls[dst_rank] = sendpos;
           
 #ifdef USE_EDGE_DELIM      
       int packsize=0;
-      assert(MPI_Pack_size(1, MPI_INT, comm, &packsize) == MPI_SUCCESS);
+      assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
       sendbuf.resize(sendbuf.size() + packsize);
       int delim=-3;
       assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
@@ -310,7 +312,14 @@ namespace ngh5
           pack_edge_map (comm, header_type, size_type, dst_rank, 
                          it1->second, num_packed_edges, sendpos, sendbuf);
 
-          sendcounts[dst_rank] = sendbuf.size() - sdispls[dst_rank];
+#ifdef USE_EDGE_DELIM      
+      delim=-4;
+      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                      &sendpos, comm) == MPI_SUCCESS);
+
+#endif
+          assert(sendpos < sendbuf.size());
+          sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
         }
       
     }
@@ -469,8 +478,8 @@ namespace ngh5
               assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm) == MPI_SUCCESS);
               if (delim != -3)
                 {
-                  printf("rank %d: unpack_rank_edge_map: recvpos = %d recvbuf_size = %u delim = %d\n", 
-                         rank, recvpos, recvbuf_size, delim);
+                  printf("rank %d: unpack_rank_edge_map: ridx = %u recvcounts[%u] = %d recvpos = %d recvbuf_size = %u delim = %d\n", 
+                         rank, ridx, recvcounts[ridx], recvpos, recvbuf_size, delim);
                 }
               assert(delim == -3);
 #endif
@@ -517,6 +526,18 @@ namespace ngh5
                         }
                     }
                 }
+
+#ifdef USE_EDGE_DELIM
+              delim=0;
+              assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm) == MPI_SUCCESS);
+              if (delim != -4)
+                {
+                  printf("rank %d: unpack_rank_edge_map: recvpos = %d recvbuf_size = %u delim = %d\n", 
+                         rank, recvpos, recvbuf_size, delim);
+                }
+              assert(delim == -4);
+#endif
+
             }
         }
     }
@@ -553,7 +574,7 @@ namespace ngh5
       DEBUG("projection ", prj_name, "\n");
 
 
-      if ((size_t)rank < io_size)
+      if (rank < (int)io_size)
         {
           DST_BLK_PTR_T block_base;
           DST_PTR_T edge_base, edge_count;
