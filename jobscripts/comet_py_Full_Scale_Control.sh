@@ -2,7 +2,7 @@
 #
 #SBATCH -J neurograph_scatter_attrs_test
 #SBATCH -o ./results/neurograph_scatter_attrs_test.%j.o
-#SBATCH --nodes=32
+#SBATCH --nodes=64
 #SBATCH --ntasks-per-node=16
 #SBATCH -p compute
 #SBATCH -t 1:00:00

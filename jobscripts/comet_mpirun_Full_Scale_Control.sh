@@ -14,7 +14,7 @@ set -x
 
 module load hdf5
 
-ibrun valgrind --leak-check=full ./build/scatter -a -i 128 \
+ibrun ./build/scatter -a -i 128 \
  -o /oasis/scratch/comet/iraikov/temp_project/dentate_Full_Scale_Control \
  /oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5
 
