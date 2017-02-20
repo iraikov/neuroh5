@@ -141,8 +141,8 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
   int dst_offset=0, src_offset=0;
-  bool opt_txt = true;
-  bool opt_hdf5_syn = true;
+  bool opt_txt = false;
+  bool opt_hdf5_syn = false;
   int optflag_input_format = 0;
   int optflag_dst_offset = 0;
   int optflag_src_offset = 0;
@@ -225,13 +225,16 @@ int main(int argc, char** argv)
         }
     }
 
+  printf("optind = %d\n", optind);
+  printf("argc = %d\n", argc);
+  printf("opt_txt = %d\n", opt_txt);
   if (optind < argc-3)
     {
       src_pop_name     = std::string(argv[optind]);
       dst_pop_name     = std::string(argv[optind+1]);
       prj_name         = std::string(argv[optind+2]);
       output_file_name = std::string(argv[optind+3]);
-      if (!opt_hdf5_syn || (!opt_txt))
+      if (!opt_hdf5_syn && (!opt_txt))
         {
           print_usage_full(argv);
           exit(1);
