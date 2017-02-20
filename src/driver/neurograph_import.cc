@@ -71,6 +71,28 @@ void print_usage_full(char** argv)
 
 }
 
+// Given a total number of elements and number of ranks, calculate the starting and length for each rank
+void rank_ranges
+(
+ const size_t&                    num_elems,
+ const size_t&                    size,
+ vector< pair<hsize_t,hsize_t> >& ranges
+ )
+{
+  hsize_t remainder=0, offset=0, buckets=0;
+  ranges.resize(size);
+  
+  for (size_t i=0; i<size; i++)
+    {
+      remainder = num_elems - offset;
+      buckets   = (size - i);
+      ranges[i] = make_pair(offset, remainder / buckets);
+      offset    += ranges[i].second;
+    }
+}
+
+  
+  
 
 int append_edge_list
 (
@@ -125,11 +147,13 @@ int append_edge_list
 int main(int argc, char** argv)
 {
   int status=0;
-  std::string dst_pop_name, src_pop_name;
-  std::string prj_name;
-  std::string output_file_name;
-  std::string txt_input_filename;
-  std::string hdf5_input_filename, hdf5_input_dsetpath;
+  string dst_pop_name, src_pop_name;
+  string prj_name;
+  string output_file_name;
+  string txt_filelist_file_name;
+  vector <string> txt_input_file_names;
+  string hdf5_input_file_name, hdf5_input_dsetpath;
+  vector <size_t> num_attrs;
   MPI_Comm all_comm;
   
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -158,7 +182,7 @@ int main(int argc, char** argv)
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hf:i:d:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "hf:i:d:a:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
@@ -206,14 +230,34 @@ int main(int argc, char** argv)
             string arg = string(optarg);
             string delimiter = ":";
             size_t pos = arg.find(delimiter);
-            hdf5_input_filename = arg.substr(0, pos); 
+            hdf5_input_file_name = arg.substr(0, pos); 
             hdf5_input_dsetpath = arg.substr(pos + delimiter.length(),
                                              arg.find(delimiter, pos + delimiter.length()));
           }
           break;
+        case 'a':
+          {
+            string arg = string(optarg);
+            string delimiter = ",";
+            size_t pos=0, pos1;
+            do
+              {
+                size_t nval;
+                stringstream ss;
+                pos1 = arg.find(delimiter, pos);
+                ss << arg.substr(pos, pos1);
+                ss >> nval;
+                num_attrs.push_back(nval);
+                if (pos != string::npos)
+                  {
+                    pos = pos1 + delimiter.length();
+                  }
+              } while (pos != string::npos);
+          }
+          break;
         case 'i':
           {
-            txt_input_filename = string(optarg);
+            txt_filelist_file_name = string(optarg);
           }
           break;
         case 'h':
@@ -227,10 +271,10 @@ int main(int argc, char** argv)
 
   if (optind < argc-3)
     {
-      src_pop_name     = std::string(argv[optind]);
-      dst_pop_name     = std::string(argv[optind+1]);
-      prj_name         = std::string(argv[optind+2]);
-      output_file_name = std::string(argv[optind+3]);
+      src_pop_name     = string(argv[optind]);
+      dst_pop_name     = string(argv[optind+1]);
+      prj_name         = string(argv[optind+2]);
+      output_file_name = string(argv[optind+3]);
       if (!opt_hdf5_syn || (!opt_txt))
         {
           print_usage_full(argv);
@@ -251,19 +295,48 @@ int main(int argc, char** argv)
 
   if (opt_hdf5_syn)
     status = io::hdf5::read_syn_projection (all_comm,
-                                            hdf5_input_filename,
+                                            hdf5_input_file_name,
                                             hdf5_input_dsetpath,
                                             dst_idx,
                                             src_idx_ptr,
                                             src_idx,
                                             syn_idx_ptr,
                                             syn_idx);
+
+  if (opt_txt)
+        {
+          ifstream infile(txt_filelist_file_name);
+          string line;
+          
+          while (getline(infile, line))
+            {
+              stringstream ss;
+              string file_name;
+              ss << line;
+              ss >> file_name;
+              txt_input_file_names.push_back(file_name);
+            }
+        }
+  
   vector<NODE_IDX_T>  dst, src;
   model::EdgeAttr edge_attrs;
-  vector <size_t> num_attrs;
   if (opt_txt)
-    status = io::read_txt_projection (txt_input_filename, num_attrs,
-                                      dst, src, edge_attrs);
+    {
+      // determine which connection files are read by which rank
+      vector< pair<hsize_t,hsize_t> > ranges;
+      rank_ranges(txt_input_file_names.size(), size, ranges);
+      
+      size_t filecount=0;
+      hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
+
+      for (size_t i=start; i<end; i++)
+        {
+          string txt_input_file_name = txt_input_file_names[i];
+          
+          status = io::read_txt_projection (txt_input_file_name, num_attrs,
+                                            dst, src, edge_attrs);
+        }
+    }
   
   vector<NODE_IDX_T>  edges;
   size_t num_edges;
