@@ -304,6 +304,8 @@ extern "C"
   {
     int status; int opt_attrs=1;
     // A vector that maps nodes to compute ranks
+    PyObject *py_node_rank_vector=NULL;
+    uint32_t *node_rank_vector_ptr;
     vector<rank_t> node_rank_vector;
     vector < edge_map_t > prj_vector;
     vector<pop_range_t> pop_vector;
@@ -314,7 +316,8 @@ extern "C"
     char *input_file_name;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
     
-    if (!PyArg_ParseTuple(args, "ksk|i", &commptr, &input_file_name, &io_size, &opt_attrs))
+    if (!PyArg_ParseTuple(args, "ksk|Oi", &commptr, &input_file_name, &io_size,
+                          &py_node_rank_vector, &opt_attrs))
       return NULL;
 
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
@@ -324,12 +327,29 @@ extern "C"
     // Read population info to determine total_num_nodes
     assert(io::hdf5::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
-    // Determine which nodes are assigned to which compute ranks
-    node_rank_vector.resize(total_num_nodes);
-    // round-robin node to rank assignment from file
-    for (size_t i = 0; i < total_num_nodes; i++)
+    // Create C arrays for node_rank_vector:
+    int typenum = NPY_UINT32;
+    PyArray_Descr *descr;
+    descr = PyArray_DescrFromType(typenum);
+    npy_intp dims[1];
+    if (py_node_rank_vector != NULL)
       {
-        node_rank_vector[i] = i%size;
+        if (PyArray_AsCArray(&py_node_rank_vector,
+                             (void *)&node_rank_vector_ptr, dims, 1, descr) < 0)
+          {
+            PyErr_SetString(PyExc_TypeError, "invalid node rank array");
+            return NULL;
+          }
+        node_rank_vector.assign(node_rank_vector_ptr, node_rank_vector_ptr+dims[0]);
+      } else
+      {
+        // Determine which nodes are assigned to which compute ranks
+        node_rank_vector.resize(total_num_nodes);
+        // round-robin node to rank assignment from file
+        for (size_t i = 0; i < total_num_nodes; i++)
+          {
+            node_rank_vector[i] = i%size;
+          }
       }
 
     graph::scatter_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
