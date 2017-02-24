@@ -18,6 +18,10 @@ src dest distance
 
 src dest longitudinal-distance transverse-distance
 
+4) Gap junction distance-based connectivity has the following format:
+
+src dest src-branch src-sec dest-branch dest-sec weight
+
 '''
 
 import h5py
@@ -53,6 +57,12 @@ attr_seg_pt_idx   = 'Segment Point Index'
 attr_long_dist    = 'Longitudinal Distance'
 attr_trans_dist   = 'Transverse Distance'
 attr_dist         = 'Distance'
+
+attr_gj_weight     = 'Weight'
+attr_gj_src_branch = 'Source Branch'
+attr_gj_dst_branch = 'Destination Branch'
+attr_gj_src_sec    = 'Source Section'
+attr_gj_dst_sec    = 'Destination Section'
 
 
 def h5_get_group (h, groupname):
@@ -570,6 +580,159 @@ def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indexty
         write_final_size_dbs (groupname, outputfile)
     elif layout=='sbs':
         write_final_size_sbs (groupname, outputfile)
+
+        
+## src dest src-branch src-sec dest-branch dest-sec weight
+def import_gj_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,outputfile):
+    
+    l_dst_ptr    = [0]
+    l_src_idx    = []
+    l_src_branch = []
+    l_src_sec    = []
+    l_dst_branch = []
+    l_dst_sec    = []
+    l_weight     = []
+        
+    # read and parse line-by-line
+
+    dst_min = -1
+    dst_old = -1
+    for l in lines:
+        a = l.split(colsep)
+        if a[0] == '':
+            del a[0]
+        src = int(float(a[0]))-offset-source_base
+        dst = int(float(a[1]))-offset-dest_base
+        if dst_min < 0:
+            dst_min = dst
+        else:
+            dst_min = min(dst_min,dst)
+        if dst_old < 0: 
+            dst_old = dst
+        else:
+            while dst_old < dst:
+                dst_old = dst_old + 1
+                l_dst_ptr.append(len(l_src_idx))
+        l_src_idx.append(src)
+        l_src_branch.append(int(float(a[2])))
+        l_src_sec.append(int(float(a[3])))
+        l_dst_branch.append(int(float(a[4])))
+        l_dst_sec.append(int(float(a[5])))
+        l_weight.append(float(a[6]))
+        
+
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+
+        g = h5_get_group (h5, grp_projections)
+        g1 = h5_get_group (g, groupname)
+        
+        write_connectivity_dbs (g1, l_src_idx, l_dst_ptr, dst_min)
+
+        g2 = h5_get_group(g1, grp_attributes)
+        g3 = h5_get_group(g2, grp_edge)
+
+        # for floating point numbers, it's usally beneficial to apply the
+        # bit-shuffle filter before compressing with GZIP
+        dset = h5_get_dataset(g3, attr_gj_weight, dtype=np.float32,
+                              maxshape=(None,), compression=6, shuffle=True)
+        dset = h5_concat_dataset(dset, np.asarray(l_weight))
+        
+        dset = h5_get_dataset(g3, attr_gj_src_branch, dtype=np.uint16, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray(l_src_branch))
+
+        dset = h5_get_dataset(g3, attr_gj_src_sec, dtype=np.uint16, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray(l_src_sec))
+
+        dset = h5_get_dataset(g3, attr_gj_dst_branch, dtype=np.uint16, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray(l_dst_branch))
+
+        dset = h5_get_dataset(g3, attr_gj_dst_sec, dtype=np.uint16, 
+                              maxshape=(None,), compression=6)
+        dset = h5_concat_dataset(dset, np.asarray(l_dst_sec))
+
+        
+@cli.command(name="import-gapjunction")
+@click.argument("source", type=str)
+@click.argument("dest", type=str)
+@click.argument("groupname", type=str)
+@click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
+@click.argument("outputfile", type=click.Path())
+@click.option('--dbs', 'layout', flag_value='dbs', default=True)
+@click.option('--sbs', 'layout', flag_value='sbs')
+@click.option('--relative-source', 'indextype_src', flag_value='rel', default=True)
+@click.option('--absolute-source', 'indextype_src', flag_value='abs')
+@click.option('--relative-dest', 'indextype_dst', flag_value='rel', default=True)
+@click.option('--absolute-dest', 'indextype_dst', flag_value='abs')
+@click.option("--colsep", type=str, default=None)
+@click.option("--offset", type=int, default=0)
+@click.option("--bufsize", type=int, default=100000)
+def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
+
+    population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
+                           "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
+    layer_mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
+                     "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
+
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+        if not (grp_h5types in h5.keys()):
+            # create an HDF5 enumerated type for the layer information
+            dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
+            h5[path_layer_tags] = dt
+            
+            # create an HDF5 enumerated type for the population label
+            dt = h5py.special_dtype(enum=(np.uint16, population_mapping))
+            h5[path_population_labels] = dt
+            
+            # create an HDF5 compound type for valid combinations of
+            # population labels
+            dt = np.dtype([("Source", h5[path_population_labels].dtype),
+                           ("Destination", h5[path_population_labels].dtype)])
+            h5[path_population_projections] = dt
+
+        g = h5_get_group(h5, grp_h5types)
+        dset = h5_get_dataset(g, grp_populations)
+        population_defns = {}
+        for p in dset[:]:
+            population_defns[p[2]] = (p[0], p[1])
+
+    src_index = population_mapping[source]
+    dst_index = population_mapping[dest]
+
+    if indextype_src == 'rel':
+        src_base = 0
+    else:
+        src_base = int((population_defns[src_index])[0])
+    if indextype_dst == 'rel':
+        dst_base = 0
+    else:
+        dst_base = int((population_defns[dst_index])[0])
+
+    write_population_ids (src_index, dst_index, groupname, outputfile)
+        
+    for inputfile in inputfiles:
+
+        click.echo("Importing file: %s\n" % inputfile) 
+        f = open(inputfile)
+        lines = f.readlines(bufsize)
+
+        while lines:
+            if layout=='dbs':
+                import_gj_lines_dbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
+            elif layout=='sbs':
+                import_gj_lines_sbs(lines, src_base, dst_base, colsep, offset, groupname, outputfile)
+            lines = f.readlines(bufsize)
+
+        f.close()
+
+    if layout=='dbs':
+        write_final_size_dbs (groupname, outputfile)
+    elif layout=='sbs':
+        write_final_size_sbs (groupname, outputfile)
+
+
 
 
 @cli.command(name="import-globals")
