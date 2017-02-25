@@ -37,6 +37,12 @@ namespace ngh5
 {
   namespace graph
   {
+
+    const int edge_start_delim = -1;
+    const int edge_end_delim   = -2;
+    const int rank_edge_start_delim = -3;
+    const int rank_edge_end_delim   = -4;
+    
     /***************************************************************************
      * Prepare an MPI packed data structure with source vertices and edge
      * attributes for a given destination vertex.
@@ -177,8 +183,7 @@ namespace ngh5
 
                 
 #ifdef USE_EDGE_DELIM      
-      int delim=-1;
-      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+      assert(MPI_Pack(&edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
@@ -210,8 +215,7 @@ namespace ngh5
         }
                 
 #ifdef USE_EDGE_DELIM      
-      delim=-2;
-      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+      assert(MPI_Pack(&edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
@@ -303,8 +307,7 @@ namespace ngh5
       int packsize=0;
       assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
       sendbuf.resize(sendbuf.size() + packsize);
-      int delim=-3;
-      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+      assert(MPI_Pack(&rank_edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
@@ -313,8 +316,7 @@ namespace ngh5
                          it1->second, num_packed_edges, sendpos, sendbuf);
 
 #ifdef USE_EDGE_DELIM      
-      delim=-4;
-      assert(MPI_Pack(&delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+      assert(MPI_Pack(&rank_edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
@@ -400,7 +402,7 @@ namespace ngh5
           printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u delim = %d\n", 
                  rank, recvpos, recvbuf_size, delim);
         }
-      assert(delim == -1);
+      assert(delim == edge_start_delim);
 #endif
 
 
@@ -446,12 +448,12 @@ namespace ngh5
       delim=0;
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
       assert(ierr == MPI_SUCCESS);
-      if (delim != -2)
+      if (delim != edge_end_delim)
         {
           printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u delim = %d\n", 
                  rank, recvpos, recvbuf_size, delim);
         }
-      assert(delim == -2);
+      assert(delim == edge_end_delim);
 #endif
 
       return ierr;
@@ -483,12 +485,12 @@ namespace ngh5
 #ifdef USE_EDGE_DELIM
               int delim=0;
               assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm) == MPI_SUCCESS);
-              if (delim != -3)
+              if (delim != rank_edge_start_delim)
                 {
                   printf("rank %d: unpack_rank_edge_map: ridx = %u recvcounts[%u] = %d recvpos = %d recvbuf_size = %u delim = %d\n", 
                          rank, ridx, ridx, recvcounts[ridx], recvpos, recvbuf_size, delim);
                 }
-              assert(delim == -3);
+              assert(delim == rank_edge_start_delim);
 #endif
           
               Size sizeval;
@@ -537,12 +539,12 @@ namespace ngh5
 #ifdef USE_EDGE_DELIM
               delim=0;
               assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm) == MPI_SUCCESS);
-              if (delim != -4)
+              if (delim != rank_edge_end_delim)
                 {
                   printf("rank %d: unpack_rank_edge_map: recvpos = %d recvbuf_size = %u delim = %d\n", 
                          rank, recvpos, recvbuf_size, delim);
                 }
-              assert(delim == -4);
+              assert(delim == rank_edge_end_delim);
 #endif
 
             }
