@@ -315,6 +315,8 @@ namespace ngh5
           pack_edge_map (comm, header_type, size_type, dst_rank, 
                          it1->second, num_packed_edges, sendpos, sendbuf);
 
+          prj_rank_edge_map.erase(dst_rank);
+          
 #ifdef USE_EDGE_DELIM      
       assert(MPI_Pack(&rank_edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
@@ -640,8 +642,6 @@ namespace ngh5
           pack_rank_edge_map (all_comm, header_type, size_type, prj_rank_edge_map, num_packed_edges, 
                               sendcounts, sendbuf, sdispls);
 
-          prj_rank_edge_map.clear();
-          
           // ensure the correct number of edges is being packed
           assert(num_packed_edges == num_edges);
           DEBUG("scatter: finished packing edge data from projection ", prj_name);
@@ -677,6 +677,8 @@ namespace ngh5
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
                            all_comm) == MPI_SUCCESS);
       sendbuf.clear();
+      sendcounts.clear();
+      sdispls.clear();
       
       unpack_rank_edge_map (all_comm, header_type, size_type, io_size, recvbuf, recvcounts, rdispls, edge_attr_num, prj_edge_map);
       
