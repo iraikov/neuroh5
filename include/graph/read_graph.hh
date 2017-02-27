@@ -21,6 +21,14 @@ namespace ngh5
 {
   namespace graph
   {
+        
+    enum EdgeMapType
+      {
+        EdgeMapDst,
+        EdgeMapSrc
+      };
+
+
     extern int append_edge_map
     (
      const NODE_IDX_T&                 dst_start,
@@ -32,7 +40,8 @@ namespace ngh5
      const model::EdgeNamedAttr&       edge_attr_values,
      const std::vector<model::rank_t>& node_rank_vector,
      size_t&                           num_edges,
-     model::rank_edge_map_t &          rank_edge_map
+     model::rank_edge_map_t &          rank_edge_map,
+     EdgeMapType                       edge_map_type
      );
 
     extern int append_prj_list

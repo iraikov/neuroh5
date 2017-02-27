@@ -35,8 +35,8 @@
 #include "read_dbs_projection.hh"
 #include "population_reader.hh"
 #include "read_graph.hh"
+#include "scatter_graph.hh"
 #include "write_graph.hh"
-#include "graph_reader.hh"
 #include "read_population.hh"
 #include "projection_names.hh"
 
@@ -302,7 +302,8 @@ extern "C"
   
   static PyObject *py_scatter_graph (PyObject *self, PyObject *args)
   {
-    int status; int opt_attrs=1;
+    int status; int opt_attrs=1; int opt_edge_map_type=0;
+    graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
     // A vector that maps nodes to compute ranks
     PyObject *py_node_rank_vector=NULL;
     uint32_t *node_rank_vector_ptr;
@@ -316,10 +317,15 @@ extern "C"
     char *input_file_name;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
     
-    if (!PyArg_ParseTuple(args, "ksk|Oi", &commptr, &input_file_name, &io_size,
-                          &py_node_rank_vector, &opt_attrs))
+    if (!PyArg_ParseTuple(args, "ksk|Oii", &commptr, &input_file_name, &io_size,
+                          &py_node_rank_vector, &opt_attrs, &opt_edge_map_type))
       return NULL;
 
+    if (opt_edge_map_type == 1)
+      {
+        edge_map_type = graph::EdgeMapSrc;
+      }
+    
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
 
     assert(io::hdf5::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
@@ -352,7 +358,7 @@ extern "C"
           }
       }
 
-    graph::scatter_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name),
+    graph::scatter_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
                          io_size, opt_attrs>0, prj_names, node_rank_vector, prj_vector,
                          total_num_nodes, local_num_edges, total_num_edges);
 
@@ -367,7 +373,7 @@ extern "C"
           {
             for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
               {
-                NODE_IDX_T dst   = it->first;
+                NODE_IDX_T key_node   = it->first;
                 edge_tuple_t& et = it->second;
                 
                 std::vector <PyObject*> py_float_edge_attrs;
@@ -380,14 +386,14 @@ extern "C"
                 std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
                 std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
                 
-                vector<NODE_IDX_T> src_vector = get<0>(et);
+                vector<NODE_IDX_T> adj_vector = get<0>(et);
                 const EdgeAttr&   edge_attr_values = get<1>(et);
 
                 npy_intp dims[1], ind = 0;
-                dims[0] = src_vector.size();
+                dims[0] = adj_vector.size();
                 
-                PyObject *src_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
-                uint32_t *src_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)src_arr, &ind);
+                PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
+                uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
 
                 if (opt_attrs>0)
                   {
@@ -419,9 +425,9 @@ extern "C"
                         py_uint32_edge_attrs.push_back(arr);
                         py_uint32_edge_attrs_ptr.push_back(ptr);
                       }
-                    for (size_t j = 0; j < src_vector.size(); j++)
+                    for (size_t j = 0; j < adj_vector.size(); j++)
                       {
-                        src_ptr[j] = src_vector[j];
+                        adj_ptr[j] = adj_vector[j];
                         for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
                           {
                             py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
@@ -442,7 +448,7 @@ extern "C"
                   }
                 
                 PyObject *py_edgeval  = PyList_New(0);
-                status = PyList_Append(py_edgeval, src_arr);
+                status = PyList_Append(py_edgeval, adj_arr);
                 assert (status == 0);
                 if (opt_attrs > 0)
                   {
@@ -467,7 +473,7 @@ extern "C"
                         assert(status == 0);
                       }
                   }
-                PyObject *key = PyInt_FromLong(dst);
+                PyObject *key = PyInt_FromLong(key_node);
                 PyDict_SetItem(py_edge_dict, key, py_edgeval);
               }
           }

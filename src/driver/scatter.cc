@@ -9,8 +9,8 @@
 
 #include "debug.hh"
 
-#include "graph_reader.hh"
 #include "read_graph.hh"
+#include "scatter_graph.hh"
 #include "model_types.hh"
 #include "population_reader.hh"
 #include "projection_names.hh"
@@ -74,6 +74,7 @@ int main(int argc, char** argv)
 
   assert(MPI_Init(&argc, &argv) >= 0);
 
+  graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
   int rank, size, io_size; size_t n_nodes;
   size_t local_num_edges, total_num_edges;
   assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
@@ -87,11 +88,13 @@ int main(int argc, char** argv)
   int optflag_binary = 0;
   int optflag_rankfile = 0;
   int optflag_iosize = 0;
+  int optflag_edgemap = 0;
   bool opt_binary = false,
     opt_rankfile = false,
     opt_iosize = false,
     opt_attrs = false,
-    opt_output = false;
+    opt_output = false,
+    opt_edgemap = false;
 
   static struct option long_options[] = {
     {"verbose",   no_argument, &optflag_verbose,  1 },
@@ -99,11 +102,12 @@ int main(int argc, char** argv)
     {"binary",    no_argument, &optflag_binary,  1 },
     {"rankfile",  required_argument, &optflag_rankfile,  1 },
     {"iosize",    required_argument, &optflag_iosize,  1 },
+    {"edgemap",    required_argument, &optflag_edgemap,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "abo:r:i:h",
+  while ((c = getopt_long (argc, argv, "abe:o:r:i:h",
                            long_options, &option_index)) != -1)
     {
       switch (c)
@@ -128,9 +132,31 @@ int main(int argc, char** argv)
             opt_output = true;
             output_file_name = std::string(strdup(optarg));
           }
+          if (optflag_edgemap == 1) {
+            opt_edgemap = true;
+            if (string(optarg) == "dst")
+              {
+                edge_map_type = graph::EdgeMapDst;
+              }
+            if (string(optarg) == "src")
+              {
+                edge_map_type = graph::EdgeMapSrc;
+              }
+          }
           break;
         case 'a':
           opt_attrs = true;
+          break;
+        case 'e':
+          opt_edgemap = true;
+          if (string(optarg) == "dst")
+            {
+              edge_map_type = graph::EdgeMapDst;
+            }
+          if (string(optarg) == "src")
+            {
+              edge_map_type = graph::EdgeMapSrc;
+            }
           break;
         case 'b':
           opt_binary = true;
@@ -212,6 +238,7 @@ int main(int argc, char** argv)
   
   DEBUG("scatter: calling scatter_graph");
   graph::scatter_graph (all_comm,
+                        edge_map_type,
                         input_file_name,
                         io_size,
                         opt_attrs,
@@ -242,16 +269,32 @@ int main(int argc, char** argv)
                   for (auto it = prj_edge_map.begin(); it != prj_edge_map.end();
                        it++)
                     {
-                      NODE_IDX_T dst   = it->first;
+                      NODE_IDX_T key_node   = it->first;
                       model::edge_tuple_t& et = it->second;
 
-                      vector<NODE_IDX_T> src_vect = get<0>(et);
+                      vector<NODE_IDX_T> adj_vector = get<0>(et);
                       const model::EdgeAttr&   edge_attr_values = get<1>(et);
 
-                      for (size_t j = 0; j < src_vect.size(); j++)
+                      for (size_t j = 0; j < adj_vector.size(); j++)
                         {
-                          NODE_IDX_T src = src_vect[j];
-                          outfile << src << dst;
+                          switch (edge_map_type)
+                            {
+                            case graph::EdgeMapDst:
+                              {
+                                NODE_IDX_T src = adj_vector[j];
+                                NODE_IDX_T dst = key_node;
+                                outfile << src << dst;
+                              }
+                              break;
+                            case graph::EdgeMapSrc:
+                              {
+                                NODE_IDX_T dst = adj_vector[j];
+                                NODE_IDX_T src = key_node;
+                                outfile << src << dst;
+                              }
+                              break;
+                            }
+                          
                           for (size_t k = 0; k <
                                  edge_attr_values.size_attr_vec<float>(); k++)
                             {
@@ -295,16 +338,33 @@ int main(int argc, char** argv)
                   for (auto it = prj_edge_map.begin(); it != prj_edge_map.end();
                        it++)
                     {
-                      NODE_IDX_T dst   = it->first;
+                      NODE_IDX_T key_node   = it->first;
                       model::edge_tuple_t& et = it->second;
 
-                      const vector<NODE_IDX_T> src_vect = get<0>(et);
+                      const vector<NODE_IDX_T> adj_vector = get<0>(et);
                       const model::EdgeAttr&   edge_attr_values = get<1>(et);
 
-                      for (size_t j = 0; j < src_vect.size(); j++)
+                      for (size_t j = 0; j < adj_vector.size(); j++)
                         {
-                          NODE_IDX_T src = src_vect[j];
-                          outfile << src << " " << dst;
+                          
+                          switch (edge_map_type)
+                            {
+                            case graph::EdgeMapDst:
+                              {
+                                NODE_IDX_T src = adj_vector[j];
+                                NODE_IDX_T dst = key_node;
+                                outfile << src << " " << dst;
+                              }
+                              break;
+                            case graph::EdgeMapSrc:
+                              {
+                                NODE_IDX_T src = key_node;
+                                NODE_IDX_T dst = adj_vector[i];
+                                outfile << src << " " << dst;
+                              }
+                              break;
+                            }
+                          
                           for (size_t k = 0; k <
                                  edge_attr_values.size_attr_vec<float>(); k++)
                             {

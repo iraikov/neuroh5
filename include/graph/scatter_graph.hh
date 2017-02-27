@@ -5,13 +5,14 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 
 #ifndef GRAPH_SCATTER_HH
 #define GRAPH_SCATTER_HH
 
+#include "read_graph.hh"
 #include "model_types.hh"
 
 #include <mpi.h>
@@ -23,10 +24,13 @@ namespace ngh5
 {
   namespace graph
   {
+    
     /// @brief Reads the edges of the given projections and scatters to all
     ///        ranks
     ///
     /// @param comm          MPI communicator
+    ///
+    /// @param scatter_type  Enumerate edges by destination (default) or source          
     ///
     /// @param file_name     Input file name
     ///
@@ -49,6 +53,7 @@ namespace ngh5
     int scatter_graph
     (
      MPI_Comm                           all_comm,
+     const EdgeMapType                  edge_map_type,
      const std::string&                 file_name,
      const int                          io_size,
      const bool                         opt_attrs,
