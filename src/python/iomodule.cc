@@ -346,6 +346,7 @@ extern "C"
             PyErr_SetString(PyExc_TypeError, "invalid node rank array");
             return NULL;
           }
+        assert(total_num_nodes == dims[0]);
         node_rank_vector.assign(node_rank_vector_ptr, node_rank_vector_ptr+dims[0]);
       } else
       {
