@@ -6,8 +6,8 @@ LD        	:= cc
 
 LINK_MPI        = 
 
-HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/lib
-HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/intel/15.0/include/
+HDF5_LIBDIR=/opt/cray/hdf5-parallel/1.8.16/gnu/4.9/lib
+HDF5_INCDIR=/opt/cray/hdf5-parallel/1.8.16/gnu/4.9/include/
 HDF5_LIB        = hdf5
 
 PARMETIS_INCDIR := $(HOME)/bin/parmetis/include
