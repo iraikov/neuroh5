@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-#SBATCH -J neurograph_scatter_attrs_test
-#SBATCH -o ./results/neurograph_scatter_attrs_test.%j.o
+#SBATCH -J neurograph_parts
+#SBATCH -o ./results/neurograph_parts.%j.o
 #SBATCH --nodes=32
 #SBATCH --ntasks-per-node=16
 #SBATCH -p compute
@@ -14,8 +14,7 @@ set -x
 
 module load hdf5
 
-ibrun ./build/scatter -a -i 128 -r ./results/ranks.4096 \
- -o /oasis/scratch/comet/iraikov/temp_project/dentate_Full_Scale_Control \
+ibrun ./build/balance_indegree  -i 128 -n 1024 -o ./results/parts.1024 \
  /oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5
 
 

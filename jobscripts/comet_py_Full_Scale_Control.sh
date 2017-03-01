@@ -22,7 +22,7 @@ set -x
 
 nodefile=`generate_pbs_nodefile`
 
-mpirun_rsh -export-all -hostfile $nodefile -np 512  \
+mpirun_rsh -export-all -hostfile $nodefile -np 1024  \
 PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH \
 /opt/python/bin/python ./tests/comet_scatter_test.py
 
