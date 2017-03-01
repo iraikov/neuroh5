@@ -311,6 +311,7 @@ namespace ngh5
 
 #endif
           auto it1 = prj_rank_edge_map.find(key_rank); 
+
           pack_edge_map (comm, header_type, size_type, key_rank, 
                          it1->second, num_packed_edges, sendpos, sendbuf);
 
@@ -398,7 +399,7 @@ namespace ngh5
       int delim=0;
       ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
       assert(ierr == MPI_SUCCESS);
-      if (delim != -1)
+      if (delim != edge_start_delim)
         {
           printf("rank %d: unpack_edge: recvpos = %d recvbuf_size = %u delim = %d\n", 
                  rank, recvpos, recvbuf_size, delim);
