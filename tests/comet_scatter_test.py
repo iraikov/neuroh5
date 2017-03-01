@@ -7,7 +7,7 @@ print "rank = ", comm.Get_rank()
 print "size = ", comm.Get_size()
 
 if comm.Get_rank() == 0:
-   node_rank_vector = np.loadtxt("parts.4096", dtype=np.uint32)
+   node_rank_vector = np.loadtxt("parts.1024", dtype=np.uint32)
    node_rank_vector = comm.bcast(node_rank_vector, root=0)
 else:
    node_rank_vector = None
