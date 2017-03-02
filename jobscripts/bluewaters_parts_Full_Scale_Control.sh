@@ -29,8 +29,20 @@ export results_path
 mkdir -p $results_path
 
 aprun -n 256 ./build/balance_indegree \
-      /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5 \
-      -i 64 -n 4096 -o ${results_path}/parts
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      -i 128 -n 2048 -o ${results_path}/parts
+aprun -n 256 ./build/balance_indegree \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      -i 128 -n 4096 -o ${results_path}/parts
+aprun -n 256 ./build/balance_indegree \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      -i 128 -n 8192 -o ${results_path}/parts
+aprun -n 256 ./build/balance_indegree \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      -i 128 -n 16384 -o ${results_path}/parts
+aprun -n 256 ./build/balance_indegree \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      -i 128 -n 32768 -o ${results_path}/parts
 
 
 

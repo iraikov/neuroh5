@@ -26,4 +26,4 @@ cd $PBS_O_WORKDIR
 aprun -n 128 ./build/neurograph_import --src-offset=-44990 \
       MPP GC MPPtoGC \
       $HOME/scratch/dentate/dentate_Full_Scale_Control_MPP.h5 \
-      -f /projects/sciteam/baef/DGC_forest_connectivity.h5:/Populations/GC/Connectivity
+      -i /projects/sciteam/baef/DGC_forest_connectivity.h5:/Populations/GC/Connectivity
