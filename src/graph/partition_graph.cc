@@ -12,7 +12,7 @@
 
 #include "read_dbs_projection.hh"
 #include "population_reader.hh"
-#include "graph_reader.hh"
+#include "scatter_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
 #include "read_population.hh"
@@ -161,7 +161,7 @@ namespace ngh5
     
       // read the edges
       vector < edge_map_t > prj_vector;
-      scatter_graph (comm,
+      scatter_graph (comm, EdgeMapDst,
                      input_file_name,
                      io_size,
                      false,
