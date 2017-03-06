@@ -9,8 +9,8 @@
 //==============================================================================
 
 
-#ifndef GRAPH_SCATTER_HH
-#define GRAPH_SCATTER_HH
+#ifndef GRAPH_BCAST_HH
+#define GRAPH_BCAST_HH
 
 #include "read_graph.hh"
 #include "model_types.hh"
@@ -25,12 +25,12 @@ namespace ngh5
   namespace graph
   {
     
-    /// @brief Reads the edges of the given projections and scatters to all
+    /// @brief Reads the edges of the given projections and broadcasts to all
     ///        ranks
     ///
     /// @param comm          MPI communicator
     ///
-    /// @param scatter_type  Enumerate edges by destination (default) or source          
+    /// @param edge_map_type  Enumerate edges by destination (default) or source          
     ///
     /// @param file_name     Input file name
     ///
@@ -50,16 +50,13 @@ namespace ngh5
     ///                         (vertices) in the graph
     ///
     /// @return              HDF5 error code
-    int scatter_graph
+    int bcast_graph
     (
      MPI_Comm                           all_comm,
      const EdgeMapType                  edge_map_type,
      const std::string&                 file_name,
-     const int                          io_size,
      const bool                         opt_attrs,
      const std::vector<std::string>&    prj_names,
-     // A vector that maps nodes to compute ranks
-     const std::vector<model::rank_t>&  node_rank_vector,
      std::vector < model::edge_map_t >& prj_vector,
      size_t                            &total_num_nodes,
      size_t                            &local_num_edges,

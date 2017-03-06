@@ -74,7 +74,7 @@ namespace ngh5
             assert(H5Sclose(fspace) >= 0);
           }
 
-        assert(MPI_Bcast(&num_pairs, 1, MPI_UINT64_T, 0, comm) >= 0);
+        assert(MPI_Bcast(&num_pairs, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
 
         // allocate buffers
         vector<pop_t> v(2*num_pairs);
@@ -103,7 +103,7 @@ namespace ngh5
             assert(H5Fclose(file) >= 0);
           }
 
-        assert(MPI_Bcast(&v[0], (int)2*num_pairs, MPI_UINT16_T, 0, comm) >= 0);
+        assert(MPI_Bcast(&v[0], (int)2*num_pairs, MPI_UINT16_T, 0, comm) == MPI_SUCCESS);
 
         // populate the set
         pop_pairs.clear();

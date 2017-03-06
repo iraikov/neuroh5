@@ -29,7 +29,7 @@ namespace ngh5
       };
 
 
-    extern int append_edge_map
+    extern int append_rank_edge_map
     (
      const NODE_IDX_T&                 dst_start,
      const NODE_IDX_T&                 src_start,
@@ -41,6 +41,20 @@ namespace ngh5
      const std::vector<model::rank_t>& node_rank_vector,
      size_t&                           num_edges,
      model::rank_edge_map_t &          rank_edge_map,
+     EdgeMapType                       edge_map_type
+     );
+
+    extern int append_edge_map
+    (
+     const NODE_IDX_T&                 dst_start,
+     const NODE_IDX_T&                 src_start,
+     const std::vector<DST_BLK_PTR_T>& dst_blk_ptr,
+     const std::vector<NODE_IDX_T>&    dst_idx,
+     const std::vector<DST_PTR_T>&     dst_ptr,
+     const std::vector<NODE_IDX_T>&    src_idx,
+     const model::EdgeNamedAttr&       edge_attr_values,
+     size_t&                           num_edges,
+     model::edge_map_t &               edge_map,
      EdgeMapType                       edge_map_type
      );
 

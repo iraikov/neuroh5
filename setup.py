@@ -45,9 +45,8 @@ setup(
         importdbs=neurograph.importdbs:cli
         importpairs=neurograph.importpairs:cli
     ''',
-    ext_package = 'neurograph',
     ext_modules = [
-        Extension('io',
+        Extension('neurograph.io',
                   extra_compile_args = extra_compile_args,
                   extra_link_args = extra_link_args,
                   libraries = libraries,
@@ -64,9 +63,11 @@ setup(
                       'src/io/read_population.cc',
                       'src/graph/read_graph.cc',
                       'src/graph/scatter_graph.cc',
+                      'src/graph/bcast_graph.cc',
                       'src/graph/validate_edge_list.cc',
                       'src/model/edge_attr.cc',
                       'src/mpi/bcast_string_vector.cc',
+                      'src/mpi/pack_edge.cc',
                       'src/python/iomodule.cc'
                   ])
         ]

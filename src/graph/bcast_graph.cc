@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file scatter_graph.cc
+///  @file bcast_graph.cc
 ///
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
@@ -37,23 +37,21 @@ namespace ngh5
 {
   namespace graph
   {
-
-
     
     /*****************************************************************************
-     * Load and scatter edge data structures 
+     * Load and broadcast edge data structures 
      *****************************************************************************/
 
-    int scatter_projection (MPI_Comm all_comm, MPI_Comm io_comm, const int io_size,
-                            EdgeMapType edge_map_type, MPI_Datatype header_type, MPI_Datatype size_type, 
-                            const string& file_name, const string& prj_name, 
-                            const bool opt_attrs,
-                            const vector<model::rank_t>&  node_rank_vector,
-                            const vector<model::pop_range_t>& pop_vector,
-                            const map<NODE_IDX_T,pair<uint32_t,model::pop_t> >& pop_ranges,
-                            const set< pair<model::pop_t, model::pop_t> >& pop_pairs,
-                            vector < model::edge_map_t >& prj_vector
-                            )
+    int bcast_projection (MPI_Comm all_comm, MPI_Comm io_comm,
+                          const EdgeMapType edge_map_type,
+                          MPI_Datatype header_type, MPI_Datatype size_type, 
+                          const string& file_name, const string& prj_name, 
+                          const bool opt_attrs,
+                          const vector<model::pop_range_t>& pop_vector,
+                          const map<NODE_IDX_T,pair<uint32_t,model::pop_t> >& pop_ranges,
+                          const set< pair<model::pop_t, model::pop_t> >& pop_pairs,
+                          vector < model::edge_map_t >& prj_vector
+                          )
     {
 
       int rank, size;
@@ -61,9 +59,7 @@ namespace ngh5
       assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
       vector<uint8_t> sendbuf; 
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
-      model::rank_edge_map_t prj_rank_edge_map;
       model::edge_map_t prj_edge_map;
       vector<uint32_t> edge_attr_num;
       size_t num_edges = 0, total_prj_num_edges = 0;
@@ -71,12 +67,12 @@ namespace ngh5
       DEBUG("projection ", prj_name, "\n");
 
 
-      if (rank < (int)io_size)
+      if (rank == 0)
         {
           DST_BLK_PTR_T block_base;
           DST_PTR_T edge_base, edge_count;
           NODE_IDX_T dst_start, src_start;
-          vector<DST_BLK_PTR_T> dst_blk_ptr;
+           vector<DST_BLK_PTR_T> dst_blk_ptr;
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
@@ -93,12 +89,12 @@ namespace ngh5
           src_start = pop_vector[src_pop].start;
           
 
-          DEBUG("scatter: reading projection ", prj_name);
+          DEBUG("bcast: reading projection ", prj_name);
           assert(io::hdf5::read_dbs_projection(io_comm, file_name, prj_name, 
                                                dst_start, src_start, total_prj_num_edges,
                                                block_base, edge_base, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
           
-          DEBUG("scatter: validating projection ", prj_name);
+          DEBUG("bcast: validating projection ", prj_name);
           // validate the edges
           assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                     pop_ranges, pop_pairs) == true);
@@ -116,62 +112,37 @@ namespace ngh5
 
           // append to the edge map
           
-          assert(append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                      edge_attr_values, node_rank_vector, num_edges, prj_rank_edge_map,
-                                      edge_map_type) >= 0);
+          assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                 edge_attr_values, num_edges, prj_edge_map,
+                                 edge_map_type) >= 0);
           
           // ensure that all edges in the projection have been read and appended to edge_list
           assert(num_edges == src_idx.size());
           
-          size_t num_packed_edges = 0;
-          DEBUG("scatter: packing edge data from projection ", prj_name);
-          
-          mpi::pack_rank_edge_map (all_comm, header_type, size_type, prj_rank_edge_map, 
-                                   num_packed_edges, sendcounts, sendbuf, sdispls);
+          size_t num_packed_edges = 0; 
+          DEBUG("bcast: packing edge data from projection ", prj_name);
+          int sendpos = 0;
+          mpi::pack_edge_map (all_comm, header_type, size_type, prj_edge_map, num_packed_edges, sendpos, sendbuf);
 
           // ensure the correct number of edges is being packed
           assert(num_packed_edges == num_edges);
-          DEBUG("scatter: finished packing edge data from projection ", prj_name);
-        } // rank < io_size
+          DEBUG("bcast: finished packing edge data from projection ", prj_name);
+
+        } // rank == 0
     
       // 0. Broadcast the number of attributes of each type to all ranks
       edge_attr_num.resize(4);
       assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
       
-      // 1. Each ALL_COMM rank sends an edge vector size to
-      //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
-      //    and creates sendcounts and sdispls arrays
+      uint32_t sendbuf_size = sendbuf.size();
+      assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+      sendbuf.resize(sendbuf_size);
       
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
-      DEBUG("scatter: after MPI_Alltoall sendcounts for projection ", prj_name);
+      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_PACKED, 0, all_comm) == MPI_SUCCESS);
       
-      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
-      //    a receive buffer, recvcounts, and rdispls
+      mpi::unpack_edge_map (all_comm, header_type, size_type, sendbuf, edge_attr_num, prj_edge_map);
       
-      size_t recvbuf_size = recvcounts[0];
-      for (int p = 1; p < size; p++)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
-      assert(recvbuf_size > 0);
-
-      vector<uint8_t> recvbuf;
-      recvbuf.resize(recvbuf_size, 0);
-      
-      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
-                           all_comm) == MPI_SUCCESS);
-      sendbuf.clear();
-      sendcounts.clear();
-      sdispls.clear();
-      
-      mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
-                                 recvbuf, recvcounts, rdispls, edge_attr_num,
-                                 prj_edge_map);
-      
-      DEBUG("scatter: finished unpacking edges for projection ", prj_name);
+      DEBUG("bcast: finished unpacking edges for projection ", prj_name);
       
       prj_vector.push_back(prj_edge_map);
       assert(MPI_Barrier(all_comm) == MPI_SUCCESS);
@@ -180,16 +151,13 @@ namespace ngh5
     }
 
 
-    int scatter_graph
+    int bcast_graph
     (
      MPI_Comm                      all_comm,
      const EdgeMapType             edge_map_type,
      const std::string&            file_name,
-     const int                     io_size,
      const bool                    opt_attrs,
      const vector<string>&         prj_names,
-     // A vector that maps nodes to compute ranks
-     const vector<model::rank_t>&  node_rank_vector,
      vector < model::edge_map_t >& prj_vector,
      size_t                       &total_num_nodes,
      size_t                       &local_num_edges,
@@ -197,20 +165,21 @@ namespace ngh5
      )
     {
       int ierr = 0;
-      // MPI Communicator for I/O ranks
-      MPI_Comm io_comm;
-      // MPI group color value used for I/O ranks
-      int io_color = 1;
       // The set of compute ranks for which the current I/O rank is responsible
       set< pair<model::pop_t, model::pop_t> > pop_pairs;
       vector<model::pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
       uint64_t prj_size = 0;
+      // MPI Communicator for I/O ranks
+      MPI_Comm io_comm;
+      // MPI group color value used for I/O ranks
+      int io_color = 1;
+
   
       int rank, size;
-      assert(MPI_Comm_size(all_comm, &size) >= 0);
-      assert(MPI_Comm_rank(all_comm, &rank) >= 0);
-
+      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+      
       // Create an MPI datatype to describe the sizes of edge structures
       Size sizeval;
       MPI_Datatype size_type, size_struct_type;
@@ -239,7 +208,7 @@ namespace ngh5
       assert(MPI_Type_commit(&header_type) == MPI_SUCCESS);
       
       // Am I an I/O rank?
-      if (rank < io_size)
+      if (rank == 0)
         {
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
@@ -257,16 +226,15 @@ namespace ngh5
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
       MPI_Barrier(all_comm);
-  
+
       assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) == MPI_SUCCESS);
-      DEBUG("rank ", rank, ": scatter: after bcast: prj_size = ", prj_size);
+      DEBUG("rank ", rank, ": bcast: after bcast: prj_size = ", prj_size);
 
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_size; i++)
         {
-          scatter_projection(all_comm, io_comm, io_size, edge_map_type, header_type, size_type, file_name, prj_names[i],
-                             opt_attrs, node_rank_vector, pop_vector, pop_ranges, pop_pairs,
-                             prj_vector);
+          bcast_projection(all_comm, io_comm, edge_map_type, header_type, size_type, file_name, prj_names[i],
+                           opt_attrs, pop_vector, pop_ranges, pop_pairs, prj_vector);
                              
         }
       MPI_Comm_free(&io_comm);
@@ -274,7 +242,7 @@ namespace ngh5
       MPI_Type_free(&size_type);
       return ierr;
     }
-
+    
   }
-  
 }
+
