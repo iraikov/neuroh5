@@ -300,7 +300,7 @@ extern "C"
   }
 
   
-  static PyObject *py_scatter_graph (PyObject *self, PyObject *args)
+  static PyObject *py_scatter_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; int opt_attrs=1; int opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
@@ -317,8 +317,17 @@ extern "C"
     char *input_file_name;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
     
-    if (!PyArg_ParseTuple(args, "ksk|Oii", &commptr, &input_file_name, &io_size,
-                          &py_node_rank_vector, &opt_attrs, &opt_edge_map_type))
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "io_size",
+                                   "node_rank_vector",
+                                   "attributes",
+                                   "map_type",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ksk|Oii", (char **)kwlist,
+                                     &commptr, &input_file_name, &io_size,
+                                     &py_node_rank_vector, &opt_attrs, &opt_edge_map_type))
       return NULL;
 
     if (opt_edge_map_type == 1)
@@ -537,7 +546,7 @@ extern "C"
   static PyMethodDef module_methods[] = {
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
       "Reads graph connectivity in Destination Block Sparse format." },
-    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS,
+    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and scatters graph connectivity in Destination Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };
