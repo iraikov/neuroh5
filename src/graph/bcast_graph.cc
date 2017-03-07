@@ -137,12 +137,15 @@ namespace ngh5
       uint32_t sendbuf_size = sendbuf.size();
       assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
       sendbuf.resize(sendbuf_size);
-      
+
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_PACKED, 0, all_comm) == MPI_SUCCESS);
+          
+      if (rank > 0)
+        {
+          mpi::unpack_edge_map (all_comm, header_type, size_type, sendbuf, edge_attr_num, prj_edge_map);
       
-      mpi::unpack_edge_map (all_comm, header_type, size_type, sendbuf, edge_attr_num, prj_edge_map);
-      
-      DEBUG("bcast: finished unpacking edges for projection ", prj_name);
+          DEBUG("bcast: finished unpacking edges for projection ", prj_name);
+        }
       
       prj_vector.push_back(prj_edge_map);
       assert(MPI_Barrier(all_comm) == MPI_SUCCESS);
