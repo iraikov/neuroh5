@@ -305,11 +305,13 @@ extern "C"
   {
     int status; int opt_attrs=1; int opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
+    PyObject *py_attribute_names=NULL;
     // A vector that maps nodes to compute ranks
     PyObject *py_node_rank_vector=NULL;
     uint32_t *node_rank_vector_ptr;
     vector<rank_t> node_rank_vector;
     vector < edge_map_t > prj_vector;
+    vector < vector <vector<string>> > edge_attr_name_vector;
     vector<pop_range_t> pop_vector;
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     vector<string> prj_names;
@@ -326,9 +328,10 @@ extern "C"
                                    "map_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ksk|Oii", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ksk|OiOi", (char **)kwlist,
                                      &commptr, &input_file_name, &io_size,
-                                     &py_node_rank_vector, &opt_attrs, &opt_edge_map_type))
+                                     &py_node_rank_vector, &opt_attrs, 
+                                     &opt_edge_map_type))
       return NULL;
 
     if (opt_edge_map_type == 1)
@@ -370,16 +373,32 @@ extern "C"
       }
 
     graph::scatter_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
-                         io_size, opt_attrs>0, prj_names, node_rank_vector, prj_vector,
+                         io_size, opt_attrs>0, prj_names, node_rank_vector, prj_vector, edge_attr_name_vector, 
                          total_num_nodes, local_num_edges, total_num_edges);
 
+    py_attribute_names = PyList_New(0);
+    if (opt_attrs>0)
+      {
+        for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
+          {
+            PyObject *py_prj_attr_names  = PyList_New(0);
+            for (size_t n = 0; n<edge_attr_name_vector[p].size(); n++)
+              {
+                for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
+                  {
+                    PyList_Append(py_prj_attr_names, PyString_FromString(edge_attr_name_vector[p][n][t].c_str()));
+                  }
+              }
+            status = PyList_Append(py_attribute_names, py_prj_attr_names);
+          }
+      }
+
+    
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
         PyObject *py_edge_dict = PyDict_New();
         edge_map_t prj_edge_map = prj_vector[i];
         
-        printf("projection %s\n", prj_names[i].c_str());
-
         if (prj_edge_map.size() > 0)
           {
             for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)

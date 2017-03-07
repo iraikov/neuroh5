@@ -16,6 +16,7 @@
 #include "read_population.hh"
 #include "validate_edge_list.hh"
 #include "scatter_graph.hh"
+#include "bcast_string_vector.hh"
 #include "pack_edge.hh"
 
 #include <cstdio>
@@ -32,6 +33,8 @@
 
 using namespace std;
 using namespace ngh5;
+
+#define MAX_ATTR_NAME 1024
 
 namespace ngh5
 {
@@ -52,8 +55,8 @@ namespace ngh5
                             const vector<model::pop_range_t>& pop_vector,
                             const map<NODE_IDX_T,pair<uint32_t,model::pop_t> >& pop_ranges,
                             const set< pair<model::pop_t, model::pop_t> >& pop_pairs,
-                            vector < model::edge_map_t >& prj_vector
-                            )
+                            vector < model::edge_map_t >& prj_vector,
+                            vector<vector<vector<string>>>& edge_attr_names_vector)
     {
 
       int rank, size;
@@ -66,6 +69,7 @@ namespace ngh5
       model::rank_edge_map_t prj_rank_edge_map;
       model::edge_map_t prj_edge_map;
       vector<uint32_t> edge_attr_num;
+      vector<vector<string>> edge_attr_names;
       size_t num_edges = 0, total_prj_num_edges = 0;
       
       DEBUG("projection ", prj_name, "\n");
@@ -119,6 +123,8 @@ namespace ngh5
           assert(append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                       edge_attr_values, node_rank_vector, num_edges, prj_rank_edge_map,
                                       edge_map_type) >= 0);
+
+          edge_attr_values.attr_names(edge_attr_names);
           
           // ensure that all edges in the projection have been read and appended to edge_list
           assert(num_edges == src_idx.size());
@@ -134,9 +140,17 @@ namespace ngh5
           DEBUG("scatter: finished packing edge data from projection ", prj_name);
         } // rank < io_size
     
-      // 0. Broadcast the number of attributes of each type to all ranks
+      // 0. Broadcast the number and names of attributes of each type to all ranks
       edge_attr_num.resize(4);
       assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+      edge_attr_names.resize(4);
+      for (size_t aidx=0; aidx<edge_attr_names.size(); aidx++)
+        {
+          if (edge_attr_num[aidx] > 0)
+            {
+              assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME, edge_attr_names[aidx]) == MPI_SUCCESS);
+            }
+        }
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
@@ -174,6 +188,8 @@ namespace ngh5
       DEBUG("scatter: finished unpacking edges for projection ", prj_name);
       
       prj_vector.push_back(prj_edge_map);
+      edge_attr_names_vector.push_back(edge_attr_names);
+      
       assert(MPI_Barrier(all_comm) == MPI_SUCCESS);
 
       return 0;
@@ -191,6 +207,7 @@ namespace ngh5
      // A vector that maps nodes to compute ranks
      const vector<model::rank_t>&  node_rank_vector,
      vector < model::edge_map_t >& prj_vector,
+     vector < vector <vector<string>> >& edge_attr_names_vector,
      size_t                       &total_num_nodes,
      size_t                       &local_num_edges,
      size_t                       &total_num_edges
@@ -266,7 +283,7 @@ namespace ngh5
         {
           scatter_projection(all_comm, io_comm, io_size, edge_map_type, header_type, size_type, file_name, prj_names[i],
                              opt_attrs, node_rank_vector, pop_vector, pop_ranges, pop_pairs,
-                             prj_vector);
+                             prj_vector, edge_attr_names_vector);
                              
         }
       MPI_Comm_free(&io_comm);

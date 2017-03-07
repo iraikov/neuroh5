@@ -161,5 +161,33 @@ namespace ngh5
       return this->uint32_values[i];
     }
 
+    void EdgeNamedAttr::attr_names (vector<vector<string>> &attr_names) const
+    {
+      attr_names.resize(EdgeNamedAttr::num_attr_types);
+      attr_names[EdgeNamedAttr::attr_index_float].resize(float_names.size());
+      attr_names[EdgeNamedAttr::attr_index_uint8].resize(uint8_names.size());
+      attr_names[EdgeNamedAttr::attr_index_uint16].resize(uint16_names.size());
+      attr_names[EdgeNamedAttr::attr_index_uint32].resize(uint32_names.size());
+        
+      for (auto const& element : float_names)
+        {
+          attr_names[EdgeNamedAttr::attr_index_float][element.second] = string(element.first);
+        }
+      for (auto const& element : uint8_names)
+        {
+          attr_names[EdgeNamedAttr::attr_index_uint8][element.second] = string(element.first);
+        }
+      for (auto const& element : uint16_names)
+        {
+          attr_names[EdgeNamedAttr::attr_index_uint16][element.second] = string(element.first);
+        }
+      for (auto const& element : uint32_names)
+        {
+          attr_names[EdgeNamedAttr::attr_index_uint32][element.second] = string(element.first);
+        }
+ 
+    }
+
+
   }
 }

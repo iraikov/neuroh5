@@ -70,6 +70,7 @@ int main(int argc, char** argv)
   map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
   vector<string> prj_names;
   vector < model::edge_map_t > prj_vector;
+  vector < vector <vector<string>> > edge_attr_name_vector;
   stringstream ss;
 
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -245,6 +246,7 @@ int main(int argc, char** argv)
                         prj_names,
                         node_rank_vector,
                         prj_vector,
+                        edge_attr_name_vector,
                         n_nodes,
                         local_num_edges,
                         total_num_edges);

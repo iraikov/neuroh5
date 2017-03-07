@@ -61,6 +61,7 @@ namespace ngh5
      // A vector that maps nodes to compute ranks
      const std::vector<model::rank_t>&  node_rank_vector,
      std::vector < model::edge_map_t >& prj_vector,
+     std::vector < std::vector <std::vector<std::string>> >& edge_attr_names_vector,
      size_t                            &total_num_nodes,
      size_t                            &local_num_edges,
      size_t                            &total_num_edges

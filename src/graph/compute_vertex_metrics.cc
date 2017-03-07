@@ -112,6 +112,7 @@ namespace ngh5
       compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
     
       // read the edges
+      vector < vector <vector<string>> > edge_attr_name_vector;
       vector < edge_map_t > prj_vector;
       scatter_graph (comm,
                      EdgeMapDst,
@@ -121,6 +122,7 @@ namespace ngh5
                      prj_names,
                      node_rank_vector,
                      prj_vector,
+                     edge_attr_name_vector,
                      total_num_nodes,
                      local_num_edges,
                      total_num_edges);

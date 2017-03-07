@@ -21,6 +21,13 @@ namespace ngh5
   {
     struct EdgeAttr
     {
+            
+      static const size_t num_attr_types = 4;
+      static const size_t attr_index_float  = 0;
+      static const size_t attr_index_uint8  = 1;
+      static const size_t attr_index_uint16 = 2;
+      static const size_t attr_index_uint32 = 3;
+
       std::vector < std::vector <float> > float_values;
       std::vector < std::vector <uint8_t> > uint8_values;
       std::vector < std::vector <uint16_t> > uint16_values;
@@ -154,6 +161,10 @@ namespace ngh5
         uint32_names.insert(make_pair(name, index));
         return index;
       }
+
+      void attr_names (std::vector<std::vector<std::string> > &) const; 
+
+
     };
   }
 }
