@@ -1,9 +1,12 @@
 #include "debug.hh"
-#include "ngh5paths.h"
-#include "ngh5types.hh"
 
-#include "dbs_graph_reader.hh"
+#include "read_dbs_projection.hh"
+#include "read_graph.hh"
+#include "scatter_graph.hh"
+#include "model_types.hh"
 #include "population_reader.hh"
+#include "projection_names.hh"
+#include "validate_edge_list.hh"
 
 #include "hdf5.h"
 
@@ -21,7 +24,7 @@
 #include <mpi.h>
 
 using namespace std;
-
+using namespace ngh5;
 /*****************************************************************************
  * Append src/dst node pairs to a list of edges
  *****************************************************************************/
@@ -140,15 +143,16 @@ int main(int argc, char** argv)
 
   assert (!((src_selection.size() == 0) && (dst_selection.size() == 0)));
   // read the population info
-  set< pair<pop_t, pop_t> > pop_pairs;
-  assert(read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
+  set< pair<model::pop_t, model::pop_t> > pop_pairs;
+  assert(io::hdf5::read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
 
-  vector<pop_range_t> pop_vector;
-  map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-  assert(read_population_ranges(MPI_COMM_WORLD, input_file_name.c_str(), pop_ranges, pop_vector) >= 0);
+  size_t total_num_nodes;
+  vector<model::pop_range_t> pop_vector;
+  map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
+  assert(io::hdf5::read_population_ranges(MPI_COMM_WORLD, input_file_name.c_str(), pop_ranges, pop_vector, total_num_nodes) >= 0);
 
   vector<string> prj_names;
-  assert(read_projection_names(MPI_COMM_WORLD, input_file_name.c_str(), prj_names) >= 0);
+  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name.c_str(), prj_names) >= 0);
       
   vector<NODE_IDX_T> edge_list;
 
@@ -168,13 +172,13 @@ int main(int argc, char** argv)
         {
           printf("Reading projection %lu (%s)\n", i, prj_names[i].c_str());
           
-          assert(read_dbs_projection(MPI_COMM_WORLD, input_file_name.c_str(), prj_names[i].c_str(), 
-                                     pop_vector, dst_start, src_start, total_prj_num_edges, block_base, edge_base,
-                                     dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+          assert(io::hdf5::read_dbs_projection(MPI_COMM_WORLD, input_file_name.c_str(), prj_names[i].c_str(), 
+                                               dst_start, src_start, total_prj_num_edges, block_base, edge_base,
+                                               dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
 
           
           // validate the edges
-          assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
+          assert(graph::validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
           
           // filter/append to the edge list
           assert(filter_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, src_selection, dst_selection, edge_list) >= 0);

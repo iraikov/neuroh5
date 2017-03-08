@@ -27,22 +27,22 @@ namespace ngh5
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
        const uint64_t&           num_edges,
-       const map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map,
-       const hsize_t&            cdim
+       const map<NODE_IDX_T, vector<NODE_IDX_T> >& adj_map,
+       hsize_t            cdim
        )
       {
         // do a sanity check on the input
         assert(src_start < src_end);
         assert(dst_start < dst_end);
 
-        uint64_t num_dest = dst_src_map.size();
+        uint64_t num_dest = adj_map.size();
         assert(num_dest > 0 && num_dest < (dst_end - dst_start + 1));
 
         // create relative destination pointers and source index
         vector<uint64_t> dst_ptr(1, 0);
         vector<uint32_t> src_idx;
         size_t pos = 0;
-        for (auto iter = dst_src_map.begin(); iter != dst_src_map.end(); ++iter)
+        for (auto iter = adj_map.begin(); iter != adj_map.end(); ++iter)
           {
             dst_ptr.push_back(dst_ptr[pos++] + iter->second.size());
             copy(iter->second.begin(), iter->second.end(),
