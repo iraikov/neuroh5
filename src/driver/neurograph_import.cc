@@ -269,9 +269,6 @@ int main(int argc, char** argv)
         }
     }
 
-  printf("optind = %d\n", optind);
-  printf("argc = %d\n", argc);
-  printf("opt_txt = %d\n", opt_txt);
   if (optind < argc-3)
     {
       src_pop_name     = std::string(argv[optind]);
