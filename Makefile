@@ -2,7 +2,7 @@ AR		:= ar
 CC		:= g++
 LD        	:= g++
 
-HDF5_DIR	:= $(HOME)/.local
+HDF5_DIR	:= $(HOME)/work/packages/phdf5-1.10.0
 HDF5_INCDIR 	:= $(HDF5_DIR)/include
 HDF5_LIBDIR 	:= $(HDF5_DIR)/lib
 

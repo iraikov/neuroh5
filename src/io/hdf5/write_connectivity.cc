@@ -27,7 +27,8 @@ namespace ngh5
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
        const uint64_t&           num_edges,
-       const map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map
+       const map<NODE_IDX_T, vector<NODE_IDX_T> >& dst_src_map,
+       const hsize_t&            cdim
        )
       {
         // do a sanity check on the input
@@ -101,8 +102,17 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         */
+
+        /* Dataset creation property list to enable chunking */
+        hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+        assert(dcpl >= 0);
+        hsize_t chunk = cdim;
+        assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+        assert(H5Pset_deflate(dcpl, 6) >= 0);
+
+
         vector<NODE_IDX_T> v_dst_start(1, dst_start);         
-        write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
+        write(file, path, NODE_IDX_H5_FILE_T, v_dst_start, dcpl);
 
         // write destination block pointer
 
@@ -149,7 +159,7 @@ namespace ngh5
         assert(H5Sclose(fspace) >= 0);
         */
 
-        write(file, path, DST_BLK_PTR_H5_FILE_T, dbp);
+        write(file, path, DST_BLK_PTR_H5_FILE_T, dbp, dcpl);
 
         // write destination pointers
         // # dest. pointers = number of destinations + 1
@@ -206,7 +216,7 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         */
-        write(file, path, DST_PTR_H5_FILE_T, dst_ptr);
+        write(file, path, DST_PTR_H5_FILE_T, dst_ptr, dcpl);
 
         // write source index
         // # source indexes = number of edges
@@ -241,7 +251,7 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         */
-        write(file, path, NODE_IDX_H5_FILE_T, src_idx);
+        write(file, path, NODE_IDX_H5_FILE_T, src_idx, dcpl);
 
         // write out source and destination population indices
         //dims = 1;
@@ -263,7 +273,7 @@ namespace ngh5
         assert(H5Sclose(fspace) >= 0);
         */
         vector<POP_IDX_T> v_src_pop_idx(1, src_pop_idx);         
-        write(file, path, POP_IDX_H5_FILE_T, v_src_pop_idx);
+        write(file, path, POP_IDX_H5_FILE_T, v_src_pop_idx, dcpl);
 
         path = projection_path_join(projection_name, "Destination Population");
         /*
@@ -284,9 +294,10 @@ namespace ngh5
         */
 
         vector<POP_IDX_T> v_dst_pop_idx(1, dst_pop_idx);         
-        write(file, path, POP_IDX_H5_FILE_T, v_dst_pop_idx);
+        write(file, path, POP_IDX_H5_FILE_T, v_dst_pop_idx, dcpl);
         
         // clean-up
+        assert(H5Pclose(dcpl) >= 0);
         //assert(H5Pclose(lcpl) >= 0);
       }
     }

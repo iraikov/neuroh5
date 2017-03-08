@@ -22,6 +22,7 @@ namespace ngh5
        const std::string&    dset_name,
        const hid_t&          file_type,
        const std::vector<T>& v,
+       hid_t                 dcpl = H5P_DEFAULT,
        bool                  do_coll_io = false
        )
       {
@@ -58,7 +59,7 @@ namespace ngh5
         hid_t fspace = H5Screate_simple(1, &total_size, &total_size);
         assert(fspace >= 0);
         hid_t dset = H5Dcreate(file, dset_name.c_str(), file_type, fspace,
-                               lcpl, H5P_DEFAULT, H5P_DEFAULT);
+                               lcpl, dcpl, H5P_DEFAULT);
         assert(dset >= 0);
 
         // prepare the memory spaces and hyperslab selections
