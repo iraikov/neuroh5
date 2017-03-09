@@ -219,12 +219,12 @@ namespace ngh5
 
     
     int pack_edge_map1 (MPI_Comm comm,
-                       MPI_Datatype header_type,
-                       MPI_Datatype size_type,
-                       const model::edge_map_t& edge_map,
-                       size_t &num_packed_edges,
-                       int &sendpos,
-                       vector<uint8_t> &sendbuf
+                        MPI_Datatype header_type,
+                        MPI_Datatype size_type,
+                        const model::edge_map_t& edge_map,
+                        size_t &num_packed_edges,
+                        int &sendpos,
+                        vector<uint8_t> &sendbuf
                        )
     {
       int ierr=0;
@@ -543,34 +543,53 @@ namespace ngh5
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
       int sendpos = 0;
-      for (size_t key_rank = 0; (int)key_rank < size; key_rank++)
+      vector<int> rank_sequence;
+      // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
+      // (as opposed to starting at rank 0)
+      for (int key_rank = rank; (int)key_rank < size; key_rank++)
+        {
+          rank_sequence.push_back(key_rank);
+        }
+      for (int key_rank = 0; (int)key_rank < rank; key_rank++)
+        {
+          rank_sequence.push_back(key_rank);
+        }
+      
+      for (const int& key_rank : rank_sequence)
         {
           sdispls[key_rank] = sendpos;
           
           auto it1 = prj_rank_edge_map.find(key_rank); 
 
-          if (it1 != prj_rank_edge_map.end())
-            {
 #ifdef USE_EDGE_DELIM      
-      int packsize=0;
-      assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
-      sendbuf.resize(sendbuf.size() + packsize);
-      assert(MPI_Pack(&rank_edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
-                      &sendpos, comm) == MPI_SUCCESS);
+          int packsize=0;
+          assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
+          sendbuf.resize(sendbuf.size() + packsize);
+          assert(MPI_Pack(&rank_edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                          &sendpos, comm) == MPI_SUCCESS);
 
 #endif
-              pack_edge_map1 (comm, header_type, size_type, 
-                              it1->second, num_packed_edges, sendpos, sendbuf);
-              prj_rank_edge_map.erase(key_rank);
+      if (it1 != prj_rank_edge_map.end())
+        {
+          pack_edge_map1 (comm, header_type, size_type, 
+                          it1->second, num_packed_edges, sendpos, sendbuf);
+          prj_rank_edge_map.erase(key_rank);
+          
+        } else
+        {
+          const model::edge_map_t edge_map;
+          pack_edge_map1 (comm, header_type, size_type, 
+                          edge_map, num_packed_edges, sendpos, sendbuf);
+        }
           
 #ifdef USE_EDGE_DELIM      
       assert(MPI_Pack(&rank_edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
-            }
-          assert(sendpos <= sendbuf.size());
-          sendcounts[key_rank] = sendpos - sdispls[key_rank];
+
+      assert(sendpos <= sendbuf.size());
+      sendcounts[key_rank] = sendpos - sdispls[key_rank];
         }
       
     }
