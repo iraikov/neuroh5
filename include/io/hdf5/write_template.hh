@@ -23,7 +23,7 @@ namespace ngh5
        const hid_t&          file_type,
        const std::vector<T>& v,
        hid_t                 dcpl = H5P_DEFAULT,
-       bool                  do_coll_io = false
+       bool                  do_coll_io = true
        )
       {
         herr_t ierr = 0;

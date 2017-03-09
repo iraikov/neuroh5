@@ -108,11 +108,11 @@ namespace ngh5
         assert(dcpl >= 0);
         hsize_t chunk = cdim;
         assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-        assert(H5Pset_deflate(dcpl, 6) >= 0);
+	//assert(H5Pset_deflate(dcpl, 6) >= 0);
 
 
         vector<NODE_IDX_T> v_dst_start(1, dst_start);         
-        write(file, path, NODE_IDX_H5_FILE_T, v_dst_start, dcpl);
+        write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
 
         // write destination block pointer
 
@@ -159,7 +159,7 @@ namespace ngh5
         assert(H5Sclose(fspace) >= 0);
         */
 
-        write(file, path, DST_BLK_PTR_H5_FILE_T, dbp, dcpl);
+        write(file, path, DST_BLK_PTR_H5_FILE_T, dbp);
 
         // write destination pointers
         // # dest. pointers = number of destinations + 1
@@ -216,7 +216,7 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         */
-        write(file, path, DST_PTR_H5_FILE_T, dst_ptr, dcpl);
+        write(file, path, DST_PTR_H5_FILE_T, dst_ptr);
 
         // write source index
         // # source indexes = number of edges
@@ -251,7 +251,7 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         */
-        write(file, path, NODE_IDX_H5_FILE_T, src_idx, dcpl);
+        write(file, path, NODE_IDX_H5_FILE_T, src_idx);
 
         // write out source and destination population indices
         //dims = 1;
@@ -273,7 +273,7 @@ namespace ngh5
         assert(H5Sclose(fspace) >= 0);
         */
         vector<POP_IDX_T> v_src_pop_idx(1, src_pop_idx);         
-        write(file, path, POP_IDX_H5_FILE_T, v_src_pop_idx, dcpl);
+        write(file, path, POP_IDX_H5_FILE_T, v_src_pop_idx);
 
         path = projection_path_join(projection_name, "Destination Population");
         /*
@@ -294,7 +294,7 @@ namespace ngh5
         */
 
         vector<POP_IDX_T> v_dst_pop_idx(1, dst_pop_idx);         
-        write(file, path, POP_IDX_H5_FILE_T, v_dst_pop_idx, dcpl);
+        write(file, path, POP_IDX_H5_FILE_T, v_dst_pop_idx);
         
         // clean-up
         assert(H5Pclose(dcpl) >= 0);
