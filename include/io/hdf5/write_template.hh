@@ -23,7 +23,7 @@ namespace ngh5
        const hid_t&          file_type,
        const std::vector<T>& v,
        hid_t                 dcpl = H5P_DEFAULT,
-       bool                  do_coll_io = false
+       bool                  do_coll_io = true
        )
       {
         herr_t ierr = 0;
@@ -63,34 +63,32 @@ namespace ngh5
         assert(dset >= 0);
 
         // prepare the memory spaces and hyperslab selections
-        // if my rank doesn't have to write anything, we fake it
-        hsize_t one = 1, start, block = (hsize_t)my_size;
-        if (my_size == 0)
-          {
-            block = 1;
-          }
+        hsize_t one = 1, start = 0, block = (hsize_t)my_size;
         hid_t mspace = H5Screate_simple(1, &block, &block);
         assert(mspace >= 0);
-        if (my_size > 0)
-          {
-            assert(H5Sselect_all(mspace) >= 0);
-          }
-        else
-          {
-            assert(H5Sselect_none(mspace) >= 0);
-          }
+        
 
         // determine the start
         std::vector<uint64_t> sendbuf(size, my_size), recvbuf(size);
         assert(MPI_Allgather(&sendbuf[0], 1, MPI_UINT64_T, &recvbuf[0], 1,
                              MPI_UINT64_T, comm) == MPI_SUCCESS);
-        for (int p = 0; p < rank; ++p)
+        for (int p = 0; p < rank; p++)
           {
             start += (hsize_t) recvbuf[p];
           }
-        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one,
-                                   &block) >= 0);
 
+        if (block > 0)
+          {
+            assert(H5Sselect_all(mspace) >= 0);
+            assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one,
+                                       &block) >= 0);
+          }
+        else
+          {
+            assert(H5Sselect_none(mspace) >= 0);
+            assert(H5Sselect_none(fspace) >= 0);
+          }
+        
         // infer the memory type
         hid_t mtype = H5Tget_native_type(file_type, H5T_DIR_ASCEND);
         assert(mtype >= 0);

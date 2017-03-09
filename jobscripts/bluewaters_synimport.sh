@@ -17,13 +17,12 @@
 #PBS -W umask=0027
 
 module load cray-hdf5-parallel
-module load gcc/4.9.3
 
 set -x
 
 cd $PBS_O_WORKDIR
 
-aprun -n 128 ./build/neurograph_import --src-offset=-44990 \
+aprun -n 128 ./build/neurograph_import -f hdf5:syn --src-offset=-44990 \
+      -d /projects/sciteam/baef/DGC_forest_syn_connectivity_20170308.h5:/Populations/GC/Connectivity \
       MPP GC MPPtoGC \
-      $HOME/scratch/dentate/dentate_Full_Scale_Control_MPP.h5 \
-      -i /projects/sciteam/baef/DGC_forest_connectivity.h5:/Populations/GC/Connectivity
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170308.h5 
