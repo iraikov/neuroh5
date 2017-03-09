@@ -57,6 +57,7 @@ namespace ngh5
           for (size_t k = 0; k < num_attrs; k++)
             {
               uint32_t numitems = edge_attr_values.size_attr<T>(k);
+              assert(numitems == num_edges);
               assert(MPI_Pack_size(numitems, mpi_type, comm, &packsize) == MPI_SUCCESS);
               sendsize += packsize;
             }
@@ -146,7 +147,7 @@ namespace ngh5
 
         }
 
-      sendsize+=MPI_BSEND_OVERHEAD;
+      //sendsize+=MPI_BSEND_OVERHEAD;
 
       return ierr;
 
@@ -229,7 +230,14 @@ namespace ngh5
       int ierr=0;
       // Create MPI_PACKED object with the number of dst vertices for this rank
       int packsize=0, sendsize=0;
+
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) >= 0);
+      assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+
       uint32_t rank_numitems=edge_map.size();
+
       assert(MPI_Pack_size(1, size_type, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
       if (rank_numitems > 0)
@@ -239,9 +247,9 @@ namespace ngh5
             {
               NODE_IDX_T key_node = it->first;
               
-              const vector<NODE_IDX_T>  adj_vector = get<0>(it->second);
+              const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
               const model::EdgeAttr&    my_edge_attrs = get<1>(it->second);
-              
+
               num_packed_edges += adj_vector.size();
               
               ierr = pack_size_edge(comm, header_type, key_node, adj_vector, my_edge_attrs,
@@ -262,7 +270,7 @@ namespace ngh5
             {
               NODE_IDX_T key_node = it->first;
               
-              const vector<NODE_IDX_T>  adj_vector = get<0>(it->second);
+              const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
               const model::EdgeAttr&    my_edge_attrs = get<1>(it->second);
 
               ierr = pack_edge(comm, header_type, key_node, adj_vector, my_edge_attrs,
@@ -539,6 +547,10 @@ namespace ngh5
         {
           sdispls[key_rank] = sendpos;
           
+          auto it1 = prj_rank_edge_map.find(key_rank); 
+
+          if (it1 != prj_rank_edge_map.end())
+            {
 #ifdef USE_EDGE_DELIM      
       int packsize=0;
       assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
@@ -547,18 +559,16 @@ namespace ngh5
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
-          auto it1 = prj_rank_edge_map.find(key_rank); 
-
-          pack_edge_map1 (comm, header_type, size_type, 
-                          it1->second, num_packed_edges, sendpos, sendbuf);
-
-          prj_rank_edge_map.erase(key_rank);
+              pack_edge_map1 (comm, header_type, size_type, 
+                              it1->second, num_packed_edges, sendpos, sendbuf);
+              prj_rank_edge_map.erase(key_rank);
           
 #ifdef USE_EDGE_DELIM      
       assert(MPI_Pack(&rank_edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
+            }
           assert(sendpos <= sendbuf.size());
           sendcounts[key_rank] = sendpos - sdispls[key_rank];
         }

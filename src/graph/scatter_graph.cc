@@ -168,7 +168,6 @@ namespace ngh5
           rdispls[p] = rdispls[p-1] + recvcounts[p-1];
           recvbuf_size += recvcounts[p];
         }
-      assert(recvbuf_size > 0);
 
       vector<uint8_t> recvbuf;
       recvbuf.resize(recvbuf_size, 0);
@@ -180,10 +179,13 @@ namespace ngh5
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
-      
-      mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
-                                 recvbuf, recvcounts, rdispls, edge_attr_num,
-                                 prj_edge_map);
+
+      if (recvbuf_size > 0)
+        {
+          mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
+                                     recvbuf, recvcounts, rdispls, edge_attr_num,
+                                     prj_edge_map);
+        }
       
       DEBUG("scatter: finished unpacking edges for projection ", prj_name);
       
