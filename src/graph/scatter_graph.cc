@@ -170,7 +170,7 @@ namespace ngh5
         }
 
       vector<uint8_t> recvbuf;
-      recvbuf.resize(recvbuf_size, 0);
+      recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,

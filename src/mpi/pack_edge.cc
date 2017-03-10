@@ -147,8 +147,6 @@ namespace ngh5
 
         }
 
-      //sendsize+=MPI_BSEND_OVERHEAD;
-
       return ierr;
 
     }
@@ -587,7 +585,8 @@ namespace ngh5
                       &sendpos, comm) == MPI_SUCCESS);
 
 #endif
-
+      sendbuf.resize(sendbuf.size()+MPI_BSEND_OVERHEAD);
+      sendpos += MPI_BSEND_OVERHEAD;
       assert(sendpos <= sendbuf.size());
       sendcounts[key_rank] = sendpos - sdispls[key_rank];
         }
@@ -628,6 +627,12 @@ namespace ngh5
                 {
                   printf("rank %d: unpack_rank_edge_map: ridx = %u recvcounts[%u] = %d recvpos = %d recvbuf_size = %u delim = %d\n", 
                          rank, ridx, ridx, recvcounts[ridx], recvpos, recvbuf_size, delim);
+                  while ((delim != rank_edge_start_delim) && (recvpos < recvbuf_size))
+                    {
+                      assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm) == MPI_SUCCESS);
+                      printf("rank %d: recvpos = %d delim = %d\n", rank, recvpos, delim);
+                    }
+                  
                 }
               assert(delim == rank_edge_start_delim);
 #endif
