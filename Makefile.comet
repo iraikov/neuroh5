@@ -1,11 +1,11 @@
 AR		:= ar
-CC		:= g++
-LD        	:= g++
+CC		:= mpicxx
+LD        	:= mpicxx
 
-MPI_INCDIR      = /opt/mvapich2/gnu/ib/include
-MPI_LIBDIR      = /opt/mvapich2/gnu/ib/lib
-HDF5_INCDIR	= /opt/hdf5/gnu/mvapich2_ib/include
-HDF5_LIBDIR	= /opt/hdf5/gnu/mvapich2_ib/lib 
+MPI_INCDIR      = /opt/mvapich2/intel/ib/include
+MPI_LIBDIR      = /opt/mvapich2/intel/ib/lib
+HDF5_INCDIR	= /opt/hdf5/intel/mvapich2_ib/include
+HDF5_LIBDIR	= /opt/hdf5/intel/mvapich2_ib/lib 
 HDF5_LIB        = hdf5
 
 PARMETIS_DIR	:= $(PARMETISHOME)

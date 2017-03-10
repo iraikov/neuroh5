@@ -9,9 +9,9 @@
 #SBATCH --mail-user=ivan.g.raikov@gmail.com
 #SBATCH --mail-type=END
 #
-
-module load python
+module load intel/2015.2.164
 module load hdf5
+module load python
 module load scipy
 module load mpi4py
 
@@ -20,11 +20,8 @@ export PYTHONPATH=$HOME/.local/lib/python2.7/site-packages:$PYTHONPATH
 
 set -x
 
-nodefile=`generate_pbs_nodefile`
-
-mpirun_rsh -export-all -hostfile $nodefile -np 1024  \
-PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH \
-/opt/python/bin/python ./tests/comet_scatter_test.py
+PYTHONPATH=$PYTHONPATH \
+mpirun -np 1024 /opt/python/bin/python ./tests/comet_scatter_test.py
 
 echo All done!
 
