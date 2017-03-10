@@ -1,4 +1,5 @@
 
+#include "debug.hh"
 #include "write_connectivity.hh"
 #include "hdf5_types.hh"
 #include "hdf5_path_names.hh"
@@ -110,6 +111,10 @@ namespace ngh5
         assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
 	//assert(H5Pset_deflate(dcpl, 6) >= 0);
 
+	if (rank == 0)
+	  {
+	    DEBUG("writing dst_start\n");
+	  }
 
         vector<NODE_IDX_T> v_dst_start(1, dst_start);         
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
@@ -158,6 +163,11 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         */
+
+	if (rank == 0)
+	  {
+	    DEBUG("writing dbp\n");
+	  }
 
         write(file, path, DST_BLK_PTR_H5_FILE_T, dbp);
 
@@ -216,6 +226,11 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         */
+
+	if (rank == 0)
+	  {
+	    DEBUG("writing dst_ptr\n");
+	  }
         write(file, path, DST_PTR_H5_FILE_T, dst_ptr);
 
         // write source index
@@ -273,6 +288,10 @@ namespace ngh5
         assert(H5Sclose(fspace) >= 0);
         */
         vector<POP_IDX_T> v_src_pop_idx(1, src_pop_idx);         
+	if (rank == 0)
+	  {
+	    DEBUG("writing src_pop_idx\n");
+	  }
         write(file, path, POP_IDX_H5_FILE_T, v_src_pop_idx);
 
         path = projection_path_join(projection_name, "Destination Population");
@@ -294,6 +313,10 @@ namespace ngh5
         */
 
         vector<POP_IDX_T> v_dst_pop_idx(1, dst_pop_idx);         
+	if (rank == 0)
+	  {
+	    DEBUG("writing dst_pop_idx\n");
+	  }
         write(file, path, POP_IDX_H5_FILE_T, v_dst_pop_idx);
         
         // clean-up
