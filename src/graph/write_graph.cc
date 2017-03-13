@@ -31,12 +31,12 @@ namespace ngh5
   {
     int write_graph
     (
-     MPI_Comm              comm,
+     MPI_Comm         comm,
      const string&    file_name,
      const string&    src_pop_name,
      const string&    dst_pop_name,
      const string&    prj_name,
-     const bool            opt_attrs,
+     const bool       opt_attrs,
      const vector<NODE_IDX_T>  edges,
      const model::NamedAttrMap& edge_attrs
      )
@@ -52,6 +52,10 @@ namespace ngh5
       map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
       size_t total_num_nodes;
+
+      int size, rank;
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
       
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(io::hdf5::read_population_ranges(comm, file_name,
@@ -79,6 +83,9 @@ namespace ngh5
       
       size_t src_start = pop_vector[src_pop_idx].start;
       size_t src_end = src_start + pop_vector[src_pop_idx].count;
+
+      assert(src_start < src_end);
+      assert(dst_start < dst_end);
       
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
@@ -87,13 +94,13 @@ namespace ngh5
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(file >= 0);
 
-      map<NODE_IDX_T, vector<NODE_IDX_T> > dst_src_map;
+      map<NODE_IDX_T, vector<NODE_IDX_T> > adj_map;
         
       for (NODE_IDX_T inode = dst_start; inode < dst_end; inode++)
         {
-          dst_src_map.insert(make_pair(inode-dst_start, vector<NODE_IDX_T>()));
+          adj_map.insert(make_pair(inode-dst_start, vector<NODE_IDX_T>()));
         }
-
+      
       map<NODE_IDX_T, vector<NODE_IDX_T> >::iterator iter;
       for (size_t i = 1; i < edges.size(); i += 2)
         {
@@ -106,35 +113,37 @@ namespace ngh5
             }
                  
           assert(src_start <= edges[i-1] && edges[i-1] < src_end);
-          
-          iter = dst_src_map.find(edges[i] - dst_start);
-          assert (iter != dst_src_map.end());
-          iter->second.push_back(edges[i-1] - src_start);
+
+          vector<NODE_IDX_T>& adj_vector  = adj_map[edges[i] - dst_start];
+          adj_vector.push_back(edges[i-1] - src_start);
         }
 
       // compute sort permutations for the source arrays
       auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       vector<std::size_t> src_sort_permutations;
       NODE_IDX_T edge_offset=0;
-      for (size_t i = 0; i < dst_src_map.size(); i++)
+      for (size_t i = 0; i < adj_map.size(); i++)
         {
-          iter = dst_src_map.find(i);
-          vector<size_t> p = sort_permutation(iter->second, compare_nodes);
-          apply_permutation_in_place(iter->second, p);
-          for (size_t j=0; j<p.size(); j++)
+          iter = adj_map.find(i);
+          if (iter != adj_map.end())
             {
-              p[j] += edge_offset;
+              vector<size_t> p = sort_permutation(iter->second, compare_nodes);
+              apply_permutation_in_place(iter->second, p);
+              for (size_t j=0; j<p.size(); j++)
+                {
+                  p[j] += edge_offset;
+                }
+              edge_offset += p.size();
+              src_sort_permutations.insert(src_sort_permutations.end(),p.begin(),p.end());
             }
-          edge_offset += p.size();
-          src_sort_permutations.insert(src_sort_permutations.end(),p.begin(),p.end());
         }
 
       io::hdf5::write_connectivity (file, prj_name, src_pop_idx, dst_pop_idx,
                                     src_start, src_end, dst_start, dst_end,
-                                    num_edges, dst_src_map);
+                                    num_edges, adj_map);
 
       
-      dst_src_map.clear();
+      adj_map.clear();
       const vector< map<NODE_IDX_T, float > >& float_attrs = edge_attrs.attr_maps<float>();
       for (auto & elem: edge_attrs.float_names)
         {
