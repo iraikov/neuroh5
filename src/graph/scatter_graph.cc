@@ -218,6 +218,8 @@ namespace ngh5
       int ierr = 0;
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
+      // MPI datatype for edges
+      MPI_Datatype mpi_edge_type;
       // MPI group color value used for I/O ranks
       int io_color = 1;
       // The set of compute ranks for which the current I/O rank is responsible
@@ -225,7 +227,8 @@ namespace ngh5
       vector<model::pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
       uint64_t prj_size = 0;
-  
+      
+      
       int rank, size;
       assert(MPI_Comm_size(all_comm, &size) >= 0);
       assert(MPI_Comm_rank(all_comm, &rank) >= 0);
