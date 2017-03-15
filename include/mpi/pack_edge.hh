@@ -10,6 +10,7 @@
 #include <mpi.h>
 #include <cstring>
 #include <vector>
+#include <map>
 #include <string>
 
 #include "model_types.hh"
@@ -20,7 +21,12 @@ namespace ngh5
 
   namespace mpi
   {
-
+    void pack_adj_map (MPI_Comm comm, MPI_Datatype header_type, MPI_Datatype size_type,
+                       const std::map<NODE_IDX_T, std::vector<NODE_IDX_T> >& adj_map,
+                       size_t &num_packed_edges,
+                       int &sendpos,
+                       std::vector<uint8_t> &sendbuf);
+    
     void pack_edge_map (MPI_Comm comm,
                         MPI_Datatype header_type,
                         MPI_Datatype size_type,

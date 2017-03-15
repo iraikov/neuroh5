@@ -234,11 +234,11 @@ namespace ngh5
       assert(MPI_Comm_rank(comm, &rank) >= 0);
 
 
-      uint32_t rank_numitems=edge_map.size();
+      uint32_t numitems=edge_map.size();
 
       assert(MPI_Pack_size(1, size_type, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
-      if (rank_numitems > 0)
+      if (numitems > 0)
         {
 
           for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
@@ -258,11 +258,11 @@ namespace ngh5
       sendbuf.resize(sendbuf.size() + sendsize, 0);
           
       Size sizeval;
-      sizeval.size = rank_numitems;
+      sizeval.size = numitems;
 
       assert(MPI_Pack(&sizeval, 1, size_type, &sendbuf[0],
                       (int)sendbuf.size(), &sendpos, comm) == MPI_SUCCESS);
-      if (rank_numitems > 0)
+      if (numitems > 0)
         {
           for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
             {
@@ -313,6 +313,131 @@ namespace ngh5
     }
 
 
+
+    int pack_adj_map1 (MPI_Comm comm,
+                       MPI_Datatype header_type,
+                       MPI_Datatype size_type,
+                       const map<NODE_IDX_T, vector<NODE_IDX_T> >& adj_map;
+                       size_t &num_packed_edges,
+                       int &sendpos,
+                       vector<uint8_t> &sendbuf
+                       )
+    {
+      int ierr=0;
+      // Create MPI_PACKED object with the number of dst vertices for this rank
+      int packsize=0, sendsize=0;
+
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) >= 0);
+      assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+
+      uint32_t numitems=adj_map.size();
+
+      assert(MPI_Pack_size(1, size_type, comm, &packsize) == MPI_SUCCESS);
+      sendsize += packsize;
+      if (numitems > 0)
+        {
+
+          for (auto it = adj_map.cbegin(); it != adj_map.cend(); ++it)
+            {
+              NODE_IDX_T key_node = it->first;
+              
+              const vector<NODE_IDX_T>&  adj_vector = it->second;
+
+              size_t num_edges = adj_vector.size();
+              num_packed_edges += num_edges;
+              
+              ierr = pack_size_edge(comm, header_type, key_node, adj_vector, my_edge_attrs,
+                                    sendsize);
+#ifdef USE_EDGE_DELIM      
+              assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
+              sendsize += packsize;
+#endif
+              
+              assert(MPI_Pack_size(1, header_type, comm, &packsize) == MPI_SUCCESS);
+              sendsize += packsize;
+              if (num_edges > 0)
+                {
+                  assert(MPI_Pack_size(num_edges, NODE_IDX_MPI_T, comm, &packsize)
+                         == MPI_SUCCESS);
+                  sendsize += packsize;
+                }
+            }
+        }
+      sendbuf.resize(sendbuf.size() + sendsize, 0);
+          
+      Size sizeval;
+      sizeval.size = numitems;
+
+      assert(MPI_Pack(&sizeval, 1, size_type, &sendbuf[0],
+                      (int)sendbuf.size(), &sendpos, comm) == MPI_SUCCESS);
+      if (numitems > 0)
+        {
+          for (auto it = adj_map.cbegin(); it != adj_map.cend(); ++it)
+            {
+              NODE_IDX_T key_node = it->first;
+              
+              const vector<NODE_IDX_T>&  adj_vector = it->second;
+
+              // Create MPI_PACKED object with all the source vertices and edge attributes
+              size_t num_edges = adj_vector.size();
+              EdgeHeader header;
+      
+              header.key  = key_node;
+              header.size = num_edges;
+
+              assert(MPI_Pack(&header, 1, header_type, &sendbuf[0], sendbuf_size,
+                              &sendpos, comm) == MPI_SUCCESS);
+
+              if (num_edges > 0)
+                {
+                  assert(MPI_Pack(&adj_vector[0], num_edges, NODE_IDX_MPI_T,
+                                  &sendbuf[0], sendbuf_size, &sendpos, comm) ==
+                         MPI_SUCCESS);
+                }
+              
+
+              assert((size_t)sendpos <= sendbuf.size());
+            }
+        }
+
+      return ierr;
+    }
+
+        
+    void pack_adj_map (MPI_Comm comm, MPI_Datatype header_type, MPI_Datatype size_type,
+                       const map<NODE_IDX_T, vector<NODE_IDX_T> >& adj_map,
+                       size_t &num_packed_edges,
+                       int &sendpos,
+                       vector<uint8_t> &sendbuf)
+    {
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) >= 0);
+      assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+#ifdef USE_EDGE_DELIM      
+      int packsize=0;
+      assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
+      sendbuf.resize(sendbuf.size() + packsize);
+      assert(MPI_Pack(&rank_edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                      &sendpos, comm) == MPI_SUCCESS);
+
+#endif
+      pack_adj_map1 (comm, header_type, size_type, 
+                      prj_edge_map, num_packed_edges, sendpos, sendbuf);
+
+#ifdef USE_EDGE_DELIM      
+      assert(MPI_Pack(&rank_edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                      &sendpos, comm) == MPI_SUCCESS);
+
+#endif
+      assert(sendpos <= sendbuf.size());
+      
+    }
+
+
+    
     /**************************************************************************
      * Unpack an MPI packed edge data structure into source vertices and edge
      * attributes
