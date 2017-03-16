@@ -7,6 +7,7 @@
 #include <hdf5.h>
 
 #include "ngh5_types.hh"
+#include "model_types.hh"
 
 
 namespace ngh5
@@ -26,11 +27,14 @@ namespace ngh5
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
        const uint64_t&           num_edges,
-       const edge_map_t&         prj_edge_map,
+       const model::edge_map_t&         prj_edge_map,
+       const std::vector<std::vector<std::string>>& edge_attr_names,
        hsize_t            cdim = 4096 
        );
 
+
     }
+    
   }
 }
 

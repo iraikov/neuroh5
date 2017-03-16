@@ -122,7 +122,7 @@ int append_syn_adj_map
 
           vector<NODE_IDX_T> adj_vector;
           model::EdgeAttr edge_attr_values;
-          vector<syn_id> syn_id_vector;
+          vector<NODE_IDX_T> syn_id_vector;
           
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
             {
@@ -134,7 +134,7 @@ int append_syn_adj_map
               num_edges++;
             }
 
-          edge_attr_map.insert(syn_id_vec);
+          edge_attr_values.insert(syn_id_vector);
 
           if (edge_map.find(dst) == edge_map.end())
             {
@@ -179,16 +179,18 @@ int main(int argc, char** argv)
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
-  int rank, size;
+  int rank, size, io_size;
   assert(MPI_Comm_size(all_comm, &size) >= 0);
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
   int dst_offset=0, src_offset=0;
-  bool opt_txt = false;
-  bool opt_hdf5_syn = false;
+  int optflag_iosize = 0;
   int optflag_input_format = 0;
   int optflag_dst_offset = 0;
   int optflag_src_offset = 0;
+  bool opt_iosize = false;
+  bool opt_txt = false;
+  bool opt_hdf5_syn = false;
   bool opt_dst_offset = false,
     opt_src_offset = false;
 
@@ -197,16 +199,22 @@ int main(int argc, char** argv)
     {"dst-offset",    required_argument, &optflag_dst_offset,  1 },
     {"src-offset",    required_argument, &optflag_src_offset,  1 },
     {"format",        required_argument, &optflag_input_format,  1 },
+    {"iosize",        required_argument, &optflag_iosize,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hf:i:d:a:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "hf:i:d:a:s:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
         {
         case 0:
+          if (optflag_iosize == 1) {
+            opt_iosize = true;
+            ss << string(optarg);
+            ss >> io_size;
+          }
           if (optflag_dst_offset == 1) {
             stringstream ss;
             opt_dst_offset = true;
@@ -277,6 +285,13 @@ int main(int argc, char** argv)
         case 'i':
           {
             txt_filelist_file_name = string(optarg);
+          }
+          break;
+        case 's':
+          {
+            opt_iosize = true;
+            ss << string(optarg);
+            ss >> io_size;
           }
           break;
         case 'h':
@@ -373,7 +388,7 @@ int main(int argc, char** argv)
 
   vector<vector<string>> edge_attr_names(model::EdgeAttr::num_attr_types);
   edge_attr_names[model::EdgeAttr::attr_index_uint32].push_back("syn_id");
-  status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name, edge_attr_names, edge_map);
+  status = graph::write_graph (all_comm, io_size, output_file_name, src_pop_name, dst_pop_name, prj_name, edge_attr_names, edge_map);
 
   MPI_Comm_free(&all_comm);
   

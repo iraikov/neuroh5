@@ -19,6 +19,7 @@
 #include "write_projection.hh"
 #include "hdf5_path_names.hh"
 #include "sort_permutation.hh"
+#include "pack_edge.hh"
 
 #include <vector>
 
@@ -61,7 +62,6 @@ namespace ngh5
     int write_graph
     (
      MPI_Comm         all_comm,
-     MPI_Comm         io_comm,
      const int        io_size,
      const string&    file_name,
      const string&    src_pop_name,
@@ -71,9 +71,12 @@ namespace ngh5
      const edge_map_t&  input_edge_map
      )
     {
-      assert(edges.size()%2 == 0);
-
-      uint64_t num_edges = edges.size()/2;
+      uint64_t num_edges = 0;
+      vector <uint32_t> edge_attr_num(edge_attr_names.size());
+      for (size_t i=0; i<edge_attr_names.size(); i++)
+        {
+          edge_attr_num[i] = edge_attr_names[i].size();
+        }
       
       // read the population info
       set< pair<model::pop_t, model::pop_t> > pop_pairs;
@@ -84,33 +87,65 @@ namespace ngh5
       size_t total_num_nodes;
 
       int size, rank;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-      
-      //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
-      assert(io::hdf5::read_population_ranges(comm, file_name,
-                                              pop_ranges, pop_vector, total_num_nodes) >= 0);
-      assert(io::hdf5::read_population_labels(comm, file_name, pop_labels) >= 0);
-      
-      for (size_t i=0; i< pop_labels.size(); i++)
+      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+      // Create an I/O communicator
+      MPI_Comm  io_comm;
+      // MPI group color value used for I/O ranks
+      int io_color = 1;
+      if (rank < io_size)
         {
-          if (src_pop_name == get<1>(pop_labels[i]))
+          MPI_Comm_split(all_comm,io_color,rank,&io_comm);
+          MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+
+          //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
+          assert(io::hdf5::read_population_ranges(all_comm, file_name,
+                                                  pop_ranges, pop_vector, total_num_nodes) >= 0);
+          assert(io::hdf5::read_population_labels(all_comm, file_name, pop_labels) >= 0);
+          
+          for (size_t i=0; i< pop_labels.size(); i++)
             {
-              src_pop_idx = get<0>(pop_labels[i]);
-              src_pop_set = true;
+              if (src_pop_name == get<1>(pop_labels[i]))
+                {
+                  src_pop_idx = get<0>(pop_labels[i]);
+                  src_pop_set = true;
+                }
+              if (dst_pop_name == get<1>(pop_labels[i]))
+                {
+                  dst_pop_idx = get<0>(pop_labels[i]);
+                  dst_pop_set = true;
+                }
             }
-          if (dst_pop_name == get<1>(pop_labels[i]))
-            {
-              dst_pop_idx = get<0>(pop_labels[i]);
-              dst_pop_set = true;
-            }
+          assert(dst_pop_set && src_pop_set);
+        }
+      else
+        {
+          MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
       
-      assert(dst_pop_set && src_pop_set);
-      
-      size_t dst_start = pop_vector[dst_pop_idx].start;
-      size_t dst_end = dst_start + pop_vector[dst_pop_idx].count;
-      size_t total_num_nodes = dst_start - dst_end;
+      size_t dst_start, dst_end;
+      size_t src_start, src_end;
+
+      if (rank == 0)
+        {
+          dst_start = pop_vector[dst_pop_idx].start;
+          dst_end = dst_start + pop_vector[dst_pop_idx].count;
+          src_start = pop_vector[src_pop_idx].start;
+          src_end = dst_start + pop_vector[src_pop_idx].count;
+          total_num_nodes = dst_start - dst_end;
+        }
+
+      assert(MPI_Bcast(&dst_start, 1, MPI_UINT32_T, 0, all_comm) ==
+             MPI_SUCCESS);          
+      assert(MPI_Bcast(&dst_end, 1, MPI_UINT32_T, 0, all_comm) ==
+             MPI_SUCCESS);          
+      assert(MPI_Bcast(&src_start, 1, MPI_UINT32_T, 0, all_comm) ==
+             MPI_SUCCESS);          
+      assert(MPI_Bcast(&src_end, 1, MPI_UINT32_T, 0, all_comm) ==
+             MPI_SUCCESS);          
+      assert(MPI_Bcast(&total_num_nodes, 1, MPI_UINT32_T, 0, all_comm) ==
+             MPI_SUCCESS);          
+        
       
       // A vector that maps nodes to compute ranks
       vector< rank_t > node_rank_vector;
@@ -124,24 +159,23 @@ namespace ngh5
           NODE_IDX_T dst = element.first;
           // all source/destination node IDs must be in range
           assert(dst_start <= dst && dst < dst_end);
-          model::edge_tuple_t& et = element.second;
-          vector<NODE_IDX_T> &v   = get<0>(et);
-          model::EdgeAttr &a      = get<1>(et);
+          model::edge_tuple_t et = element.second;
+          vector<NODE_IDX_T> v   = get<0>(et);
+          model::EdgeAttr a      = get<1>(et);
 
           vector<NODE_IDX_T> adj_vector;
           for (auto & src: v)
             {
               if (!(src_start <= src && src < src_end))
                 {
-                  printf("src_start = %lu src_end = %lu\n", src_start, src_end);
-                  printf("edges[%d] = %lu\n", i-1, src);
+                  printf("src = %u src_start = %lu src_end = %lu\n", src, src_start, src_end);
                 }
               assert(src_start <= src && src < src_end);
               adj_vector.push_back(src - src_start);
               num_edges++;
             }
 
-          vector<hsize_t> p = sort_permutation(adj_vector, compare_nodes);
+          vector<size_t> p = sort_permutation(adj_vector, compare_nodes);
           apply_permutation_in_place(adj_vector, p);
           apply_permutation_in_place(a.float_values, p);
           apply_permutation_in_place(a.uint8_values, p);
@@ -155,6 +189,8 @@ namespace ngh5
           EdgeAttr &edge_attr_vec = get<1>(et);
           edge_attr_vec.append(a);
         }
+
+
 
       // Create an MPI datatype to describe the sizes of edge structures
       Size sizeval;
@@ -188,11 +224,11 @@ namespace ngh5
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
       // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
-      size_t num_packed_edges = 0; int sendpos = 0;
+      size_t num_packed_edges = 0; 
              
       mpi::pack_rank_edge_map (all_comm, header_type, size_type,
                                rank_edge_map, num_packed_edges,
-                               sendcounts, sendbuf, sdipls);
+                               sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
       
       // 1. Each ALL_COMM rank sends an edge vector size to
@@ -226,23 +262,27 @@ namespace ngh5
       if (recvbuf_size > 0)
         {
           mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
-                                     recvbuf, recvcounts, rdispls, prj_edge_map);
+                                     recvbuf, recvcounts, rdispls, edge_attr_num,
+                                     prj_edge_map);
         }
 
-      
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
 
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
-
-      io::hdf5::write_projection (file, prj_name, src_pop_idx, dst_pop_idx,
-                                  src_start, src_end, dst_start, dst_end,
-                                  num_edges, prj_edge_map);
-      
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
+      if (rank < io_size)
+        {
+          hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+          assert(fapl >= 0);
+          assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
+          
+          hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+          assert(file >= 0);
+          
+          io::hdf5::write_projection (file, prj_name, src_pop_idx, dst_pop_idx,
+                                      src_start, src_end, dst_start, dst_end,
+                                      num_edges, prj_edge_map, edge_attr_names);
+          
+          assert(H5Fclose(file) >= 0);
+          assert(H5Pclose(fapl) >= 0);
+        }
 
       return 0;
     }

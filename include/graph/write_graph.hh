@@ -22,18 +22,18 @@ namespace ngh5
   namespace graph
   {
     
-
     int write_graph
     (
-     MPI_Comm              comm,
+     MPI_Comm         all_comm,
+     const int        io_size,
      const std::string&    file_name,
      const std::string&    src_pop_name,
      const std::string&    dst_pop_name,
      const std::string&    prj_name,
-     const bool            opt_attrs,
-     const std::vector<NODE_IDX_T> edges,
-     const model::NamedAttrMap& edge_attrs
+     const std::vector<std::vector<std::string>>& edge_attr_names,
+     const model::edge_map_t&  input_edge_map
      );
+
   }
 }
 

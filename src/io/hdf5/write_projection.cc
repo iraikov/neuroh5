@@ -30,7 +30,7 @@ namespace ngh5
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
        const uint64_t&           num_edges,
-       const edge_map_t&         prj_edge_map,
+       const model::edge_map_t&  prj_edge_map,
        const vector<vector<string>>& edge_attr_names,
        hsize_t                   cdim
        )
@@ -50,23 +50,23 @@ namespace ngh5
         for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
           {
             NODE_IDX_T dst = iter->first;
-            model::edge_tuple_t& et = iter->second;
-            vector<NODE_IDX_T> &v = get<0>(et);
-            model::EdgeAttr &a = get<1>(et);
+            model::edge_tuple_t et = iter->second;
+            vector<NODE_IDX_T> v = get<0>(et);
+            model::EdgeAttr a = get<1>(et);
 
             if (!dst_blk_idx.empty())
               {
                 // creates new block if non-contiguous dst indices
                 if ((dst-1) > last_idx)
                   {
-                    dst_blk_idx.push_back(dst);
+                    dst_blk_idx.push_back(dst - dst_start);
                     dbp.push_back(dst_ptr.size());
                   }
                 last_idx = dst;
               }
             else
               {
-                dst_blk_idx.push_back(dst);
+                dst_blk_idx.push_back(dst - dst_start);
                 last_idx = dst;
               }
 
@@ -122,7 +122,7 @@ namespace ngh5
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
         assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
-                        &local_dst_start) >= 0);
+                        &dst_blk_idx[0]) >= 0);
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
@@ -323,69 +323,24 @@ namespace ngh5
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
         
-        const vector< map<NODE_IDX_T, float > >& float_attrs = edge_attrs.attr_maps<float>();
-        for (auto & elem: edge_attrs.float_names)
+        model::EdgeNamedAttr edge_attr_values;
+        vector< vector<float> > float_attrs (edge_attr_names[model::EdgeAttr::attr_index_float].size());
+
+        for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
           {
-            const string& attr_name = elem.first;
-            const size_t k = elem.second;
-            const map<NODE_IDX_T, float >& value_map = float_attrs[k];
-            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-            vector<float> values;
-            for (const auto& val: value_map)
-              {
-                float v = val.second;
-                values.push_back(v);
-              }
-            io::hdf5::write_sparse_edge_attribute<float>(file, path, values);
+            model::edge_tuple_t et = iter->second;
+            model::EdgeAttr a = get<1>(et);
+            edge_attr_values.append(a);
           }
         
-        const vector< map<NODE_IDX_T, uint8_t > >& uint8_attrs = edge_attrs.attr_maps<uint8_t>();
-        for (auto & elem: edge_attrs.uint8_names)
+        for (size_t i=0; i<edge_attr_values.float_values.size(); i++)
           {
-            const string& attr_name = elem.first;
-            const size_t k = elem.second;
-            const map<NODE_IDX_T, uint8_t >& value_map = uint8_attrs[k];
+            const string& attr_name = edge_attr_names[model::EdgeAttr::attr_index_float][i];
             string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-            vector<uint8_t> values;
-            for (const auto& val: value_map)
-              {
-                uint8_t v = val.second;
-                values.push_back(v);
-              }
-            io::hdf5::write_sparse_edge_attribute<uint8_t>(file, path, values);
-        }
-        
-        const vector< map<NODE_IDX_T, uint16_t > >& uint16_attrs = edge_attrs.attr_maps<uint16_t>();
-        for (const auto& elem: edge_attrs.uint16_names)
-          {
-            const string& attr_name = elem.first;
-            const size_t k = elem.second;
-            const map <NODE_IDX_T, uint16_t >& value_map = uint16_attrs[k];
-            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-            vector<uint16_t> values;
-            for (auto& val: value_map)
-              {
-                uint16_t v = val.second;
-                values.push_back(v);
-              }
-            io::hdf5::write_sparse_edge_attribute<uint16_t>(file, path, values);
+            io::hdf5::write_sparse_edge_attribute<float>(file, path, edge_attr_values.float_values[i]);
           }
         
-        const vector< map<NODE_IDX_T, uint32_t > >& uint32_attrs = edge_attrs.attr_maps<uint32_t>();
-        for (const auto& elem: edge_attrs.uint32_names)
-          {
-            const string& attr_name = elem.first;
-            const size_t k = elem.second;
-            const map <NODE_IDX_T, uint32_t >& value_map = uint32_attrs[k];
-            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-            vector<uint32_t> values;
-            for (auto& val: value_map)
-              {
-                uint32_t v = val.second;
-                values.push_back(v);
-              }
-            io::hdf5::write_sparse_edge_attribute<uint32_t>(file, path, values);
-          }
+        float_attrs.clear();
         
         
         // clean-up
