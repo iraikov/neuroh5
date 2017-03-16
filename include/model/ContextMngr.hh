@@ -15,6 +15,13 @@ namespace ngh5
 
       static void initialize();
 
+      static int all_comm_size();
+      static int all_comm_rank();
+
+      static int  io_comm_size();
+      static bool io_rank_flag(); // indicates if this process is an I/O rank
+      static int  io_comm_rank(); // negative for non-I/O ranks
+
       template<typename T>
       static void node_scatter
       (
@@ -56,8 +63,14 @@ namespace ngh5
       static bool m_initialized;
 
       // MPI stuff
-      static MPI_Comm m_io_comm;
       static MPI_Comm m_all_comm;
+      static int m_all_comm_size;
+      static int m_all_comm_rank;
+
+      static MPI_Comm m_io_comm;
+      static int m_io_comm_size;
+      static bool m_io_rank_flag;
+      static int m_io_comm_rank;
 
       // HDF5 stuff
       static hid_t m_ngh5_file;
@@ -86,8 +99,5 @@ namespace ngh5
     };
   }
 }
-
-
-
 
 #endif
