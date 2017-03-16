@@ -100,7 +100,8 @@ namespace ngh5
           DEBUG("scatter: reading projection ", prj_name);
           assert(io::hdf5::read_dbs_projection(io_comm, file_name, prj_name, 
                                                dst_start, src_start, total_prj_num_edges,
-                                               block_base, edge_base, dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                               block_base, edge_base, dst_blk_ptr, dst_idx,
+                                               dst_ptr, src_idx) >= 0);
           
           DEBUG("scatter: validating projection ", prj_name);
           // validate the edges

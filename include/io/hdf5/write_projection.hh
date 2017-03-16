@@ -15,7 +15,7 @@ namespace ngh5
   {
     namespace hdf5
     {
-      void write_connectivity
+      void write_projection
       (
        hid_t                     file,
        const std::string&        projection_name,
@@ -26,7 +26,7 @@ namespace ngh5
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
        const uint64_t&           num_edges,
-       const std::map<NODE_IDX_T, std::vector<NODE_IDX_T> >& adj_map,
+       const edge_map_t&         prj_edge_map,
        hsize_t            cdim = 4096 
        );
 

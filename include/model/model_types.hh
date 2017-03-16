@@ -1,14 +1,14 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file ngh5types.hh
+///  @file model_types.hh
 ///
 ///  Type definitions for the fundamental datatypes used in the graph storage
 ///  format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
-#ifndef NGH5TYPES_HH
-#define NGH5TYPES_HH
+#ifndef MODEL_TYPES_HH
+#define MODEL_TYPES_HH
 
 #include "edge_attr.hh"
 #include "ngh5_types.hh"

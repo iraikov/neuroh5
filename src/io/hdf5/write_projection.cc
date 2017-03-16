@@ -1,9 +1,10 @@
 
 
 #include "debug.hh"
-#include "write_connectivity.hh"
 #include "hdf5_types.hh"
 #include "hdf5_path_names.hh"
+#include "write_projection.hh"
+#include "write_edge_attributes.hh"
 #include "write_template.hh"
 
 #include <algorithm>
@@ -18,7 +19,7 @@ namespace ngh5
   {
     namespace hdf5
     {
-      void write_connectivity
+      void write_projection
       (
        hid_t                     file,
        const string&             projection_name,
@@ -29,27 +30,50 @@ namespace ngh5
        const NODE_IDX_T&         dst_start,
        const NODE_IDX_T&         dst_end,
        const uint64_t&           num_edges,
-       const map<NODE_IDX_T, vector<NODE_IDX_T> >& adj_map,
-       hsize_t            cdim
+       const edge_map_t&         prj_edge_map,
+       const vector<vector<string>>& edge_attr_names,
+       hsize_t                   cdim
        )
       {
         // do a sanity check on the input
         assert(src_start < src_end);
         assert(dst_start < dst_end);
 
-        uint64_t num_dest = adj_map.size();
-        assert(num_dest > 0 && num_dest < (dst_end - dst_start + 1));
+        uint64_t num_dest = prj_edge_map.size();
 
         // create relative destination pointers and source index
+        vector<uint64_t> dbp(1,0); // only the last rank writes two elements
         vector<uint64_t> dst_ptr(1, 0);
-        vector<uint32_t> src_idx;
-        size_t pos = 0;
-        for (auto iter = adj_map.begin(); iter != adj_map.end(); ++iter)
+        vector<NODE_IDX_T> dst_blk_idx, src_idx;
+        NODE_IDX_T last_idx;
+        size_t pos = 0; 
+        for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
           {
-            dst_ptr.push_back(dst_ptr[pos++] + iter->second.size());
-            copy(iter->second.begin(), iter->second.end(),
-                 back_inserter(src_idx));
+            NODE_IDX_T dst = iter->first;
+            model::edge_tuple_t& et = iter->second;
+            vector<NODE_IDX_T> &v = get<0>(et);
+            model::EdgeAttr &a = get<1>(et);
+
+            if (!dst_blk_idx.empty())
+              {
+                // creates new block if non-contiguous dst indices
+                if ((dst-1) > last_idx)
+                  {
+                    dst_blk_idx.push_back(dst);
+                    dbp.push_back(dst_ptr.size());
+                  }
+                last_idx = dst;
+              }
+            else
+              {
+                dst_blk_idx.push_back(dst);
+                last_idx = dst;
+              }
+
+            dst_ptr.push_back(dst_ptr[pos++] + v.size());
+            copy(v.begin(), v.end(), back_inserter(src_idx));
           }
+
 
         // get the I/O communicator
         MPI_Comm comm;
@@ -98,7 +122,7 @@ namespace ngh5
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
         assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
-                        &dst_start) >= 0);
+                        &local_dst_start) >= 0);
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
@@ -114,15 +138,15 @@ namespace ngh5
         vector<NODE_IDX_T> v_dst_start(1, dst_start);         
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
         */
-        
-        // write destination block pointer
-        vector<uint64_t> dbp(1,0); // only the last rank writes two elements
 
         for (int p = 0; p < rank; ++p)
           {
             dbp[0] += recvbuf_num_dest[p];
           }
-
+        for (size_t i = 1; i < dbp.size(); i++)
+          {
+            dbp[i] += dbp[0];
+          }
         if (rank == size-1) // last rank writes the total destination count
           {
             dbp.push_back(dbp[0] + recvbuf_num_dest[rank]);
@@ -136,11 +160,7 @@ namespace ngh5
                           fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
         assert(dset >= 0);
 
-        dims = 1;
-        if (rank == size-1) // the last rank writes an extra element
-          {
-            dims = 2;
-          }
+        dims = dbp.size();
         mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
         assert(H5Sselect_all(mspace) >= 0);
@@ -302,6 +322,71 @@ namespace ngh5
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
         assert(H5Sclose(fspace) >= 0);
+        
+        const vector< map<NODE_IDX_T, float > >& float_attrs = edge_attrs.attr_maps<float>();
+        for (auto & elem: edge_attrs.float_names)
+          {
+            const string& attr_name = elem.first;
+            const size_t k = elem.second;
+            const map<NODE_IDX_T, float >& value_map = float_attrs[k];
+            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
+            vector<float> values;
+            for (const auto& val: value_map)
+              {
+                float v = val.second;
+                values.push_back(v);
+              }
+            io::hdf5::write_sparse_edge_attribute<float>(file, path, values);
+          }
+        
+        const vector< map<NODE_IDX_T, uint8_t > >& uint8_attrs = edge_attrs.attr_maps<uint8_t>();
+        for (auto & elem: edge_attrs.uint8_names)
+          {
+            const string& attr_name = elem.first;
+            const size_t k = elem.second;
+            const map<NODE_IDX_T, uint8_t >& value_map = uint8_attrs[k];
+            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
+            vector<uint8_t> values;
+            for (const auto& val: value_map)
+              {
+                uint8_t v = val.second;
+                values.push_back(v);
+              }
+            io::hdf5::write_sparse_edge_attribute<uint8_t>(file, path, values);
+        }
+        
+        const vector< map<NODE_IDX_T, uint16_t > >& uint16_attrs = edge_attrs.attr_maps<uint16_t>();
+        for (const auto& elem: edge_attrs.uint16_names)
+          {
+            const string& attr_name = elem.first;
+            const size_t k = elem.second;
+            const map <NODE_IDX_T, uint16_t >& value_map = uint16_attrs[k];
+            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
+            vector<uint16_t> values;
+            for (auto& val: value_map)
+              {
+                uint16_t v = val.second;
+                values.push_back(v);
+              }
+            io::hdf5::write_sparse_edge_attribute<uint16_t>(file, path, values);
+          }
+        
+        const vector< map<NODE_IDX_T, uint32_t > >& uint32_attrs = edge_attrs.attr_maps<uint32_t>();
+        for (const auto& elem: edge_attrs.uint32_names)
+          {
+            const string& attr_name = elem.first;
+            const size_t k = elem.second;
+            const map <NODE_IDX_T, uint32_t >& value_map = uint32_attrs[k];
+            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
+            vector<uint32_t> values;
+            for (auto& val: value_map)
+              {
+                uint32_t v = val.second;
+                values.push_back(v);
+              }
+            io::hdf5::write_sparse_edge_attribute<uint32_t>(file, path, values);
+          }
+        
         
         // clean-up
         assert(H5Pclose(dcpl) >= 0);

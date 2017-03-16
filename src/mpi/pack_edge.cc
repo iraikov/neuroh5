@@ -313,7 +313,7 @@ namespace ngh5
     }
 
 
-
+    /*
     int pack_adj_map1 (MPI_Comm comm,
                        MPI_Datatype header_type,
                        MPI_Datatype size_type,
@@ -408,9 +408,7 @@ namespace ngh5
         
     void pack_adj_map (MPI_Comm comm, MPI_Datatype header_type, MPI_Datatype size_type,
                        const map<NODE_IDX_T, vector<NODE_IDX_T> >& adj_map,
-                       size_t &num_packed_edges,
-                       int &sendpos,
-                       vector<uint8_t> &sendbuf)
+                       size_t &num_packed_edges, int &sendpos, vector<uint8_t> &sendbuf)
     {
       int rank, size;
       assert(MPI_Comm_size(comm, &size) >= 0);
@@ -435,7 +433,7 @@ namespace ngh5
       assert(sendpos <= sendbuf.size());
       
     }
-
+    */
 
     
     /**************************************************************************

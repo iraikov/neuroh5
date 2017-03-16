@@ -94,7 +94,7 @@ void rank_ranges
   
   
 
-int append_edge_list
+int append_syn_adj_map
 (
  const int src_offset, const int dst_offset,
  const vector<NODE_IDX_T>&  dst_idx,
@@ -103,8 +103,7 @@ int append_edge_list
  const vector<DST_PTR_T>&   syn_idx_ptr,
  const vector<NODE_IDX_T>&  syn_idx,
  size_t&                    num_edges,
- vector<NODE_IDX_T>&        edge_list,
- model::NamedAttrMap&       edge_attr_map
+ model::edge_map_t&         edge_map
  )
 {
   int ierr = 0; 
@@ -121,16 +120,36 @@ int append_edge_list
           size_t low_syn_ptr = syn_idx_ptr[d],
             high_syn_ptr = syn_idx_ptr[d+1];
 
+          vector<NODE_IDX_T> adj_vector;
+          model::EdgeAttr edge_attr_values;
+          vector<syn_id> syn_id_vector;
+          
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
             {
               assert(ii < high_syn_ptr);
               NODE_IDX_T src = src_idx[i] + src_offset;
               NODE_IDX_T syn_id = syn_idx[ii];
-              edge_list.push_back(src);
-              edge_list.push_back(dst);
-              edge_attr_map.insert<uint32_t>(0, num_edges, syn_id);
+              adj_vector.push_back(src);
+              syn_id_vector.push_back(syn_id);
               num_edges++;
             }
+
+          edge_attr_map.insert(syn_id_vec);
+
+          if (edge_map.find(dst) == edge_map.end())
+            {
+              edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values)));
+            }
+          else
+            {
+              model::edge_tuple_t et = edge_map[dst];
+              vector<NODE_IDX_T> &v = get<0>(et);
+              model::EdgeAttr &a = get<1>(et);
+              v.insert(v.end(),adj_vector.begin(),adj_vector.end());
+              a.append(edge_attr_values);
+              edge_map[dst] = make_tuple(v,a);
+            }
+
         }
     }
 
@@ -337,21 +356,24 @@ int main(int argc, char** argv)
                                             dst, src, edge_attrs);
         }
     }
-  
-  vector<NODE_IDX_T>  edges;
+
+  model::edge_map_t edge_map;
   size_t num_edges;
-  model::NamedAttrMap edge_attr_map;
+
+  /*
+  model::NamedAttrMap edge_attr_map:
   edge_attr_map.uint32_values.resize(1);
   edge_attr_map.uint32_names.insert(make_pair("syn_id", 0));
+  */
   
-  status = append_edge_list (src_offset, dst_offset,
-                             dst_idx, src_idx_ptr, src_idx,
-                             syn_idx_ptr, syn_idx,
-                             num_edges,
-                             edges,
-                             edge_attr_map);
+  status = append_syn_adj_map (src_offset, dst_offset,
+                               dst_idx, src_idx_ptr, src_idx,
+                               syn_idx_ptr, syn_idx,
+                               num_edges, edge_map);
 
-  status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name, true, edges, edge_attr_map);
+  vector<vector<string>> edge_attr_names(model::EdgeAttr::num_attr_types);
+  edge_attr_names[model::EdgeAttr::attr_index_uint32].push_back("syn_id");
+  status = graph::write_graph (all_comm, output_file_name, src_pop_name, dst_pop_name, prj_name, edge_attr_names, edge_map);
 
   MPI_Comm_free(&all_comm);
   

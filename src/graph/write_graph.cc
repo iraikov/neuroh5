@@ -16,8 +16,7 @@
 #include "population_reader.hh"
 #include "read_population.hh"
 #include "write_graph.hh"
-#include "write_connectivity.hh"
-#include "write_edge_attributes.hh"
+#include "write_projection.hh"
 #include "hdf5_path_names.hh"
 #include "sort_permutation.hh"
 
@@ -61,7 +60,6 @@ namespace ngh5
     
     int write_graph
     (
-<<<<<<< HEAD
      MPI_Comm         all_comm,
      MPI_Comm         io_comm,
      const int        io_size,
@@ -69,9 +67,8 @@ namespace ngh5
      const string&    src_pop_name,
      const string&    dst_pop_name,
      const string&    prj_name,
-     const bool       opt_attrs,
-     const vector<NODE_IDX_T>  edges,
-     const model::NamedAttrMap& edge_attrs
+     const vector<vector<string>>& edge_attr_names,
+     const edge_map_t&  input_edge_map
      )
     {
       assert(edges.size()%2 == 0);
@@ -114,58 +111,50 @@ namespace ngh5
       size_t dst_start = pop_vector[dst_pop_idx].start;
       size_t dst_end = dst_start + pop_vector[dst_pop_idx].count;
       size_t total_num_nodes = dst_start - dst_end;
-
-      map<NODE_IDX_T, vector<NODE_IDX_T> > adj_map;
-
-      for (size_t i = 1; i < edges.size(); i += 2)
-        {
-          // all source/destination node IDs must be in range
-          assert(dst_start <= edges[i] && edges[i] < dst_end);
-          if (!(src_start <= edges[i-1] && edges[i-1] < src_end))
-            {
-              printf("src_start = %lu src_end = %lu\n", src_start, src_end);
-              printf("edges[%d] = %lu\n", i-1, edges[i-1]);
-            }
-          
-          assert(src_start <= edges[i-1] && edges[i-1] < src_end);
-
-          vector<NODE_IDX_T>& adj_vector  = adj_map[edges[i] - dst_start];
-          adj_vector.push_back(edges[i-1] - src_start);
-        }
       
-      // compute sort permutations for the source arrays
-      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
-      vector<std::size_t> src_sort_permutations;
-      NODE_IDX_T edge_offset=0;
-      for (size_t i = 0; i < adj_map.size(); i++)
-        {
-          iter = adj_map.find(i);
-          vector<size_t> p = sort_permutation(iter->second, compare_nodes);
-          apply_permutation_in_place(iter->second, p);
-          for (size_t j=0; j<p.size(); j++)
-            {
-              vector<size_t> p = sort_permutation(iter->second, compare_nodes);
-              apply_permutation_in_place(iter->second, p);
-              for (size_t j=0; j<p.size(); j++)
-                {
-                  p[j] += edge_offset;
-                }
-              edge_offset += p.size();
-              src_sort_permutations.insert(src_sort_permutations.end(),p.begin(),p.end());
-            }
-        }
+      // A vector that maps nodes to compute ranks
+      vector< rank_t > node_rank_vector;
       compute_node_rank_vector(io_size, total_num_nodes, node_rank_vector);
 
-      // A vector that maps nodes to compute ranks
-      vector <rank_t> node_rank_vector;
-              
       // construct a map where each set of edges are arranged by destination I/O rank
-      
-             
-      // send buffer and structures for MPI Alltoall operation
-      vector<uint8_t> sendbuf;
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
+      rank_edge_map_t rank_edge_map;
+      for (auto & element: input_edge_map)
+        {
+          NODE_IDX_T dst = element.first;
+          // all source/destination node IDs must be in range
+          assert(dst_start <= dst && dst < dst_end);
+          model::edge_tuple_t& et = element.second;
+          vector<NODE_IDX_T> &v   = get<0>(et);
+          model::EdgeAttr &a      = get<1>(et);
 
+          vector<NODE_IDX_T> adj_vector;
+          for (auto & src: v)
+            {
+              if (!(src_start <= src && src < src_end))
+                {
+                  printf("src_start = %lu src_end = %lu\n", src_start, src_end);
+                  printf("edges[%d] = %lu\n", i-1, src);
+                }
+              assert(src_start <= src && src < src_end);
+              adj_vector.push_back(src - src_start);
+              num_edges++;
+            }
+
+          vector<hsize_t> p = sort_permutation(adj_vector, compare_nodes);
+          apply_permutation_in_place(adj_vector, p);
+          apply_permutation_in_place(a.float_values, p);
+          apply_permutation_in_place(a.uint8_values, p);
+          apply_permutation_in_place(a.uint16_values, p);
+          apply_permutation_in_place(a.uint32_values, p);
+
+          size_t dst_rank = node_rank_vector[dst];
+          edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
+          vector<NODE_IDX_T> &src_vec = get<0>(et1);
+          src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
+          EdgeAttr &edge_attr_vec = get<1>(et);
+          edge_attr_vec.append(a);
+        }
 
       // Create an MPI datatype to describe the sizes of edge structures
       Size sizeval;
@@ -194,99 +183,63 @@ namespace ngh5
       assert(MPI_Type_create_resized(header_struct_type, 0, sizeof(header), &header_type) == MPI_SUCCESS);
       assert(MPI_Type_commit(&header_type) == MPI_SUCCESS);
 
+      // send buffer and structures for MPI Alltoall operation
+      vector<uint8_t> sendbuf;
+      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+
       // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; int sendpos = 0;
              
-      pack_rank_adj_map (all_comm, header_type, size_type,
-                         rank_node_vector, adj_map, num_packed_edges,
-                         sendpos, sendbuf);
+      mpi::pack_rank_edge_map (all_comm, header_type, size_type,
+                               rank_edge_map, num_packed_edges,
+                               sendcounts, sendbuf, sdipls);
+      rank_edge_map.clear();
+      
+      // 1. Each ALL_COMM rank sends an edge vector size to
+      //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
+      //    and creates sendcounts and sdispls arrays
+      
+      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
+      
+      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
+      //    a receive buffer, recvcounts, and rdispls
+      
+      size_t recvbuf_size = recvcounts[0];
+      for (int p = 1; p < size; p++)
+        {
+          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
+          recvbuf_size += recvcounts[p];
+        }
 
-             
-             
+      vector<uint8_t> recvbuf;
+      recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
+      
+      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
+      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
+                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
+                           all_comm) == MPI_SUCCESS);
+      sendbuf.clear();
+      sendcounts.clear();
+      sdispls.clear();
+
+      model::edge_map_t prj_edge_map;
+      if (recvbuf_size > 0)
+        {
+          mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
+                                     recvbuf, recvcounts, rdispls, prj_edge_map);
+        }
+
       
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(file >= 0);
 
-      io::hdf5::write_connectivity (file, prj_name, src_pop_idx, dst_pop_idx,
-                                    src_start, src_end, dst_start, dst_end,
-                                    num_edges, adj_map);
-
-      
-      const vector< map<NODE_IDX_T, float > >& float_attrs = edge_attrs.attr_maps<float>();
-      for (auto & elem: edge_attrs.float_names)
-        {
-          const string& attr_name = elem.first;
-          const size_t k = elem.second;
-          const map<NODE_IDX_T, float >& value_map = float_attrs[k];
-          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          vector<float> values;
-          for (const auto& val: value_map)
-            {
-              float v = val.second;
-              values.push_back(v);
-            }
-          assert(values.size() == src_sort_permutations.size());
-          apply_permutation_in_place<float>(values, src_sort_permutations);
-          io::hdf5::write_sparse_edge_attribute<float>(file, path, values);
-        }
-
-      const vector< map<NODE_IDX_T, uint8_t > >& uint8_attrs = edge_attrs.attr_maps<uint8_t>();
-      for (auto & elem: edge_attrs.uint8_names)
-        {
-          const string& attr_name = elem.first;
-          const size_t k = elem.second;
-          const map<NODE_IDX_T, uint8_t >& value_map = uint8_attrs[k];
-          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          vector<uint8_t> values;
-          for (const auto& val: value_map)
-            {
-              uint8_t v = val.second;
-              values.push_back(v);
-            }
-          assert(values.size() == src_sort_permutations.size());
-          apply_permutation_in_place<uint8_t>(values, src_sort_permutations);
-          io::hdf5::write_sparse_edge_attribute<uint8_t>(file, path, values);
-        }
-
-      const vector< map<NODE_IDX_T, uint16_t > >& uint16_attrs = edge_attrs.attr_maps<uint16_t>();
-      for (const auto& elem: edge_attrs.uint16_names)
-        {
-          const string& attr_name = elem.first;
-          const size_t k = elem.second;
-          const map <NODE_IDX_T, uint16_t >& value_map = uint16_attrs[k];
-          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          vector<uint16_t> values;
-          for (auto& val: value_map)
-            {
-              uint16_t v = val.second;
-              values.push_back(v);
-            }
-          assert(values.size() == src_sort_permutations.size());
-          apply_permutation_in_place<uint16_t>(values, src_sort_permutations);
-          io::hdf5::write_sparse_edge_attribute<uint16_t>(file, path, values);
-        }
-
-      const vector< map<NODE_IDX_T, uint32_t > >& uint32_attrs = edge_attrs.attr_maps<uint32_t>();
-      for (const auto& elem: edge_attrs.uint32_names)
-        {
-          const string& attr_name = elem.first;
-          const size_t k = elem.second;
-          const map <NODE_IDX_T, uint32_t >& value_map = uint32_attrs[k];
-          string path = io::hdf5::edge_attribute_path(prj_name, attr_name);
-          vector<uint32_t> values;
-          for (auto& val: value_map)
-            {
-              uint32_t v = val.second;
-              values.push_back(v);
-            }
-          assert(values.size() == src_sort_permutations.size());
-          apply_permutation_in_place<uint32_t>(values, src_sort_permutations);
-          io::hdf5::write_sparse_edge_attribute<uint32_t>(file, path, values);
-        }
+      io::hdf5::write_projection (file, prj_name, src_pop_idx, dst_pop_idx,
+                                  src_start, src_end, dst_start, dst_end,
+                                  num_edges, prj_edge_map);
       
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);
