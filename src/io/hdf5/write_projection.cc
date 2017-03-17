@@ -38,9 +38,27 @@ namespace ngh5
         // do a sanity check on the input
         assert(src_start < src_end);
         assert(dst_start < dst_end);
+        
+
+        // get the I/O communicator
+        MPI_Comm comm;
+        MPI_Info info;
+        hid_t fapl = H5Fget_access_plist(file);
+        assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+
+        int size, rank;
+        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+
+        assert(H5Pclose(fapl) >= 0);
 
         uint64_t num_dest = prj_edge_map.size();
-
+        uint64_t num_blocks = 1;
+        if (rank == size-1)
+          {
+            num_blocks++;
+          }
+        
         // create relative destination pointers and source index
         vector<uint64_t> dbp(1,0); // only the last rank writes two elements
         vector<uint64_t> dst_ptr(1, 0);
@@ -61,6 +79,7 @@ namespace ngh5
                   {
                     dst_blk_idx.push_back(dst - dst_start);
                     dbp.push_back(dst_ptr.size());
+                    num_blocks++;
                   }
                 last_idx = dst;
               }
@@ -73,21 +92,17 @@ namespace ngh5
             dst_ptr.push_back(dst_ptr[pos++] + v.size());
             copy(v.begin(), v.end(), back_inserter(src_idx));
           }
+        printf("num_edges = %u src_idx.size() = %u\n", num_edges, src_idx.size());
+        assert(num_edges == src_idx.size());
 
-
-        // get the I/O communicator
-        MPI_Comm comm;
-        MPI_Info info;
-        hid_t fapl = H5Fget_access_plist(file);
-        assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
-
-        int size, rank;
-        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-
-        assert(H5Pclose(fapl) >= 0);
 
         // exchange allocation data
+
+        vector<uint64_t> sendbuf_num_blocks(size, num_blocks);
+        vector<uint64_t> recvbuf_num_blocks(size);
+        assert(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_UINT64_T,
+                             &recvbuf_num_blocks[0], 1, MPI_UINT64_T, comm)
+               == MPI_SUCCESS);
 
         vector<uint64_t> sendbuf_num_dest(size, num_dest);
         vector<uint64_t> recvbuf_num_dest(size);
@@ -105,16 +120,42 @@ namespace ngh5
         assert(lcpl >= 0);
         assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
-        // write destination block index (= first_node)
+        uint64_t total_num_blocks=0;
+        for (size_t p=0; p<size; p++)
+          {
+            total_num_blocks = total_num_blocks + recvbuf_num_blocks[p];
+          }
 
+        uint64_t total_num_dests=0;
+        for (size_t p=0; p<size; p++)
+          {
+            total_num_dests = total_num_dests + recvbuf_num_dest[p];
+          }
+
+        uint64_t total_num_edges=0;
+        for (size_t p=0; p<size; p++)
+          {
+            total_num_edges = total_num_edges + recvbuf_num_edge[p];
+          }
+        printf("source index: total_num_edges = %u\n", total_num_edges);
+
+        printf("num_blocks = %u total_num_blocks = %u\n", num_blocks, total_num_blocks);
+        
         string path = io::hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Index");
-        hsize_t dims = (hsize_t)size, one = 1;
+        hsize_t dims = (hsize_t)total_num_blocks, one = 1;
         hid_t fspace = H5Screate_simple(1, &dims, &dims);
         assert(fspace >= 0);
         hid_t dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
                                 lcpl, H5P_DEFAULT, H5P_DEFAULT);
         assert(dset >= 0);
-        dims = 1;
+        if (rank == size-1)
+          {
+            dims = num_blocks-1;
+          }
+        else
+          {
+            dims = num_blocks;
+          }
         hid_t mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
         assert(H5Sselect_all(mspace) >= 0);
@@ -153,19 +194,19 @@ namespace ngh5
           }
 
         path = projection_path_join(projection_name, "/Connectivity/Destination Block Pointer");
-        dims = (hsize_t)(size + 1);
+        dims = (hsize_t)total_num_blocks;
         fspace = H5Screate_simple(1, &dims, &dims);
         assert(fspace >= 0);
         dset = H5Dcreate2(file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
                           fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
         assert(dset >= 0);
-
-        dims = dbp.size();
+        dims = num_blocks;
         mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
         assert(H5Sselect_all(mspace) >= 0);
         start = (hsize_t)rank;
         block = dims;
+        printf("dbp write: start = %lu block = %lu\n", start, block);
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
         assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
@@ -208,11 +249,7 @@ namespace ngh5
           }
 
         path = projection_path_join(projection_name, "/Connectivity/Destination Pointer");
-        dims = 0;
-        for (int p = 0; p < size; ++p)
-          {
-            dims += recvbuf_num_dest[p];
-          }
+        dims = total_num_dests;
         ++dims; // one extra element
 
         fspace = H5Screate_simple(1, &dims, &dims);
@@ -248,11 +285,7 @@ namespace ngh5
         // # source indexes = number of edges
 
         path = projection_path_join(projection_name, "/Connectivity/Source Index");
-        dims = 0;
-        for (int p = 0; p < size; ++p)
-          {
-            dims += recvbuf_num_edge[p];
-          }
+        dims = total_num_edges;
 
         fspace = H5Screate_simple(1, &dims, &dims);
         assert(fspace >= 0);
@@ -266,6 +299,7 @@ namespace ngh5
         assert(H5Sselect_all(mspace) >= 0);
         start = (hsize_t)dst_ptr[0];
         block = dims;
+        printf("source index: start = %u block = %u\n", start, block);
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
 

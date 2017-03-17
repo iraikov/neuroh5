@@ -181,11 +181,12 @@ namespace ngh5
       sendcounts.clear();
       sdispls.clear();
 
+      uint64_t num_unpacked_edges=0;
       if (recvbuf_size > 0)
         {
           mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
                                      recvbuf, recvcounts, rdispls, edge_attr_num,
-                                     prj_edge_map);
+                                     prj_edge_map, num_unpacked_edges);
         }
       
       DEBUG("scatter: finished unpacking edges for projection ", prj_name);

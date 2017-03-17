@@ -62,7 +62,8 @@ namespace ngh5
                                const std::vector<int>& recvcounts,
                                const std::vector<int>& rdispls,
                                const std::vector<uint32_t> &edge_attr_num,
-                               model::edge_map_t& prj_edge_map
+                               model::edge_map_t& prj_edge_map,
+                               uint64_t& num_unpacked_edges
                                );
   }
 }
