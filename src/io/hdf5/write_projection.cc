@@ -358,8 +358,11 @@ namespace ngh5
         assert(H5Sclose(fspace) >= 0);
         
         model::EdgeNamedAttr edge_attr_values;
-        vector< vector<float> > float_attrs (edge_attr_names[model::EdgeAttr::attr_index_float].size());
-
+        edge_attr_values.float_values.resize(edge_attr_names[model::EdgeAttr::attr_index_float].size());
+        edge_attr_values.uint8_values.resize(edge_attr_names[model::EdgeAttr::attr_index_uint8].size());
+        edge_attr_values.uint16_values.resize(edge_attr_names[model::EdgeAttr::attr_index_uint16].size());
+        edge_attr_values.uint32_values.resize(edge_attr_names[model::EdgeAttr::attr_index_uint32].size());
+        
         for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
           {
             model::edge_tuple_t et = iter->second;
@@ -374,7 +377,26 @@ namespace ngh5
             io::hdf5::write_sparse_edge_attribute<float>(file, path, edge_attr_values.float_values[i]);
           }
         
-        float_attrs.clear();
+        for (size_t i=0; i<edge_attr_values.uint8_values.size(); i++)
+          {
+            const string& attr_name = edge_attr_names[model::EdgeAttr::attr_index_uint8][i];
+            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
+            io::hdf5::write_sparse_edge_attribute<uint8_t>(file, path, edge_attr_values.uint8_values[i]);
+          }
+        
+        for (size_t i=0; i<edge_attr_values.uint16_values.size(); i++)
+          {
+            const string& attr_name = edge_attr_names[model::EdgeAttr::attr_index_uint16][i];
+            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
+            io::hdf5::write_sparse_edge_attribute<uint16_t>(file, path, edge_attr_values.uint16_values[i]);
+          }
+        
+        for (size_t i=0; i<edge_attr_values.uint32_values.size(); i++)
+          {
+            const string& attr_name = edge_attr_names[model::EdgeAttr::attr_index_uint32][i];
+            string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
+            io::hdf5::write_sparse_edge_attribute<uint32_t>(file, path, edge_attr_values.uint32_values[i]);
+          }
         
         
         // clean-up
