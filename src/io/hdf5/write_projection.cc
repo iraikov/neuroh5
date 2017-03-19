@@ -60,7 +60,7 @@ namespace ngh5
           }
         
         // create relative destination pointers and source index
-        vector<uint64_t> dbp(1,0); // only the last rank writes two elements
+        vector<uint64_t> dbp(1, 0); // only the last rank writes two elements
         vector<uint64_t> dst_ptr(1, 0);
         vector<NODE_IDX_T> dst_blk_idx, src_idx;
         NODE_IDX_T last_idx;
@@ -78,7 +78,7 @@ namespace ngh5
                 if ((dst-1) > last_idx)
                   {
                     dst_blk_idx.push_back(dst - dst_start);
-                    dbp.push_back(dst_ptr.size());
+                    dbp.push_back(dst_ptr.size()-1);
                     num_blocks++;
                   }
                 last_idx = dst;
@@ -92,7 +92,6 @@ namespace ngh5
             dst_ptr.push_back(dst_ptr[pos++] + v.size());
             copy(v.begin(), v.end(), back_inserter(src_idx));
           }
-        printf("num_edges = %u src_idx.size() = %u\n", num_edges, src_idx.size());
         assert(num_edges == src_idx.size());
 
 
@@ -137,12 +136,9 @@ namespace ngh5
           {
             total_num_edges = total_num_edges + recvbuf_num_edge[p];
           }
-        printf("source index: total_num_edges = %u\n", total_num_edges);
-
-        printf("num_blocks = %u total_num_blocks = %u\n", num_blocks, total_num_blocks);
         
         string path = io::hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Index");
-        hsize_t dims = (hsize_t)total_num_blocks, one = 1;
+        hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
         hid_t fspace = H5Screate_simple(1, &dims, &dims);
         assert(fspace >= 0);
         hid_t dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
@@ -159,7 +155,13 @@ namespace ngh5
         hid_t mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
         assert(H5Sselect_all(mspace) >= 0);
-        hsize_t start = (hsize_t)rank, block = dims;
+        hsize_t start = 0;
+        for (int p = 0; p < rank; ++p)
+          {
+            start += recvbuf_num_blocks[p];
+          }
+        
+        hsize_t block = dims;
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
         assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
@@ -204,9 +206,14 @@ namespace ngh5
         mspace = H5Screate_simple(1, &dims, &dims);
         assert(mspace >= 0);
         assert(H5Sselect_all(mspace) >= 0);
-        start = (hsize_t)rank;
+
+        start = 0;
+        for (int p = 0; p < rank; ++p)
+          {
+            start += recvbuf_num_blocks[p];
+          }
+
         block = dims;
-        printf("dbp write: start = %lu block = %lu\n", start, block);
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
         assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
@@ -299,7 +306,6 @@ namespace ngh5
         assert(H5Sselect_all(mspace) >= 0);
         start = (hsize_t)dst_ptr[0];
         block = dims;
-        printf("source index: start = %u block = %u\n", start, block);
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                    &one, &block) >= 0);
 
