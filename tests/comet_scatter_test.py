@@ -15,6 +15,6 @@ else:
 
 g = scatter_graph(MPI._addressof(comm), 
                   "/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5", 
-                  192, node_rank_vector)
+                  256, node_rank_vector)
 
 print g.keys()
