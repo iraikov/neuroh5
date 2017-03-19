@@ -5,7 +5,8 @@ comm = MPI.COMM_WORLD
 print "rank = ", comm.Get_rank()
 print "size = ", comm.Get_size()
 
-g = scatter_graph(MPI._addressof(comm), "data/dentate_test.h5", 5, attributes=True)
+(g, a) = scatter_graph(MPI._addressof(comm), "data/dentate_test.h5", 5, attributes=True)
 
-print g
+#xprint a
+#print g
 

@@ -305,7 +305,6 @@ extern "C"
   {
     int status; int opt_attrs=1; int opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
-    PyObject *py_attribute_names=NULL;
     // A vector that maps nodes to compute ranks
     PyObject *py_node_rank_vector=NULL;
     uint32_t *node_rank_vector_ptr;
@@ -376,20 +375,27 @@ extern "C"
                          io_size, opt_attrs>0, prj_names, node_rank_vector, prj_vector, edge_attr_name_vector, 
                          total_num_nodes, local_num_edges, total_num_edges);
 
-    py_attribute_names = PyList_New(0);
+    PyObject *py_attribute_info = PyDict_New();
     if (opt_attrs>0)
       {
         for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
           {
-            PyObject *py_prj_attr_names  = PyList_New(0);
+            PyObject *py_prj_attr_info  = PyDict_New();
+            int attr_index=0;
             for (size_t n = 0; n<edge_attr_name_vector[p].size(); n++)
               {
                 for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
                   {
-                    PyList_Append(py_prj_attr_names, PyString_FromString(edge_attr_name_vector[p][n][t].c_str()));
+                    PyObject *py_attr_key = PyString_FromString(edge_attr_name_vector[p][n][t].c_str());
+                    PyObject *py_attr_index = PyInt_FromLong(attr_index);
+                    
+                    PyDict_SetItem(py_prj_attr_info, py_attr_key, py_attr_index);
+                    attr_index++;
                   }
               }
-            status = PyList_Append(py_attribute_names, py_prj_attr_names);
+            PyObject *prj_key = PyString_FromString(prj_names[p].c_str());
+            PyDict_SetItem(py_attribute_info, prj_key, py_prj_attr_info);
+
           }
       }
 
@@ -512,7 +518,17 @@ extern "C"
         
       }
 
-    return py_prj_dict;
+    if (opt_attrs > 0)
+      {
+        PyObject *py_prj_tuple = PyTuple_New(2);
+        PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
+        PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+        return py_prj_tuple;
+      }
+    else
+      {
+        return py_prj_dict;
+      }
   }
 
   
