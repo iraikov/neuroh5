@@ -84,7 +84,7 @@ namespace ngh5
     }
 
   
-    int compute_vertex_metrics
+    int compute_vertex_indegree
     (
      MPI_Comm comm,
      const std::string& file_name,
@@ -127,12 +127,10 @@ namespace ngh5
                      local_num_edges,
                      total_num_edges);
       
-      DEBUG("rank ", rank, ": parts: after scatter");
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
       merge_edge_map (prj_vector, edge_map);
 
-      DEBUG("rank ", rank, ": parts: after merge");
 
       prj_vector.clear();
 
@@ -186,6 +184,204 @@ namespace ngh5
 
       return status;
     }
-  
+
+    
+    int compute_vertex_outdegree
+    (
+     MPI_Comm comm,
+     const std::string& file_name,
+     const std::vector<std::string> prj_names,
+     const size_t io_size
+     )
+    {
+      int status=0;
+    
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) >= 0);
+      assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+    
+      // Read population info to determine total_num_nodes
+      size_t local_num_nodes, total_num_nodes,
+        local_num_edges, total_num_edges;
+
+      vector<pop_range_t> pop_vector;
+      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+      assert(io::hdf5::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+
+      // A vector that maps nodes to compute ranks
+      vector<rank_t> node_rank_vector;
+      compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
+    
+      // read the edges
+      vector < vector <vector<string>> > edge_attr_name_vector;
+      vector < edge_map_t > prj_vector;
+      scatter_graph (comm,
+                     EdgeMapSrc,
+                     file_name,
+                     io_size,
+                     false,
+                     prj_names,
+                     node_rank_vector,
+                     prj_vector,
+                     edge_attr_name_vector,
+                     total_num_nodes,
+                     local_num_edges,
+                     total_num_edges);
+      
+      // Combine the edges from all projections into a single edge map
+      map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
+      merge_edge_map (prj_vector, edge_map);
+
+      prj_vector.clear();
+
+      uint64_t sum_outdegree=0, nz_outdegree=0;
+      std::vector<uint32_t> vertex_outdegrees;
+      vertex_degree (comm, total_num_nodes, edge_map, vertex_outdegrees);
+      edge_map.clear();
+
+      for(size_t v=0; v<total_num_nodes; v++)
+        {
+          uint32_t degree = vertex_outdegrees[v];
+          sum_outdegree = sum_outdegree + degree;
+          if (degree > 0) nz_outdegree++;
+        }
+      std::vector<float> vertex_norm_outdegrees;
+      vertex_norm_outdegrees.resize(total_num_nodes);
+      for(size_t v=0; v<total_num_nodes; v++)
+        {
+          float norm_outdegree = (float)vertex_outdegrees[v] / (float)sum_outdegree;
+          vertex_norm_outdegrees[v] = norm_outdegree;
+        }
+      
+      float mean_norm_outdegree = 1.0 / (float)nz_outdegree;
+
+      vector <NODE_IDX_T> node_id;
+      vector <uint32_t> vertex_outdegree_value;
+      vector <float> vertex_norm_outdegree_value;
+
+      for (NODE_IDX_T i=0; i<node_rank_vector.size(); i++)
+        {
+          if (node_rank_vector[i] == rank)
+            {
+              node_id.push_back(i);
+              vertex_outdegree_value.push_back(vertex_outdegrees[i]);
+              vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[i]);
+            }
+        }
+
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      assert(fapl >= 0);
+      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+      assert(file >= 0);
+      
+      ngh5::io::hdf5::write_node_attribute (file, "Vertex outdegree", node_id, vertex_outdegree_value);
+      ngh5::io::hdf5::write_node_attribute (file, "Vertex norm outdegree", node_id, vertex_norm_outdegree_value);
+
+      assert(H5Fclose(file) >= 0);
+      assert(H5Pclose(fapl) >= 0);
+
+      return status;
+    }
+
+
+    int compute_vertex_neighborhood
+    (
+     MPI_Comm comm,
+     const std::string& file_name,
+     const std::vector<std::string> prj_names,
+     const size_t io_size
+     )
+    {
+      int status=0;
+    
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) >= 0);
+      assert(MPI_Comm_rank(comm, &rank) >= 0);
+
+    
+      // Read population info to determine total_num_nodes
+      size_t local_num_nodes, total_num_nodes,
+        local_num_edges, total_num_edges;
+
+      vector<pop_range_t> pop_vector;
+      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+      assert(io::hdf5::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+
+      // A vector that maps nodes to compute ranks
+      vector<rank_t> node_rank_vector;
+      compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
+    
+      // read the edges
+      vector < vector <vector<string>> > edge_attr_name_vector;
+      vector < edge_map_t > dst_prj_vector, src_prj_vector;
+      scatter_graph (comm,
+                     EdgeMapDst,
+                     file_name,
+                     io_size,
+                     false,
+                     prj_names,
+                     node_rank_vector,
+                     dst_prj_vector,
+                     edge_attr_name_vector,
+                     total_num_nodes,
+                     local_num_edges,
+                     total_num_edges);
+
+      scatter_graph (comm,
+                     EdgeMapSrc,
+                     file_name,
+                     io_size,
+                     false,
+                     prj_names,
+                     node_rank_vector,
+                     src_prj_vector,
+                     edge_attr_name_vector,
+                     total_num_nodes,
+                     local_num_edges,
+                     total_num_edges);
+
+      // Combine the edges from all projections into a single edge map
+      map<NODE_IDX_T, vector<NODE_IDX_T> > dst_edge_map;
+      merge_edge_map (dst_prj_vector, dst_edge_map);
+      map<NODE_IDX_T, vector<NODE_IDX_T> > src_edge_map;
+      merge_edge_map (src_prj_vector, src_edge_map);
+
+      dst_prj_vector.clear();
+      src_prj_vector.clear();
+
+      std::vector<uint32_t> vertex_neighborhoods;
+      vertex_neighborhood (comm, total_num_nodes, src_edge_map, dst_edge_map, vertex_neighborhoods);
+      src_edge_map.clear();
+      dst_edge_map.clear();
+
+      vector <uint32_t> vertex_neighborhood_value;
+
+      for (NODE_IDX_T i=0; i<node_rank_vector.size(); i++)
+        {
+          if (node_rank_vector[i] == rank)
+            {
+              node_id.push_back(i);
+              vertex_neighborhood_value.push_back(vertex_neighborhoods[i]);
+            }
+        }
+
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      assert(fapl >= 0);
+      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+      assert(file >= 0);
+      
+      ngh5::io::hdf5::write_node_attribute (file, "Vertex neighborhood", node_id, vertex_neighborhood_value);
+
+      assert(H5Fclose(file) >= 0);
+      assert(H5Pclose(fapl) >= 0);
+
+      return status;
+    }
+
   }
 }
