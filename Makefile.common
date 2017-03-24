@@ -18,6 +18,7 @@ vpath %.cc $(SRC_DIR):$(DRIVER_SRC_DIR)
 define make-goal
 $1/%.o: %.cc
 	$(CC) -std=c++11 -Wall -DUSE_EDGE_DELIM $(INCLUDES) -g -c $$< -o $$@
+#	$(CXX) -hstd=c++11 -DUSE_EDGE_DELIM $(INCLUDES) -g -c $$< -o $$@
 endef
 
 .PHONY: all checkdirs clean
@@ -29,19 +30,19 @@ all: checkdirs $(DRIVER_OBJ) build/reader build/scatter build/balance_indegree b
 #	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(PARMETIS_LIBDIR) -l$(HDF5_LIB)  -lparmetis -lmetis $(LINK_MPI)
 
 build/reader: build/driver/reader.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/scatter: build/driver/scatter.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/balance_indegree: build/driver/balance_indegree.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/vertex_metrics: build/driver/vertex_metrics.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/neurograph_import: build/driver/neurograph_import.o build/libngh5.graph.a build/libngh5.io.a build/libngh5.io.hdf5.a build/libngh5.mpi.a 
-	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI)
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/libngh5.io.a: $(OBJ)
 	$(AR) cr $@ $^
