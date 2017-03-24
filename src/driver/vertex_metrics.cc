@@ -146,7 +146,14 @@ int main(int argc, char** argv)
   std::vector<NODE_IDX_T> parts;
   std::vector<double> part_weights;
   
-  graph::compute_vertex_metrics
+  graph::compute_vertex_indegree
+  (
+   MPI_COMM_WORLD,
+   input_file_name,
+   prj_names,
+   iosize
+   );
+  graph::compute_vertex_outdegree
   (
    MPI_COMM_WORLD,
    input_file_name,

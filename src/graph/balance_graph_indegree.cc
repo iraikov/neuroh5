@@ -125,8 +125,7 @@ namespace ngh5
 
     
       // Read population info to determine total_num_nodes
-      size_t local_num_nodes, total_num_nodes,
-        local_num_edges, total_num_edges;
+      size_t total_num_nodes, local_num_edges, total_num_edges;
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
@@ -232,19 +231,21 @@ namespace ngh5
                 });
       
       vidx=0;
-      for (size_t pidx=0; pidx<Nparts; pidx++)
+      while (vidx < total_num_nodes)
         {
-          size_t p = part_idx_vector[pidx];
-          while ((part_nums[p] > 0) &&
-                 (vidx < total_num_nodes))
+          for (size_t pidx=0; pidx<Nparts; pidx++)
             {
-              NODE_IDX_T n = node_idx_vector[vidx];
-              if (parts_map.find(n) == parts_map.end())
+              size_t p = part_idx_vector[pidx];
+              if (part_nums[p] > 0)
                 {
-                  parts_map.insert(make_pair(n, p));
-                  part_nums[p]--;
+                  NODE_IDX_T n = node_idx_vector[vidx];
+                  if (parts_map.find(n) == parts_map.end())
+                    {
+                      parts_map.insert(make_pair(n, p));
+                      part_nums[p]--;
+                    }
+                  vidx++;
                 }
-              vidx++;
             }
         }
       
