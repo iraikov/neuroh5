@@ -60,23 +60,22 @@ namespace ngh5
     }
 
     // Assign each node to a rank 
-    void compute_node_rank_vector
+    void compute_node_rank_map
     (
      size_t num_ranks,
      size_t num_nodes,
-     vector< rank_t > &node_rank_vector
+     map< NODE_IDX_T, rank_t > &node_rank_map
      )
     {
       hsize_t remainder=0, offset=0, buckets=0;
     
-      node_rank_vector.resize(num_nodes);
       for (size_t i=0; i<num_ranks; i++)
         {
           remainder  = num_nodes - offset;
           buckets    = num_ranks - i;
           for (size_t j = 0; j < remainder / buckets; j++)
             {
-              node_rank_vector[offset+j] = i;
+              node_rank_map.insert(make_pair(offset+j, i));
             }
           offset    += remainder / buckets;
         }
@@ -132,8 +131,8 @@ namespace ngh5
       assert(io::hdf5::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
-      vector<rank_t> node_rank_vector;
-      compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
+      map<NODE_IDX_T, rank_t> node_rank_map;
+      compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
       vector < edge_map_t > prj_vector;
@@ -144,7 +143,7 @@ namespace ngh5
                      io_size,
                      false,
                      prj_names,
-                     node_rank_vector,
+                     node_rank_map,
                      prj_vector,
                      edge_attr_name_vector,
                      total_num_nodes,

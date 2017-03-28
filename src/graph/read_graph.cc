@@ -376,7 +376,7 @@ namespace ngh5
      const vector<DST_PTR_T>&      dst_ptr,
      const vector<NODE_IDX_T>&     src_idx,
      const EdgeNamedAttr&          edge_attr_values,
-     const vector<rank_t>&         node_rank_vector,
+     const map<NODE_IDX_T, rank_t>&  node_rank_map,
      size_t&                       num_edges,
      rank_edge_map_t &             rank_edge_map,
      EdgeMapType                   edge_map_type
@@ -405,7 +405,9 @@ namespace ngh5
                             {
                             case EdgeMapDst:
                               {
-                                rank_t myrank = node_rank_vector[dst];
+                                auto it = node_rank_map.find(dst);
+                                assert(it != node_rank_map.end());
+                                rank_t myrank = it->second;
                                 edge_tuple_t& et = rank_edge_map[myrank][dst];
                                 vector<NODE_IDX_T> &my_srcs = get<0>(et);
 
@@ -459,7 +461,9 @@ namespace ngh5
                                   {
                                     NODE_IDX_T src = src_idx[j] + src_start;
 
-                                    rank_t myrank = node_rank_vector[src];
+                                    auto it = node_rank_map.find(src);
+                                    assert(it != node_rank_map.end());
+                                    rank_t myrank = it->second;
                                     edge_tuple_t& et = rank_edge_map[myrank][src];
 
                                     vector<NODE_IDX_T> &my_dsts = get<0>(et);

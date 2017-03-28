@@ -61,23 +61,22 @@ namespace ngh5
     }
 
     // Assign each node to a rank 
-    void compute_node_rank_vector
+    void compute_node_rank_map
     (
      size_t num_ranks,
      size_t num_nodes,
-     vector< rank_t > &node_rank_vector
+     map< NODE_IDX_T, rank_t > &node_rank_map
      )
     {
       hsize_t remainder=0, offset=0, buckets=0;
     
-      node_rank_vector.resize(num_nodes);
       for (size_t i=0; i<num_ranks; i++)
         {
           remainder  = num_nodes - offset;
           buckets    = num_ranks - i;
           for (size_t j = 0; j < remainder / buckets; j++)
             {
-              node_rank_vector[offset+j] = i;
+              node_rank_map.insert(make_pair(offset+j, i));
             }
           offset    += remainder / buckets;
         }
@@ -108,8 +107,8 @@ namespace ngh5
       assert(io::hdf5::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
-      vector<rank_t> node_rank_vector;
-      compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
+      map<NODE_IDX_T, rank_t> node_rank_map;
+      compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
       vector < vector <vector<string>> > edge_attr_name_vector;
@@ -120,7 +119,7 @@ namespace ngh5
                      io_size,
                      false,
                      prj_names,
-                     node_rank_vector,
+                     node_rank_map,
                      prj_vector,
                      edge_attr_name_vector,
                      total_num_nodes,
@@ -159,13 +158,13 @@ namespace ngh5
       vector <uint32_t> vertex_indegree_value;
       vector <float> vertex_norm_indegree_value;
 
-      for (NODE_IDX_T i=0; i<node_rank_vector.size(); i++)
+      for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
         {
-          if (node_rank_vector[i] == rank)
+          if (it->second == rank)
             {
-              node_id.push_back(i);
-              vertex_indegree_value.push_back(vertex_indegrees[i]);
-              vertex_norm_indegree_value.push_back(vertex_norm_indegrees[i]);
+              node_id.push_back(it->first);
+              vertex_indegree_value.push_back(vertex_indegrees[it->first]);
+              vertex_norm_indegree_value.push_back(vertex_norm_indegrees[it->first]);
             }
         }
 
@@ -210,8 +209,8 @@ namespace ngh5
       assert(io::hdf5::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
-      vector<rank_t> node_rank_vector;
-      compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
+      map<NODE_IDX_T, rank_t> node_rank_map;
+      compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
       vector < vector <vector<string>> > edge_attr_name_vector;
@@ -222,7 +221,7 @@ namespace ngh5
                      io_size,
                      false,
                      prj_names,
-                     node_rank_vector,
+                     node_rank_map,
                      prj_vector,
                      edge_attr_name_vector,
                      total_num_nodes,
@@ -260,13 +259,13 @@ namespace ngh5
       vector <uint32_t> vertex_outdegree_value;
       vector <float> vertex_norm_outdegree_value;
 
-      for (NODE_IDX_T i=0; i<node_rank_vector.size(); i++)
+      for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
         {
-          if (node_rank_vector[i] == rank)
+          if (it->second == rank)
             {
-              node_id.push_back(i);
-              vertex_outdegree_value.push_back(vertex_outdegrees[i]);
-              vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[i]);
+              node_id.push_back(it->first);
+              vertex_outdegree_value.push_back(vertex_outdegrees[it->first]);
+              vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[it->first]);
             }
         }
 

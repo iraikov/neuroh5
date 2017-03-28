@@ -38,7 +38,7 @@ namespace ngh5
       // Specifies destination- or source- oriented in-memory edge representation
       EdgeMapType edge_map_type;
       
-      vector<model::rank_t>  node_rank_vector;
+      map<NODE_IDX_T, model::rank_t>  node_rank_map;
       vector<model::pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
       set< pair<model::pop_t, model::pop_t> > pop_pairs;
