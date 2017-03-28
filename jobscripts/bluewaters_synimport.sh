@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### set the number of nodes and the number of PEs per node
-#PBS -l nodes=8:ppn=16:xe
+#PBS -l nodes=16:ppn=16:xe
 ### which queue to use
 #PBS -q debug
 ### set the wallclock time
@@ -22,7 +22,7 @@ set -x
 
 cd $PBS_O_WORKDIR
 
-aprun -n 128 ./build/neurograph_import -f hdf5:syn --src-offset=-44990 \
-      -d /projects/sciteam/baef/DGC_forest_syn_connectivity_20170308.h5:/Populations/GC/Connectivity \
+aprun -n 256 ./build/neurograph_import -f hdf5:syn --src-offset=-44990 -s 256 \
+      -d /projects/sciteam/baef/DGC_forest_syn_connectivity_20170313.h5:/Populations/GC/Connectivity \
       MPP GC MPPtoGC \
-      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170308.h5 
+      /projects/sciteam/baef/dentate_Full_Scale_Control_MPP_20170313.h5 
