@@ -68,6 +68,21 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 extern "C"
 {
+  
+  void create_node_rank_map (PyObject *py_node_rank_map,
+                             map<NODE_IDX_T,rank_t>& node_rank_map)
+  {
+    PyObject *gid_key, *gid_value;
+    Py_ssize_t map_pos = 0;
+    
+    while (PyDict_Next(py_node_rank_map, &map_pos, &gid_key, &gid_value))
+      {
+        NODE_IDX_T gid = PyInt_AsLong(gid_key);
+        rank_t rank = PyInt_AsLong(gid_value);
+        node_rank_map.insert(make_pair(gid,rank));
+      }
+  }
+
   /*
   static PyObject *py_append_connections (PyObject *self, PyObject *args, PyObject *kwds)
   {
@@ -306,9 +321,8 @@ extern "C"
     int status; int opt_attrs=1; int opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
     // A vector that maps nodes to compute ranks
-    PyObject *py_node_rank_vector=NULL;
-    uint32_t *node_rank_vector_ptr;
-    vector<rank_t> node_rank_vector;
+    PyObject *py_node_rank_map=NULL;
+    map<NODE_IDX_T, rank_t> node_rank_map;
     vector < edge_map_t > prj_vector;
     vector < vector <vector<string>> > edge_attr_name_vector;
     vector<pop_range_t> pop_vector;
@@ -322,14 +336,14 @@ extern "C"
     static const char *kwlist[] = {"commptr",
                                    "file_name",
                                    "io_size",
-                                   "node_rank_vector",
+                                   "node_rank_map",
                                    "attributes",
                                    "map_type",
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "ksk|OiOi", (char **)kwlist,
                                      &commptr, &input_file_name, &io_size,
-                                     &py_node_rank_vector, &opt_attrs, 
+                                     &py_node_rank_map, &opt_attrs, 
                                      &opt_edge_map_type))
       return NULL;
 
@@ -345,34 +359,22 @@ extern "C"
     // Read population info to determine total_num_nodes
     assert(io::hdf5::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
-    // Create C arrays for node_rank_vector:
-    int typenum = NPY_UINT32;
-    PyArray_Descr *descr;
-    descr = PyArray_DescrFromType(typenum);
-    npy_intp dims[1];
-    if (py_node_rank_vector != NULL)
+    // Create C++ map for node_rank_map:
+    if (py_node_rank_map != NULL)
       {
-        if (PyArray_AsCArray(&py_node_rank_vector,
-                             (void *)&node_rank_vector_ptr, dims, 1, descr) < 0)
-          {
-            PyErr_SetString(PyExc_TypeError, "invalid node rank array");
-            return NULL;
-          }
-        assert(total_num_nodes == dims[0]);
-        node_rank_vector.assign(node_rank_vector_ptr, node_rank_vector_ptr+dims[0]);
-      } else
+        create_node_rank_map(py_node_rank_map, node_rank_map);
+      }
+    else
       {
-        // Determine which nodes are assigned to which compute ranks
-        node_rank_vector.resize(total_num_nodes);
         // round-robin node to rank assignment from file
         for (size_t i = 0; i < total_num_nodes; i++)
           {
-            node_rank_vector[i] = i%size;
+            node_rank_map.insert(make_pair(i, i%size));
           }
       }
 
     graph::scatter_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
-                         io_size, opt_attrs>0, prj_names, node_rank_vector, prj_vector, edge_attr_name_vector, 
+                         io_size, opt_attrs>0, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
                          total_num_nodes, local_num_edges, total_num_edges);
 
     PyObject *py_attribute_info = PyDict_New();
@@ -568,11 +570,6 @@ extern "C"
 
     // Read population info to determine total_num_nodes
     assert(io::hdf5::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
-
-    // Create C arrays for node_rank_vector:
-    int typenum = NPY_UINT32;
-    PyArray_Descr *descr;
-    descr = PyArray_DescrFromType(typenum);
 
     graph::bcast_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
                          opt_attrs>0, prj_names, prj_vector, edge_attr_name_vector, 

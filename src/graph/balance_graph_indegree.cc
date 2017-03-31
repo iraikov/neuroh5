@@ -60,23 +60,22 @@ namespace ngh5
     }
 
     // Assign each node to a rank 
-    void compute_node_rank_vector
+    void compute_node_rank_map
     (
      size_t num_ranks,
      size_t num_nodes,
-     vector< rank_t > &node_rank_vector
+     map< NODE_IDX_T, rank_t > &node_rank_map
      )
     {
       hsize_t remainder=0, offset=0, buckets=0;
     
-      node_rank_vector.resize(num_nodes);
       for (size_t i=0; i<num_ranks; i++)
         {
           remainder  = num_nodes - offset;
           buckets    = num_ranks - i;
           for (size_t j = 0; j < remainder / buckets; j++)
             {
-              node_rank_vector[offset+j] = i;
+              node_rank_map.insert(make_pair(offset+j, i));
             }
           offset    += remainder / buckets;
         }
@@ -125,16 +124,15 @@ namespace ngh5
 
     
       // Read population info to determine total_num_nodes
-      size_t local_num_nodes, total_num_nodes,
-        local_num_edges, total_num_edges;
+      size_t total_num_nodes, local_num_edges, total_num_edges;
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       assert(io::hdf5::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
-      vector<rank_t> node_rank_vector;
-      compute_node_rank_vector(size, total_num_nodes, node_rank_vector);
+      map<NODE_IDX_T, rank_t> node_rank_map;
+      compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
       vector < edge_map_t > prj_vector;
@@ -145,7 +143,7 @@ namespace ngh5
                      io_size,
                      false,
                      prj_names,
-                     node_rank_vector,
+                     node_rank_map,
                      prj_vector,
                      edge_attr_name_vector,
                      total_num_nodes,
@@ -232,19 +230,21 @@ namespace ngh5
                 });
       
       vidx=0;
-      for (size_t pidx=0; pidx<Nparts; pidx++)
+      while (vidx < total_num_nodes)
         {
-          size_t p = part_idx_vector[pidx];
-          while ((part_nums[p] > 0) &&
-                 (vidx < total_num_nodes))
+          for (size_t pidx=0; pidx<Nparts; pidx++)
             {
-              NODE_IDX_T n = node_idx_vector[vidx];
-              if (parts_map.find(n) == parts_map.end())
+              size_t p = part_idx_vector[pidx];
+              if (part_nums[p] > 0)
                 {
-                  parts_map.insert(make_pair(n, p));
-                  part_nums[p]--;
+                  NODE_IDX_T n = node_idx_vector[vidx];
+                  if (parts_map.find(n) == parts_map.end())
+                    {
+                      parts_map.insert(make_pair(n, p));
+                      part_nums[p]--;
+                    }
+                  vidx++;
                 }
-              vidx++;
             }
         }
       

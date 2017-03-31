@@ -177,8 +177,8 @@ def import_lsn_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,ou
     dst_old = -1
     for l in lines:
         a = l.split(colsep)
-        src = int(a[0])-offset-source_base
-        dst = int(a[1])-offset-dest_base
+        src = int(a[0])+offset-source_base
+        dst = int(a[1])+offset-dest_base
         if dst_min < 0:
             dst_min = dst
         else:
@@ -330,8 +330,9 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname
     dst_old = -1
     for l in lines:
         a = l.split(colsep)
-        src = int(a[0])-offset-source_base
-        dst = int(a[1])-offset-dest_base
+        src = int(float(a[0]))+offset-source_base
+        dst = int(float(a[1]))+offset-dest_base
+        print 'src = ', src
         if dst_min < 0:
             dst_min = dst
         else:
@@ -391,6 +392,7 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname
 @click.option("--bufsize", type=int, default=100000)
 def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
 
+    print "offset = ", offset
     population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
                            "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
     layer_mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,
@@ -465,8 +467,8 @@ def import_dist_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,o
     dst_old = -1
     for l in lines:
         a = l.split(colsep)
-        src = int(a[0])-offset-source_base
-        dst = int(a[1])-offset-dest_base
+        src = int(a[0])+offset-source_base
+        dst = int(a[1])+offset-dest_base
         if dst_min < 0:
             dst_min = dst
         else:
@@ -601,8 +603,8 @@ def import_gj_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,out
         a = l.split(colsep)
         if a[0] == '':
             del a[0]
-        src = int(float(a[0]))-offset-source_base
-        dst = int(float(a[1]))-offset-dest_base
+        src = int(float(a[0]))+offset-source_base
+        dst = int(float(a[1]))+offset-dest_base
         if dst_min < 0:
             dst_min = dst
         else:
@@ -669,7 +671,7 @@ def import_gj_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname,out
 @click.option("--colsep", type=str, default=None)
 @click.option("--offset", type=int, default=0)
 @click.option("--bufsize", type=int, default=100000)
-def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
+def import_gapjunction(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
 
     population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
                            "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
