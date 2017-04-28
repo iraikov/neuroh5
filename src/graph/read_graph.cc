@@ -406,8 +406,16 @@ namespace ngh5
                             case EdgeMapDst:
                               {
                                 auto it = node_rank_map.find(dst);
-                                assert(it != node_rank_map.end());
-                                rank_t myrank = it->second;
+                                if (it == node_rank_map.end())
+                                  {
+                                    printf("gid %d not found in rank map\n", dst);
+                                  }
+                                //assert(it != node_rank_map.end());
+                                rank_t myrank;
+                                if (it == node_rank_map.end())
+                                { myrank = 0; }
+                                else
+                                { myrank = it->second; }
                                 edge_tuple_t& et = rank_edge_map[myrank][dst];
                                 vector<NODE_IDX_T> &my_srcs = get<0>(et);
 
