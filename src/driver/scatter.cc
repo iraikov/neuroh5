@@ -65,9 +65,9 @@ int main(int argc, char** argv)
   // MPI Communicator for I/O ranks
   MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
-  vector<model::rank_t> node_rank_vector;
+  map<NODE_IDX_T, model::rank_t> node_rank_map;
   vector<model::pop_range_t> pop_vector;
-  map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
+  map<NODE_IDX_T, pair<uint32_t,model::pop_t> > pop_ranges;
   vector<string> prj_names;
   vector < model::edge_map_t > prj_vector;
   vector < vector <vector<string>> > edge_attr_name_vector;
@@ -202,13 +202,12 @@ int main(int argc, char** argv)
                                           pop_vector, n_nodes) >= 0);
 
   // Determine which nodes are assigned to which compute ranks
-  node_rank_vector.resize(n_nodes);
   if (!opt_rankfile)
     {
       // round-robin node to rank assignment from file
       for (size_t i = 0; i < n_nodes; i++)
         {
-          node_rank_vector[i] = i%size;
+          node_rank_map.insert(make_pair(i, i%size));
         }
     }
   else
@@ -223,7 +222,7 @@ int main(int argc, char** argv)
           model::rank_t n;
 
           assert (iss >> n);
-          node_rank_vector[i] = n;
+          node_rank_map.insert(make_pair(i, n));
           i++;
         }
 
@@ -244,7 +243,7 @@ int main(int argc, char** argv)
                         io_size,
                         opt_attrs,
                         prj_names,
-                        node_rank_vector,
+                        node_rank_map,
                         prj_vector,
                         edge_attr_name_vector,
                         n_nodes,

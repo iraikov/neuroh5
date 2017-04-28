@@ -24,7 +24,7 @@ namespace ngh5
 {
   namespace graph
   {
-  /// @brief Computes various metrics of the vertices in the specified projections
+  /// @brief Computes in-degree of the vertices in the specified projections
   ///
   /// @param comm          MPI communicator
   ///
@@ -36,7 +36,15 @@ namespace ngh5
   ///
   /// @return              HDF5 error code
     
-    int compute_vertex_metrics
+    int compute_vertex_indegree
+    (
+     MPI_Comm comm,
+     const std::string& input_file_name,
+     const std::vector<std::string> prj_names,
+     const size_t io_size
+     );
+    
+    int compute_vertex_outdegree
     (
      MPI_Comm comm,
      const std::string& input_file_name,

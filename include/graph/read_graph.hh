@@ -16,6 +16,7 @@
 #include <mpi.h>
 
 #include <vector>
+#include <map>
 
 namespace ngh5
 {
@@ -38,7 +39,7 @@ namespace ngh5
      const std::vector<DST_PTR_T>&     dst_ptr,
      const std::vector<NODE_IDX_T>&    src_idx,
      const model::EdgeNamedAttr&       edge_attr_values,
-     const std::vector<model::rank_t>& node_rank_vector,
+     const std::map<NODE_IDX_T, model::rank_t>& node_rank_map,
      size_t&                           num_edges,
      model::rank_edge_map_t &          rank_edge_map,
      EdgeMapType                       edge_map_type

@@ -51,7 +51,7 @@ namespace ngh5
                             EdgeMapType edge_map_type, MPI_Datatype header_type, MPI_Datatype size_type, 
                             const string& file_name, const string& prj_name, 
                             const bool opt_attrs,
-                            const vector<model::rank_t>&  node_rank_vector,
+                            const map<NODE_IDX_T, model::rank_t>&  node_rank_map,
                             const vector<model::pop_range_t>& pop_vector,
                             const map<NODE_IDX_T,pair<uint32_t,model::pop_t> >& pop_ranges,
                             const set< pair<model::pop_t, model::pop_t> >& pop_pairs,
@@ -122,7 +122,7 @@ namespace ngh5
           // append to the edge map
           
           assert(append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                      edge_attr_values, node_rank_vector, num_edges, prj_rank_edge_map,
+                                      edge_attr_values, node_rank_map, num_edges, prj_rank_edge_map,
                                       edge_map_type) >= 0);
 
           edge_attr_values.attr_names(edge_attr_names);
@@ -209,7 +209,7 @@ namespace ngh5
      const bool                    opt_attrs,
      const vector<string>&         prj_names,
      // A vector that maps nodes to compute ranks
-     const vector<model::rank_t>&  node_rank_vector,
+     const map<NODE_IDX_T, model::rank_t>&  node_rank_map,
      vector < model::edge_map_t >& prj_vector,
      vector < vector <vector<string>> >& edge_attr_names_vector,
      size_t                       &total_num_nodes,
@@ -289,7 +289,7 @@ namespace ngh5
       for (size_t i = 0; i < prj_size; i++)
         {
           scatter_projection(all_comm, io_comm, io_size, edge_map_type, header_type, size_type, file_name, prj_names[i],
-                             opt_attrs, node_rank_vector, pop_vector, pop_ranges, pop_pairs,
+                             opt_attrs, node_rank_map, pop_vector, pop_ranges, pop_pairs,
                              prj_vector, edge_attr_names_vector);
                              
         }

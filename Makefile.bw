@@ -2,7 +2,7 @@ CXX=CC
 CC=cc
 
 AR		:= ar
-LD        	:= cc
+LD        	:= CC
 
 LINK_MPI        = 
 
