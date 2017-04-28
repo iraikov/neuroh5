@@ -125,12 +125,10 @@ namespace ngh5
                      total_num_nodes,
                      local_num_edges,
                      total_num_edges);
-      
+
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
       merge_edge_map (prj_vector, edge_map);
-
-
       prj_vector.clear();
 
       uint64_t sum_indegree=0, nz_indegree=0;
