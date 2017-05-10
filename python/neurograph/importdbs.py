@@ -36,6 +36,7 @@ grp_populations  = 'Populations'
 grp_attributes   = 'Attributes'
 grp_node   = 'Node'
 grp_edge   = 'Edge'
+grp_population_projections = 'Population projections'
 
 path_layer_tags = '/%s/Layer tags' % grp_h5types
 path_population_labels = '/%s/Population labels' % grp_h5types
@@ -820,7 +821,7 @@ def import_connectivity(connectivity_file, outputfile, colsep):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        if grp_h5types in h5.keys():
+        if (grp_h5types in h5.keys()) & (grp_population_projections in h5[grp_h5types].keys()):
             dt = h5[path_population_projections].dtype
         else: 
             # create an HDF5 compound type for valid combinations of
