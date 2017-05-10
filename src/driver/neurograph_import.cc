@@ -373,6 +373,8 @@ int main(int argc, char** argv)
       src_range[0] = pop_vector[src_pop_idx].start;
       src_range[1] = src_range[0] + pop_vector[src_pop_idx].count;
 
+      if (rank == 0)
+        printf("src range start = %u src range end = %u\n", src_range[0], src_range[1]);
     }
 
   if (opt_txt)

@@ -147,26 +147,18 @@ namespace ngh5
             assert(file >= 0);
             dset = H5Dopen2(file, h5types_path_join(POP).c_str(), H5P_DEFAULT);
             assert(dset >= 0);
+
             hid_t fspace = H5Dget_space(dset);
             assert(fspace >= 0);
             num_ranges = (uint64_t) H5Sget_simple_extent_npoints(fspace);
             assert(num_ranges > 0);
             assert(H5Sclose(fspace) >= 0);
-          }
 
-        assert(MPI_Bcast(&num_ranges, 1, MPI_UINT64_T, 0, comm) >= 0);
-
-        // allocate buffers
-        pop_vector.resize(num_ranges);
-
-        // MPI rank 0 reads and broadcasts the population ranges
-
-        if (rank == 0)
-          {
             hid_t ftype = H5Dget_type(dset);
             assert(ftype >= 0);
-            hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
 
+            pop_vector.resize(num_ranges);
+            hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
             assert(H5Dread(dset, mtype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
                            &pop_vector[0]) >= 0);
 
@@ -177,6 +169,13 @@ namespace ngh5
             assert(H5Fclose(file) >= 0);
           }
 
+        assert(MPI_Bcast(&num_ranges, 1, MPI_UINT64_T, 0, comm) >= 0);
+        assert(num_ranges > 0);
+
+        // allocate buffers
+        pop_vector.resize(num_ranges);
+
+        // MPI rank 0 reads and broadcasts the population ranges
         assert(MPI_Bcast(&pop_vector[0], (int)num_ranges*sizeof(pop_range_t),
                          MPI_BYTE, 0, comm) >= 0);
 
