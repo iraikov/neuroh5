@@ -811,3 +811,41 @@ def import_globals(population_file, connectivity_file, outputfile, colsep):
         dset[:] = a
 
         f.close()
+
+@cli.command(name="import-connectivity")
+@click.argument("connectivity-file", type=click.Path(exists=True))
+@click.argument("outputfile", type=click.Path())
+@click.option("--colsep", type=str, default=' ')
+def import_connectivity(connectivity_file, outputfile, colsep):
+
+    with h5py.File(outputfile, "a", libver="latest") as h5:
+
+        if grp_h5types in h5.keys():
+            dt = h5[path_population_projections].dtype
+        else: 
+            # create an HDF5 compound type for valid combinations of
+            # population labels
+            dt = np.dtype([("Source", h5[path_population_labels].dtype),
+                           ("Destination", h5[path_population_labels].dtype)])
+            h5[path_population_projections] = dt
+
+        g = h5_get_group (h5, grp_h5types)
+        f = open(connectivity_file)
+        lines = f.readlines()
+        
+        dt = h5[path_population_projections]
+        dset = h5_get_dataset(g, "Valid population projections", 
+                              maxshape=(len(lines),), dtype=dt)
+        dset.resize((len(lines),))
+        a = np.zeros(len(lines), dtype=dt)
+        idx = 0
+        for l in lines:
+            label, src, dst = l.split(colsep)
+            a[idx]["Source"] = int(src)
+            a[idx]["Destination"] = int(dst)
+            idx += 1
+
+        dset[:] = a
+
+        f.close()
+        
