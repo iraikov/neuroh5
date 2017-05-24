@@ -11,42 +11,47 @@
 
 using namespace std;
 
-namespace ngh5
+namespace neurotrees
 {
-  namespace io
+  
+  string cell_attribute_prefix
+  (
+   const string& name_space,
+   const string& pop_name
+   )
   {
-    namespace hdf5
-    {
-      //////////////////////////////////////////////////////////////////////////
-      string edge_attribute_path
-      (
-       const string& proj_name
-       )
-      {
-        return PRJ + "/" + proj_name + "/" + ATTR + "/" + EDGE;
-      }
-
-      //////////////////////////////////////////////////////////////////////////
-      string edge_attribute_path
-      (
-       const string& proj_name,
-       const string& attr_name
-       )
-      {
-        return edge_attribute_path(proj_name) + "/" + attr_name;
-      }
-
-      //////////////////////////////////////////////////////////////////////////
-      string projection_path_join(const string& proj_name, const string& name)
-      {
-        return PRJ + "/" + proj_name + "/" + name;
-      }
-
-      //////////////////////////////////////////////////////////////////////////
-      string h5types_path_join(const string& name)
-      {
-        return H5_TYPES + "/" + name;
-      }
-    }
+    return "/" + POPS + "/" + pop_name + "/" + name_space;
   }
+
+  string cell_attribute_path
+  (
+   const string& name_space,
+   const string& pop_name,
+   const string& attr_name
+   )
+  {
+    return cell_attribute_prefix(name_space, pop_name) + "/" + attr_name;
+  }
+  
+  string population_path
+  (
+   const string& pop_name
+   )
+  {
+    return "/" + POPS + "/" + pop_name;
+  }
+  
+  string population_trees_path
+  (
+   const string& pop_name
+   )
+  {
+    return "/" + POPS + "/" + pop_name + "/" + TREES;
+  }
+  
+  string h5types_path_join(const string& name)
+  {
+    return H5_TYPES + "/" + name;
+  }
+  
 }
