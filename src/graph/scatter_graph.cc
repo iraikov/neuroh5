@@ -220,8 +220,6 @@ namespace ngh5
       int ierr = 0;
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
-      // MPI datatype for edges
-      MPI_Datatype mpi_edge_type;
       // MPI group color value used for I/O ranks
       int io_color = 1;
       // The set of compute ranks for which the current I/O rank is responsible

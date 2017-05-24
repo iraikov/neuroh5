@@ -400,7 +400,6 @@ int main(int argc, char** argv)
       vector< pair<hsize_t,hsize_t> > ranges;
       rank_ranges(txt_input_file_names.size(), size, ranges);
       
-      size_t filecount=0;
       hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
       for (size_t i=start; i<end; i++)

@@ -141,7 +141,6 @@ int main(int argc, char** argv)
   assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
   vector<model::prj_tuple_t> prj_list;
-  size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
   
   std::vector<NODE_IDX_T> parts;
   std::vector<double> part_weights;

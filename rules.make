@@ -16,14 +16,14 @@ SRC      	:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
 OBJ       	:= $(patsubst src/%.cc,build/%.o,$(SRC))
 INCLUDES  	:= $(addprefix -I,$(INC_DIR) include $(HDF5_INCDIR) $(MPI_INCDIR) $(PARMETIS_INCDIR))
 ifndef PARMETIS
-OBJ       	:= $(filter-out build/graph/partition_graph.o,$(DRIVER_OBJ))
+OBJ       	:= $(filter-out build/graph/partition_graph.o,$(OBJ))
 endif
 
 vpath %.cc $(SRC_DIR):$(DRIVER_SRC_DIR)
 
 define make-goal
 $1/%.o: %.cc
-	$(CC) -std=c++11 -Wall -DUSE_EDGE_DELIM $(INCLUDES) -g -c $$< -o $$@
+	$(CC) -std=c++11 -Wall -Wno-unused-but-set-variable -DUSE_EDGE_DELIM $(INCLUDES) -g -c $$< -o $$@
 endef
 
 .PHONY: all checkdirs clean

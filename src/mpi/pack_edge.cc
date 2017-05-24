@@ -535,7 +535,7 @@ namespace ngh5
                           "recvpos = %d recvbuf_size = %d j = %lu num_recv_items = %lu\n", 
                           rank, recvpos, recvbuf_size, j, num_recv_items);
                  }
-               assert(recvpos <= (size_t)recvbuf_size);
+               assert(recvpos <= recvbuf_size);
                
                if (prj_edge_map.find(key_node) == prj_edge_map.end())
                  {
@@ -664,7 +664,7 @@ namespace ngh5
               assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm) == MPI_SUCCESS);
               if (delim != rank_edge_start_delim)
                 {
-                  printf("rank %d: unpack_rank_edge_map: ridx = %u recvcounts[%u] = %d recvpos = %d recvbuf_size = %u delim = %d\n", 
+                  printf("rank %d: unpack_rank_edge_map: ridx = %lu recvcounts[%lu] = %d recvpos = %d recvbuf_size = %d delim = %d\n", 
                          rank, ridx, ridx, recvcounts[ridx], recvpos, recvbuf_size, delim);
                   while ((delim != rank_edge_start_delim) && (recvpos < recvbuf_size))
                     {
@@ -698,7 +698,7 @@ namespace ngh5
                       if (recvpos > (int)recvbuf_size)
                         {
                           printf("rank %d: unpacking projection has reached end of buffer; "
-                                 "recvpos = %d recvbuf_size = %lu j = %lu num_recv_items = %lu\n", 
+                                 "recvpos = %d recvbuf_size = %d j = %lu num_recv_items = %lu\n", 
                                  rank, recvpos, recvbuf_size, j, num_recv_items);
                         }
                       assert(recvpos <= (int)recvbuf_size);

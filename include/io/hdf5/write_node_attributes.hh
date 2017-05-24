@@ -39,10 +39,13 @@ namespace ngh5
         hid_t fapl = H5Fget_access_plist(file);
         assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
 
-        int size, rank;
-        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-
+        int ssize, srank;
+        assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+        assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+        size_t size, rank;
+        size = (size_t)ssize;
+        rank = (size_t)srank;
+        
         uint32_t my_count = (uint32_t)node_id.size();
         std::vector<uint32_t> all_counts(size);
         assert(MPI_Allgather(&my_count, 1, MPI_UINT32_T, &all_counts[0], 1,

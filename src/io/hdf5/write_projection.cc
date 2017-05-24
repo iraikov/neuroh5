@@ -46,10 +46,13 @@ namespace ngh5
         hid_t fapl = H5Fget_access_plist(file);
         assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
 
-        int size, rank;
-        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-
+        int ssize, srank;
+        assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+        assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+        size_t size, rank;
+        size = (size_t)ssize;
+        rank = (size_t)srank;
+        
         assert(H5Pclose(fapl) >= 0);
 
         uint64_t num_dest = prj_edge_map.size();
@@ -156,7 +159,7 @@ namespace ngh5
         assert(mspace >= 0);
         assert(H5Sselect_all(mspace) >= 0);
         hsize_t start = 0;
-        for (int p = 0; p < rank; ++p)
+        for (size_t p = 0; p < rank; ++p)
           {
             start += recvbuf_num_blocks[p];
           }
@@ -182,7 +185,7 @@ namespace ngh5
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
         */
 
-        for (int p = 0; p < rank; ++p)
+        for (size_t p = 0; p < rank; ++p)
           {
             dbp[0] += recvbuf_num_dest[p];
           }
@@ -208,7 +211,7 @@ namespace ngh5
         assert(H5Sselect_all(mspace) >= 0);
 
         start = 0;
-        for (int p = 0; p < rank; ++p)
+        for (size_t p = 0; p < rank; ++p)
           {
             start += recvbuf_num_blocks[p];
           }
@@ -236,7 +239,7 @@ namespace ngh5
         // write destination pointers
         // # dest. pointers = number of destinations + 1
         uint64_t s = 0;
-        for (int p = 0; p < rank; ++p)
+        for (size_t p = 0; p < rank; ++p)
           {
             s += recvbuf_num_edge[p];
           }

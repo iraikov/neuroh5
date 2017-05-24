@@ -93,13 +93,16 @@ namespace ngh5
     {
       int status=0;
     
-      int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      int srank, ssize;
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) >= 0);
 
+      size_t rank, size;
+      rank = (size_t)srank;
+      size = (size_t)ssize;
     
       // Read population info to determine total_num_nodes
-      size_t local_num_nodes, total_num_nodes,
+      size_t total_num_nodes,
         local_num_edges, total_num_edges;
 
       vector<pop_range_t> pop_vector;
@@ -150,8 +153,6 @@ namespace ngh5
           vertex_norm_indegrees[v] = norm_indegree;
         }
       
-      float mean_norm_indegree = 1.0 / (float)nz_indegree;
-
       vector <NODE_IDX_T> node_id;
       vector <uint32_t> vertex_indegree_value;
       vector <float> vertex_norm_indegree_value;
@@ -193,13 +194,16 @@ namespace ngh5
     {
       int status=0;
     
-      int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      int srank, ssize;
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) >= 0);
 
+      size_t rank, size;
+      rank = (size_t)srank;
+      size = (size_t)ssize;
     
       // Read population info to determine total_num_nodes
-      size_t local_num_nodes, total_num_nodes,
+      size_t total_num_nodes,
         local_num_edges, total_num_edges;
 
       vector<pop_range_t> pop_vector;
@@ -251,8 +255,6 @@ namespace ngh5
           vertex_norm_outdegrees[v] = norm_outdegree;
         }
       
-      float mean_norm_outdegree = 1.0 / (float)nz_outdegree;
-
       vector <NODE_IDX_T> node_id;
       vector <uint32_t> vertex_outdegree_value;
       vector <float> vertex_norm_outdegree_value;
