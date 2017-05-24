@@ -2,7 +2,7 @@ AR		:= ar
 CC		:= g++
 LD        	:= g++
 
-LINK_MPI        = -L$(MPI_LIBDIR) -lmpi
+LINK_MPI        = -L$(MPI_LIBDIR) -lmpich
 
 HDF5_DIR	:= /usr
 HDF5_INCDIR 	:= $(HDF5_DIR)/include/hdf5/mpich
@@ -16,8 +16,11 @@ MPI_DIR		:= /usr
 MPI_INCDIR	:= $(MPI_DIR)/include/mpich
 MPI_LIBDIR	:= $(MPI_DIR)/lib/x86_64-linux-gnu/
 
+ifdef PARMETIS
 PARMETIS_DIR	:= /usr
 PARMETIS_INCDIR	:= $(PARMETIS_DIR)/include
 PARMETIS_LIBDIR	:= $(PARMETIS_DIR)/lib
+endif
 
-include Makefile.common
+include rules.make
+

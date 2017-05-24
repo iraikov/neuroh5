@@ -2,10 +2,10 @@ AR		:= ar
 CC		:= mpicxx
 LD        	:= mpicxx
 
-MPI_INCDIR      = /opt/mvapich2/intel/ib/include
-MPI_LIBDIR      = /opt/mvapich2/intel/ib/lib
-HDF5_INCDIR	= /opt/hdf5/intel/mvapich2_ib/include
-HDF5_LIBDIR	= /opt/hdf5/intel/mvapich2_ib/lib 
+MPI_INCDIR      = $(MPIHOME)/include
+MPI_LIBDIR      = $(MPIHOME)/lib
+HDF5_INCDIR	= $(MPIHOME)/include
+HDF5_LIBDIR	= $(MPIHOME)/lib 
 HDF5_LIB        = hdf5
 
 PARMETIS_DIR	:= $(PARMETISHOME)
@@ -17,4 +17,4 @@ LINK_MPI        = -L$(MPI_LIBDIR) -lmpich
 CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR) -I../include
 LDFLAGS		= -L$(HDF5_LIBDIR) 
 
-include Makefile.common
+include rules.make
