@@ -103,7 +103,7 @@ namespace neuroio
     {(SWC_TYPE_T)5, "SWC_CUSTOM"}
   };
 
-
+  // population type
   typedef uint16_t pop_t;
   
   // population range type
@@ -129,6 +129,40 @@ namespace neuroio
                       > neurotree_t;
 
   typedef std::map<Graph::vertex, std::vector<Graph::vertex> > contraction_map_t;
+
+  // population combination type
+  typedef struct
+  {
+    uint16_t src;
+    uint16_t dst;
+  }
+    pop_comb_t;
+
+
+  typedef std::map<NODE_IDX_T,std::pair<uint32_t,pop_t> > pop_range_map_t;
+  
+  typedef pop_range_map_t::const_iterator pop_range_iter_t;
+
+  // Type for mapping nodes and edges in the graph to MPI ranks
+  
+  typedef uint32_t rank_t;
+  
+  typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
+                      EdgeAttr  // edge attribute vector,
+                      > edge_tuple_t;
+
+  typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
+  
+  typedef edge_map_t::const_iterator edge_map_iter_t;
+  
+  typedef std::map<rank_t, edge_map_t> rank_edge_map_t;
+  
+  typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
+  
+  typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
+                      std::vector<NODE_IDX_T>, // destination vector
+                      EdgeAttr  // edge attribute vector
+                      > prj_tuple_t;
 
 }
 
