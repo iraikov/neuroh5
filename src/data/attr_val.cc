@@ -13,9 +13,9 @@
 #include <vector>
 
 using namespace std;
-using namespace neurotrees;
+using namespace neuroio;
 
-namespace neurotrees
+namespace neuroio
 {
 
     template<>

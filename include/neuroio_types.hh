@@ -1,29 +1,75 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file neurotrees_types.hh
+///  @file neuroio_types.hh
 ///
-///  Type definitions for the fundamental datatypes used in the neurotrees storage
-///  format.
+///  Type definitions for the fundamental datatypes used in the API
 ///
-///  Copyright (C) 2016 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
-#ifndef NEUROTREES_TYPES_HH
-#define NEUROTREES_TYPES_HH
+#ifndef NEUROIO_TYPES_HH
+#define NEUROIO_TYPES_HH
 
-#include <hdf5.h>
-
+#include <cstdint>
+#include <limits.h>
 #include <utility>
 #include <string>
 #include <map>
 #include <tuple>
 #include <vector>
 
+#include <hdf5.h>
+
 #include "ngraph.hh"
 
 #define MAX_ATTR_NAME_LEN 128
 
-namespace neurotrees
+using namespace NGraph;
+
+namespace neuroio
 {
+
+#if SIZE_MAX == UCHAR_MAX
+   #define MPI_SIZE_T MPI_UNSIGNED_CHAR
+#elif SIZE_MAX == USHRT_MAX
+   #define MPI_SIZE_T MPI_UNSIGNED_SHORT
+#elif SIZE_MAX == UINT_MAX
+   #define MPI_SIZE_T MPI_UNSIGNED
+#elif SIZE_MAX == ULONG_MAX
+   #define MPI_SIZE_T MPI_UNSIGNED_LONG
+#elif SIZE_MAX == ULLONG_MAX
+   #define MPI_SIZE_T MPI_UNSIGNED_LONG_LONG
+#else
+   #error "unknown SIZE_T"
+#endif
+
+  // node index type
+  typedef unsigned int NODE_IDX_T;
+  // cell index type
+  typedef unsigned int CELL_IDX_T;
+  
+  // population index type
+  typedef uint16_t POP_IDX_T;
+  
+  // MPI type of node indexes
+#define NODE_IDX_MPI_T MPI_UINT32_T
+  
+  // DBS offset type
+  typedef uint64_t DST_PTR_T;
+  
+  // Block offset type
+  typedef uint64_t DST_BLK_PTR_T;
+  
+  // Size and header type used for indicating structure size in packed edge data
+  struct EdgeHeader
+  {
+    NODE_IDX_T key;
+    uint32_t size;
+  };
+  
+  struct Size
+  {
+    uint32_t size;
+  };
 
   typedef float      COORD_T;
   typedef float      REALVAL_T;
@@ -57,7 +103,6 @@ namespace neurotrees
     {(SWC_TYPE_T)5, "SWC_CUSTOM"}
   };
 
-  using namespace NGraph;
 
   typedef uint16_t pop_t;
   
@@ -86,5 +131,6 @@ namespace neurotrees
   typedef std::map<Graph::vertex, std::vector<Graph::vertex> > contraction_map_t;
 
 }
+
 
 #endif

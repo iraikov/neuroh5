@@ -1,22 +1,22 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file edge_attr.cc
+///  @file edgeattr.cc
 ///
 ///  Template specialization for routine in EdgeAttr.
 ///  format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
-#include "edge_attr.hh"
+#include "edgeattr.hh"
 
 #include <map>
 #include <vector>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroio;
 
-namespace ngh5
+namespace neuroio
 {
   namespace model
   {

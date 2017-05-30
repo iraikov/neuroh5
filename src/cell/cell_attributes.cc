@@ -1,3 +1,12 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file cell_attributes.cc
+///
+///  Routines for manipulation of scalar and vector attributes associated with a cell id.
+///
+///  Copyright (C) 2016-2017 Project Neurograph.
+//==============================================================================
+
 #include "infer_datatype.hh"
 #include "neurotrees_types.hh"
 #include "pack_tree.hh"
@@ -20,9 +29,9 @@
 #include <vector>
 
 using namespace std;
-using namespace neurotrees;
+using namespace neuroio;
 
-namespace neurotrees
+namespace neuroio
 {
   
 
