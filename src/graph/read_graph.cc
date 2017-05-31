@@ -5,7 +5,7 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 #include "debug.hh"
@@ -21,10 +21,10 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace ngh5::model;
+using namespace neuroio::data;
 using namespace std;
 
-namespace ngh5
+namespace neuroio
 {
   namespace graph
   {

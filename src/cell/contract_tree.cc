@@ -4,7 +4,7 @@
 ///
 ///  Tree contraction routine.
 ///
-///  Copyright (C) 2016 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project Neurotrees.
 //==============================================================================
 
 #include "debug.hh"
@@ -22,7 +22,7 @@
 using namespace std;
 using namespace NGraph;
 
-namespace neurotrees
+namespace neuroio
 {
   
   void contract_tree_bfs (const Graph &A,  

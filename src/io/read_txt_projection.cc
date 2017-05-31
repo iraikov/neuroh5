@@ -21,7 +21,7 @@
 
 using namespace std;
 
-namespace ngh5
+namespace neuroio
 {
   namespace io
   {
@@ -30,7 +30,7 @@ namespace ngh5
                              const vector <size_t>& num_attrs,
                              vector<NODE_IDX_T>&    dst,
                              vector<NODE_IDX_T>&    src,
-                             ngh5::model::EdgeAttr& attrs)
+                             neuroio::data::EdgeAttr& attrs)
     {
       ifstream infile(file_name.c_str());
       string line;

@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for reading descriptions of neurite structures.
 ///
-///  Copyright (C) 2016 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project Neurotrees.
 //==============================================================================
 
 #include "debug.hh"
@@ -18,7 +18,7 @@
 #include <map>
 #include <vector>
 #include "ngraph.hh"
-#include "neurotrees_types.hh"
+#include "neuroio_types.hh"
 #include "contract_tree.hh"
 
 #undef NDEBUG
@@ -27,183 +27,185 @@
 using namespace std;
 using namespace NGraph;
 
-namespace neurotrees
+namespace neuroio
 {
-  
-    
-  /*****************************************************************************
-   * Load tree data structures 
-   *****************************************************************************/
-  int read_layer_swc
-  (
-   const std::string& file_name,
-   const CELL_IDX_T gid,
-   const int id_offset,
-   const int layer_offset,
-   const SWC_TYPE_T swc_type,
-   const bool split_layers,
-   vector<neurotree_t> &tree_list
-   )
+
+  namespace io
   {
-    int status = 0;
-    Graph A, S;
-    std::vector<COORD_T> xcoords, ycoords, zcoords;  // coordinates of nodes
-    std::vector<REALVAL_T> radiuses;   // Radius
-    std::vector<LAYER_IDX_T> layers;   // Layer
-    std::vector<PARENT_NODE_IDX_T> parents;   // Parent point ids
-    std::vector<SWC_TYPE_T> swc_types;   // SWC types
-    Graph::vertex_set roots;
-
-    ifstream infile(file_name);
-    string line;
-    size_t i = 0;
     
-    while (getline(infile, line))
-      {
-        istringstream iss(line);
-        NODE_IDX_T id, idpar; int opt_idpar;
-        int layer_value; LAYER_IDX_T layer;
-        REALVAL_T radius;
-        COORD_T x, y, z;
+    /*****************************************************************************
+     * Load tree data structures 
+     *****************************************************************************/
+    int read_layer_swc
+    (
+     const std::string& file_name,
+     const CELL_IDX_T gid,
+     const int id_offset,
+     const int layer_offset,
+     const SWC_TYPE_T swc_type,
+     const bool split_layers,
+     vector<neurotree_t> &tree_list
+     )
+    {
+      int status = 0;
+      Graph A, S;
+      std::vector<COORD_T> xcoords, ycoords, zcoords;  // coordinates of nodes
+      std::vector<REALVAL_T> radiuses;   // Radius
+      std::vector<LAYER_IDX_T> layers;   // Layer
+      std::vector<PARENT_NODE_IDX_T> parents;   // Parent point ids
+      std::vector<SWC_TYPE_T> swc_types;   // SWC types
+      Graph::vertex_set roots;
 
-        iss >> id;
-        id = id+id_offset;
-        if (iss.fail()) continue;
-        
-        assert (iss >> layer_value);
-        assert (iss >> x);
-        assert (iss >> y);
-        assert (iss >> z);
-        assert (iss >> radius);
-        assert (iss >> opt_idpar);
+      ifstream infile(file_name);
+      string line;
+      size_t i = 0;
+    
+      while (getline(infile, line))
+        {
+          istringstream iss(line);
+          NODE_IDX_T id, idpar; int opt_idpar;
+          int layer_value; LAYER_IDX_T layer;
+          REALVAL_T radius;
+          COORD_T x, y, z;
 
-        if (layer_value < 0)
-          {
-            layer = 0;
-          }
-        else
-          {
-            layer = layer_value + layer_offset;
-          }
+          iss >> id;
+          id = id+id_offset;
+          if (iss.fail()) continue;
         
-        A.insert_vertex(id);
-        if (opt_idpar > -1)
-          {
-            idpar = opt_idpar+id_offset;
-            A.insert_edge(idpar,id);
-          }
-        else
-          {
-            roots.insert(id);
-          }
+          assert (iss >> layer_value);
+          assert (iss >> x);
+          assert (iss >> y);
+          assert (iss >> z);
+          assert (iss >> radius);
+          assert (iss >> opt_idpar);
+
+          if (layer_value < 0)
+            {
+              layer = 0;
+            }
+          else
+            {
+              layer = layer_value + layer_offset;
+            }
         
-        if (opt_idpar > -1)
-          {
-            parents.push_back(opt_idpar+id_offset);
-          }
-        else
-          {
-            parents.push_back(opt_idpar);
-          }
+          A.insert_vertex(id);
+          if (opt_idpar > -1)
+            {
+              idpar = opt_idpar+id_offset;
+              A.insert_edge(idpar,id);
+            }
+          else
+            {
+              roots.insert(id);
+            }
+        
+          if (opt_idpar > -1)
+            {
+              parents.push_back(opt_idpar+id_offset);
+            }
+          else
+            {
+              parents.push_back(opt_idpar);
+            }
           
-        swc_types.push_back(swc_type);
-        xcoords.push_back(x);
-        ycoords.push_back(y);
-        zcoords.push_back(z);
-        radiuses.push_back(radius);
-        layers.push_back(layer);
+          swc_types.push_back(swc_type);
+          xcoords.push_back(x);
+          ycoords.push_back(y);
+          zcoords.push_back(z);
+          radiuses.push_back(radius);
+          layers.push_back(layer);
         
-        i++;
-      }
+          i++;
+        }
     
-    infile.close();
+      infile.close();
 
-    //cout << A;
+      //cout << A;
     
-    contraction_map_t contraction_map;
-    vector<SECTION_IDX_T> src_vector, dst_vector;
-    vector<SECTION_IDX_T> sec_vector;
-    S.insert_vertex(0);
+      contraction_map_t contraction_map;
+      vector<SECTION_IDX_T> src_vector, dst_vector;
+      vector<SECTION_IDX_T> sec_vector;
+      S.insert_vertex(0);
 
-    if (split_layers)
-      contract_tree_regions_dfs (A, layers, roots, S, contraction_map, 0, 0);
-    else
-      contract_tree_dfs (A, roots, S, contraction_map, 0, 0);
+      if (split_layers)
+        contract_tree_regions_dfs (A, layers, roots, S, contraction_map, 0, 0);
+      else
+        contract_tree_dfs (A, roots, S, contraction_map, 0, 0);
     
-    //cout << S;
-    size_t num_sections = contraction_map.size();
-    assert(num_sections > 0);
+      //cout << S;
+      size_t num_sections = contraction_map.size();
+      assert(num_sections > 0);
     
-    sec_vector.push_back(contraction_map.size());
-    size_t sec_idx = 0;
-    for(auto it = contraction_map.cbegin(); it != contraction_map.end(); it++)
-      {
-        // iterator->first = key
-        // iterator->second = value
-        size_t size = it->second.size();
-        sec_vector.push_back(size);
-        sec_vector.insert(std::end(sec_vector),std::begin(it->second),std::end(it->second));
-        sec_idx++;
-      }
-    assert(sec_idx == num_sections);
+      sec_vector.push_back(contraction_map.size());
+      size_t sec_idx = 0;
+      for(auto it = contraction_map.cbegin(); it != contraction_map.end(); it++)
+        {
+          // iterator->first = key
+          // iterator->second = value
+          size_t size = it->second.size();
+          sec_vector.push_back(size);
+          sec_vector.insert(std::end(sec_vector),std::begin(it->second),std::end(it->second));
+          sec_idx++;
+        }
+      assert(sec_idx == num_sections);
     
-    for ( Graph::const_iterator p = S.begin(); p != S.end(); p++)
-      {
-        Graph::vertex u = Graph::node (p); 
-        Graph::vertex_set outs = S.out_neighbors(u);
-        assert(u < num_sections);
+      for ( Graph::const_iterator p = S.begin(); p != S.end(); p++)
+        {
+          Graph::vertex u = Graph::node (p); 
+          Graph::vertex_set outs = S.out_neighbors(u);
+          assert(u < num_sections);
 
-        for ( Graph::vertex_set::const_iterator s = outs.begin(); s != outs.end(); s++)
-          {
-            Graph::vertex v = Graph::node (s);
-            assert(v < num_sections);
-            assert(u != v);
-            src_vector.push_back(u);
-            dst_vector.push_back(v);
-          }
-      }
+          for ( Graph::vertex_set::const_iterator s = outs.begin(); s != outs.end(); s++)
+            {
+              Graph::vertex v = Graph::node (s);
+              assert(v < num_sections);
+              assert(u != v);
+              src_vector.push_back(u);
+              dst_vector.push_back(v);
+            }
+        }
 
     
-    neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sec_vector,xcoords,ycoords,zcoords,radiuses,layers,parents,swc_types);
-    tree_list.push_back(tree);
+      neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sec_vector,xcoords,ycoords,zcoords,radiuses,layers,parents,swc_types);
+      tree_list.push_back(tree);
 
-    if (debug_enabled)
-      {
-        cout << "layers: " << endl;
-        for_each(layers.cbegin(),
-                 layers.cend(),
-                 [] (const LAYER_IDX_T i)
-                 { cout << " " << i; } 
-                 );
-        cout << endl;
+      if (debug_enabled)
+        {
+          cout << "layers: " << endl;
+          for_each(layers.cbegin(),
+                   layers.cend(),
+                   [] (const LAYER_IDX_T i)
+                   { cout << " " << i; } 
+                   );
+          cout << endl;
 
-        cout << "src_vector: " << endl;
-        for_each(src_vector.cbegin(),
-                 src_vector.cend(),
-                 [] (const Graph::vertex i)
-                 { cout << " " << i; } 
-                 );
-        cout << endl;
+          cout << "src_vector: " << endl;
+          for_each(src_vector.cbegin(),
+                   src_vector.cend(),
+                   [] (const Graph::vertex i)
+                   { cout << " " << i; } 
+                   );
+          cout << endl;
 
-        cout << "dst_vector: " << endl;
-        for_each(dst_vector.cbegin(),
-                 dst_vector.cend(),
-                 [] (const Graph::vertex i)
-                 { cout << " " << i; } 
-                 );
-        cout << endl;
+          cout << "dst_vector: " << endl;
+          for_each(dst_vector.cbegin(),
+                   dst_vector.cend(),
+                   [] (const Graph::vertex i)
+                   { cout << " " << i; } 
+                   );
+          cout << endl;
         
-        cout << "sec_vector: " << endl;
-        for_each(sec_vector.cbegin(),
-                 sec_vector.cend(),
-                 [] (const Graph::vertex i)
-                 { cout << " " << i; } 
-                 );
-        cout << endl;
-      }
+          cout << "sec_vector: " << endl;
+          for_each(sec_vector.cbegin(),
+                   sec_vector.cend(),
+                   [] (const Graph::vertex i)
+                   { cout << " " << i; } 
+                   );
+          cout << endl;
+        }
 
-    return status;
-  }
+      return status;
+    }
   
-
+  }
 }

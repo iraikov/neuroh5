@@ -30,7 +30,7 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroio;
 
 void throw_err(char const* err_message)
 {

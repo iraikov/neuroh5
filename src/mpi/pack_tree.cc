@@ -11,66 +11,68 @@
 
 using namespace std;
 
-namespace neurotrees
+#define MAX_ATTR_NAME_LEN 128
+
+namespace neuroio
 {
-  #define MAX_ATTR_NAME_LEN 128
-  
-  /***************************************************************************
-   * Prepare MPI packed data structures with attributes for a given tree.
-   **************************************************************************/
 
-  void pack_size_gid
-  (
-   MPI_Comm comm,
-   int &sendsize
-   )
+  namespace mpi
   {
-    int packsize=0;
-    assert(MPI_Pack_size(1, MPI_CELL_IDX_T, comm, &packsize) == MPI_SUCCESS);
+    
+    /***************************************************************************
+     * Prepare MPI packed data structures with attributes for a given tree.
+     **************************************************************************/
 
-    sendsize += packsize;
-  }
+    void pack_size_gid
+    (
+     MPI_Comm comm,
+     int &sendsize
+     )
+    {
+      int packsize=0;
+      assert(MPI_Pack_size(1, MPI_CELL_IDX_T, comm, &packsize) == MPI_SUCCESS);
 
-  void pack_size_attr_values
-  (
-   MPI_Comm comm,
-   const MPI_Datatype mpi_type,
-   const size_t num_elems,
-   int &sendsize
-   )
-  {
-    int packsize=0;
-    if (num_elems > 0)
-      {
-	assert(MPI_Pack_size(num_elems, mpi_type, comm, &packsize) == MPI_SUCCESS);
-	sendsize += packsize;
-      }
-  }
-  
-  void pack_gid
-  (
-   MPI_Comm comm,
-   const CELL_IDX_T gid,
-   const int &sendbuf_size,
-   vector<uint8_t> &sendbuf,
-   int &sendpos
-   )
-  {
-    assert(MPI_Pack(&gid, 1, MPI_CELL_IDX_T, &sendbuf[0], sendbuf_size, &sendpos, comm)
-           == MPI_SUCCESS);
-  }
-  
+      sendsize += packsize;
+    }
 
+    void pack_size_attr_values
+    (
+     MPI_Comm comm,
+     const MPI_Datatype mpi_type,
+     const size_t num_elems,
+     int &sendsize
+     )
+    {
+      int packsize=0;
+      if (num_elems > 0)
+        {
+          assert(MPI_Pack_size(num_elems, mpi_type, comm, &packsize) == MPI_SUCCESS);
+          sendsize += packsize;
+        }
+    }
   
-  int pack_tree
-  (
-   MPI_Comm comm,
-   const CELL_IDX_T &gid,
-   const neurotree_t &tree,
-   int &sendpos,
-   vector<uint8_t> &sendbuf
-   )
-  {
+    void pack_gid
+    (
+     MPI_Comm comm,
+     const CELL_IDX_T gid,
+     const int &sendbuf_size,
+     vector<uint8_t> &sendbuf,
+     int &sendpos
+     )
+    {
+      assert(MPI_Pack(&gid, 1, MPI_CELL_IDX_T, &sendbuf[0], sendbuf_size, &sendpos, comm)
+             == MPI_SUCCESS);
+    }
+  
+    int pack_tree
+    (
+     MPI_Comm comm,
+     const CELL_IDX_T &gid,
+     const neurotree_t &tree,
+     int &sendpos,
+     vector<uint8_t> &sendbuf
+     )
+    {
       int ierr = 0;
       int packsize=0, sendsize = 0;
 
@@ -143,27 +145,27 @@ namespace neurotrees
       return ierr;
     }
 
-  void unpack_gid
-  (
-   MPI_Comm comm,
-   CELL_IDX_T &gid,
-   const size_t &recvbuf_size,
-   const vector<uint8_t> &recvbuf,
-   int &recvpos
-   )
-  {
-    assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-                      &gid, 1, MPI_CELL_IDX_T, comm) == MPI_SUCCESS);
-  }
+    void unpack_gid
+    (
+     MPI_Comm comm,
+     CELL_IDX_T &gid,
+     const size_t &recvbuf_size,
+     const vector<uint8_t> &recvbuf,
+     int &recvpos
+     )
+    {
+      assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
+                        &gid, 1, MPI_CELL_IDX_T, comm) == MPI_SUCCESS);
+    }
 
-  int unpack_tree
-  (
-   MPI_Comm comm,
-   const vector<uint8_t> &recvbuf,
-   int &recvpos,
-   map<CELL_IDX_T, neurotree_t> &tree_map
-   )
-  {
+    int unpack_tree
+    (
+     MPI_Comm comm,
+     const vector<uint8_t> &recvbuf,
+     int &recvpos,
+     map<CELL_IDX_T, neurotree_t> &tree_map
+     )
+    {
       int ierr = 0;
       
       CELL_IDX_T gid;
@@ -210,4 +212,5 @@ namespace neurotrees
       
       return ierr;
     }
+  }
 }

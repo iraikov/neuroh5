@@ -24,9 +24,9 @@
 #include <cassert>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroio;
 
-namespace ngh5
+namespace neuroio
 {
   namespace mpi
   {

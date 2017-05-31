@@ -35,9 +35,9 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace ngh5::model;
+using namespace neuroio::data;
 
-namespace ngh5
+namespace neuroio
 {
   namespace graph
   {

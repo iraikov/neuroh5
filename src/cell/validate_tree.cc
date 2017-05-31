@@ -4,7 +4,7 @@
 ///
 ///  Validate tree structure.
 ///
-///  Copyright (C) 2016 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project Neurotrees.
 //==============================================================================
 
 

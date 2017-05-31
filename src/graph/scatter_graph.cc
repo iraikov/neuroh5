@@ -32,11 +32,11 @@
 #include <cassert>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroio;
 
 #define MAX_ATTR_NAME 1024
 
-namespace ngh5
+namespace neuroio
 {
   namespace graph
   {

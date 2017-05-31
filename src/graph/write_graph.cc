@@ -27,10 +27,10 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace ngh5::model;
+using namespace neuroio::data;
 using namespace std;
 
-namespace ngh5
+namespace neuroio
 {
   namespace graph
   {

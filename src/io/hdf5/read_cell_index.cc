@@ -27,7 +27,7 @@
 
 using namespace std;
 
-namespace neurotrees
+namespace neuroio
 {
 
   
