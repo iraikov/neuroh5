@@ -1,16 +1,15 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file hdf5-types.hh
+///  @file hdf5_types.hh
 ///
-///  Type definitions for the fundamental datatypes used in the Neurotrees format.
+///  Type definitions for the fundamental datatypes used in the NeuroIO format.
 ///
-///  Copyright (C) 2016 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project Neurotrees.
 //==============================================================================
 #ifndef HDF5_TYPES_HH
 #define HDF5_TYPES_HH
 
 #include <hdf5.h>
-
 
 
 // In-memory HDF5 datatype of attribute pointers

@@ -1,20 +1,21 @@
-#ifndef HDF5_EXISTS_TREE_H5TYPES_HH
-#define HDF5_EXISTS_TREE_H5TYPES_HH
+#ifndef COPY_TREE_H5TYPES_HH
+#define COPY_TREE_H5TYPES_HH
 
 #include "hdf5.h"
 
 #include <vector>
 
-namespace neurotrees
+namespace neuroio
 {
 
 /*****************************************************************************
- * Checks if the population definitions for tree dataset exist
+ * Copies population definitions for tree dataset from src file to dst file
  *****************************************************************************/
 
-  int hdf5_exists_tree_h5types
+  int copy_tree_h5types
   (
-   hid_t  file
+   hid_t  src_file,
+   hid_t  dst_file
    );
 }
 

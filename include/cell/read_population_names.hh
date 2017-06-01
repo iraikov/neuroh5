@@ -11,17 +11,20 @@
 
 #include <mpi.h>
 #include <vector>
-#include "neurotrees_types.hh"
+#include "neuroio_types.hh"
 
-namespace neurotrees
+namespace neuroio
 {
-  herr_t read_population_names
-  (
-   MPI_Comm             comm,
-   hid_t                file,
-   vector<string>&      pop_names
-   );
-
+  namespace hdf5
+  {
+    
+    herr_t read_population_names
+    (
+     MPI_Comm             comm,
+     hid_t                file,
+     vector<string>&      pop_names
+     );
+  }
 }
 
 #endif
