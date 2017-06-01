@@ -4,16 +4,16 @@
 ///
 ///  
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
-#ifndef READ_CELL_INDEX_HH
-#define READ_CELL_INDEX_HH
+#ifndef CELL_INDEX_HH
+#define CELL_INDEX_HH
 
 #include <mpi.h>
 #include <vector>
-#include "neuroio_types.hh"
+#include "neuroh5_types.hh"
 
-namespace neuroio
+namespace neuroh5
 {
   namespace cell
   {

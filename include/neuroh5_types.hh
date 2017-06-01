@@ -1,13 +1,13 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file neuroio_types.hh
+///  @file neuroh5_types.hh
 ///
 ///  Type definitions for the fundamental datatypes used in the API
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
-#ifndef NEUROIO_TYPES_HH
-#define NEUROIO_TYPES_HH
+#ifndef NEUROH5_TYPES_HH
+#define NEUROH5_TYPES_HH
 
 #include <cstdint>
 #include <limits.h>
@@ -25,7 +25,7 @@
 
 using namespace NGraph;
 
-namespace neuroio
+namespace neuroh5
 {
 
 #if SIZE_MAX == UCHAR_MAX
@@ -150,7 +150,7 @@ namespace neuroio
   typedef uint32_t rank_t;
   
   typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
-                      EdgeAttr  // edge attribute vector,
+                      AttrVal  // edge attribute vector,
                       > edge_tuple_t;
 
   typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
@@ -163,7 +163,7 @@ namespace neuroio
   
   typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
                       std::vector<NODE_IDX_T>, // destination vector
-                      EdgeAttr  // edge attribute vector
+                      AttrVal  // edge attribute vector
                       > prj_tuple_t;
 
 }

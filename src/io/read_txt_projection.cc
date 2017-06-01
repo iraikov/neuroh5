@@ -4,7 +4,7 @@
 ///
 ///  Read a projection in text format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
@@ -17,11 +17,11 @@
 
 
 #include "read_txt_projection.hh"
-#include "ngh5_types.hh"
+#include "neuroh5_types.hh"
 
 using namespace std;
 
-namespace neuroio
+namespace neuroh5
 {
   namespace io
   {
@@ -30,7 +30,7 @@ namespace neuroio
                              const vector <size_t>& num_attrs,
                              vector<NODE_IDX_T>&    dst,
                              vector<NODE_IDX_T>&    src,
-                             neuroio::data::EdgeAttr& attrs)
+                             neuroh5::data::AttrVal& attrs)
     {
       ifstream infile(file_name.c_str());
       string line;

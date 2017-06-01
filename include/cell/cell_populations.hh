@@ -1,32 +1,24 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file population_reader.hh
+///  @file cell_populations
 ///
 ///  Functions for reading population information and validating the
 ///  source and destination indices of edges.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
+#ifndef CELL_POPULATIONS_HH
+#define CELL_POPULATIONS_HH
 
-#ifndef POPULATION_READER_HH
-#define POPULATION_READER_HH
-
-#include "model_types.hh"
-
-#include <hdf5.h>
 #include <mpi.h>
-
-#include <map>
-#include <set>
-#include <map>
 #include <vector>
+#include "neuroh5_types.hh"
 
-
-
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace cell
   {
+
     /// @brief Reads the valid combinations of source/destination populations.
     ///
     /// @param comm          MPI communicator
@@ -75,6 +67,14 @@ namespace neuroio
      MPI_Comm                         comm,
      const std::string&               file_name,
      std::vector< std::pair<model::pop_t, std::string> > & pop_labels
+     );
+
+    
+    herr_t read_population_names
+    (
+     MPI_Comm             comm,
+     hid_t                file,
+     vector<string>&      pop_names
      );
   }
 }

@@ -9,16 +9,16 @@
 ///  Code based on Stack Overflow question
 ///  http://stackoverflow.com/questions/17074324/how-can-i-sort-two-vectors-in-the-same-way-with-criteria-that-uses-only-one-of
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #include <vector>
 #include <algorithm>
 #include <functional>
 
-namespace ngh5
+namespace neuroh5
 {
-  namespace model
+  namespace data
   {
     // Given a std::vector<T> and a comparison for type T, returns
     // the permutation of indices that results from sorting the

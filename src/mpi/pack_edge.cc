@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for packing/unpacking graphs edges in MPI_PACKED format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -24,9 +24,9 @@
 #include <cassert>
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
-namespace neuroio
+namespace neuroh5
 {
   namespace mpi
   {
@@ -48,7 +48,7 @@ namespace neuroio
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
      const size_t num_edges,
-     const model::EdgeAttr& edge_attr_values,
+     const data::AttrVal& edge_attr_values,
      int &sendsize
      )
     {
@@ -78,7 +78,7 @@ namespace neuroio
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
      const uint32_t num_edges,
-     const model::EdgeAttr& edge_attr_values,
+     const data::AttrVal& edge_attr_values,
      const int &sendbuf_size,
      int &sendpos,
      vector<uint8_t> &sendbuf
@@ -125,7 +125,7 @@ namespace neuroio
      MPI_Datatype header_type,
      const NODE_IDX_T &key_node,
      const vector<NODE_IDX_T>& adj_vector,
-     const model::EdgeAttr& edge_attr_values,
+     const data::AttrVal& edge_attr_values,
      int &sendsize
      )
     {
@@ -172,7 +172,7 @@ namespace neuroio
      MPI_Datatype header_type,
      const NODE_IDX_T key_node,
      const vector<NODE_IDX_T>& adj_vector,
-     const model::EdgeAttr& edge_attr_values,
+     const data::AttrVal& edge_attr_values,
      int &sendpos,
      vector<uint8_t> &sendbuf
      )
@@ -234,7 +234,7 @@ namespace neuroio
     int pack_edge_map1 (MPI_Comm comm,
                         MPI_Datatype header_type,
                         MPI_Datatype size_type,
-                        const model::edge_map_t& edge_map,
+                        const edge_map_t& edge_map,
                         size_t &num_packed_edges,
                         int &sendpos,
                         vector<uint8_t> &sendbuf
@@ -261,7 +261,7 @@ namespace neuroio
               NODE_IDX_T key_node = it->first;
               
               const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
-              const model::EdgeAttr&    my_edge_attrs = get<1>(it->second);
+              const data::AttrVal&    my_edge_attrs = get<1>(it->second);
 
               num_packed_edges += adj_vector.size();
               
@@ -284,7 +284,7 @@ namespace neuroio
               NODE_IDX_T key_node = it->first;
               
               const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
-              const model::EdgeAttr&    my_edge_attrs = get<1>(it->second);
+              const data::AttrVal&    my_edge_attrs = get<1>(it->second);
 
               ierr = pack_edge(comm, header_type, key_node, adj_vector, my_edge_attrs,
                                sendpos, sendbuf);
@@ -298,7 +298,7 @@ namespace neuroio
 
     
     void pack_edge_map (MPI_Comm comm, MPI_Datatype header_type, MPI_Datatype size_type,
-                        model::edge_map_t& prj_edge_map, 
+                        edge_map_t& prj_edge_map, 
                         size_t &num_packed_edges,
                         int &sendpos,
                         vector<uint8_t> &sendbuf)
@@ -343,7 +343,7 @@ namespace neuroio
      const uint32_t edge_attr_num,
      const vector<uint8_t> &recvbuf,
      const int recvbuf_size,
-     model::EdgeAttr& edge_attr_values,
+     data::AttrVal& edge_attr_values,
      int & recvpos
      )
     {
@@ -409,7 +409,7 @@ namespace neuroio
      const vector<uint32_t> &edge_attr_num,
      NODE_IDX_T &key_node,
      vector<NODE_IDX_T>& adj_vector,
-     model::EdgeAttr& edge_attr_values,
+     data::AttrVal& edge_attr_values,
      int & recvpos
      )
     {
@@ -450,19 +450,19 @@ namespace neuroio
                      rank, recvbuf_size, recvpos, key_node, numitems);
             }
           assert(recvpos <= recvbuf_size);
-          unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[model::EdgeAttr::attr_index_float],
+          unpack_edge_attr_values<float>(comm, MPI_FLOAT, numitems, edge_attr_num[data::AttrVal::attr_index_float],
                                          recvbuf, recvbuf_size, 
                                          edge_attr_values, recvpos);
           assert(recvpos <= recvbuf_size);
-          unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems, edge_attr_num[model::EdgeAttr::attr_index_uint8],
+          unpack_edge_attr_values<uint8_t>(comm, MPI_UINT8_T, numitems, edge_attr_num[data::AttrVal::attr_index_uint8],
                                            recvbuf, recvbuf_size, 
                                            edge_attr_values, recvpos);
           assert(recvpos <= recvbuf_size);
-          unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems, edge_attr_num[model::EdgeAttr::attr_index_uint16],
+          unpack_edge_attr_values<uint16_t>(comm, MPI_UINT16_T, numitems, edge_attr_num[data::AttrVal::attr_index_uint16],
                                             recvbuf, recvbuf_size, 
                                             edge_attr_values, recvpos);
           assert(recvpos <= recvbuf_size);
-          unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[model::EdgeAttr::attr_index_uint32],
+          unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[data::AttrVal::attr_index_uint32],
                                             recvbuf, recvbuf_size, 
                                             edge_attr_values, recvpos);
 
@@ -489,7 +489,7 @@ namespace neuroio
                           MPI_Datatype size_type,
                           const vector<uint8_t> &recvbuf,
                           const vector<uint32_t> &edge_attr_num,
-                          model::edge_map_t& prj_edge_map
+                          edge_map_t& prj_edge_map
                           )
     {
       const int recvbuf_size = recvbuf.size();
@@ -524,7 +524,7 @@ namespace neuroio
              {
                NODE_IDX_T key_node; 
                vector<NODE_IDX_T> adj_vector;
-               model::EdgeAttr edge_attr_values;
+               data::AttrVal edge_attr_values;
                       
                unpack_edge(comm, header_type, recvbuf, edge_attr_num, 
                            key_node, adj_vector, edge_attr_values, recvpos);
@@ -543,9 +543,9 @@ namespace neuroio
                  }
                else
                  {
-                   model::edge_tuple_t et = prj_edge_map[key_node];
+                   edge_tuple_t et = prj_edge_map[key_node];
                    vector<NODE_IDX_T> &v = get<0>(et);
-                   model::EdgeAttr &a = get<1>(et);
+                   data::AttrVal &a = get<1>(et);
                    v.insert(v.end(),adj_vector.begin(),adj_vector.end());
                    a.append(edge_attr_values);
                    prj_edge_map[key_node] = make_tuple(v,a);
@@ -569,7 +569,7 @@ namespace neuroio
     
     
     void pack_rank_edge_map (MPI_Comm comm, MPI_Datatype header_type, MPI_Datatype size_type,
-                             model::rank_edge_map_t& prj_rank_edge_map, 
+                             rank_edge_map_t& prj_rank_edge_map, 
                              size_t &num_packed_edges,
                              vector<int>& sendcounts,
                              vector<uint8_t> &sendbuf,
@@ -613,7 +613,7 @@ namespace neuroio
           
         } else
         {
-          const model::edge_map_t empty_edge_map;
+          const edge_map_t empty_edge_map;
           pack_edge_map1 (comm, header_type, size_type, 
                           empty_edge_map, num_packed_edges, sendpos, sendbuf);
         }
@@ -644,7 +644,7 @@ namespace neuroio
                                const vector<int>& recvcounts,
                                const vector<int>& rdispls,
                                const vector<uint32_t> &edge_attr_num,
-                               model::edge_map_t& prj_edge_map,
+                               edge_map_t& prj_edge_map,
                                uint64_t& num_unpacked_edges
                               )
     {
@@ -690,7 +690,7 @@ namespace neuroio
                     {
                       NODE_IDX_T key_node; 
                       vector<NODE_IDX_T> adj_vector;
-                      model::EdgeAttr edge_attr_values;
+                      data::AttrVal edge_attr_values;
                       
                       unpack_edge(comm, header_type, recvbuf, edge_attr_num, 
                                   key_node, adj_vector, edge_attr_values, recvpos);
@@ -708,9 +708,9 @@ namespace neuroio
                         }
                       else
                         {
-                          model::edge_tuple_t et = prj_edge_map[key_node];
+                          edge_tuple_t et = prj_edge_map[key_node];
                           vector<NODE_IDX_T> &v = get<0>(et);
-                          model::EdgeAttr &a = get<1>(et);
+                          data::AttrVal &a = get<1>(et);
                           v.insert(v.end(),adj_vector.begin(),adj_vector.end());
                           a.append(edge_attr_values);
                           prj_edge_map[key_node] = make_tuple(v,a);

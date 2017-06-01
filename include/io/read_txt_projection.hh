@@ -2,18 +2,18 @@
 //==============================================================================
 ///  @file reader.cc
 ///
-///  Driver program for scatter_graph function.
+///  Read projection in text format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #include <string>
 #include <vector>
 
-#include "ngh5_types.hh"
-#include "edge_attr.hh"
+#include "neuroh5_types.hh"
+#include "attr_val.hh"
 
-namespace ngh5
+namespace neuroh5
 {
   namespace io
   {
@@ -21,6 +21,6 @@ namespace ngh5
                              const std::vector <size_t>& num_attrs,
                              std::vector<NODE_IDX_T>&    dst,
                              std::vector<NODE_IDX_T>&    src,
-                             ngh5::model::EdgeAttr&      attrs);
+                             data::AttrVal&      attrs);
   }
 }

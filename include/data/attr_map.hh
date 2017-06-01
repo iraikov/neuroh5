@@ -4,7 +4,7 @@
 ///
 ///  Functions for storing attributes in vectors of different types.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #ifndef ATTR_MAP_HH
@@ -14,10 +14,12 @@
 #include <set>
 #include <vector>
 
-#include "neurotrees_types.hh"
+#include "neuroh5_types.hh"
 
-namespace neurotrees
+namespace neuroh5
 {
+  namespace cell
+  {
 
     struct AttrMap
     {
@@ -156,6 +158,7 @@ namespace neurotrees
                      const std::vector<T> &value);
 
     };
+  }
 }
 
 #endif

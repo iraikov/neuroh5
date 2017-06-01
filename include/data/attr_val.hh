@@ -1,10 +1,10 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file attrval.hh
+///  @file attr_val.hh
 ///
 ///  Functions for storing attributes in vectors of different types.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #ifndef ATTR_VAL_HH
@@ -13,13 +13,21 @@
 #include <map>
 #include <vector>
 
-#include "neurotrees_types.h"
+#include "neuroh5_types.h"
 
-namespace neurotrees
+namespace neuroh5
 {
+  namespace data
+  {
 
     struct AttrVal
     {
+      static const size_t num_attr_types = 4;
+      static const size_t attr_index_float  = 0;
+      static const size_t attr_index_uint8  = 1;
+      static const size_t attr_index_uint16 = 2;
+      static const size_t attr_index_uint32 = 3;
+
       std::vector < std::vector <float> > float_values;
       std::vector < std::vector <uint8_t> > uint8_values;
       std::vector < std::vector <uint16_t> > uint16_values;
@@ -37,9 +45,7 @@ namespace neurotrees
       template<class T>
       size_t size_attr (size_t i) const;
 
-      size_t insert (const std::vector<CELL_IDX_T> &gid,
-                     const std::vector<ATTR_PTR_T> &ptr,
-                     const std::vector<float> &value)
+      size_t insert (const std::vector<float> &value)
       {
         size_t index;
         index = float_values.size();
@@ -79,14 +85,35 @@ namespace neurotrees
 
       void append (AttrVal a)
       {
-        float_values.insert(float_values.end(),a.float_values.begin(),
-                            a.float_values.end());
-        uint8_values.insert(uint8_values.end(),a.uint8_values.begin(),
-                            a.uint8_values.end());
-        uint16_values.insert(uint16_values.end(),a.uint16_values.begin(),
-                             a.uint16_values.end());
-        uint32_values.insert(uint32_values.end(),a.uint32_values.begin(),
-                             a.uint32_values.end());
+        assert(float_values.size() == a.float_values.size());
+        assert(uint8_values.size() == a.uint8_values.size());
+        assert(uint16_values.size() == a.uint16_values.size());
+        assert(uint32_values.size() == a.uint32_values.size());
+        for (size_t i=0; i<float_values.size(); i++)
+          {
+            float_values[i].insert(float_values[i].end(),
+                                   a.float_values[i].begin(),
+                                   a.float_values[i].end());
+          }
+        for (size_t i=0; i<uint8_values.size(); i++)
+          {
+            uint8_values[i].insert(uint8_values[i].end(),
+                                   a.uint8_values[i].begin(),
+                                   a.uint8_values[i].end());
+          }
+        for (size_t i=0; i<uint16_values.size(); i++)
+          {
+            uint16_values[i].insert(uint16_values[i].end(),
+                                   a.uint16_values[i].begin(),
+                                   a.uint16_values[i].end());
+          }
+        for (size_t i=0; i<uint32_values.size(); i++)
+          {
+            uint32_values[i].insert(uint32_values[i].end(),
+                                   a.uint32_values[i].begin(),
+                                   a.uint32_values[i].end());
+          }
+
       }
     };
 
@@ -135,7 +162,11 @@ namespace neurotrees
         uint32_names.insert(make_pair(name, index));
         return index;
       }
+
+      void attr_names (std::vector<std::vector<std::string> > &) const; 
+
     };
+  }
 }
 
 #endif

@@ -2,7 +2,7 @@
 //==============================================================================
 ///  @file hdf5_types.hh
 ///
-///  Type definitions for the fundamental datatypes used in the NeuroIO format.
+///  Type definitions for the fundamental datatypes used in the NeuroH5 format.
 ///
 ///  Copyright (C) 2016-2017 Project Neurotrees.
 //==============================================================================

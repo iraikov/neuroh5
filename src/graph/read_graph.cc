@@ -5,7 +5,7 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -24,7 +24,7 @@
 using namespace neuroio::data;
 using namespace std;
 
-namespace neuroio
+namespace neuroh5
 {
   namespace graph
   {
@@ -44,8 +44,8 @@ namespace neuroio
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       set< pair<pop_t, pop_t> > pop_pairs;
-      assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
-      assert(io::hdf5::read_population_ranges
+      assert(cell::read_population_combos(comm, file_name, pop_pairs) >= 0);
+      assert(cell::read_population_ranges
              (comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // read the edges
@@ -59,7 +59,7 @@ namespace neuroio
           vector<DST_PTR_T> dst_ptr;
           vector<NODE_IDX_T> src_idx;
           vector< pair<string,hid_t> > edge_attr_info;
-          EdgeNamedAttr edge_attr_values;
+          NamedAttrVal edge_attr_values;
           size_t local_prj_num_edges;
           size_t total_prj_num_edges;
 
@@ -139,7 +139,7 @@ namespace neuroio
      const vector<NODE_IDX_T>&           dst_idx,
      const vector<DST_PTR_T>&            dst_ptr,
      const vector<NODE_IDX_T>&           src_idx,
-     const EdgeNamedAttr&                edge_attr_values,
+     const NamedAttrVal&                 edge_attr_values,
      size_t&                             num_edges,
      vector<prj_tuple_t>&                prj_list
      )
@@ -147,7 +147,7 @@ namespace neuroio
       int ierr = 0; size_t dst_ptr_size;
       num_edges = 0;
       vector<NODE_IDX_T> src_vec, dst_vec;
-      EdgeAttr edge_attr_vec;
+      AttrVal edge_attr_vec;
 
       edge_attr_vec.resize<float>
         (edge_attr_values.size_attr_vec<float>());
@@ -225,7 +225,7 @@ namespace neuroio
      const vector<NODE_IDX_T>&     dst_idx,
      const vector<DST_PTR_T>&      dst_ptr,
      const vector<NODE_IDX_T>&     src_idx,
-     const EdgeNamedAttr&          edge_attr_values,
+     const NamedAttrVal&           edge_attr_values,
      size_t&                       num_edges,
      edge_map_t &                  edge_map,
      EdgeMapType                   edge_map_type
@@ -257,7 +257,7 @@ namespace neuroio
                                 edge_tuple_t& et = edge_map[dst];
                                 vector<NODE_IDX_T> &my_srcs = get<0>(et);
 
-                                EdgeAttr &edge_attr_vec = get<1>(et);
+                                AttrVal &edge_attr_vec = get<1>(et);
                       
                                 edge_attr_vec.resize<float>
                                   (edge_attr_values.size_attr_vec<float>());
@@ -311,7 +311,7 @@ namespace neuroio
 
                                     vector<NODE_IDX_T> &my_dsts = get<0>(et);
 
-                                    EdgeAttr &edge_attr_vec = get<1>(et);
+                                    AttrVal &edge_attr_vec = get<1>(et);
                                     
                                     edge_attr_vec.resize<float>
                                       (edge_attr_values.size_attr_vec<float>());
@@ -375,7 +375,7 @@ namespace neuroio
      const vector<NODE_IDX_T>&     dst_idx,
      const vector<DST_PTR_T>&      dst_ptr,
      const vector<NODE_IDX_T>&     src_idx,
-     const EdgeNamedAttr&          edge_attr_values,
+     const NamedAttrVal&           edge_attr_values,
      const map<NODE_IDX_T, rank_t>&  node_rank_map,
      size_t&                       num_edges,
      rank_edge_map_t &             rank_edge_map,
@@ -419,7 +419,7 @@ namespace neuroio
                                 edge_tuple_t& et = rank_edge_map[myrank][dst];
                                 vector<NODE_IDX_T> &my_srcs = get<0>(et);
 
-                                EdgeAttr &edge_attr_vec = get<1>(et);
+                                AttrVal &edge_attr_vec = get<1>(et);
                       
                                 edge_attr_vec.resize<float>
                                   (edge_attr_values.size_attr_vec<float>());
@@ -476,7 +476,7 @@ namespace neuroio
 
                                     vector<NODE_IDX_T> &my_dsts = get<0>(et);
 
-                                    EdgeAttr &edge_attr_vec = get<1>(et);
+                                    AttrVal &edge_attr_vec = get<1>(et);
                                     
                                     edge_attr_vec.resize<float>
                                       (edge_attr_values.size_attr_vec<float>());

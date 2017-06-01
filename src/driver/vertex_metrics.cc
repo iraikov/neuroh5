@@ -4,7 +4,7 @@
 ///
 ///  Driver program for computing graph vertex metrics and saving them to the file.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
@@ -30,7 +30,7 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {

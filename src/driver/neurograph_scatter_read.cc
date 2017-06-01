@@ -1,10 +1,10 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file reader.cc
+///  @file scatter_read.cc
 ///
 ///  Driver program for scatter_graph function.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -26,7 +26,7 @@
 #include <sstream>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {
@@ -65,11 +65,11 @@ int main(int argc, char** argv)
   // MPI Communicator for I/O ranks
   MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
-  map<NODE_IDX_T, model::rank_t> node_rank_map;
-  vector<model::pop_range_t> pop_vector;
-  map<NODE_IDX_T, pair<uint32_t,model::pop_t> > pop_ranges;
+  map<NODE_IDX_T, rank_t> node_rank_map;
+  vector<pop_range_t> pop_vector;
+  map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
   vector<string> prj_names;
-  vector < model::edge_map_t > prj_vector;
+  vector < edge_map_t > prj_vector;
   vector < vector <vector<string>> > edge_attr_name_vector;
   stringstream ss;
 
@@ -219,7 +219,7 @@ int main(int argc, char** argv)
       while (getline(infile, line))
         {
           istringstream iss(line);
-          model::rank_t n;
+          rank_t n;
 
           assert (iss >> n);
           node_rank_map.insert(make_pair(i, n));
@@ -258,7 +258,7 @@ int main(int argc, char** argv)
           for (size_t i = 0; i < prj_vector.size(); i++)
             {
               DEBUG("scatter: outputting edges ", i);
-              model::edge_map_t prj_edge_map = prj_vector[i];
+              edge_map_t prj_edge_map = prj_vector[i];
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
@@ -271,10 +271,10 @@ int main(int argc, char** argv)
                        it++)
                     {
                       NODE_IDX_T key_node   = it->first;
-                      model::edge_tuple_t& et = it->second;
+                      edge_tuple_t& et = it->second;
 
                       vector<NODE_IDX_T> adj_vector = get<0>(et);
-                      const model::EdgeAttr&   edge_attr_values = get<1>(et);
+                      const data::AttrVal&   edge_attr_values = get<1>(et);
 
                       for (size_t j = 0; j < adj_vector.size(); j++)
                         {
@@ -327,7 +327,7 @@ int main(int argc, char** argv)
         {
           for (size_t i = 0; i < prj_vector.size(); i++)
             {
-              model::edge_map_t prj_edge_map = prj_vector[i];
+              edge_map_t prj_edge_map = prj_vector[i];
               if (prj_edge_map.size() > 0)
                 {
                   ofstream outfile;
@@ -340,10 +340,10 @@ int main(int argc, char** argv)
                        it++)
                     {
                       NODE_IDX_T key_node   = it->first;
-                      model::edge_tuple_t& et = it->second;
+                      edge_tuple_t& et = it->second;
 
                       const vector<NODE_IDX_T> adj_vector = get<0>(et);
-                      const model::EdgeAttr&   edge_attr_values = get<1>(et);
+                      const data::AttrVal&   edge_attr_values = get<1>(et);
 
                       for (size_t j = 0; j < adj_vector.size(); j++)
                         {

@@ -5,7 +5,7 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
@@ -27,10 +27,10 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace neuroio::data;
+using namespace neuroh5::data;
 using namespace std;
 
-namespace neuroio
+namespace neuroh5
 {
   namespace graph
   {
@@ -152,9 +152,9 @@ namespace neuroio
           NODE_IDX_T dst = element.first;
           // all source/destination node IDs must be in range
           assert(dst_start <= dst && dst < dst_end);
-          model::edge_tuple_t et = element.second;
+          edge_tuple_t et        = element.second;
           vector<NODE_IDX_T> v   = get<0>(et);
-          model::EdgeAttr a      = get<1>(et);
+          data::AttrVal a        = get<1>(et);
 
           vector<NODE_IDX_T> adj_vector;
           for (auto & src: v)
@@ -195,7 +195,7 @@ namespace neuroio
           edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
-          EdgeAttr &edge_attr_vec = get<1>(et1);
+          AttrVal &edge_attr_vec = get<1>(et1);
           
           edge_attr_vec.float_values.resize(a.float_values.size());
           edge_attr_vec.uint8_values.resize(a.uint8_values.size());

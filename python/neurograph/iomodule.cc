@@ -42,8 +42,8 @@
 #include "projection_names.hh"
 
 using namespace std;
-using namespace ngh5;
-using namespace ngh5::model;
+using namespace neuroh5;
+using namespace neuroh5::data;
 
 void throw_err(char const* err_message)
 {
@@ -210,7 +210,7 @@ extern "C"
         
         const vector<NODE_IDX_T>& src_vector = get<0>(prj);
         const vector<NODE_IDX_T>& dst_vector = get<1>(prj);
-        const EdgeAttr&  edge_attr_values    = get<2>(prj);
+        const AttrVal&  edge_attr_values    = get<2>(prj);
 
         std::vector <PyObject*> py_float_edge_attrs;
         std::vector <PyObject*> py_uint8_edge_attrs;
@@ -425,7 +425,7 @@ extern "C"
                 std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
                 
                 vector<NODE_IDX_T> adj_vector = get<0>(et);
-                const EdgeAttr&   edge_attr_values = get<1>(et);
+                const AttrVal&   edge_attr_values = get<1>(et);
 
                 npy_intp dims[1], ind = 0;
                 dims[0] = adj_vector.size();
@@ -624,7 +624,7 @@ extern "C"
                 std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
                 
                 vector<NODE_IDX_T> adj_vector = get<0>(et);
-                const EdgeAttr&   edge_attr_values = get<1>(et);
+                const AttrVal&   edge_attr_values = get<1>(et);
 
                 npy_intp dims[1], ind = 0;
                 dims[0] = adj_vector.size();

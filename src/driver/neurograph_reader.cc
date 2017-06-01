@@ -4,7 +4,7 @@
 ///
 ///  Driver program for read_graph function.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
@@ -23,7 +23,7 @@
 #include <sstream>
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {
@@ -62,13 +62,13 @@ void print_usage_full(char** argv)
  *****************************************************************************/
 
 void output_projection(string outfilename,
-                       const model::prj_tuple_t& projection)
+                       const prj_tuple_t& projection)
 {
   DEBUG("output_projection: outfilename is ",outfilename,"\n");
 
   const vector<NODE_IDX_T>& src_list = get<0>(projection);
   const vector<NODE_IDX_T>& dst_list = get<1>(projection);
-  const model::EdgeAttr&  edge_attr_values  = get<2>(projection);
+  const data::AttrVal&  edge_attr_values  = get<2>(projection);
 
   ofstream outfile;
   outfile.open(outfilename.c_str());

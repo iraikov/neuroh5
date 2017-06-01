@@ -17,7 +17,7 @@
 #include "read_txt_projection.hh"
 #include "write_graph.hh"
 #include "attr_map.hh"
-#include "edge_attr.hh"
+#include "attr_val.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -37,7 +37,7 @@
 
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 
 void throw_err(char const* err_message)
@@ -122,7 +122,7 @@ int append_syn_adj_map
             high_syn_ptr = syn_idx_ptr[d+1];
 
           vector<NODE_IDX_T> adj_vector;
-          data::EdgeAttr edge_attr_values;
+          data::AttrVal edge_attr_values;
           vector<NODE_IDX_T> syn_id_vector;
           
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
@@ -149,7 +149,7 @@ int append_syn_adj_map
             {
               edge_tuple_t et = edge_map[dst];
               vector<NODE_IDX_T> &v = get<0>(et);
-              data::EdgeAttr &a = get<1>(et);
+              data::AttrVal &a = get<1>(et);
               v.insert(v.end(),adj_vector.begin(),adj_vector.end());
               a.append(edge_attr_values);
               edge_map[dst] = make_tuple(v,a);
@@ -393,7 +393,7 @@ int main(int argc, char** argv)
         }
   
   vector<NODE_IDX_T>  dst, src;
-  data::EdgeAttr edge_attrs;
+  data::AttrVal edge_attrs;
   if (opt_txt)
     {
       // determine which connection files are read by which rank
@@ -425,8 +425,8 @@ int main(int argc, char** argv)
                                syn_idx_ptr, syn_idx,
                                num_edges, edge_map);
 
-  vector<vector<string>> edge_attr_names(data::EdgeAttr::num_attr_types);
-  edge_attr_names[data::EdgeAttr::attr_index_uint32].push_back("syn_id");
+  vector<vector<string>> edge_attr_names(data::AttrVal::num_attr_types);
+  edge_attr_names[data::AttrVal::attr_index_uint32].push_back("syn_id");
   status = graph::write_graph (all_comm, io_size, output_file_name, src_pop_name, dst_pop_name, prj_name, edge_attr_names, edge_map);
 
   MPI_Comm_free(&all_comm);
