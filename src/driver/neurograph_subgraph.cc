@@ -1,10 +1,12 @@
 #include "debug.hh"
 
+#include "model_types.hh"
+#include "cell_populations.hh"
+
 #include "read_dbs_projection.hh"
 #include "read_graph.hh"
 #include "scatter_graph.hh"
-#include "model_types.hh"
-#include "population_reader.hh"
+
 #include "projection_names.hh"
 #include "validate_edge_list.hh"
 
@@ -24,7 +26,7 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 /*****************************************************************************
  * Append src/dst node pairs to a list of edges

@@ -4,7 +4,7 @@
 ///
 ///  Driver program for scatter_read_trees function.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
@@ -20,16 +20,15 @@
 #include <map>
 #include <mpi.h>
 
-#include "neurotrees_types.hh"
+#include "neuroh5_types.hh"
 #include "hdf5_path_names.hh"
+#include "cell_populations.hh"
 #include "scatter_read_tree.hh"
-#include "read_population_names.hh"
-#include "read_population_ranges.hh"
 #include "dataset_num_elements.hh"
 #include "validate_tree.hh"
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {

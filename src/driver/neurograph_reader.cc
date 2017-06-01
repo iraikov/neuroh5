@@ -10,8 +10,8 @@
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
-#include "model_types.hh"
 #include "projection_names.hh"
 
 #include <mpi.h>

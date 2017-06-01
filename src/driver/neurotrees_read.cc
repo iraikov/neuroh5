@@ -4,7 +4,7 @@
 ///
 ///  Driver program for read_trees function.
 ///
-///  Copyright (C) 2016 Project Neurotrees.
+///  Copyright (C) 2016 Project NeuroH5.
 //==============================================================================
 
 
@@ -25,7 +25,7 @@
 #include <sstream>
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {

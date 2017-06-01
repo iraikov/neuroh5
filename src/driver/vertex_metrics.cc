@@ -10,9 +10,9 @@
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
 #include "compute_vertex_metrics.hh"
-#include "model_types.hh"
 #include "projection_names.hh"
 
 #include <getopt.h>

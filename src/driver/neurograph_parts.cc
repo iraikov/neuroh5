@@ -10,9 +10,9 @@
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
 #include "graph_parts.hh"
-#include "model_types.hh"
 #include "projection_names.hh"
 
 #include <getopt.h>
@@ -152,9 +152,9 @@ int main(int argc, char** argv)
   if (!opt_iosize) iosize = 4;
 
   vector<string> prj_names;
-  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
+  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
-  vector<model::prj_tuple_t> prj_list;
+  vector<prj_tuple_t> prj_list;
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
   
   // read the edges

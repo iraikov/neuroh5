@@ -9,10 +9,10 @@
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
+#include "cell_populations.hh"
 #include "read_graph.hh"
 #include "scatter_graph.hh"
-#include "model_types.hh"
-#include "population_reader.hh"
 #include "projection_names.hh"
 
 #include <mpi.h>
@@ -198,8 +198,8 @@ int main(int argc, char** argv)
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
   // Read population info to determine n_nodes
-  assert(io::hdf5::read_population_ranges(all_comm, input_file_name, pop_ranges,
-                                          pop_vector, n_nodes) >= 0);
+  assert(cell::read_population_ranges(all_comm, input_file_name, pop_ranges,
+                                      pop_vector, n_nodes) >= 0);
 
   // Determine which nodes are assigned to which compute ranks
   if (!opt_rankfile)
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
 
   DEBUG("scatter: reading projection names");
 
-  assert(io::hdf5::read_projection_names(all_comm, input_file_name, prj_names) >= 0);
+  assert(graph::read_projection_names(all_comm, input_file_name, prj_names) >= 0);
   MPI_Barrier(all_comm);
   DEBUG("scatter: finished reading projection names");
 

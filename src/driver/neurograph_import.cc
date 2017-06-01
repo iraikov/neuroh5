@@ -10,8 +10,8 @@
 
 #include "debug.hh"
 
-#include "model_types.hh"
-#include "population_reader.hh"
+#include "neuroh5_types.hh"
+#include "cell_populations.hh"
 #include "projection_names.hh"
 #include "read_syn_projection.hh"
 #include "read_txt_projection.hh"
@@ -342,18 +342,18 @@ int main(int argc, char** argv)
   if (opt_hdf5_syn)
     {
       
-      assert(io::hdf5::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
+      assert(cell::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
                                               pop_vector, n_nodes) >= 0);
-      assert(io::hdf5::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
+      assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
       
-      status = io::hdf5::read_syn_projection (all_comm,
-                                              hdf5_input_file_name,
-                                              hdf5_input_dsetpath,
-                                              dst_idx,
-                                              src_idx_ptr,
-                                              src_idx,
-                                              syn_idx_ptr,
-                                              syn_idx);
+      status = io::read_syn_projection (all_comm,
+                                        hdf5_input_file_name,
+                                        hdf5_input_dsetpath,
+                                        dst_idx,
+                                        src_idx_ptr,
+                                        src_idx,
+                                        syn_idx_ptr,
+                                        syn_idx);
 
       for (size_t i=0; i< pop_labels.size(); i++)
         {

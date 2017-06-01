@@ -23,13 +23,13 @@
 #include <getopt.h>
 #include <mpi.h>
 
-#include "neuroio_types.hh"
+#include "neuroh5_types.hh"
 #include "hdf5_path_names.hh"
 #include "scatter_read_tree.hh"
 #include "write_tree.hh"
 #include "cell_attributes.hh"
-#include "read_population_names.hh"
-#include "read_population_ranges.hh"
+#include "cell_populations.hh"
+
 #include "dataset_num_elements.hh"
 #include "validate_tree.hh"
 #include "create_file_toplevel.hh"
@@ -39,7 +39,7 @@
 #include "copy_tree_h5types.hh"
 
 using namespace std;
-using namespace neurotrees;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {

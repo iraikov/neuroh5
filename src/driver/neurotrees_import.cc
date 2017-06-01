@@ -4,7 +4,7 @@
 ///
 ///  Driver program for various import procedures.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
@@ -26,20 +26,21 @@
 #include <set>
 #include <vector>
 
-#include "neurotrees_types.hh"
+#include "neuroh5_types.hh"
 #include "read_layer_swc.hh"
 #include "dataset_num_elements.hh"
 #include "rank_range.hh"
 #include "write_tree.hh"
+
 #include "hdf5_types.hh"
 #include "hdf5_path_names.hh"
-#include "hdf5_create_tree_file.hh"
-#include "hdf5_create_tree_dataset.hh"
-#include "hdf5_exists_tree_dataset.hh"
+#include "create_file_toplevel.hh"
+#include "create_tree_dataset.hh"
+#include "exists_tree_dataset.hh"
 
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 
 void throw_err(char const* err_message)

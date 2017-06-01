@@ -10,10 +10,10 @@
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
-#include "balance_graph_indegree.hh"
-#include "model_types.hh"
 #include "projection_names.hh"
+#include "balance_graph_indegree.hh"
 
 #include <getopt.h>
 #include <cassert>
@@ -30,7 +30,7 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace neuroio;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {
