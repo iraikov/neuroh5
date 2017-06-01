@@ -11,18 +11,22 @@
 
 #include <mpi.h>
 #include <vector>
-#include "neurotrees_types.hh"
+#include "neuroio_types.hh"
 
 namespace neuroio
 {
-  herr_t read_cell_index
-  (
-   MPI_Comm             comm,
-   const string&        file_name,
-   const string&        pop_name,
-   vector<CELL_IDX_T>&  cell_index
-   );
+  namespace cell
+  {
+    
+    herr_t read_cell_index
+    (
+     MPI_Comm             comm,
+     const string&        file_name,
+     const string&        pop_name,
+     vector<CELL_IDX_T>&  cell_index
+     );
 
+  }
 }
 
 #endif

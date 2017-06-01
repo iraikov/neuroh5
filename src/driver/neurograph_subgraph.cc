@@ -24,7 +24,8 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroio;
+
 /*****************************************************************************
  * Append src/dst node pairs to a list of edges
  *****************************************************************************/
@@ -143,16 +144,16 @@ int main(int argc, char** argv)
 
   assert (!((src_selection.size() == 0) && (dst_selection.size() == 0)));
   // read the population info
-  set< pair<model::pop_t, model::pop_t> > pop_pairs;
-  assert(io::hdf5::read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
+  set< pair<pop_t, pop_t> > pop_pairs;
+  assert(graph::read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
 
   size_t total_num_nodes;
-  vector<model::pop_range_t> pop_vector;
-  map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
-  assert(io::hdf5::read_population_ranges(MPI_COMM_WORLD, input_file_name.c_str(), pop_ranges, pop_vector, total_num_nodes) >= 0);
+  vector<pop_range_t> pop_vector;
+  map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+  assert(cell::read_population_ranges(MPI_COMM_WORLD, input_file_name.c_str(), pop_ranges, pop_vector, total_num_nodes) >= 0);
 
   vector<string> prj_names;
-  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name.c_str(), prj_names) >= 0);
+  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name.c_str(), prj_names) >= 0);
       
   vector<NODE_IDX_T> edge_list;
 
@@ -172,9 +173,9 @@ int main(int argc, char** argv)
         {
           printf("Reading projection %lu (%s)\n", i, prj_names[i].c_str());
           
-          assert(io::hdf5::read_dbs_projection(MPI_COMM_WORLD, input_file_name.c_str(), prj_names[i].c_str(), 
-                                               dst_start, src_start, total_prj_num_edges, block_base, edge_base,
-                                               dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+          assert(graph::read_dbs_projection(MPI_COMM_WORLD, input_file_name.c_str(), prj_names[i].c_str(), 
+                                            dst_start, src_start, total_prj_num_edges, block_base, edge_base,
+                                            dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
 
           
           // validate the edges

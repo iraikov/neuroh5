@@ -4,7 +4,7 @@
 ///
 ///  Driver program for read_graph function.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 
@@ -23,7 +23,7 @@
 #include <sstream>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroio;
 
 void throw_err(char const* err_message)
 {
@@ -169,10 +169,10 @@ int main(int argc, char** argv)
     }
 
   vector<string> prj_names;
-  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name,
-                                         prj_names) >= 0);
+  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name,
+                                      prj_names) >= 0);
 
-  vector<model::prj_tuple_t> prj_list;
+  vector<prj_tuple_t> prj_list;
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
 
   // read the edges

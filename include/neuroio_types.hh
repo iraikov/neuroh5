@@ -44,6 +44,7 @@ namespace neuroio
 
   // node index type
   typedef unsigned int NODE_IDX_T;
+  
   // cell index type
   typedef unsigned int CELL_IDX_T;
   
@@ -51,7 +52,7 @@ namespace neuroio
   typedef uint16_t POP_IDX_T;
   
   // MPI type of node indexes
-#define NODE_IDX_MPI_T MPI_UINT32_T
+  typedef MPI_UINT32_T NODE_IDX_MPI_T;
   
   // DBS offset type
   typedef uint64_t DST_PTR_T;
@@ -83,18 +84,19 @@ namespace neuroio
   typedef uint64_t   TOPO_PTR_T;
   typedef uint32_t   CELL_IDX_T;
 
-#define MPI_CELL_IDX_T MPI_UINT32_T
-#define MPI_COORD_T MPI_FLOAT
-#define MPI_REALVAL_T MPI_FLOAT
-#define MPI_SWC_TYPE_T MPI_INT8_T
-#define MPI_LAYER_IDX_T MPI_UINT16_T
-#define MPI_SECTION_IDX_T MPI_UINT16_T
-#define MPI_NODE_IDX_T MPI_UINT32_T
-#define MPI_PARENT_NODE_IDX_T MPI_INT32_T
+  typedef MPI_UINT32_T MPI_CELL_IDX_T;
+  typedef MPI_FLOAT MPI_COORD_T;
+  typedef MPI_FLOAT MPI_REALVAL_T;
+  typedef MPI_INT8_T MPI_SWC_TYPE_T;
+  typedef MPI_UINT16_T MPI_LAYER_IDX_T;
+  typedef MPI_UINT16_T MPI_SECTION_IDX_T;
+  typedef MPI_UINT32_T MPI_NODE_IDX_T;
+  typedef MPI_INT32_T MPI_PARENT_NODE_IDX_T;
 
-#define MPI_ATTR_PTR_T MPI_UINT64_T
+  typedef MPI_UINT64_T MPI_ATTR_PTR_T;
   
-  const static std::vector< std::pair<SWC_TYPE_T, std::string> > swc_type_enumeration {
+  const static std::vector< std::pair<SWC_TYPE_T, std::string> > swc_type_enumeration
+  {
     {(SWC_TYPE_T)0, "SWC_UNDEFINED"},
     {(SWC_TYPE_T)1, "SWC_SOMA"},
     {(SWC_TYPE_T)2, "SWC_AXON"},
@@ -115,7 +117,7 @@ namespace neuroio
   } pop_range_t;
 
   
-  typedef std::tuple< CELL_IDX_T,   // Tree gid
+  typedef std::tuple< CELL_IDX_T,   // Tree id
                       std::vector<SECTION_IDX_T>,   // Section id sources
                       std::vector<SECTION_IDX_T>,   // Section id destinations
                       std::vector<SECTION_IDX_T>,   // Mapping of node ids to section ids

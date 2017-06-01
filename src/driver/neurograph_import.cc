@@ -104,7 +104,7 @@ int append_syn_adj_map
  const vector<DST_PTR_T>&   syn_idx_ptr,
  const vector<NODE_IDX_T>&  syn_idx,
  size_t&                    num_edges,
- model::edge_map_t&         edge_map
+ edge_map_t&                edge_map
  )
 {
   int ierr = 0; 
@@ -122,7 +122,7 @@ int append_syn_adj_map
             high_syn_ptr = syn_idx_ptr[d+1];
 
           vector<NODE_IDX_T> adj_vector;
-          model::EdgeAttr edge_attr_values;
+          data::EdgeAttr edge_attr_values;
           vector<NODE_IDX_T> syn_id_vector;
           
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
@@ -147,9 +147,9 @@ int append_syn_adj_map
             }
           else
             {
-              model::edge_tuple_t et = edge_map[dst];
+              edge_tuple_t et = edge_map[dst];
               vector<NODE_IDX_T> &v = get<0>(et);
-              model::EdgeAttr &a = get<1>(et);
+              data::EdgeAttr &a = get<1>(et);
               v.insert(v.end(),adj_vector.begin(),adj_vector.end());
               a.append(edge_attr_values);
               edge_map[dst] = make_tuple(v,a);
@@ -326,9 +326,9 @@ int main(int argc, char** argv)
       exit(1);
     }
 
-  vector<model::pop_range_t> pop_vector;
-  map<NODE_IDX_T, pair<uint32_t,model::pop_t> > pop_ranges;
-  vector<pair <model::pop_t, string> > pop_labels;
+  vector<pop_range_t> pop_vector;
+  map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+  vector<pair <pop_t, string> > pop_labels;
   size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
   size_t n_nodes;
   vector<NODE_IDX_T>  src_range(2);
@@ -393,7 +393,7 @@ int main(int argc, char** argv)
         }
   
   vector<NODE_IDX_T>  dst, src;
-  model::EdgeAttr edge_attrs;
+  data::EdgeAttr edge_attrs;
   if (opt_txt)
     {
       // determine which connection files are read by which rank
@@ -411,7 +411,7 @@ int main(int argc, char** argv)
         }
     }
 
-  model::edge_map_t edge_map;
+  edge_map_t edge_map;
   size_t num_edges;
 
   /*
@@ -425,8 +425,8 @@ int main(int argc, char** argv)
                                syn_idx_ptr, syn_idx,
                                num_edges, edge_map);
 
-  vector<vector<string>> edge_attr_names(model::EdgeAttr::num_attr_types);
-  edge_attr_names[model::EdgeAttr::attr_index_uint32].push_back("syn_id");
+  vector<vector<string>> edge_attr_names(data::EdgeAttr::num_attr_types);
+  edge_attr_names[data::EdgeAttr::attr_index_uint32].push_back("syn_id");
   status = graph::write_graph (all_comm, io_size, output_file_name, src_pop_name, dst_pop_name, prj_name, edge_attr_names, edge_map);
 
   MPI_Comm_free(&all_comm);

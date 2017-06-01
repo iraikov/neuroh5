@@ -39,7 +39,7 @@
 
 
 using namespace std;
-using namespace neurotrees;
+using namespace neuroio;
 
 
 void throw_err(char const* err_message)

@@ -151,7 +151,7 @@ int main(int argc, char** argv)
   if (!opt_iosize) iosize = 4;
 
   vector<string> prj_names;
-  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
+  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
   vector<model::prj_tuple_t> prj_list;
   
