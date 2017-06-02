@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
 
 /*****************************************************************************

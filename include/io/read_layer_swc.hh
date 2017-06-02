@@ -4,26 +4,30 @@
 ///
 ///  Definition for layer SWC import routine.
 ///
-///  Copyright (C) 2016 Project Neurotrees.
+///  Copyright (C) 2016 Project NeuroH5.
 //==============================================================================
 #ifndef READ_LAYER_SWC_HH
 #define READ_LAYER_SWC_HH
 
 #include <vector>
-#include "neurotrees_types.hh"
+#include "neuroh5_types.hh"
 
-namespace neurotrees
+namespace neuroh5
 {
-  int read_layer_swc
-  (
-   const std::string& file_name,
-   const CELL_IDX_T gid,
-   const int id_offset,
-   const int layer_offset,
-   const SWC_TYPE_T swc_type,
-   const bool split_layers,
-   std::vector<neurotrees::neurotree_t> &tree_list
-   );
+  namespace io
+  {
+    int read_layer_swc
+    (
+     const std::string& file_name,
+     const CELL_IDX_T gid,
+     const int id_offset,
+     const int layer_offset,
+     const SWC_TYPE_T swc_type,
+     const bool split_layers,
+     std::vector<neuroh5::neurotree_t> &tree_list
+     );
+  }
+    
 }
 
 #endif

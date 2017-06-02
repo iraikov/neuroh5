@@ -1,11 +1,11 @@
-#ifndef HDF5_EXISTS_TREE_DATASET_HH
-#define HDF5_EXISTS_TREE_DATASET_HH
+#ifndef EXISTS_TREE_DATASET_HH
+#define EXISTS_TREE_DATASET_HH
 
 #include "hdf5.h"
 
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {

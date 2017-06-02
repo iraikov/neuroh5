@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace hdf5
   {

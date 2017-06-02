@@ -11,9 +11,9 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace graph
   {
     herr_t read_syn_projection
     (

@@ -15,9 +15,9 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace graph
   {
     /// @brief Discovers the list of edge attributes.
     ///

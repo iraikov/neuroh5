@@ -5,13 +5,13 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #ifndef READ_DBS_PROJECTION_HH
 #define READ_DBS_PROJECTION_HH
 
-#include "hdf5_types.hh"
+#include "neuroh5_types.hh"
 
 #include <mpi.h>
 
@@ -19,9 +19,9 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace graph
   {
     /// @brief Reads the projections
     ///

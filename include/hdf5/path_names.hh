@@ -1,9 +1,9 @@
-#ifndef HDF5_PATH_NAMES_HH
-#define HDF5_PATH_NAMES_HH
+#ifndef PATH_NAMES_HH
+#define PATH_NAMES_HH
 
 #include <string>
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {

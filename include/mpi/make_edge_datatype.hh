@@ -4,7 +4,7 @@
 ///
 ///  Function for creating MPI datatype for edge representation.
 ///
-///  Copyright (C) 2017 Project Neurograph.
+///  Copyright (C) 2017 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
@@ -13,7 +13,7 @@
 #include <string>
 
 
-namespace ngh5
+namespace neuroh5
 {
 
   namespace mpi

@@ -7,7 +7,7 @@
 #include <cassert>
 #include <string>
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {

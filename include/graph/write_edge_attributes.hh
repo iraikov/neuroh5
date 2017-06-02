@@ -1,8 +1,8 @@
 #ifndef WRITE_EDGE_ATTRIBUTES_HH
 #define WRITE_EDGE_ATTRIBUTES_HH
 
+#include "neuroh5_types.hh"
 #include "infer_datatype.hh"
-#include "neuroio_types.hh"
 
 #include "hdf5.h"
 #include "mpi.h"
@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace cell
   {
     //////////////////////////////////////////////////////////////////////////
     template <typename T>

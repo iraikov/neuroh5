@@ -4,7 +4,7 @@
 ///
 ///  Function for packing edges in MPI_PACKED format.
 ///
-///  Copyright (C) 2017 Project Neurograph.
+///  Copyright (C) 2017 Project Neuroh5.
 //==============================================================================
 
 #include <mpi.h>
@@ -13,10 +13,10 @@
 #include <map>
 #include <string>
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
 
-namespace ngh5
+namespace neuroh5
 {
 
   namespace mpi

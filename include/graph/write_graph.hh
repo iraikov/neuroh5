@@ -5,19 +5,19 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #ifndef WRITE_GRAPH_HH
 #define WRITE_GRAPH_HH
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 #include "attr_map.hh"
 
 #include <mpi.h>
 #include <vector>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -31,7 +31,7 @@ namespace ngh5
      const std::string&    dst_pop_name,
      const std::string&    prj_name,
      const std::vector<std::vector<std::string>>& edge_attr_names,
-     const model::edge_map_t&  input_edge_map
+     const edge_map_t&  input_edge_map
      );
 
   }

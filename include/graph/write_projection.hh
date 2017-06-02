@@ -6,11 +6,11 @@
 #include <map>
 #include <hdf5.h>
 
-#include "neuroio_types.hh"
+#include "neuroh5_types.hh"
 
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace graph
   {
     void write_projection
     (
@@ -23,7 +23,7 @@ namespace neuroio
      const NODE_IDX_T&         dst_start,
      const NODE_IDX_T&         dst_end,
      const uint64_t&           num_edges,
-     const model::edge_map_t&         prj_edge_map,
+     const edge_map_t&         prj_edge_map,
      const std::vector<std::vector<std::string>>& edge_attr_names,
      hsize_t            cdim = 4096 
      );

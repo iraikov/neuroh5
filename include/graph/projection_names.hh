@@ -16,9 +16,9 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace graph
   {
     /// @brief Reads the names of projections
     ///

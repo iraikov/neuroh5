@@ -6,19 +6,16 @@
 
 #include <string>
 
-namespace ngh5
+namespace neuroh5
 {
-  namespace io
+  namespace hdf5
   {
-    namespace hdf5
-    {
-      hsize_t dataset_num_elements
-      (
-       MPI_Comm           comm,
-       const std::string& file_name,
-       const std::string& path
-       );
-    }
+    hsize_t dataset_num_elements
+    (
+     MPI_Comm           comm,
+     const std::string& file_name,
+     const std::string& path
+     );
   }
 }
 

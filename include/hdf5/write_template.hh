@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {

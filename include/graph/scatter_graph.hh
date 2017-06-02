@@ -5,22 +5,22 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
 #ifndef GRAPH_SCATTER_HH
 #define GRAPH_SCATTER_HH
 
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
-#include "model_types.hh"
 
 #include <mpi.h>
 
 #include <map>
 #include <vector>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {

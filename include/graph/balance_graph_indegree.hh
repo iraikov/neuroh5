@@ -4,14 +4,14 @@
 ///
 ///  Function definitions for balancing graphs.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016 Project NeuroH5.
 //==============================================================================
 
 
 #ifndef BALANCE_GRAPH_INDEGREE_HH
 #define BALANCE_GRAPH_INDEGREE_HH
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 
 
 #include <mpi.h>
@@ -20,7 +20,7 @@
 #include <map>
 #include <vector>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {

@@ -5,20 +5,20 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #ifndef READ_GRAPH_HH
 #define READ_GRAPH_HH
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 
 #include <mpi.h>
 
 #include <vector>
 #include <map>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -38,10 +38,10 @@ namespace ngh5
      const std::vector<NODE_IDX_T>&    dst_idx,
      const std::vector<DST_PTR_T>&     dst_ptr,
      const std::vector<NODE_IDX_T>&    src_idx,
-     const model::EdgeNamedAttr&       edge_attr_values,
-     const std::map<NODE_IDX_T, model::rank_t>& node_rank_map,
+     const data::NamedAttrVal&         edge_attr_values,
+     const std::map<NODE_IDX_T, rank_t>& node_rank_map,
      size_t&                           num_edges,
-     model::rank_edge_map_t &          rank_edge_map,
+     rank_edge_map_t &                 rank_edge_map,
      EdgeMapType                       edge_map_type
      );
 
@@ -53,9 +53,9 @@ namespace ngh5
      const std::vector<NODE_IDX_T>&    dst_idx,
      const std::vector<DST_PTR_T>&     dst_ptr,
      const std::vector<NODE_IDX_T>&    src_idx,
-     const model::EdgeNamedAttr&       edge_attr_values,
+     const data::NamedAttrVal&         edge_attr_values,
      size_t&                           num_edges,
-     model::edge_map_t &               edge_map,
+     edge_map_t &                      edge_map,
      EdgeMapType                       edge_map_type
      );
 
@@ -67,9 +67,9 @@ namespace ngh5
      const std::vector<NODE_IDX_T>&                     dst_idx,
      const std::vector<DST_PTR_T>&                      dst_ptr,
      const std::vector<NODE_IDX_T>&                     src_idx,
-     const model::EdgeNamedAttr&                        edge_attr_values,
+     const data::NamedAttrVal&                          edge_attr_values,
      size_t&                                            num_edges,
-     std::vector<model::prj_tuple_t>&                   prj_list
+     std::vector<prj_tuple_t>&                          prj_list
      );
 
     /// @brief Reads the edges of the given projections
@@ -102,7 +102,7 @@ namespace ngh5
      const std::string&               file_name,
      const bool                       opt_attrs,
      const std::vector<std::string>   prj_names,
-     std::vector<model::prj_tuple_t>& prj_list,
+     std::vector<prj_tuple_t>&        prj_list,
      size_t&                          total_num_nodes,
      size_t&                          local_prj_num_edges,
      size_t&                          total_prj_num_edges
