@@ -1,8 +1,8 @@
 
 
 #include "debug.hh"
-#include "hdf5_types.hh"
-#include "hdf5_path_names.hh"
+#include "neuroh5_types.hh"
+#include "path_names.hh"
 #include "write_projection.hh"
 #include "write_edge_attributes.hh"
 #include "write_template.hh"
@@ -138,7 +138,7 @@ namespace neuroh5
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
         
-      string path = io::hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Index");
+      string path = hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Index");
       hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
       hid_t fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
@@ -196,7 +196,7 @@ namespace neuroh5
           dbp.push_back(dbp[0] + recvbuf_num_dest[rank]);
         }
 
-      path = projection_path_join(projection_name, "/Connectivity/Destination Block Pointer");
+      path = hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Pointer");
       dims = (hsize_t)total_num_blocks;
       fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
@@ -380,29 +380,29 @@ namespace neuroh5
       for (size_t i=0; i<edge_attr_values.float_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_float][i];
-          string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-          graph::write_sparse_edge_attribute<float>(file, path, edge_attr_values.float_values[i]);
+          string path = graph::edge_attribute_path(projection_name, attr_name);
+          cell::write_sparse_attribute<float>(file, path, edge_attr_values.float_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.uint8_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint8][i];
-          string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-          graph::write_sparse_edge_attribute<uint8_t>(file, path, edge_attr_values.uint8_values[i]);
+          string path = graph::edge_attribute_path(projection_name, attr_name);
+          cell::write_sparse_attribute<uint8_t>(file, path, edge_attr_values.uint8_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.uint16_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint16][i];
-          string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-          graph::write_sparse_edge_attribute<uint16_t>(file, path, edge_attr_values.uint16_values[i]);
+          string path = graph::edge_attribute_path(projection_name, attr_name);
+          cell::write_sparse_attribute<uint16_t>(file, path, edge_attr_values.uint16_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.uint32_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint32][i];
-          string path = io::hdf5::edge_attribute_path(projection_name, attr_name);
-          graph::write_sparse_edge_attribute<uint32_t>(file, path, edge_attr_values.uint32_values[i]);
+          string path = graph::edge_attribute_path(projection_name, attr_name);
+          cell::write_sparse_attribute<uint32_t>(file, path, edge_attr_values.uint32_values[i]);
         }
         
         

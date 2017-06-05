@@ -1,12 +1,12 @@
 #include "debug.hh"
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 #include "cell_populations.hh"
 
 #include "read_dbs_projection.hh"
 #include "read_graph.hh"
 #include "scatter_graph.hh"
-
+#include "cell_populations.hh"
 #include "projection_names.hh"
 #include "validate_edge_list.hh"
 
@@ -147,7 +147,7 @@ int main(int argc, char** argv)
   assert (!((src_selection.size() == 0) && (dst_selection.size() == 0)));
   // read the population info
   set< pair<pop_t, pop_t> > pop_pairs;
-  assert(graph::read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
+  assert(cell::read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
 
   size_t total_num_nodes;
   vector<pop_range_t> pop_vector;

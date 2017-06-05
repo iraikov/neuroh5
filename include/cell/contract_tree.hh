@@ -20,19 +20,19 @@ namespace neuroh5
   {
     void contract_tree_bfs (const NGraph::Graph &A, 
                             NGraph::Graph::vertex_set& roots,
-                            NGraph::Graph &S, neurotrees::contraction_map_t& contraction_map,
+                            NGraph::Graph &S, contraction_map_t& contraction_map,
                             NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);
     void contract_tree_dfs (const NGraph::Graph &A, 
                             NGraph::Graph::vertex_set& roots,
-                            NGraph::Graph &S, neurotrees::contraction_map_t& contraction_map,
+                            NGraph::Graph &S, contraction_map_t& contraction_map,
                             NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);
     void contract_tree_regions_bfs (const NGraph::Graph &A, const std::vector<LAYER_IDX_T>& regions,
                                     NGraph::Graph::vertex_set& roots,
-                                    NGraph::Graph &S, neurotrees::contraction_map_t& contraction_map,
+                                    NGraph::Graph &S, contraction_map_t& contraction_map,
                                     NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);
     void contract_tree_regions_dfs (const NGraph::Graph &A, const std::vector<LAYER_IDX_T>& regions,
                                     NGraph::Graph::vertex_set& roots,
-                                    NGraph::Graph &S, neurotrees::contraction_map_t& contraction_map,
+                                    NGraph::Graph &S, contraction_map_t& contraction_map,
                                     NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);
   }
 }

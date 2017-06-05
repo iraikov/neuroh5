@@ -31,8 +31,7 @@
 #include "dataset_num_elements.hh"
 #include "rank_range.hh"
 #include "write_tree.hh"
-#include "hdf5_types.hh"
-#include "hdf5_path_names.hh"
+#include "path_names.hh"
 #include "create_file_toplevel.hh"
 #include "create_tree_dataset.hh"
 #include "exists_tree_dataset.hh"
@@ -76,6 +75,7 @@ void print_usage_full(char** argv)
 int main(int argc, char** argv)
 {
   int status;
+  int layer_offset=0;
   std::string pop_name;
   std::string output_file_name;
   std::string filelist_name, idfilelist_name;
@@ -183,7 +183,7 @@ int main(int argc, char** argv)
       else
         {
           CELL_IDX_T tree_id = tree_id_offset;
-          for (size_t i = optind+2; i<argc; i++)
+          for (int i = optind+2; i<argc; i++)
             {
               input_file_names.push_back(std::string(argv[i]));
               gid_list.push_back(tree_id);
@@ -202,7 +202,7 @@ int main(int argc, char** argv)
 
   // determine which blocks of block_ptr are read by which rank
   vector< pair<hsize_t,hsize_t> > ranges;
-  rank_ranges(input_file_names.size(), size, ranges);
+  mpi::rank_ranges(input_file_names.size(), size, ranges);
 
   size_t filecount=0;
   hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
@@ -211,7 +211,8 @@ int main(int argc, char** argv)
     {
       std::string input_file_name = input_file_names[i];
       CELL_IDX_T gid = gid_list[i];
-      status = read_layer_swc (input_file_name, gid, node_id_offset, swc_type, tree_list);
+      status = io::read_layer_swc (input_file_name, gid, node_id_offset, layer_offset,
+                                   swc_type, false, tree_list);
       filecount++;
       if (filecount % 1000 == 0)
         {
@@ -223,7 +224,7 @@ int main(int argc, char** argv)
 
   if (access( output_file_name.c_str(), F_OK ) != 0)
     {
-      status = hdf5_create_tree_file (all_comm, output_file_name);
+      status = hdf5::create_file_toplevel (all_comm, output_file_name);
     }
   assert(status == 0);
   MPI_Barrier(all_comm);
@@ -235,17 +236,17 @@ int main(int argc, char** argv)
   hid_t file = H5Fopen(output_file_name.c_str(), H5F_ACC_RDWR, fapl);
   assert(file >= 0);
 
-  if (!hdf5_exists_tree_dataset(file, pop_name))
+  if (!hdf5::exists_tree_dataset(file, pop_name))
     {
-      status = hdf5_create_tree_dataset(all_comm, file, pop_name);
+      status = hdf5::create_tree_dataset(all_comm, file, pop_name);
     }
   assert(status == 0);
 
   // Reads the current attribute extent to determine number of entries for that population
-  hsize_t ptr_num   = dataset_num_elements(all_comm, file, tree_attribute_path(TREES, pop_name, ATTR_PTR));
-  hsize_t attr_num  = dataset_num_elements(all_comm, file, tree_attribute_path(TREES, pop_name, X_COORD));
-  hsize_t sec_num   = dataset_num_elements(all_comm, file, tree_attribute_path(TREES, pop_name, SECTION));
-  hsize_t topo_num  = dataset_num_elements(all_comm, file, tree_attribute_path(TREES, pop_name, SRCSEC));
+  hsize_t ptr_num   = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR));
+  hsize_t attr_num  = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD));
+  hsize_t sec_num   = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SECTION));
+  hsize_t topo_num  = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC));
   hsize_t ptr_start = 0, attr_start = 0, sec_start = 0, topo_start = 0;
   status = H5Pclose (fapl);
   status = H5Fclose (file);
@@ -255,9 +256,9 @@ int main(int argc, char** argv)
   sec_start  = sec_num;
   topo_start = topo_num;
   
-  status = write_trees(all_comm, output_file_name, pop_name, 
-                       ptr_start, attr_start, sec_start, topo_start, 
-                       tree_list);
+  status = cell::write_trees(all_comm, output_file_name, pop_name, 
+                             ptr_start, attr_start, sec_start, topo_start, 
+                             tree_list);
   assert(status == 0);
 
 

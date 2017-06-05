@@ -5,13 +5,13 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {
 
     /*****************************************************************************
-     * Creates a file with the specified top-level groups for storing NeuroIO structures
+     * Creates a file with the specified top-level groups for storing NeuroH5 structures
      * and returns operation status
      *****************************************************************************/
     int create_file_toplevel

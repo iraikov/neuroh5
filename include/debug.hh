@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <iostream>
 
-namespace neuroio
+namespace neuroh5
 {
 
   static bool debug_enabled = true;

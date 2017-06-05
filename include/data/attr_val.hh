@@ -12,8 +12,7 @@
 
 #include <map>
 #include <vector>
-
-#include "neuroh5_types.h"
+#include <cassert>
 
 namespace neuroh5
 {

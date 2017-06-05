@@ -346,14 +346,14 @@ int main(int argc, char** argv)
                                               pop_vector, n_nodes) >= 0);
       assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
       
-      status = io::read_syn_projection (all_comm,
-                                        hdf5_input_file_name,
-                                        hdf5_input_dsetpath,
-                                        dst_idx,
-                                        src_idx_ptr,
-                                        src_idx,
-                                        syn_idx_ptr,
-                                        syn_idx);
+      status = graph::read_syn_projection (all_comm,
+                                           hdf5_input_file_name,
+                                           hdf5_input_dsetpath,
+                                           dst_idx,
+                                           src_idx_ptr,
+                                           src_idx,
+                                           syn_idx_ptr,
+                                           syn_idx);
 
       for (size_t i=0; i< pop_labels.size(); i++)
         {

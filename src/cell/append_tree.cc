@@ -1,10 +1,10 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file write_tree.cc
+///  @file append_tree.cc
 ///
-///  Write tree structures.
+///  Append tree structures to NeuroH5 file.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
@@ -13,15 +13,15 @@
 #include <cassert>
 #include <vector>
 
-#include "neurotrees_types.hh"
+#include "neuroh5_types.hh"
+#include "file_access.hh"
 #include "rank_range.hh"
 #include "dataset_num_elements.hh"
-#include "hdf5_types.hh"
-#include "hdf5_enum_type.hh"
-#include "hdf5_path_names.hh"
-#include "hdf5_write_template.hh"
+#include "enum_type.hh"
+#include "path_names.hh"
+#include "write_template.hh"
 
-namespace neuroio
+namespace neuroh5
 {
   
   namespace cell
@@ -30,7 +30,7 @@ namespace neuroio
     /*****************************************************************************
      * Save tree data structures to HDF5
      *****************************************************************************/
-    int write_trees
+    int append_trees
     (
      MPI_Comm comm,
      const std::string& file_name,
@@ -39,7 +39,8 @@ namespace neuroio
      const hsize_t attr_start,
      const hsize_t sec_start,
      const hsize_t topo_start,
-     std::vector<neurotree_t> &tree_list
+     std::vector<neurotree_t> &tree_list,
+     create_index = false
      )
     {
       herr_t status; hid_t wapl;
@@ -53,7 +54,7 @@ namespace neuroio
       status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
 
       /* Create HDF5 enumerated type for reading SWC type information */
-      hid_t hdf5_swc_type = create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
+      hid_t hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
     
       uint64_t all_attr_size=0, all_sec_size=0, all_topo_size=0;
       std::vector<uint64_t> attr_size_vector, sec_size_vector, topo_size_vector;
@@ -62,7 +63,7 @@ namespace neuroio
       std::vector<TOPO_PTR_T> topo_ptr;
       std::vector<ATTR_PTR_T> attr_ptr;
     
-      std::vector<CELL_IDX_T> all_gid_vector;
+      std::vector<CELL_IDX_T> all_index_vector;
       std::vector<SECTION_IDX_T> all_src_vector, all_dst_vector;
       std::vector<COORD_T> all_xcoords, all_ycoords, all_zcoords;  // coordinates of nodes
       std::vector<REALVAL_T> all_radiuses;    // Radius
@@ -80,13 +81,6 @@ namespace neuroio
         {
           local_ptr_size=local_ptr_size+1;
         }
-      hsize_t local_gid_size = tree_list.size();
-
-      std::vector<uint64_t> gid_size_vector;
-      gid_size_vector.resize(size);
-      status = MPI_Allgather(&local_gid_size, 1, MPI_UINT64_T, &gid_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
-      hsize_t local_gid_start = ptr_start;
 
       std::vector<uint64_t> ptr_size_vector;
       ptr_size_vector.resize(size);
@@ -97,7 +91,6 @@ namespace neuroio
       for (size_t i=0; i<rank; i++)
         {
           local_ptr_start = local_ptr_start + ptr_size_vector[i];
-          local_gid_start = local_gid_start + gid_size_vector[i];
         }
 
       hsize_t global_ptr_size = ptr_start;
@@ -149,7 +142,7 @@ namespace neuroio
           sec_size = sections.size();
           sec_ptr.push_back(sec_size+sec_ptr.back());
 
-          all_gid_vector.push_back(gid);
+          all_index_vector.push_back(gid);
           all_src_vector.insert(all_src_vector.end(),src_vector.begin(),src_vector.end());
           all_dst_vector.insert(all_dst_vector.end(),dst_vector.begin(),dst_vector.end());
           all_sections.insert(all_sections.end(),sections.begin(),sections.end());
@@ -167,7 +160,7 @@ namespace neuroio
 
         }
 
-      assert(all_gid_vector.size() == block);
+      assert(all_index_vector.size() == block);
       assert(topo_ptr.size() == block+1);
       assert(sec_ptr.size()  == block+1);
       assert(attr_ptr.size() == block+1);
@@ -182,6 +175,19 @@ namespace neuroio
       status = MPI_Allgather(&all_topo_size, 1, MPI_UINT64_T, &topo_size_vector[0], 1, MPI_UINT64_T, comm);
       assert(status >= 0);
 
+      hsize_t local_index_size = all_index_vector.size();
+
+      std::vector<uint64_t> index_size_vector;
+      index_size_vector.resize(size);
+      status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
+      assert(status == MPI_SUCCESS);
+
+      hsize_t local_index_start = ptr_start;
+      for (size_t i=0; i<rank; i++)
+        {
+          local_index_start = local_index_start + index_size_vector[i];
+        }
+      
       hsize_t local_attr_start=attr_start, local_sec_start=sec_start, local_topo_start=topo_start;
       // calculate the starting position of this rank
       for (size_t i=0; i<rank; i++)
@@ -191,12 +197,13 @@ namespace neuroio
           local_topo_start = local_topo_start + topo_size_vector[i];
         }
       // calculate the new sizes of the datasets
-      hsize_t global_attr_size=attr_start, global_sec_size=sec_start, global_topo_size=topo_start;
+      hsize_t global_index_size=ptr_start, global_attr_size=attr_start, global_sec_size=sec_start, global_topo_size=topo_start;
       for (size_t i=0; i<size; i++)
         {
-          global_attr_size  = global_attr_size + attr_size_vector[i];
-          global_sec_size   = global_sec_size  + sec_size_vector[i];
-          global_topo_size  = global_topo_size + topo_size_vector[i];
+          global_index_size = global_index_size + index_size_vector[i];
+          global_attr_size  = global_attr_size  + attr_size_vector[i];
+          global_sec_size   = global_sec_size   + sec_size_vector[i];
+          global_topo_size  = global_topo_size  + topo_size_vector[i];
         }
     
 
@@ -208,94 +215,102 @@ namespace neuroio
           attr_ptr[i] = attr_ptr[i] + local_attr_start;
         }
 
-      // TODO; create separate functions for opening HDF5 file for reading and writing
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+      // create the cell index if option create_index is true
+      if (create_index)
+        {
+          status = append_cell_index (comm, file_name, pop_name, all_index_vector);
+        }
+      else
+        {
+          // TODO: validate cell index
+        }
+
+      hid_t file = hdf5::file_open(comm, file_name, rdwr=true);
       assert(file >= 0);
 
-      status = hdf5_write<CELL_IDX_T> (file, cell_attribute_path(TREES, pop_name, TREE_ID),
-                                       global_gid_size, local_gid_start, all_gid_vector.size(),
-                                       CELL_IDX_H5_NATIVE_T,
-                                       all_gid_vector, wapl);
 
-      status = hdf5_write<ATTR_PTR_T> (file, cell_attribute_path(TREES, pop_name, ATTR_PTR),
-                                       global_ptr_size, local_ptr_start, attr_ptr.size(),
-                                       ATTR_PTR_H5_NATIVE_T,
-                                       attr_ptr, wapl);
-    
-      status = hdf5_write<SEC_PTR_T> (file, cell_attribute_path(TREES, pop_name, SEC_PTR),
-                                      global_ptr_size, local_ptr_start, sec_ptr.size(),
-                                      SEC_PTR_H5_NATIVE_T,
-                                      sec_ptr, wapl);
-    
-      status = hdf5_write<TOPO_PTR_T> (file, cell_attribute_path(TREES, pop_name, TOPO_PTR),
-                                       global_ptr_size, local_ptr_start, topo_ptr.size(),
-                                       TOPO_PTR_H5_NATIVE_T,
-                                       topo_ptr, wapl);
+      
+      status = hdf5::write<CELL_IDX_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
+                                        global_index_size, local_index_start, local_index_size,
+                                        CELL_IDX_H5_NATIVE_T, all_index_vector, wapl);
 
-      status = hdf5_write<SECTION_IDX_T> (file, cell_attribute_path(TREES, pop_name, SRCSEC),
-                                          global_topo_size, local_topo_start, all_src_vector.size(),
-                                          SECTION_IDX_H5_NATIVE_T,
-                                          all_src_vector, wapl);
+
+      status = hdf5::write<ATTR_PTR_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR),
+                                        global_ptr_size, local_ptr_start, attr_ptr.size(),
+                                        ATTR_PTR_H5_NATIVE_T,
+                                        attr_ptr, wapl);
+    
+      status = hdf5::write<SEC_PTR_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SEC_PTR),
+                                       global_ptr_size, local_ptr_start, sec_ptr.size(),
+                                       SEC_PTR_H5_NATIVE_T,
+                                       sec_ptr, wapl);
+      
+      status = hdf5::write<TOPO_PTR_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TOPO_PTR),
+                                        global_ptr_size, local_ptr_start, topo_ptr.size(),
+                                        TOPO_PTR_H5_NATIVE_T,
+                                        topo_ptr, wapl);
+      
+      status = hdf5::write<SECTION_IDX_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC),
+                                           global_topo_size, local_topo_start, all_src_vector.size(),
+                                           SECTION_IDX_H5_NATIVE_T,
+                                           all_src_vector, wapl);
       assert(status == 0);
     
-      status = hdf5_write<SECTION_IDX_T> (file, cell_attribute_path(TREES, pop_name, DSTSEC),
-                                          global_topo_size, local_topo_start, all_dst_vector.size(),
-                                          SECTION_IDX_H5_NATIVE_T,
-                                          all_dst_vector, wapl);
-      assert(status == 0);
-
-      status = hdf5_write<SECTION_IDX_T> (file, cell_attribute_path(TREES, pop_name, SECTION),
-                                          global_sec_size, local_sec_start, all_sections.size(),
-                                          SECTION_IDX_H5_NATIVE_T,
-                                          all_sections, wapl);
+      status = hdf5::write<SECTION_IDX_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::DSTSEC),
+                                           global_topo_size, local_topo_start, all_dst_vector.size(),
+                                           SECTION_IDX_H5_NATIVE_T,
+                                           all_dst_vector, wapl);
       assert(status == 0);
 
-      status = hdf5_write<COORD_T> (file, cell_attribute_path(TREES, pop_name, X_COORD),
-                                    global_attr_size, local_attr_start, all_xcoords.size(),
-                                    COORD_H5_NATIVE_T,
-                                    all_xcoords, wapl);
+      status = hdf5::write<SECTION_IDX_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SECTION),
+                                     global_sec_size, local_sec_start, all_sections.size(),
+                                     SECTION_IDX_H5_NATIVE_T,
+                                     all_sections, wapl);
+      assert(status == 0);
+
+      status = hdf5::write<COORD_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD),
+                                     global_attr_size, local_attr_start, all_xcoords.size(),
+                                     COORD_H5_NATIVE_T,
+                                     all_xcoords, wapl);
       assert(status == 0);
     
-      status = hdf5_write<COORD_T> (file, cell_attribute_path(TREES, pop_name, Y_COORD),
-                                    global_attr_size, local_attr_start, all_ycoords.size(),
-                                    COORD_H5_NATIVE_T,
-                                    all_ycoords, wapl);
+      status = hdf5::write<COORD_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::Y_COORD),
+                                     global_attr_size, local_attr_start, all_ycoords.size(),
+                                     COORD_H5_NATIVE_T,
+                                     all_ycoords, wapl);
       assert(status == 0);
     
-      status = hdf5_write<COORD_T> (file, cell_attribute_path(TREES, pop_name, Z_COORD),
-                                    global_attr_size, local_attr_start, all_zcoords.size(),
-                                    COORD_H5_NATIVE_T,
-                                    all_zcoords, wapl);
+      status = hdf5::write<COORD_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::Z_COORD),
+                                     global_attr_size, local_attr_start, all_zcoords.size(),
+                                     COORD_H5_NATIVE_T,
+                                     all_zcoords, wapl);
       assert(status == 0);
     
-      status = hdf5_write<REALVAL_T> (file, cell_attribute_path(TREES, pop_name, RADIUS),
-                                      global_attr_size, local_attr_start, all_radiuses.size(),
-                                      REAL_H5_NATIVE_T,
-                                      all_radiuses, wapl);
+      status = hdf5::write<REALVAL_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::RADIUS),
+                                       global_attr_size, local_attr_start, all_radiuses.size(),
+                                       REAL_H5_NATIVE_T,
+                                       all_radiuses, wapl);
       assert(status == 0);
     
-      status = hdf5_write<LAYER_IDX_T> (file, cell_attribute_path(TREES, pop_name, LAYER),
-                                        global_attr_size, local_attr_start, all_layers.size(),
-                                        LAYER_IDX_H5_NATIVE_T,
-                                        all_layers, wapl);
+      status = hdf5::write<LAYER_IDX_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::LAYER),
+                                         global_attr_size, local_attr_start, all_layers.size(),
+                                         LAYER_IDX_H5_NATIVE_T,
+                                         all_layers, wapl);
       assert(status == 0);
     
-      status = hdf5_write<PARENT_NODE_IDX_T> (file, cell_attribute_path(TREES, pop_name, PARENT),
-                                              global_attr_size, local_attr_start, all_layers.size(),
-                                              PARENT_NODE_IDX_H5_NATIVE_T,
-                                              all_parents, wapl);
+      status = hdf5::write<PARENT_NODE_IDX_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::PARENT),
+                                               global_attr_size, local_attr_start, all_layers.size(),
+                                               PARENT_NODE_IDX_H5_NATIVE_T,
+                                               all_parents, wapl);
       assert(status == 0);
     
-      status = hdf5_write<SWC_TYPE_T> (file, cell_attribute_path(TREES, pop_name, SWCTYPE),
-                                       global_attr_size, local_attr_start, all_swc_types.size(),
-                                       hdf5_swc_type,
-                                       all_swc_types, wapl);
+      status = hdf5::write<SWC_TYPE_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SWCTYPE),
+                                        global_attr_size, local_attr_start, all_swc_types.size(),
+                                        hdf5_swc_type,
+                                        all_swc_types, wapl);
       assert(status == 0);
     
-      status = H5Fclose(file);
+      status = hdf5::file_close(file);
       assert(status == 0);
       status = H5Pclose(fapl);
       assert(status == 0);

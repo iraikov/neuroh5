@@ -9,8 +9,10 @@ namespace neuroh5
   {
     
     const std::string POPS       = "Populations";
+    const std::string PRJ        = "Projections";
     const std::string H5_TYPES   = "H5Types";
-    const std::string POPLABELS  = "Population labels";
+    const std::string POP_LABELS = "Population labels";
+    const std::string POP_COMBS  = "Population combinations";
   
     const std::string TREES      = "Trees";
     const std::string X_COORD    = "X Coordinate";
@@ -23,7 +25,7 @@ namespace neuroh5
     const std::string DSTSEC     = "Destination Section";
     const std::string PARENT     = "Parent Point";
     const std::string SWCTYPE    = "SWC Type";
-    const std::string TREE_ID    = "Tree ID";
+    const std::string CELL_INDEX = "Cell Index";
 
     const std::string ATTR_PTR   = "Attribute Pointer";
     const std::string TOPO_PTR   = "Topology Pointer";

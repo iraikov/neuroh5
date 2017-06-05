@@ -21,11 +21,12 @@
 #include <mpi.h>
 
 #include "neuroh5_types.hh"
-#include "hdf5_path_names.hh"
+#include "path_names.hh"
 #include "cell_populations.hh"
 #include "scatter_read_tree.hh"
 #include "dataset_num_elements.hh"
 #include "validate_tree.hh"
+#include "attr_map.hh"
 
 using namespace std;
 using namespace neuroh5;
@@ -76,7 +77,7 @@ void output_tree(string outfilename,
   const std::vector<COORD_T> & xcoords=get<4>(tree);
   const std::vector<COORD_T> & ycoords=get<5>(tree);
   const std::vector<COORD_T> & zcoords=get<6>(tree);
-  const std::vector<REALVAL_T> & radiuses=get<7>(tree);
+  /*const std::vector<REALVAL_T> & radiuses=get<7>(tree);*/
   const std::vector<LAYER_IDX_T> & layers=get<8>(tree);
   const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
   const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
@@ -141,18 +142,18 @@ void summarize_tree(const string outfilename,
                     const CELL_IDX_T gid,
                     const neurotree_t& tree,
                     const vector<vector<string>> &attr_names,
-                    NamedAttrMap &attr_map)
+                    data::NamedAttrMap &attr_map)
 {
-  const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);
-  const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
+  /*const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);*/
+  /*const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);*/
   const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
   const std::vector<COORD_T> & xcoords=get<4>(tree);
   const std::vector<COORD_T> & ycoords=get<5>(tree);
   const std::vector<COORD_T> & zcoords=get<6>(tree);
-  const std::vector<REALVAL_T> & radiuses=get<7>(tree);
-  const std::vector<LAYER_IDX_T> & layers=get<8>(tree);
-  const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
-  const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
+  /*const std::vector<REALVAL_T> & radiuses=get<7>(tree);*/
+  /*const std::vector<LAYER_IDX_T> & layers=get<8>(tree);*/
+  /*const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);*/
+  /*const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);*/
 
   ofstream fout;
   fout.open (outfilename, ios::app);
@@ -179,32 +180,32 @@ void summarize_tree(const string outfilename,
   
   for (size_t i=0; i<float_attrs.size(); i++)
     {
-      fout << "  float attribute " << attr_names[AttrMap::attr_index_float][i] <<
+      fout << "  float attribute " << attr_names[data::AttrMap::attr_index_float][i] <<
         " is of size " << float_attrs[i].size() << endl;
     }
   for (size_t i=0; i<uint8_attrs.size(); i++)
     {
-      fout << "  uint8 attribute " << attr_names[AttrMap::attr_index_uint8][i] <<
+      fout << "  uint8 attribute " << attr_names[data::AttrMap::attr_index_uint8][i] <<
         " is of size " << uint8_attrs[i].size() << endl;
     }
   for (size_t i=0; i<int8_attrs.size(); i++)
     {
-      fout << "  int8 attribute " << attr_names[AttrMap::attr_index_int8][i] <<
+      fout << "  int8 attribute " << attr_names[data::AttrMap::attr_index_int8][i] <<
         " is of size " << int8_attrs[i].size() << endl;
     }
   for (size_t i=0; i<uint16_attrs.size(); i++)
     {
-      fout << "  uint16 attribute " << attr_names[AttrMap::attr_index_uint16][i] <<
+      fout << "  uint16 attribute " << attr_names[data::AttrMap::attr_index_uint16][i] <<
         " is of size " << uint16_attrs[i].size() << endl;
     }
   for (size_t i=0; i<uint32_attrs.size(); i++)
     {
-      fout << "  uint32 attribute " << attr_names[AttrMap::attr_index_uint32][i] <<
+      fout << "  uint32 attribute " << attr_names[data::AttrMap::attr_index_uint32][i] <<
         " is of size " << uint32_attrs[i].size() << endl;
     }
   for (size_t i=0; i<int32_attrs.size(); i++)
     {
-      fout << "  int32 attribute " << attr_names[AttrMap::attr_index_int32][i] <<
+      fout << "  int32 attribute " << attr_names[data::AttrMap::attr_index_int32][i] <<
         " is of size " << int32_attrs[i].size() << endl;
     }
   fout.close();
@@ -319,9 +320,9 @@ int main(int argc, char** argv)
   vector<pop_range_t> pop_vector;
 
   // Read population info to determine n_nodes
-  assert(read_population_ranges(all_comm, input_file_name,
-                                pop_ranges, pop_vector,
-                                n_nodes) >= 0);
+  assert(cell::read_population_ranges(all_comm, input_file_name,
+                                      pop_ranges, pop_vector,
+                                      n_nodes) >= 0);
   // TODO; create separate functions for opening HDF5 file for reading and writing
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
   assert(fapl >= 0);
@@ -330,7 +331,7 @@ int main(int argc, char** argv)
   assert(file >= 0);
 
   vector<string> pop_names;
-  status = read_population_names(all_comm, file, pop_names);
+  status = cell::read_population_names(all_comm, file, pop_names);
   assert (status >= 0);
 
   status = H5Pclose (fapl);
@@ -365,15 +366,15 @@ int main(int argc, char** argv)
     }
 
   map<CELL_IDX_T, neurotree_t>  tree_map;
-  NamedAttrMap attr_map;
+  data::NamedAttrMap attr_map;
   
   for (size_t i = 0; i<pop_names.size(); i++)
     {
-      status = scatter_read_trees (all_comm, input_file_name, io_size,
-                                   opt_attrs, attr_namespace,
-                                   node_rank_map,
-                                   pop_names[i], pop_vector[i].start,
-                                   tree_map, attr_map);
+      status = cell::scatter_read_trees (all_comm, input_file_name, io_size,
+                                         opt_attrs, attr_namespace,
+                                         node_rank_map,
+                                         pop_names[i], pop_vector[i].start,
+                                         tree_map, attr_map);
 
       
       assert (status >= 0);
@@ -382,7 +383,7 @@ int main(int argc, char** argv)
                tree_map.cend(),
                [&] (const pair<CELL_IDX_T, neurotree_t> &element)
                { const neurotree_t& tree = element.second;
-                 validate_tree(tree); } 
+                 cell::validate_tree(tree); } 
                );
 
     }

@@ -4,7 +4,7 @@
 ///
 ///  Driver program for graph vertex balancing functions.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 
@@ -153,7 +153,7 @@ int main(int argc, char** argv)
   vector<string> prj_names;
   assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
-  vector<model::prj_tuple_t> prj_list;
+  vector<prj_tuple_t> prj_list;
   
   std::vector<NODE_IDX_T> parts;
   std::vector<double> part_weights;

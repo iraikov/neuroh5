@@ -17,9 +17,11 @@
 #include <tuple>
 #include <vector>
 
+#include <mpi.h>
 #include <hdf5.h>
 
 #include "ngraph.hh"
+#include "data/attr_val.hh"
 
 #define MAX_ATTR_NAME_LEN 128
 
@@ -46,13 +48,13 @@ namespace neuroh5
   typedef unsigned int NODE_IDX_T;
   
   // cell index type
-  typedef unsigned int CELL_IDX_T;
+  typedef NODE_IDX_T CELL_IDX_T;
   
   // population index type
   typedef uint16_t POP_IDX_T;
   
   // MPI type of node indexes
-  typedef MPI_UINT32_T NODE_IDX_MPI_T;
+  #define NODE_IDX_MPI_T MPI_UINT32_T
   
   // DBS offset type
   typedef uint64_t DST_PTR_T;
@@ -84,16 +86,15 @@ namespace neuroh5
   typedef uint64_t   TOPO_PTR_T;
   typedef uint32_t   CELL_IDX_T;
 
-  typedef MPI_UINT32_T MPI_CELL_IDX_T;
-  typedef MPI_FLOAT MPI_COORD_T;
-  typedef MPI_FLOAT MPI_REALVAL_T;
-  typedef MPI_INT8_T MPI_SWC_TYPE_T;
-  typedef MPI_UINT16_T MPI_LAYER_IDX_T;
-  typedef MPI_UINT16_T MPI_SECTION_IDX_T;
-  typedef MPI_UINT32_T MPI_NODE_IDX_T;
-  typedef MPI_INT32_T MPI_PARENT_NODE_IDX_T;
-
-  typedef MPI_UINT64_T MPI_ATTR_PTR_T;
+  #define MPI_CELL_IDX_T    MPI_UINT32_T 
+  #define MPI_COORD_T       MPI_FLOAT 
+  #define MPI_REALVAL_T     MPI_FLOAT 
+  #define MPI_SWC_TYPE_T    MPI_INT8_T 
+  #define MPI_LAYER_IDX_T   MPI_UINT16_T 
+  #define MPI_SECTION_IDX_T MPI_UINT16_T 
+  #define MPI_NODE_IDX_T    MPI_UINT32_T 
+  #define MPI_PARENT_NODE_IDX_T MPI_INT32_T 
+  #define MPI_ATTR_PTR_T    MPI_UINT64_T 
   
   const static std::vector< std::pair<SWC_TYPE_T, std::string> > swc_type_enumeration
   {
@@ -150,7 +151,7 @@ namespace neuroh5
   typedef uint32_t rank_t;
   
   typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
-                      AttrVal  // edge attribute vector,
+                      data::AttrVal  // edge attribute vector,
                       > edge_tuple_t;
 
   typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
@@ -163,7 +164,7 @@ namespace neuroh5
   
   typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
                       std::vector<NODE_IDX_T>, // destination vector
-                      AttrVal  // edge attribute vector
+                      data::AttrVal  // edge attribute vector
                       > prj_tuple_t;
 
 // In-memory HDF5 datatype of attribute pointers
@@ -226,12 +227,14 @@ namespace neuroh5
 // In-file HDF5 datatype of SWC types
 #define SWC_TYPE_H5_FILE_T   H5T_STD_I8LE
 
-// In-memory HDF5 datatype of gid
+// In-memory HDF5 datatype of cell index
 #define CELL_IDX_H5_NATIVE_T H5T_NATIVE_UINT32
 
-// In-file HDF5 datatype of gid
+// In-file HDF5 datatype of cell index
 #define CELL_IDX_H5_FILE_T   H5T_STD_U32LE
 
+
+  
 }
 
 

@@ -1,7 +1,7 @@
 #ifndef HDF5_READ_TEMPLATE
 #define HDF5_READ_TEMPLATE
 
-#include "hdf5.h"
+#include <hdf5.h>
 
 #include <cassert>
 #include <vector>
@@ -12,7 +12,7 @@ namespace neuroh5
   {
   
     template<class T>
-    herr_t hdf5_read
+    herr_t read
     (
      hid_t              loc,
      const std::string& name,

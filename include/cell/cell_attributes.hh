@@ -1,15 +1,6 @@
 #ifndef CELL_ATTRIBUTES_HH
 #define CELL_ATTRIBUTES_HH
 
-#include "infer_datatype.hh"
-#include "infer_mpi_datatype.hh"
-#include "neurotrees_types.hh"
-#include "hdf5_types.hh"
-#include "path_names.hh"
-#include "attrmap.hh"
-
-#include <hdf5.h>
-#include <mpi.h>
 
 #include <cassert>
 #include <cstdint>
@@ -17,10 +8,30 @@
 #include <type_traits>
 #include <vector>
 
+#include <hdf5.h>
+#include <mpi.h>
+
+#include "neuroh5_types.hh"
+#include "infer_datatype.hh"
+#include "infer_mpi_datatype.hh"
+#include "path_names.hh"
+#include "hdf5_cell_attributes.hh"
+#include "attr_map.hh"
+
 namespace neuroh5
 {
   namespace cell
   {
+    void create_cell_attribute_datasets
+    (
+     const hid_t&   file,
+     const string&  attr_namespace,
+     const string&  pop_name,
+     const string&  attr_name,
+     const hid_t&   ftype,
+     const size_t   chunk_size,
+     const size_t   value_chunk_size
+     );
     
     herr_t get_cell_attributes
     (
@@ -37,7 +48,7 @@ namespace neuroh5
      const string&    file_name,
      const string&    name_space,
      const string&    pop_name,
-     NamedAttrMap&    attr_values,
+     data::NamedAttrMap&    attr_values,
      size_t offset = 0,
      size_t numitems = 0
      );
@@ -53,7 +64,7 @@ namespace neuroh5
      const map<CELL_IDX_T,size_t> &node_rank_map,
      const string                 &pop_name,
      const CELL_IDX_T              pop_start,
-     NamedAttrMap                 &attr_map,
+     data::NamedAttrMap                 &attr_map,
      // if positive, these arguments specify offset and number of entries to read
      // from the entries available to the current rank
      size_t offset   = 0,
@@ -68,7 +79,7 @@ namespace neuroh5
      const string&    file_name,
      const string&    name_space,
      const string&    pop_name,
-     NamedAttrMap&    attr_values,
+     data::NamedAttrMap&    attr_values,
      size_t offset = 0,
      size_t numitems = 0
      );
@@ -119,18 +130,18 @@ namespace neuroh5
       hid_t ftype = infer_datatype(dummy);
       assert(ftype >= 0);
 
-      string attr_prefix = cell_attribute_prefix(attr_namespace, pop_name);
-      string attr_path = cell_attribute_path(attr_namespace, pop_name, attr_name);
-      if (!(H5Lexists (file, ("/" + POPS).c_str(), H5P_DEFAULT) > 0) ||
-          !(H5Lexists (file, population_path(pop_name).c_str(), H5P_DEFAULT) > 0) ||
+      string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
+      string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
+      if (!(H5Lexists (file, ("/" + hdf5::POPS).c_str(), H5P_DEFAULT) > 0) ||
+          !(H5Lexists (file, hdf5::population_path(pop_name).c_str(), H5P_DEFAULT) > 0) ||
           !(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0) ||
           !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
         {
           create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
-                                         ftype, chunk_size, value_chunk_size);
+                                               ftype, chunk_size, value_chunk_size);
         }
 
-      hdf5_append_cell_attribute<T>(file, attr_path, gid, attr_ptr, values);
+      hdf5::append_cell_attribute<T>(file, attr_path, gid, attr_ptr, values);
     
       status = H5Fclose(file);
       assert(status == 0);
@@ -166,7 +177,7 @@ namespace neuroh5
       size = ssize;
     
       vector< pair<hsize_t,hsize_t> > ranges;
-      rank_ranges(size, io_size, ranges);
+      mpi::rank_ranges(size, io_size, ranges);
 
       // Determine I/O ranks to which to send the values
       vector <size_t> io_dests(size); 
@@ -366,10 +377,10 @@ namespace neuroh5
 
       if (rank < io_size)
         {
-          append_cell_attribute<T>(io_comm, file_name,
-                                   attr_namespace, pop_name, attr_name,
-                                   gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
-                                   chunk_size, value_chunk_size, cache_size);
+          hdf5::append_cell_attribute<T>(io_comm, file_name,
+                                         attr_namespace, pop_name, attr_name,
+                                         gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
+                                         chunk_size, value_chunk_size, cache_size);
         }
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
     }
@@ -419,13 +430,13 @@ namespace neuroh5
       hid_t ftype = infer_datatype(dummy);
       assert(ftype >= 0);
 
-      string attr_path = cell_attribute_path(attr_namespace, pop_name, attr_name);
+      string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
 
       create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
                                      ftype, chunk_size, value_chunk_size);
     
-      hdf5_write_cell_attribute<T> (comm, file, attr_path,
-                                    gid, attr_ptr, value);
+      hdf5::write_cell_attribute<T> (comm, file, attr_path,
+                                     gid, attr_ptr, value);
 
       status = H5Fclose(file);
       assert(status == 0);
@@ -448,7 +459,6 @@ namespace neuroh5
      const size_t cache_size = 1*1024*1024
      )
     {
-      int status;
       vector<ATTR_PTR_T>  attr_ptr;
       vector<CELL_IDX_T>  gid_vector;
       vector<T>  value_vector;
@@ -471,6 +481,89 @@ namespace neuroh5
                               gid_vector, attr_ptr, value_vector,
                               chunk_size, value_chunk_size, cache_size);
     }
+
+
+    template <typename T>
+    herr_t write_sparse_attribute
+    (
+     hid_t                    loc,
+     const std::string&       path,
+     const std::vector<T>&    value
+     )
+    {
+      // get a file handle and retrieve the MPI info
+      hid_t file = H5Iget_file_id(loc);
+      assert(file >= 0);
+
+      MPI_Comm comm;
+      MPI_Info info;
+      hid_t fapl = H5Fget_access_plist(file);
+      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+
+      int ssize, srank;
+      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      size_t size, rank;
+      size = (size_t)ssize;
+      rank = (size_t)srank;
+
+      uint32_t my_count = (uint32_t)value.size();
+      std::vector<uint32_t> all_counts(size);
+      assert(MPI_Allgather(&my_count, 1, MPI_UINT32_T, &all_counts[0], 1,
+                           MPI_UINT32_T, comm) == MPI_SUCCESS);
+
+      // calculate the total dataset size and the offset of my piece
+      hsize_t start = 0, total = 0, count = 1, block = my_count;
+      for (size_t p = 0; p < size; ++p)
+        {
+          if (p < rank)
+            {
+              start += (hsize_t) all_counts[p];
+            }
+          total += (hsize_t) all_counts[p];
+        }
+
+      // create dataspaces and selections
+      hid_t mspace = H5Screate_simple(1, &block, &block);
+      assert(mspace >= 0);
+      assert(H5Sselect_all(mspace) >= 0);
+      hid_t fspace = H5Screate_simple(1, &total, &total);
+      assert(fspace >= 0);
+      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                 &count, &block) >= 0);
+
+      // figure the type
+
+      T dummy;
+      hid_t ftype = infer_datatype(dummy);
+      assert(ftype >= 0);
+      hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
+      assert(mtype >= 0);
+
+      // Ready to roll!
+
+      // we write the values first
+      // everything needs to be scaled by 2 for the edge IDs
+
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+
+      hid_t dset = H5Dcreate(loc, path.c_str(), ftype, fspace,
+                             lcpl, H5P_DEFAULT, H5P_DEFAULT);
+      assert(dset >= 0);
+      assert(H5Dwrite(dset, mtype, mspace, fspace, H5P_DEFAULT, &value[0])
+             >= 0);
+
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Tclose(mtype) >= 0);
+      assert(H5Sclose(fspace) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+      assert(H5Pclose(lcpl) >= 0);
+
+      return 0;
+    }
+
 
   }
   

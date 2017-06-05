@@ -4,7 +4,7 @@
 ///
 ///  Read and scatter tree structures.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
@@ -14,21 +14,20 @@
 #include <vector>
 #include <map>
 
-#include "neurotrees_types.hh"
-#include "attrmap.hh"
+#include "neuroh5_types.hh"
+#include "attr_map.hh"
 #include "cell_attributes.hh"
 #include "rank_range.hh"
 #include "pack_tree.hh"
 #include "dataset_num_elements.hh"
-#include "mpi_bcast_string_vector.hh"
-#include "hdf5_types.hh"
-#include "hdf5_enum_type.hh"
-#include "hdf5_path_names.hh"
-#include "hdf5_read_template.hh"
+#include "bcast_string_vector.hh"
+#include "enum_type.hh"
+#include "path_names.hh"
+#include "read_template.hh"
 
 using namespace std;
 
-namespace neuroio
+namespace neuroh5
 {
 
   namespace cell
@@ -150,7 +149,7 @@ namespace neuroio
      const string                 &pop_name,
      const CELL_IDX_T              pop_start,
      map<CELL_IDX_T, neurotree_t> &tree_map,
-     NamedAttrMap                 &attr_map,
+     data::NamedAttrMap           &attr_map,
      size_t offset = 0,
      size_t numitems = 0
      )
@@ -185,7 +184,7 @@ namespace neuroio
 
 
           /* Create HDF5 enumerated type for reading SWC type information */
-          hdf5_swc_type = create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
+          hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
         
           fapl = H5Pcreate(H5P_FILE_ACCESS);
           assert(fapl >= 0);
@@ -197,7 +196,7 @@ namespace neuroio
 
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
           assert(file >= 0);
-          dset_size = dataset_num_elements(io_comm, file, cell_attribute_path(TREES, string(pop_name), ATTR_PTR))-1;
+          dset_size = hdf5::dataset_num_elements(io_comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::ATTR_PTR))-1;
 
           if (numitems > 0)
             {
@@ -218,7 +217,7 @@ namespace neuroio
           if (read_size > 0)
             {
               // determine which blocks of block_ptr are read by which I/O rank
-              rank_ranges(read_size, io_size, ranges);
+              mpi::rank_ranges(read_size, io_size, ranges);
             
               start = ranges[rank].first + offset;
               end   = start + ranges[rank].second;
@@ -263,64 +262,64 @@ namespace neuroio
           
             // allocate buffer and memory dataspace
             attr_ptr.resize(block);
-            status = hdf5_read<ATTR_PTR_T> (file,
-                                            cell_attribute_path(TREES, pop_name, ATTR_PTR),
-                                            start, block,
-                                            ATTR_PTR_H5_NATIVE_T,
-                                            attr_ptr, rapl);
+            status = hdf5::read<ATTR_PTR_T> (file,
+                                             hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR),
+                                             start, block,
+                                             ATTR_PTR_H5_NATIVE_T,
+                                             attr_ptr, rapl);
             assert(status >= 0);
           
             sec_ptr.resize(block);
-            status = hdf5_read<SEC_PTR_T> (file,
-                                           cell_attribute_path(TREES, pop_name, SEC_PTR),
-                                           start, block,
-                                           SEC_PTR_H5_NATIVE_T,
-                                           sec_ptr, rapl);
+            status = hdf5::read<SEC_PTR_T> (file,
+                                            hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SEC_PTR),
+                                            start, block,
+                                            SEC_PTR_H5_NATIVE_T,
+                                            sec_ptr, rapl);
             assert(status >= 0);
           
             topo_ptr.resize(block);
-            status = hdf5_read<TOPO_PTR_T> (file,
-                                            cell_attribute_path(TREES, pop_name, TOPO_PTR),
-                                            start, block,
-                                            TOPO_PTR_H5_NATIVE_T,
-                                            topo_ptr, rapl);
+            status = hdf5::read<TOPO_PTR_T> (file,
+                                             hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TOPO_PTR),
+                                             start, block,
+                                             TOPO_PTR_H5_NATIVE_T,
+                                             topo_ptr, rapl);
             assert(status >= 0);
 
             gid_vector.resize(block-1);
-            status = hdf5_read<CELL_IDX_T> (file,
-                                            cell_attribute_path(TREES, pop_name, TREE_ID),
-                                            start, block-1,
-                                            CELL_IDX_H5_NATIVE_T,
-                                            gid_vector, rapl);
+            status = hdf5::read<CELL_IDX_T> (file,
+                                             hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TREE_ID),
+                                             start, block-1,
+                                             CELL_IDX_H5_NATIVE_T,
+                                             gid_vector, rapl);
 
           
             hsize_t topo_start = topo_ptr[0];
             size_t topo_block = topo_ptr.back()-topo_start;
           
             src_vector.resize(topo_block);
-            status = hdf5_read<SECTION_IDX_T> (file,
-                                               cell_attribute_path(TREES, pop_name, SRCSEC),
-                                               topo_start, topo_block,
-                                               SECTION_IDX_H5_NATIVE_T,
-                                               src_vector, rapl);
+            status = hdf5::read<SECTION_IDX_T> (file,
+                                                hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC),
+                                                topo_start, topo_block,
+                                                SECTION_IDX_H5_NATIVE_T,
+                                                src_vector, rapl);
             assert(status == 0);
             dst_vector.resize(topo_block);
-            status = hdf5_read<SECTION_IDX_T> (file,
-                                               cell_attribute_path(TREES, pop_name, DSTSEC),
-                                               topo_start, topo_block,
-                                               SECTION_IDX_H5_NATIVE_T,
-                                               dst_vector, rapl);
+            status = hdf5::read<SECTION_IDX_T> (file,
+                                                hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::DSTSEC),
+                                                topo_start, topo_block,
+                                                SECTION_IDX_H5_NATIVE_T,
+                                                dst_vector, rapl);
             assert(status == 0);
           
             hsize_t sec_start = sec_ptr[0];
             size_t sec_block = sec_ptr.back()-sec_start;
           
             sections.resize(sec_block);
-            status = hdf5_read<SECTION_IDX_T> (file,
-                                               cell_attribute_path(TREES, pop_name, SECTION),
-                                               sec_start, sec_block,
-                                               SECTION_IDX_H5_NATIVE_T,
-                                               sections, rapl);
+            status = hdf5::read<SECTION_IDX_T> (file,
+                                                hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SECTION),
+                                                sec_start, sec_block,
+                                                SECTION_IDX_H5_NATIVE_T,
+                                                sections, rapl);
             assert(status == 0);
           
           
@@ -329,53 +328,53 @@ namespace neuroio
             size_t attr_block = attr_ptr.back()-attr_start;
           
             xcoords.resize(attr_block);
-            status = hdf5_read<COORD_T> (file,
-                                         cell_attribute_path(TREES, pop_name, X_COORD),
-                                         attr_start, attr_block,
-                                         COORD_H5_NATIVE_T,
-                                         xcoords, rapl);
+            status = hdf5::read<COORD_T> (file,
+                                          hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD),
+                                          attr_start, attr_block,
+                                          COORD_H5_NATIVE_T,
+                                          xcoords, rapl);
             assert(status == 0);
             ycoords.resize(attr_block);
-            status = hdf5_read<COORD_T> (file,
-                                         cell_attribute_path(TREES, pop_name, Y_COORD),
-                                         attr_start, attr_block,
-                                         COORD_H5_NATIVE_T,
-                                         ycoords, rapl);
+            status = hdf5::read<COORD_T> (file,
+                                          hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::Y_COORD),
+                                          attr_start, attr_block,
+                                          COORD_H5_NATIVE_T,
+                                          ycoords, rapl);
             assert(status == 0);
             zcoords.resize(attr_block);
-            status = hdf5_read<COORD_T> (file,
-                                         cell_attribute_path(TREES, pop_name, Z_COORD),
-                                         attr_start, attr_block,
-                                         COORD_H5_NATIVE_T,
-                                         zcoords, rapl);
+            status = hdf5::read<COORD_T> (file,
+                                          hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::Z_COORD),
+                                          attr_start, attr_block,
+                                          COORD_H5_NATIVE_T,
+                                          zcoords, rapl);
             assert(status == 0);
             radiuses.resize(attr_block);
-            status = hdf5_read<REALVAL_T> (file,
-                                           cell_attribute_path(TREES, pop_name, RADIUS),
-                                           attr_start, attr_block,
-                                           REAL_H5_NATIVE_T,
-                                           radiuses, rapl);
+            status = hdf5::read<REALVAL_T> (file,
+                                            hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::RADIUS),
+                                            attr_start, attr_block,
+                                            REAL_H5_NATIVE_T,
+                                            radiuses, rapl);
             assert(status == 0);
             layers.resize(attr_block);
-            status = hdf5_read<LAYER_IDX_T> (file,
-                                             cell_attribute_path(TREES, pop_name, LAYER),
-                                             attr_start, attr_block,
-                                             LAYER_IDX_H5_NATIVE_T,
-                                             layers, rapl);
+            status = hdf5::read<LAYER_IDX_T> (file,
+                                              hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::LAYER),
+                                              attr_start, attr_block,
+                                              LAYER_IDX_H5_NATIVE_T,
+                                              layers, rapl);
             assert(status == 0);
             parents.resize(attr_block);
-            status = hdf5_read<PARENT_NODE_IDX_T> (file,
-                                                   cell_attribute_path(TREES, pop_name, PARENT),
-                                                   attr_start, attr_block,
-                                                   PARENT_NODE_IDX_H5_NATIVE_T,
-                                                   parents, rapl);
+            status = hdf5::read<PARENT_NODE_IDX_T> (file,
+                                                    hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::PARENT),
+                                                    attr_start, attr_block,
+                                                    PARENT_NODE_IDX_H5_NATIVE_T,
+                                                    parents, rapl);
             assert(status == 0);
             swc_types.resize(attr_block);
-            status = hdf5_read<SWC_TYPE_T> (file,
-                                            cell_attribute_path(TREES, pop_name, SWCTYPE),
-                                            attr_start, attr_block,
-                                            hdf5_swc_type,
-                                            swc_types, rapl);
+            status = hdf5::read<SWC_TYPE_T> (file,
+                                             hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SWCTYPE),
+                                             attr_start, attr_block,
+                                             hdf5_swc_type,
+                                             swc_types, rapl);
             assert(status == 0);
           
           
@@ -400,16 +399,16 @@ namespace neuroio
           vector<int> rank_sequence;
           // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
           // (as opposed to starting at rank 0)
-          for (int dst_rank = rank; (int)dst_rank < size; dst_rank++)
+          for (size_t dst_rank = rank; dst_rank < size; dst_rank++)
             {
               rank_sequence.push_back(dst_rank);
             }
-          for (int dst_rank = 0; (int)dst_rank < rank; dst_rank++)
+          for (size_t dst_rank = 0; dst_rank < rank; dst_rank++)
             {
               rank_sequence.push_back(dst_rank);
             }
 
-          for (const int& dst_rank : rank_sequence)
+          for (const size_t& dst_rank : rank_sequence)
             {
               auto it1 = rank_tree_map.find(dst_rank); 
               sdispls[dst_rank] = sendpos;
@@ -421,7 +420,7 @@ namespace neuroio
                       CELL_IDX_T  gid   = it2->first;
                       const neurotree_t &tree = it2->second;
                     
-                      pack_tree(all_comm, gid, tree, sendpos, sendbuf);
+                      mpi::pack_tree(all_comm, gid, tree, sendpos, sendbuf);
                     }
                 }
               sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
@@ -457,7 +456,7 @@ namespace neuroio
       int recvpos = 0; 
       while ((size_t)recvpos < recvbuf_size)
         {
-          unpack_tree(all_comm, recvbuf, recvpos, tree_map);
+          mpi::unpack_tree(all_comm, recvbuf, recvpos, tree_map);
           assert((size_t)recvpos <= recvbuf_size);
         }
       recvbuf.clear();

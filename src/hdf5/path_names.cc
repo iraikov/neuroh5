@@ -1,13 +1,13 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file hdf5_path_names.cc
+///  @file path_names.cc
 ///
 ///  Definitions of Neurograph HDF5 path manipulation function.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
-#include "hdf5_path_names.hh"
+#include "path_names.hh"
 
 using namespace std;
 

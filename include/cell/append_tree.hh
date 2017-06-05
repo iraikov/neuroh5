@@ -13,7 +13,7 @@ namespace neuroh5
     /*****************************************************************************
      * Save tree data structures to HDF5
      *****************************************************************************/
-    int write_trees
+    int append_trees
     (
      MPI_Comm comm,
      const std::string& file_name,

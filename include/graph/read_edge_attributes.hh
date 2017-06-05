@@ -1,8 +1,8 @@
 #ifndef READ_EDGE_ATTRIBUTES_HH
 #define READ_EDGE_ATTRIBUTES_HH
 
+#include "neuroh5_types.hh"
 #include "infer_datatype.hh"
-#include "ngh5_types.hh"
 
 #include "hdf5.h"
 #include "mpi.h"
@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-namespace neuroio
+namespace neuroh5
 {
-  namespace hdf5
+  namespace graph
   {
     //////////////////////////////////////////////////////////////////////////
     template <typename T>

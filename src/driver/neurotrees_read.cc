@@ -4,19 +4,18 @@
 ///
 ///  Driver program for read_trees function.
 ///
-///  Copyright (C) 2016 Project NeuroH5.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
 #include "debug.hh"
 
-#include "neurotrees_types.hh"
-#include "hdf5_path_names.hh"
+#include "neuroh5_types.hh"
+#include "cell_populations.hh"
 #include "read_tree.hh"
-#include "read_population_names.hh"
-#include "read_population_ranges.hh"
-#include "dataset_num_elements.hh"
 #include "validate_tree.hh"
+#include "path_names.hh"
+#include "dataset_num_elements.hh"
 
 #include <mpi.h>
 #include <getopt.h>
@@ -73,7 +72,7 @@ void output_tree(string outfilename,
   const std::vector<COORD_T> & xcoords=get<4>(tree);
   const std::vector<COORD_T> & ycoords=get<5>(tree);
   const std::vector<COORD_T> & zcoords=get<6>(tree);
-  const std::vector<REALVAL_T> & radiuses=get<7>(tree);
+  /*const std::vector<REALVAL_T> & radiuses=get<7>(tree);*/
   const std::vector<LAYER_IDX_T> & layers=get<8>(tree);
   const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
   const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
@@ -197,9 +196,9 @@ int main(int argc, char** argv)
   vector<pop_range_t> pop_vector;
   size_t n_nodes;
   // Read population info
-  assert(read_population_ranges(all_comm, input_file_name,
-                                pop_ranges, pop_vector,
-                                n_nodes) >= 0);
+  assert(cell::read_population_ranges(all_comm, input_file_name,
+                                      pop_ranges, pop_vector,
+                                      n_nodes) >= 0);
 
   // TODO; create separate functions for opening HDF5 file for reading and writing
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -209,25 +208,25 @@ int main(int argc, char** argv)
   assert(file >= 0);
   
   vector<string> pop_names;
-  status = read_population_names(all_comm, file, pop_names);
+  status = cell::read_population_names(all_comm, file, pop_names);
   assert (status >= 0);
 
   status = H5Pclose (fapl);
   status = H5Fclose (file);
 
-  size_t start, end;
+  size_t start=0, end=0;
   std::vector<neurotree_t> tree_list;
   for (size_t i = 0; i<pop_names.size(); i++)
     {
-      status = read_trees (all_comm, input_file_name,
-                           pop_names[i], pop_vector[i].start,
-                           tree_list, start, end, true);
+      status = cell::read_trees (all_comm, input_file_name,
+                                 pop_names[i], pop_vector[i].start,
+                                 tree_list, start, end, true);
       assert (status >= 0);
       
       for_each(tree_list.cbegin(),
                tree_list.cend(),
                [&] (const neurotree_t& tree)
-               { validate_tree(tree); } 
+               { cell::validate_tree(tree); } 
                );
 
     }

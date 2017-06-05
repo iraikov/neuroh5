@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file attrmap.hh
+///  @file attr_map.hh
 ///
 ///  Functions for storing attributes in vectors of different types.
 ///
@@ -18,25 +18,27 @@
 
 namespace neuroh5
 {
-  namespace cell
+  namespace data
   {
 
     struct AttrMap
     {
       
-      static const size_t num_attr_types = 6;
+      static const size_t num_attr_types    = 7;
       static const size_t attr_index_float  = 0;
       static const size_t attr_index_uint8  = 1;
       static const size_t attr_index_int8   = 2;
       static const size_t attr_index_uint16 = 3;
-      static const size_t attr_index_uint32 = 4;
-      static const size_t attr_index_int32  = 5;
+      static const size_t attr_index_int16  = 4;
+      static const size_t attr_index_uint32 = 5;
+      static const size_t attr_index_int32  = 6;
       
       std::set<CELL_IDX_T> gid_set;
       std::vector <std::map < CELL_IDX_T, std::vector <float> > >    float_values;
       std::vector <std::map < CELL_IDX_T, std::vector <uint8_t> > >  uint8_values;
       std::vector <std::map < CELL_IDX_T, std::vector <int8_t> > >   int8_values;
       std::vector <std::map < CELL_IDX_T, std::vector <uint16_t> > > uint16_values;
+      std::vector <std::map < CELL_IDX_T, std::vector <int16_t> > >  int16_values;
       std::vector <std::map < CELL_IDX_T, std::vector <uint32_t> > > uint32_values;
       std::vector <std::map < CELL_IDX_T, std::vector <int32_t> > >  int32_values;
 
@@ -77,6 +79,9 @@ namespace neuroh5
         uint16_values.insert(uint16_values.end(),
                              a.uint16_values.begin(),
                              a.uint16_values.end());
+        int16_values.insert(int16_values.end(),
+                            a.int16_values.begin(),
+                            a.int16_values.end());
         uint32_values.insert(uint32_values.end(),
                              a.uint32_values.begin(),
                              a.uint32_values.end());
@@ -103,6 +108,10 @@ namespace neuroh5
           {
             uint16_values[i].erase(gid);
           }
+        for (size_t i=0; i<int16_values.size(); i++)
+          {
+            int16_values[i].erase(gid);
+          }
         for (size_t i=0; i<uint32_values.size(); i++)
           {
             uint32_values[i].erase(gid);
@@ -120,6 +129,7 @@ namespace neuroh5
         uint8_values.clear();
         int8_values.clear();
         uint16_values.clear();
+        int16_values.clear();
         uint32_values.clear();
         int32_values.clear();
         gid_set.clear();
@@ -136,6 +146,7 @@ namespace neuroh5
       std::map<std::string, size_t> uint8_names;
       std::map<std::string, size_t> int8_names;
       std::map<std::string, size_t> uint16_names;
+      std::map<std::string, size_t> int16_names;
       std::map<std::string, size_t> uint32_names;
       std::map<std::string, size_t> int32_names;
 

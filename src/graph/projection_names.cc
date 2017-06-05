@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "debug.hh"
-#include "hdf5_path_names.hh"
+#include "path_names.hh"
 #include "bcast_string_vector.hh"
 
 
@@ -25,11 +25,9 @@
 
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
-  namespace io
-  {
-    namespace hdf5
+    namespace graph
     {
       //////////////////////////////////////////////////////////////////////////
       herr_t iterate_cb
@@ -71,7 +69,7 @@ namespace ngh5
             assert(file >= 0);
 
 
-            grp = H5Gopen(file, PRJ.c_str(), H5P_DEFAULT);
+            grp = H5Gopen(file, hdf5::PRJ.c_str(), H5P_DEFAULT);
             assert(grp >= 0);
             assert(H5Gget_num_objs(grp, &num_projections)>=0);
             hsize_t idx = 0;
@@ -98,5 +96,4 @@ namespace ngh5
         return ierr;
       }
     }
-  }
 }

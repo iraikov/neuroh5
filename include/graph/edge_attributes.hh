@@ -1,9 +1,10 @@
 #ifndef EDGE_ATTRIBUTES_HH
 #define EDGE_ATTRIBUTES_HH
 
+#include "neuroh5_types.hh"
+
 #include "infer_datatype.hh"
-#include "ngh5_types.hh"
-#include "edge_attr.hh"
+#include "attr_val.hh"
 #include "read_edge_attributes.hh"
 #include "write_edge_attributes.hh"
 
@@ -87,7 +88,7 @@ namespace neuroh5
      const DST_PTR_T       edge_base,
      const DST_PTR_T       edge_count,
      const hid_t           attr_h5type,
-     model::EdgeNamedAttr& attr_values
+     data::NamedAttrVal& attr_values
      );
 
     extern int read_all_edge_attributes
@@ -98,7 +99,7 @@ namespace neuroh5
      const DST_PTR_T                                    edge_base,
      const DST_PTR_T                                    edge_count,
      const std::vector< std::pair<std::string,hid_t> >& edge_attr_info,
-     model::EdgeNamedAttr&                              edge_attr_values
+     data::NamedAttrVal&                              edge_attr_values
      );
   }
 }

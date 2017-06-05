@@ -4,7 +4,7 @@
 #include <hdf5.h>
 #include <mpi.h>
 
-#include "ngh5_types.hh"
+#include "neuroh5_types.hh"
 
 #include <cassert>
 #include <cstdint>

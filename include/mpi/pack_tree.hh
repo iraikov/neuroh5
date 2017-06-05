@@ -171,7 +171,7 @@ namespace neuroh5
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
      const CELL_IDX_T gid,
-     NamedAttrMap& m,
+     data::NamedAttrMap& m,
      const size_t &recvbuf_size,
      const vector<uint8_t> &recvbuf,
      int &recvpos

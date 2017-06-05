@@ -59,8 +59,8 @@ namespace neuroh5
      const bool                         opt_attrs,
      const std::vector<std::string>&    prj_names,
      // A vector that maps nodes to compute ranks
-     const std::map<NODE_IDX_T, model::rank_t>&  node_rank_map,
-     std::vector < model::edge_map_t >& prj_vector,
+     const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
+     std::vector < edge_map_t >& prj_vector,
      std::vector < std::vector <std::vector<std::string>> >& edge_attr_names_vector,
      size_t                            &total_num_nodes,
      size_t                            &local_num_edges,

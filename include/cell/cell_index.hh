@@ -1,8 +1,8 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file read_cell_index
+///  @file cell_index
 ///
-///  
+///  Routines for reading and writing the indices of cells for which attributes are defined.
 ///
 ///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
@@ -24,6 +24,14 @@ namespace neuroh5
      const string&        file_name,
      const string&        pop_name,
      vector<CELL_IDX_T>&  cell_index
+     );
+
+    herr_t append_cell_index
+    (
+     MPI_Comm             comm,
+     const string&        file_name,
+     const string&        pop_name,
+     const vector<CELL_IDX_T>&  cell_index
      );
 
   }

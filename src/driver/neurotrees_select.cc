@@ -24,7 +24,7 @@
 #include <mpi.h>
 
 #include "neuroh5_types.hh"
-#include "hdf5_path_names.hh"
+#include "path_names.hh"
 #include "scatter_read_tree.hh"
 #include "write_tree.hh"
 #include "cell_attributes.hh"
@@ -205,9 +205,9 @@ int main(int argc, char** argv)
   vector<pop_range_t> pop_vector;
 
   // Read population info to determine n_nodes
-  assert(read_population_ranges(all_comm, input_file_name,
-                                pop_ranges, pop_vector,
-                                n_nodes) >= 0);
+  assert(cell::read_population_ranges(all_comm, input_file_name,
+                                      pop_ranges, pop_vector,
+                                      n_nodes) >= 0);
   // TODO; create separate functions for opening HDF5 file for reading and writing
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
   assert(fapl >= 0);
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
   assert(input_file >= 0);
 
   vector<string> pop_names;
-  status = read_population_names(all_comm, input_file, pop_names);
+  status = cell::read_population_names(all_comm, input_file, pop_names);
   assert (status >= 0);
 
   // Determine index of population to be read
@@ -280,13 +280,13 @@ int main(int argc, char** argv)
     }
 
   map<CELL_IDX_T, neurotree_t>  tree_map;
-  NamedAttrMap attr_map;
+  data::NamedAttrMap attr_map;
   
-  status = scatter_read_trees (all_comm, input_file_name, io_size,
-                               opt_attrs, attr_namespace,
-                               node_rank_map,
-                               pop_name, pop_vector[pop_idx].start,
-                               tree_map, attr_map);
+  status = cell::scatter_read_trees (all_comm, input_file_name, io_size,
+                                     opt_attrs, attr_namespace,
+                                     node_rank_map,
+                                     pop_name, pop_vector[pop_idx].start,
+                                     tree_map, attr_map);
   
   
   assert (status >= 0);
@@ -295,28 +295,28 @@ int main(int argc, char** argv)
            tree_map.cend(),
            [&] (const pair<CELL_IDX_T, neurotree_t> &element)
            { const neurotree_t& tree = element.second;
-             validate_tree(tree); } 
+             cell::validate_tree(tree); } 
            );
   
   size_t local_num_trees = tree_map.size();
   
   printf("Task %d has received a total of %lu trees\n", rank,  local_num_trees);
   vector <size_t> num_attrs;
-  num_attrs.resize(AttrMap::num_attr_types);
+  num_attrs.resize(data::AttrMap::num_attr_types);
 
   vector<vector<string>> attr_names;
-  attr_names.resize(AttrMap::num_attr_types);
+  attr_names.resize(data::AttrMap::num_attr_types);
 
   attr_map.attr_names(attr_names);
   attr_map.num_attrs(num_attrs);
 
 
-  vector<map< CELL_IDX_T, vector<float> > >    subset_float_values(num_attrs[AttrMap::attr_index_float]);
-  vector<map< CELL_IDX_T, vector<uint8_t> > >  subset_uint8_values(num_attrs[AttrMap::attr_index_uint8]);
-  vector<map< CELL_IDX_T, vector<int8_t> > >   subset_int8_values(num_attrs[AttrMap::attr_index_int8]);
-  vector<map< CELL_IDX_T, vector<uint16_t> > > subset_uint16_values(num_attrs[AttrMap::attr_index_uint16]);
-  vector<map< CELL_IDX_T, vector<uint32_t> > > subset_uint32_values(num_attrs[AttrMap::attr_index_uint32]);
-  vector<map< CELL_IDX_T, vector<int32_t> > >  subset_int32_values(num_attrs[AttrMap::attr_index_int32]);
+  vector<map< CELL_IDX_T, vector<float> > >    subset_float_values(num_attrs[data::AttrMap::attr_index_float]);
+  vector<map< CELL_IDX_T, vector<uint8_t> > >  subset_uint8_values(num_attrs[data::AttrMap::attr_index_uint8]);
+  vector<map< CELL_IDX_T, vector<int8_t> > >   subset_int8_values(num_attrs[data::AttrMap::attr_index_int8]);
+  vector<map< CELL_IDX_T, vector<uint16_t> > > subset_uint16_values(num_attrs[data::AttrMap::attr_index_uint16]);
+  vector<map< CELL_IDX_T, vector<uint32_t> > > subset_uint32_values(num_attrs[data::AttrMap::attr_index_uint32]);
+  vector<map< CELL_IDX_T, vector<int32_t> > >  subset_int32_values(num_attrs[data::AttrMap::attr_index_int32]);
 
   vector<neurotree_t> tree_subset;
   
@@ -371,14 +371,14 @@ int main(int argc, char** argv)
                     MPI_SUM, 0, all_comm) >= 0);
   assert(MPI_Bcast(&global_subset_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
 
-  printf("Task %d local selection size is %lu\n", rank, local_subset_size);
+  printf("Task %d local selection size is %u\n", rank, local_subset_size);
 
   hsize_t ptr_start = 0, attr_start = 0, sec_start = 0, topo_start = 0;
 
   if (global_subset_size > 0)
     {
       //status = access( output_file_name.c_str(), F_OK );
-      status = hdf5_create_tree_file (all_comm, output_file_name);
+      status = hdf5::create_file_toplevel (all_comm, output_file_name);
       assert(status == 0);
       MPI_Barrier(all_comm);
       
@@ -389,16 +389,16 @@ int main(int argc, char** argv)
       hid_t output_file = H5Fopen(output_file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(output_file >= 0);
       
-      if (!hdf5_exists_tree_dataset(output_file, pop_name))
+      if (!hdf5::exists_tree_dataset(output_file, pop_name))
         {
-          status = hdf5_create_tree_dataset(all_comm, output_file, pop_name);
+          status = hdf5::create_tree_dataset(all_comm, output_file, pop_name);
         }
 
-      if (!hdf5_exists_tree_h5types(output_file))
+      if (!hdf5::exists_tree_h5types(output_file))
         {
           input_file = H5Fopen(input_file_name.c_str(), H5F_ACC_RDONLY, fapl);
           assert(input_file >= 0);
-          status = hdf5_copy_tree_h5types(input_file, output_file);
+          status = hdf5::copy_tree_h5types(input_file, output_file);
           status = H5Fclose (input_file);
           assert(status == 0);
         }
@@ -409,9 +409,9 @@ int main(int argc, char** argv)
       status = H5Fclose (output_file);
       assert(status == 0);
       
-      status = write_trees(all_comm, output_file_name, pop_name, 
-                           ptr_start, attr_start, sec_start, topo_start, 
-                           tree_subset);
+      status = cell::write_trees(all_comm, output_file_name, pop_name, 
+                                 ptr_start, attr_start, sec_start, topo_start, 
+                                 tree_subset);
       
       assert(status == 0);
 
@@ -419,76 +419,76 @@ int main(int argc, char** argv)
         {
           for (size_t i=0; i<subset_float_values.size(); i++)
             {
-              write_cell_attribute_map<float>(all_comm,
-                                              output_file_name,
-                                              attr_namespace,
-                                              pop_name,
-                                              attr_names[AttrMap::attr_index_float][i],
-                                              subset_float_values[i],
-                                              chunksize,
-                                              value_chunksize,
-                                              cachesize);
+              cell::write_cell_attribute_map<float>(all_comm,
+                                                    output_file_name,
+                                                    attr_namespace,
+                                                    pop_name,
+                                                    attr_names[data::AttrMap::attr_index_float][i],
+                                                    subset_float_values[i],
+                                                    chunksize,
+                                                    value_chunksize,
+                                                    cachesize);
             }
           for (size_t i=0; i<subset_uint8_values.size(); i++)
             {
-              write_cell_attribute_map<uint8_t>(all_comm,
-                                                output_file_name,
-                                                attr_namespace,
-                                                pop_name,
-                                                attr_names[AttrMap::attr_index_uint8][i],
-                                                subset_uint8_values[i],
-                                                chunksize,
-                                                value_chunksize,
-                                                cachesize);
+              cell::write_cell_attribute_map<uint8_t>(all_comm,
+                                                      output_file_name,
+                                                      attr_namespace,
+                                                      pop_name,
+                                                      attr_names[data::AttrMap::attr_index_uint8][i],
+                                                      subset_uint8_values[i],
+                                                      chunksize,
+                                                      value_chunksize,
+                                                      cachesize);
             }
           for (size_t i=0; i<subset_int8_values.size(); i++)
             {
-              write_cell_attribute_map<int8_t>(all_comm,
-                                               output_file_name,
-                                               attr_namespace,
-                                               pop_name,
-                                               attr_names[AttrMap::attr_index_int8][i],
-                                               subset_int8_values[i],
-                                               chunksize,
-                                               value_chunksize,
-                                               cachesize);
+              cell::write_cell_attribute_map<int8_t>(all_comm,
+                                                     output_file_name,
+                                                     attr_namespace,
+                                                     pop_name,
+                                                     attr_names[data::AttrMap::attr_index_int8][i],
+                                                     subset_int8_values[i],
+                                                     chunksize,
+                                                     value_chunksize,
+                                                     cachesize);
             }
           for (size_t i=0; i<subset_uint16_values.size(); i++)
             {
-              write_cell_attribute_map<uint16_t>(all_comm,
-                                                 output_file_name,
-                                                 attr_namespace,
-                                                 pop_name,
-                                                 attr_names[AttrMap::attr_index_uint16][i],
-                                                 subset_uint16_values[i],
-                                                 chunksize,
-                                                 value_chunksize,
-                                                 cachesize);
+              cell::write_cell_attribute_map<uint16_t>(all_comm,
+                                                       output_file_name,
+                                                       attr_namespace,
+                                                       pop_name,
+                                                       attr_names[data::AttrMap::attr_index_uint16][i],
+                                                       subset_uint16_values[i],
+                                                       chunksize,
+                                                       value_chunksize,
+                                                       cachesize);
             }
           for (size_t i=0; i<subset_uint32_values.size(); i++)
             {
-              write_cell_attribute_map<uint32_t>(all_comm,
-                                                 output_file_name,
-                                                 attr_namespace,
-                                                 pop_name,
-                                                 attr_names[AttrMap::attr_index_uint32][i],
-                                                 subset_uint32_values[i],
-                                                 chunksize,
-                                                 value_chunksize,
-                                                 cachesize);
+              cell::write_cell_attribute_map<uint32_t>(all_comm,
+                                                       output_file_name,
+                                                       attr_namespace,
+                                                       pop_name,
+                                                       attr_names[data::AttrMap::attr_index_uint32][i],
+                                                       subset_uint32_values[i],
+                                                       chunksize,
+                                                       value_chunksize,
+                                                       cachesize);
             }
           
           for (size_t i=0; i<subset_int32_values.size(); i++)
             {
-              write_cell_attribute_map<int32_t>(all_comm,
-                                                output_file_name,
-                                                attr_namespace,
-                                                pop_name,
-                                                attr_names[AttrMap::attr_index_int32][i],
-                                                subset_int32_values[i],
-                                                chunksize,
-                                                value_chunksize,
-                                                cachesize);
+              cell::write_cell_attribute_map<int32_t>(all_comm,
+                                                      output_file_name,
+                                                      attr_namespace,
+                                                      pop_name,
+                                                      attr_names[data::AttrMap::attr_index_int32][i],
+                                                      subset_int32_values[i],
+                                                      chunksize,
+                                                      value_chunksize,
+                                                      cachesize);
             }
         }
     }

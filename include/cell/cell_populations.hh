@@ -33,7 +33,7 @@ namespace neuroh5
     (
      MPI_Comm                                           comm,
      const std::string&                                 file_name,
-     std::set< std::pair<model::pop_t,model::pop_t> >&  pop_pairs
+     std::set< std::pair<pop_t,pop_t> >&  pop_pairs
      );
 
     /// @brief Reads the id ranges of each population
@@ -57,8 +57,8 @@ namespace neuroh5
     (
      MPI_Comm                         comm,
      const std::string&               file_name,
-     model::pop_range_map_t&          pop_ranges,
-     std::vector<model::pop_range_t>& pop_vector,
+     pop_range_map_t&          pop_ranges,
+     std::vector<pop_range_t>& pop_vector,
      size_t&                          total_num_nodes
      );
 
@@ -66,7 +66,7 @@ namespace neuroh5
     (
      MPI_Comm                         comm,
      const std::string&               file_name,
-     std::vector< std::pair<model::pop_t, std::string> > & pop_labels
+     std::vector< std::pair<pop_t, std::string> > & pop_labels
      );
 
     

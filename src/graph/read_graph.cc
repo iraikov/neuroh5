@@ -13,7 +13,7 @@
 #include "edge_attributes.hh"
 
 #include "read_dbs_projection.hh"
-#include "population_reader.hh"
+#include "cell_populations.hh"
 #include "read_graph.hh"
 #include "read_population.hh"
 #include "validate_edge_list.hh"
@@ -21,7 +21,7 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace neuroio::data;
+using namespace neuroh5::data;
 using namespace std;
 
 namespace neuroh5
@@ -79,7 +79,7 @@ namespace neuroh5
                 " src_start = ", src_start,
                 "\n");
 
-          assert(io::hdf5::read_dbs_projection
+          assert(graph::read_dbs_projection
                  (comm, file_name, prj_names[i], dst_start, src_start,
                   total_prj_num_edges, block_base, edge_base, dst_blk_ptr,
                   dst_idx, dst_ptr, src_idx) >= 0);
@@ -97,10 +97,10 @@ namespace neuroh5
           if (opt_attrs)
             {
               edge_count = src_idx.size();
-              assert(io::hdf5::get_edge_attributes(file_name, prj_names[i],
+              assert(graph::get_edge_attributes(file_name, prj_names[i],
                                                    edge_attr_info) >= 0);
 
-              assert(io::hdf5::read_all_edge_attributes
+              assert(graph::read_all_edge_attributes
                      (comm, file_name, prj_names[i], edge_base, edge_count,
                       edge_attr_info, edge_attr_values) >= 0);
             }
