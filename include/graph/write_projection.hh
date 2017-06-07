@@ -15,9 +15,8 @@ namespace neuroh5
     void write_projection
     (
      hid_t                     file,
-     const std::string&        projection_name,
-     const POP_IDX_T&          src_pop_idx,
-     const POP_IDX_T&          dst_pop_idx,
+     const std::string&        src_pop_name,
+     const std::string&        dst_pop_name,
      const NODE_IDX_T&         src_start,
      const NODE_IDX_T&         src_end,
      const NODE_IDX_T&         dst_start,

@@ -8,11 +8,11 @@ namespace neuroh5
   namespace hdf5
   {
     
-    const std::string POPS       = "Populations";
-    const std::string PRJ        = "Projections";
-    const std::string H5_TYPES   = "H5Types";
-    const std::string POP_LABELS = "Population labels";
-    const std::string POP_COMBS  = "Population combinations";
+    const std::string POPULATIONS = "Populations";
+    const std::string PROJECTIONS = "Projections";
+    const std::string H5_TYPES    = "H5Types";
+    const std::string POP_LABELS  = "Population labels";
+    const std::string POP_COMBS   = "Population combinations";
   
     const std::string TREES      = "Trees";
     const std::string X_COORD    = "X Coordinate";
@@ -30,7 +30,12 @@ namespace neuroh5
     const std::string ATTR_PTR   = "Attribute Pointer";
     const std::string TOPO_PTR   = "Topology Pointer";
     const std::string SEC_PTR    = "Section Pointer";
-  
+
+    const std::string DST_BLK_PTR = "Destination Block Pointer";
+    const std::string DST_BLK_IDX = "Destination Block Index";
+    const std::string DST_PTR     = "Destination Pointer";
+    const std::string SRC_IDX     = "Source Index";
+    
     /// @brief Returns the path to a population group
     ///
     /// @param pop_name         Population group name

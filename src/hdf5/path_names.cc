@@ -22,7 +22,7 @@ namespace neuroio
      const string& pop_name
      )
     {
-      return "/" + POPS + "/" + pop_name + "/" + name_space;
+      return "/" + POPULATIONS + "/" + pop_name + "/" + name_space;
     }
     
     string cell_attribute_path
@@ -35,20 +35,32 @@ namespace neuroio
       return cell_attribute_prefix(name_space, pop_name) + "/" + attr_name;
     }
     
+    string projection_attribute_path
+    (
+     const string& src_pop_space,
+     const string& dst_pop_name,
+     const string& attr_name
+     )
+    {
+      return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name + "/" + attr_name;
+    }
+    
+    string projection_attribute_path
+    (
+     const string& src_pop_name,
+     const string& dst_pop_name,
+     const string& attr_name
+     )
+    {
+      return projection_attribute_prefix(src_pop_name, dst_pop_name) + "/" + attr_name;
+    }
+    
     string population_path
     (
      const string& pop_name
      )
     {
-      return "/" + POPS + "/" + pop_name;
-    }
-    
-    string population_trees_path
-    (
-     const string& pop_name
-     )
-    {
-      return "/" + POPS + "/" + pop_name + "/" + TREES;
+      return "/" + POPULATIONS + "/" + pop_name;
     }
     
     string h5types_path_join(const string& name)

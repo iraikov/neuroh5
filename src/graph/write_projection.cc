@@ -20,9 +20,8 @@ namespace neuroh5
     void write_projection
     (
      hid_t                     file,
-     const string&             projection_name,
-     const POP_IDX_T&          src_pop_idx,
-     const POP_IDX_T&          dst_pop_idx,
+     const string&             src_pop_name,
+     const string&             dst_pop_name,
      const NODE_IDX_T&         src_start,
      const NODE_IDX_T&         src_end,
      const NODE_IDX_T&         dst_start,
@@ -138,7 +137,7 @@ namespace neuroh5
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
         
-      string path = hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Index");
+      string path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_IDX);
       hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
       hid_t fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
@@ -196,7 +195,7 @@ namespace neuroh5
           dbp.push_back(dbp[0] + recvbuf_num_dest[rank]);
         }
 
-      path = hdf5::projection_path_join(projection_name, "/Connectivity/Destination Block Pointer");
+      path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR);
       dims = (hsize_t)total_num_blocks;
       fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
@@ -256,7 +255,7 @@ namespace neuroh5
           dst_ptr.resize(num_dest);
         }
 
-      path = projection_path_join(projection_name, "/Connectivity/Destination Pointer");
+      path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_PTR);
       dims = total_num_dests;
       ++dims; // one extra element
 
@@ -292,7 +291,7 @@ namespace neuroh5
       // write source index
       // # source indexes = number of edges
 
-      path = projection_path_join(projection_name, "/Connectivity/Source Index");
+      path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX);
       dims = total_num_edges;
 
       fspace = H5Screate_simple(1, &dims, &dims);
@@ -321,48 +320,6 @@ namespace neuroh5
         write(file, path, NODE_IDX_H5_FILE_T, src_idx);
       */
         
-      // write out source and destination population indices
-      dims = 1;
-      path = projection_path_join(projection_name, "Source Population");
-
-      mspace = H5Screate_simple(1, &dims, &dims);
-      assert(mspace >= 0);
-      fspace = H5Screate_simple(1, &dims, &dims);
-      assert(fspace >= 0);
-      dset = H5Dcreate2(file, path.c_str(), POP_IDX_H5_NATIVE_T,
-                        fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
-      assert(dset >= 0);
-      assert(H5Sselect_all(fspace) >= 0);
-      assert(H5Dwrite(dset, POP_IDX_H5_NATIVE_T, mspace, fspace,
-                      H5P_DEFAULT, &src_pop_idx) >= 0);
-
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
-      /*
-        vector<POP_IDX_T> v_src_pop_idx(1, src_pop_idx);         
-	if (rank == 0)
-        {
-        DEBUG("writing src_pop_idx\n");
-        }
-        write(file, path, POP_IDX_H5_FILE_T, v_src_pop_idx);
-      */
-        
-      path = projection_path_join(projection_name, "Destination Population");
-      mspace = H5Screate_simple(1, &dims, &dims);
-      assert(mspace >= 0);
-      fspace = H5Screate_simple(1, &dims, &dims);
-      assert(fspace >= 0);
-      dset = H5Dcreate2(file, path.c_str(), POP_IDX_H5_NATIVE_T,
-                        fspace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
-      assert(dset >= 0);
-      assert(H5Sselect_all(fspace) >= 0);
-      assert(H5Dwrite(dset, POP_IDX_H5_NATIVE_T, mspace, fspace,
-                      H5P_DEFAULT, &dst_pop_idx) >= 0);
-
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
         
       data::NamedAttrVal edge_attr_values;
       edge_attr_values.float_values.resize(edge_attr_names[data::AttrVal::attr_index_float].size());
@@ -381,7 +338,7 @@ namespace neuroh5
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_float][i];
           string path = graph::edge_attribute_path(projection_name, attr_name);
-          cell::write_sparse_attribute<float>(file, path, edge_attr_values.float_values[i]);
+          cell::write_sparse_edge_attribute<float>(file, path, edge_attr_values.float_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.uint8_values.size(); i++)

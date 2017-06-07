@@ -143,13 +143,13 @@ namespace neuroh5
     (
      const hid_t&                    loc,
      const std::string&              path,
-     const std::vector<CELL_IDX_T>&  gid,
+     const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value
      )
     {
       int status;
-      assert(gid.size() == attr_ptr.size()-1);
+      assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
       assert(value.size() > 0);
 
@@ -170,11 +170,11 @@ namespace neuroh5
       size = ssize;
       rank = srank;
 
-      // Determine the total number of gids
-      hsize_t local_gid_size=gid.size();
-      std::vector<uint64_t> gid_size_vector;
-      gid_size_vector.resize(size);
-      status = MPI_Allgather(&local_gid_size, 1, MPI_UINT64_T, &gid_size_vector[0], 1, MPI_UINT64_T, comm);
+      // Determine the total size of index
+      hsize_t local_index_size=index.size();
+      std::vector<uint64_t> index_size_vector;
+      index_size_vector.resize(size);
+      status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
       assert(status == MPI_SUCCESS);
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
@@ -202,32 +202,32 @@ namespace neuroh5
       assert(mtype >= 0);
 
       // create datasets
-      hsize_t ptr_size=0, gid_size=0, value_size=0;
-      size_cell_attributes(comm, loc, path, ptr_size, gid_size, value_size);
+      hsize_t ptr_size=0, index_size=0, value_size=0;
+      size_cell_attributes(comm, loc, path, ptr_size, index_size, value_size);
 
       // Determine starting positions
-      hsize_t ptr_start=0, gid_start=0, value_start=0;
+      hsize_t ptr_start=0, index_start=0, value_start=0;
       if (ptr_size>0)
         {
           ptr_start=ptr_size-1;
         }
-      gid_start=gid_size; value_start=value_size;
+      index_start=index_size; value_start=value_size;
 
-      hsize_t local_value_start=value_start, local_gid_start=gid_start, local_ptr_start=ptr_start;
+      hsize_t local_value_start=value_start, local_index_start=index_start, local_ptr_start=ptr_start;
       // calculate the starting positions of this rank
       for (size_t i=0; i<rank; i++)
         {
           local_value_start = local_value_start + value_size_vector[i];
-          local_gid_start = local_gid_start + gid_size_vector[i];
+          local_index_start = local_index_start + index_size_vector[i];
           local_ptr_start = local_ptr_start + ptr_size_vector[i];
         }
 
       // calculate the new sizes of the datasets
-      hsize_t global_value_size=value_start, global_gid_size=gid_start, global_ptr_size=ptr_start;
+      hsize_t global_value_size=value_start, global_index_size=index_start, global_ptr_size=ptr_start;
       for (size_t i=0; i<size; i++)
         {
           global_value_size  = global_value_size + value_size_vector[i];
-          global_gid_size  = global_gid_size + gid_size_vector[i];
+          global_index_size  = global_index_size + index_size_vector[i];
           global_ptr_size  = global_ptr_size + ptr_size_vector[i];
         }
 
@@ -246,17 +246,22 @@ namespace neuroh5
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
         }
 
-      status = write<CELL_IDX_T> (file, path + "/gid",
-                                  global_gid_size, local_gid_start, local_gid_size,
+      // TODO:
+      // if option index_mode is:
+      // 1) create: create the cell index in /Populations, otherwise validate with index in /Populations
+      // 2) link: link to cell index already in this attribute namespace
+      
+      status = write<CELL_IDX_T> (file, path + "/" + hdf5::CELL_INDEX,
+                                  global_index_size, local_index_start, local_index_size,
                                   CELL_IDX_H5_NATIVE_T,
-                                  gid, wapl);
+                                  index, wapl);
     
-      status = write<ATTR_PTR_T> (file, path + "/ptr",
+      status = write<ATTR_PTR_T> (file, path + "/Attribute Pointer",
                                   global_ptr_size, local_ptr_start, local_ptr_size,
                                   ATTR_PTR_H5_NATIVE_T,
                                   local_attr_ptr, wapl);
     
-      status = write<T> (file, path + "/value",
+      status = write<T> (file, path + "/Attribute Value",
                          global_value_size, local_value_start, local_value_size,
                          mtype, value, wapl);
 
@@ -290,13 +295,13 @@ namespace neuroh5
      MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
-     const std::vector<CELL_IDX_T>&  gid,
+     const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value
      )
     {
       int status;
-      assert(gid.size() == attr_ptr.size()-1);
+      assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
       int ssize, srank; size_t size, rank;
@@ -307,11 +312,11 @@ namespace neuroh5
       size = ssize;
       rank = srank;
 
-      // Determine the total number of gids
-      hsize_t local_gid_size=gid.size();
-      std::vector<uint64_t> gid_size_vector;
-      gid_size_vector.resize(size);
-      status = MPI_Allgather(&local_gid_size, 1, MPI_UINT64_T, &gid_size_vector[0], 1, MPI_UINT64_T, comm);
+      // Determine the total number of indexs
+      hsize_t local_index_size=index.size();
+      std::vector<uint64_t> index_size_vector;
+      index_size_vector.resize(size);
+      status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
       assert(status == MPI_SUCCESS);
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
@@ -332,20 +337,20 @@ namespace neuroh5
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
       assert(status == MPI_SUCCESS);
 
-      hsize_t local_value_start=0, local_gid_start=0, local_ptr_start=0;
+      hsize_t local_value_start=0, local_index_start=0, local_ptr_start=0;
       // calculate the starting positions of this rank
       for (size_t i=0; i<rank; i++)
         {
           local_value_start = local_value_start + value_size_vector[i];
-          local_gid_start = local_gid_start + gid_size_vector[i];
+          local_index_start = local_index_start + index_size_vector[i];
           local_ptr_start = local_ptr_start + ptr_size_vector[i];
         }
       // calculate the new sizes of the datasets
-      hsize_t global_value_size=0, global_gid_size=0, global_ptr_size=0;
+      hsize_t global_value_size=0, global_index_size=0, global_ptr_size=0;
       for (size_t i=0; i<size; i++)
         {
           global_value_size  = global_value_size + value_size_vector[i];
-          global_gid_size  = global_gid_size + gid_size_vector[i];
+          global_index_size  = global_index_size + index_size_vector[i];
           global_ptr_size  = global_ptr_size + ptr_size_vector[i];
         }
 
@@ -366,17 +371,17 @@ namespace neuroh5
         {
           // write to datasets
         
-          status = write<CELL_IDX_T> (loc, path + "/gid",
-                                      global_gid_size, local_gid_start, local_gid_size,
+          status = write<CELL_IDX_T> (loc, path + "/" + hdf5::CELL_INDEX,
+                                      global_index_size, local_index_start, local_index_size,
                                       CELL_IDX_H5_NATIVE_T,
-                                      gid);
+                                      index);
         
-          status = write<ATTR_PTR_T> (loc, path + "/ptr",
+          status = write<ATTR_PTR_T> (loc, path + "/Attribute Pointer",
                                       global_ptr_size, local_ptr_start, local_ptr_size,
                                       ATTR_PTR_H5_NATIVE_T,
                                       local_attr_ptr);
         
-          status = write<T> (loc, path + "/value",
+          status = write<T> (loc, path + "/Attribute Value",
                              global_value_size, local_value_start, local_value_size,
                              mtype, value);
         }
