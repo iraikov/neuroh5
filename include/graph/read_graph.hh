@@ -17,6 +17,7 @@
 
 #include <vector>
 #include <map>
+#include <utility>
 
 namespace neuroh5
 {
@@ -80,7 +81,7 @@ namespace neuroh5
     ///
     /// @param opt_attrs     If true, read edge attributes
     ///
-    /// @param prj_names     Vector of projection names to be read
+    /// @param prj_names     Vector of <src, dst> projections to be read
     ///
     /// @param prj_list      Vector of projection tuples, to be filled with
     ///                      edge information by this procedure
@@ -101,7 +102,7 @@ namespace neuroh5
      MPI_Comm                         comm,
      const std::string&               file_name,
      const bool                       opt_attrs,
-     const std::vector<std::string>   prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      std::vector<prj_tuple_t>&        prj_list,
      size_t&                          total_num_nodes,
      size_t&                          local_prj_num_edges,
