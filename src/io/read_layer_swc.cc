@@ -17,8 +17,9 @@
 #include <set>
 #include <map>
 #include <vector>
+
 #include "ngraph.hh"
-#include "neuroio_types.hh"
+#include "neuroh5_types.hh"
 #include "contract_tree.hh"
 
 #undef NDEBUG
@@ -27,7 +28,7 @@
 using namespace std;
 using namespace NGraph;
 
-namespace neuroio
+namespace neuroh5
 {
 
   namespace io
@@ -128,9 +129,9 @@ namespace neuroio
       S.insert_vertex(0);
 
       if (split_layers)
-        contract_tree_regions_dfs (A, layers, roots, S, contraction_map, 0, 0);
+        cell::contract_tree_regions_dfs (A, layers, roots, S, contraction_map, 0, 0);
       else
-        contract_tree_dfs (A, roots, S, contraction_map, 0, 0);
+        cell::contract_tree_dfs (A, roots, S, contraction_map, 0, 0);
     
       //cout << S;
       size_t num_sections = contraction_map.size();

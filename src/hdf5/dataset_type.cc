@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {

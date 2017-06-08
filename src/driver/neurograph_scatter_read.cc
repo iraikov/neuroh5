@@ -1,10 +1,10 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file scatter_read.cc
+///  @file neurograph_scatter_read.cc
 ///
 ///  Driver program for scatter_graph function.
 ///
-///  Copyright (C) 2016 Project NeuroH5.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
   map<NODE_IDX_T, rank_t> node_rank_map;
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-  vector<string> prj_names;
+  vector<pair<string,string>> prj_names;
   vector < edge_map_t > prj_vector;
   vector < vector <vector<string>> > edge_attr_name_vector;
   stringstream ss;

@@ -3,13 +3,13 @@
 #include <cassert>
 #include <string>
 
-#include "neuroio_types.hh"
-#include "hdf5_types.hh"
-#include "hdf5_enum_type.hh"
-#include "hdf5_path_names.hh"
+#include "neuroh5_types.hh"
+
+#include "enum_type.hh"
+#include "path_names.hh"
 #include "create_tree_dataset.hh"
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {
@@ -50,7 +50,7 @@ namespace neuroio
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
         
       /* Create a population group, if one does not already exist.  */
-      if ((!H5Lexists (file, POPS.c_str(), H5P_DEFAULT)) ||
+      if ((!H5Lexists (file, POPULATIONS.c_str(), H5P_DEFAULT)) ||
           (!H5Lexists (file, population_path(pop_name).c_str(), H5P_DEFAULT)));
       {
         group = H5Gcreate2(file, population_path(pop_name).c_str(), lcpl, H5P_DEFAULT, H5P_DEFAULT);
@@ -111,7 +111,7 @@ namespace neuroio
     
       /* Create a Tree ID dataset. */
       dataspace = H5Screate_simple (1, dims, maxdims); 
-      dataset = H5Dcreate2 (file, cell_attribute_path(TREES, pop_name, TREE_ID).c_str(),
+      dataset = H5Dcreate2 (file, cell_attribute_path(TREES, pop_name, CELL_INDEX).c_str(),
                             CELL_IDX_H5_NATIVE_T, dataspace,
                             lcpl, plist, H5P_DEFAULT);
       status = H5Dclose (dataset);

@@ -1,17 +1,18 @@
 
-#include "read_link_names.hh"
-
-#include "debug.hh"
-
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+
+#include "debug.hh"
+
+#include "read_link_names.hh"
+
 
 using namespace std;
 
 #define MAX_NAME_LEN 1024
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {

@@ -4,12 +4,12 @@
 ///
 ///  Calculate vertex (in/out)degree from an edge map.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 #include "debug.hh"
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 #include <map>
 #include <vector>
 #include <mpi.h>
@@ -17,10 +17,10 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace ngh5::model;
+using namespace neuroh5;
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {

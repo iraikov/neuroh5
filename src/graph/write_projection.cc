@@ -4,8 +4,8 @@
 #include "neuroh5_types.hh"
 #include "path_names.hh"
 #include "write_projection.hh"
-#include "write_edge_attributes.hh"
 #include "write_template.hh"
+#include "edge_attributes.hh"
 
 #include <algorithm>
 #include <cassert>
@@ -137,7 +137,7 @@ namespace neuroh5
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
         
-      string path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_IDX);
+      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_IDX);
       hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
       hid_t fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
@@ -195,7 +195,7 @@ namespace neuroh5
           dbp.push_back(dbp[0] + recvbuf_num_dest[rank]);
         }
 
-      path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR);
+      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR);
       dims = (hsize_t)total_num_blocks;
       fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
@@ -255,7 +255,7 @@ namespace neuroh5
           dst_ptr.resize(num_dest);
         }
 
-      path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_PTR);
+      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_PTR);
       dims = total_num_dests;
       ++dims; // one extra element
 
@@ -291,7 +291,7 @@ namespace neuroh5
       // write source index
       // # source indexes = number of edges
 
-      path = hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX);
+      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX);
       dims = total_num_edges;
 
       fspace = H5Screate_simple(1, &dims, &dims);
@@ -337,29 +337,29 @@ namespace neuroh5
       for (size_t i=0; i<edge_attr_values.float_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_float][i];
-          string path = graph::edge_attribute_path(projection_name, attr_name);
-          cell::write_sparse_edge_attribute<float>(file, path, edge_attr_values.float_values[i]);
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_name);
+          graph::write_edge_attribute<float>(file, path, edge_attr_values.float_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.uint8_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint8][i];
-          string path = graph::edge_attribute_path(projection_name, attr_name);
-          cell::write_sparse_attribute<uint8_t>(file, path, edge_attr_values.uint8_values[i]);
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_name);
+          graph::write_edge_attribute<uint8_t>(file, path, edge_attr_values.uint8_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.uint16_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint16][i];
-          string path = graph::edge_attribute_path(projection_name, attr_name);
-          cell::write_sparse_attribute<uint16_t>(file, path, edge_attr_values.uint16_values[i]);
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_name);
+          graph::write_edge_attribute<uint16_t>(file, path, edge_attr_values.uint16_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.uint32_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint32][i];
-          string path = graph::edge_attribute_path(projection_name, attr_name);
-          cell::write_sparse_attribute<uint32_t>(file, path, edge_attr_values.uint32_values[i]);
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_name);
+          graph::write_edge_attribute<uint32_t>(file, path, edge_attr_values.uint32_values[i]);
         }
         
         

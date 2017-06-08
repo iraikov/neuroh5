@@ -20,6 +20,7 @@
 #include "enum_type.hh"
 #include "path_names.hh"
 #include "write_template.hh"
+#include "cell_index.hh"
 
 namespace neuroh5
 {
@@ -40,7 +41,7 @@ namespace neuroh5
      const hsize_t sec_start,
      const hsize_t topo_start,
      std::vector<neurotree_t> &tree_list,
-     create_index = false
+     bool create_index = false
      )
     {
       herr_t status; hid_t wapl;
@@ -94,12 +95,10 @@ namespace neuroh5
         }
 
       hsize_t global_ptr_size = ptr_start;
-      hsize_t global_gid_size = ptr_start;
 
       for (size_t i=0; i<size; i++)
         {
           global_ptr_size = global_ptr_size + ptr_size_vector[i];
-          global_gid_size = global_gid_size + gid_size_vector[i];
         }
 
       size_t block  = tree_list.size();
@@ -225,7 +224,7 @@ namespace neuroh5
           // TODO: validate cell index
         }
 
-      hid_t file = hdf5::file_open(comm, file_name, rdwr=true);
+      hid_t file = hdf5::open_file(comm, file_name, true);
       assert(file >= 0);
 
 
@@ -310,9 +309,7 @@ namespace neuroh5
                                         all_swc_types, wapl);
       assert(status == 0);
     
-      status = hdf5::file_close(file);
-      assert(status == 0);
-      status = H5Pclose(fapl);
+      status = hdf5::close_file(file);
       assert(status == 0);
       status = H5Pclose(wapl);
       assert(status == 0);

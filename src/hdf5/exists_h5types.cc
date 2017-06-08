@@ -2,10 +2,10 @@
 #include "hdf5.h"
 #include <string>
 
-#include "hdf5_path_names.hh"
+#include "path_names.hh"
 #include "exists_tree_h5types.hh"
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {
@@ -23,7 +23,7 @@ namespace neuroio
       status = H5Lexists (file, H5_TYPES.c_str(), H5P_DEFAULT);
       if (status)
         {
-          status = H5Lexists (file, h5types_path_join(POPS).c_str(), H5P_DEFAULT);
+          status = H5Lexists (file, h5types_path_join(POPULATIONS).c_str(), H5P_DEFAULT);
         }
 
       return status;

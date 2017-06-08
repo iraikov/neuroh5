@@ -35,7 +35,9 @@ namespace neuroh5
     const std::string DST_BLK_IDX = "Destination Block Index";
     const std::string DST_PTR     = "Destination Pointer";
     const std::string SRC_IDX     = "Source Index";
-    
+
+    std::string h5types_path_join(const std::string& name);
+
     /// @brief Returns the path to a population group
     ///
     /// @param pop_name         Population group name
@@ -62,7 +64,7 @@ namespace neuroh5
     ///
     /// @param pop_name         Population data set name
     ///
-    /// @param attr_name        Tree attribute name
+    /// @param attr_name        Cell attribute name
     ///
     /// @return                  A string containing the full path to the
     ///                          attribute data set
@@ -78,8 +80,30 @@ namespace neuroh5
      const std::string& name_space,
      const std::string& pop_name
      );
+    
+    /// @brief Returns the path to projection edge attributes
+    ///
+    /// @param src_pop_name         Source population name
+    ///
+    /// @param dst_pop_name         Destination population name
+    ///
+    /// @param attr_name        Tree attribute name
+    ///
+    /// @return                  A string containing the full path to the
+    ///                          attribute data set
+    std::string edge_attribute_path
+    (
+     //const std::string& name_space,
+     const std::string& src_pop_name,
+     const std::string& dst_pop_name,
+     const std::string& attr_name
+     );
 
-    std::string h5types_path_join(const std::string& name);
+    std::string edge_attribute_prefix
+    (
+     const std::string& src_pop_name,
+     const std::string& dst_pop_name
+     );
     
   }
 }

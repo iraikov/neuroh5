@@ -21,7 +21,7 @@
 #include <hdf5.h>
 
 #include "ngraph.hh"
-#include "data/attr_val.hh"
+#include "attr_val.hh"
 
 #define MAX_ATTR_NAME_LEN 128
 
@@ -85,6 +85,7 @@ namespace neuroh5
   typedef uint64_t   SEC_PTR_T;
   typedef uint64_t   TOPO_PTR_T;
   typedef uint32_t   CELL_IDX_T;
+  typedef uint32_t   NODE_IDX_T;
 
   #define MPI_CELL_IDX_T    MPI_UINT32_T 
   #define MPI_COORD_T       MPI_FLOAT 
@@ -233,7 +234,19 @@ namespace neuroh5
 // In-file HDF5 datatype of cell index
 #define CELL_IDX_H5_FILE_T   H5T_STD_U32LE
 
+// In-memory HDF5 datatype of destination block pointers
+#define DST_BLK_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
 
+// In-file HDF5 datatype of destination block pointers
+#define DST_BLK_PTR_H5_FILE_T   H5T_STD_U64LE
+
+// In-memory HDF5 datatype of destination pointers
+#define DST_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
+
+// In-file HDF5 datatype of destination pointers
+#define DST_PTR_H5_FILE_T   H5T_STD_U64LE
+
+  
   
 }
 

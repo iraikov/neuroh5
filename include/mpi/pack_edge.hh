@@ -1,8 +1,8 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file pack_edge.cc
+///  @file pack_edge.hh
 ///
-///  Function for packing edges in MPI_PACKED format.
+///  Functions for packing edges in MPI_PACKED format.
 ///
 ///  Copyright (C) 2017 Project Neuroh5.
 //==============================================================================
@@ -14,11 +14,9 @@
 #include <string>
 
 #include "neuroh5_types.hh"
-#include "read_graph.hh"
 
 namespace neuroh5
 {
-
   namespace mpi
   {
     void pack_adj_map (MPI_Comm comm, MPI_Datatype header_type, MPI_Datatype size_type,
@@ -30,7 +28,7 @@ namespace neuroh5
     void pack_edge_map (MPI_Comm comm,
                         MPI_Datatype header_type,
                         MPI_Datatype size_type,
-                        model::edge_map_t& prj_edge_map, 
+                        edge_map_t& prj_edge_map, 
                         size_t &num_packed_edges,
                         int &sendpos,
                         std::vector<uint8_t> &sendbuf);
@@ -41,13 +39,13 @@ namespace neuroh5
                           MPI_Datatype size_type,
                           const std::vector<uint8_t> &recvbuf,
                           const std::vector<uint32_t> &edge_attr_num,
-                          model::edge_map_t& prj_edge_map
+                          edge_map_t& prj_edge_map
                           );
     
     void pack_rank_edge_map (MPI_Comm comm,
                              MPI_Datatype header_type,
                              MPI_Datatype size_type,
-                             model::rank_edge_map_t& prj_rank_edge_map,
+                             rank_edge_map_t& prj_rank_edge_map,
                              size_t &num_packed_edges,
                              std::vector<int>& sendcounts,
                              std::vector<uint8_t> &sendbuf,
@@ -62,7 +60,7 @@ namespace neuroh5
                                const std::vector<int>& recvcounts,
                                const std::vector<int>& rdispls,
                                const std::vector<uint32_t> &edge_attr_num,
-                               model::edge_map_t& prj_edge_map,
+                               edge_map_t& prj_edge_map,
                                uint64_t& num_unpacked_edges
                                );
   }

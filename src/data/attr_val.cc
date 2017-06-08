@@ -1,22 +1,24 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file attrval.cc
+///  @file attr_val.cc
 ///
 ///  Template specialization for AttrVal. 
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
-
-#include "attrval.hh"
 
 #include <map>
 #include <vector>
 
-using namespace std;
-using namespace neuroio;
+#include "attr_val.hh"
 
-namespace neuroio
+using namespace std;
+using namespace neuroh5;
+
+namespace neuroh5
 {
+  namespace data
+  {
 
     template<>
     const size_t AttrVal::size_attr_vec<float> () const
@@ -185,5 +187,5 @@ namespace neuroio
         }
  
     }
-
+  }
 }

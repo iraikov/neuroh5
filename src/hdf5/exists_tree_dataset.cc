@@ -1,11 +1,11 @@
 
-#include "hdf5.h"
+#include <hdf5.h>
 #include <string>
 
 #include "path_names.hh"
 #include "exists_tree_dataset.hh"
 
-namespace neuroio
+namespace neuroh5
 {
   namespace hdf5
   {
@@ -20,7 +20,7 @@ namespace neuroio
     {
       herr_t status;  
       
-      status = H5Lexists (file, POPS.c_str(), H5P_DEFAULT);
+      status = H5Lexists (file, POPULATIONS.c_str(), H5P_DEFAULT);
       if (status)
         {
             status = H5Lexists (file, population_path(pop_name).c_str(), H5P_DEFAULT);

@@ -57,7 +57,7 @@ namespace neuroh5
      const std::string&                 file_name,
      const int                          io_size,
      const bool                         opt_attrs,
-     const std::vector<std::string>&    prj_names,
+     const std::vector< std::pair<std::string,std::string> >&    prj_names,
      // A vector that maps nodes to compute ranks
      const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
      std::vector < edge_map_t >& prj_vector,

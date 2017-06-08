@@ -72,7 +72,8 @@ namespace neuroh5
      std::vector<DST_BLK_PTR_T>&     dst_blk_ptr,
      std::vector<NODE_IDX_T>&        dst_idx,
      std::vector<DST_PTR_T>&         dst_ptr,
-     std::vector<NODE_IDX_T>&        src_idx
+     std::vector<NODE_IDX_T>&        src_idx,
+     bool collective = true
      );
   }
 }

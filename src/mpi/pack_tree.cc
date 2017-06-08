@@ -5,15 +5,16 @@
 #include <vector>
 #include <map>
 
-#include "neurotrees_types.hh"
-#include "attrmap.hh"
+#include "neuroh5_types.hh"
+
+#include "attr_map.hh"
 #include "pack_tree.hh"
 
 using namespace std;
 
 #define MAX_ATTR_NAME_LEN 128
 
-namespace neuroio
+namespace neuroh5
 {
 
   namespace mpi

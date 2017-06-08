@@ -1,14 +1,14 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file projection_names.cc
+///  @file group_contents.hh
 ///
-///  Reads the projection names
+///  Reads the contents of a group.
 ///
 ///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
-#ifndef PROJECTION_NAMES_HH
-#define PROJECTION_NAMES_HH
+#ifndef GROUP_CONTENTS_HH
+#define GROUP_CONTENTS_HH
 
 #include <hdf5.h>
 #include <mpi.h>
@@ -18,22 +18,23 @@
 
 namespace neuroh5
 {
-  namespace graph
+  namespace hdf5
   {
-    /// @brief Reads the names of projections
+    /// @brief Reads the names of the elements of a group
     ///
     /// @param comm          MPI communicator
     ///
     /// @param file_name     Input file name
     ///
-    /// @param proj_names    Vector of projection names
+    /// @param path          Path to group
     ///
     /// @return              HDF5 error code
-    extern herr_t read_projection_names
+    extern herr_t group_contents
     (
      MPI_Comm                  comm,
      const std::string&        file_name,
-     std::vector< std::pair<std::string,std::string> >& proj_names
+     const std::string&        path,
+     std::vector <std::string> obj_names
      );
   }
 }

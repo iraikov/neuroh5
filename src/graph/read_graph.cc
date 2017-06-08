@@ -12,10 +12,9 @@
 
 #include "edge_attributes.hh"
 
-#include "read_dbs_projection.hh"
+#include "read_projection.hh"
 #include "cell_populations.hh"
 #include "read_graph.hh"
-#include "read_population.hh"
 #include "validate_edge_list.hh"
 
 #undef NDEBUG
@@ -42,6 +41,7 @@ namespace neuroh5
     {
       // read the population info
       vector<pop_range_t> pop_vector;
+      vector< pair<pop_t, string> > pop_labels;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       set< pair<pop_t, pop_t> > pop_pairs;
       assert(cell::read_population_combos(comm, file_name, pop_pairs) >= 0);
@@ -101,7 +101,7 @@ namespace neuroh5
 
           DEBUG("reader: projection ", i, " has a total of ",
                 total_prj_num_edges, " edges");
-          DEBUG("reader: validating projection ", i, "(", src_pop_name, " -> ", dst_pop_name ")");
+          DEBUG("reader: validating projection ", i, "(", src_pop_name, " -> ", dst_pop_name, ")");
 
           // validate the edges
           assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx,

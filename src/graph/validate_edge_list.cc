@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file scatter_graph.cc
+///  @file validate_edge_list.cc
 ///
 ///  Functions for validating edges in DBS (Destination Block Sparse)
 ///  format.
@@ -12,10 +12,10 @@
 
 #include "debug.hh"
 
-using namespace neuroio::data;
 using namespace std;
+using namespace neuroh5;
 
-namespace neuroio
+namespace neuroh5
 {
   namespace graph
   {

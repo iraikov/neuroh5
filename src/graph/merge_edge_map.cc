@@ -9,15 +9,14 @@
 
 #include "debug.hh"
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 
 #undef NDEBUG
 #include <cassert>
 
-using namespace neuroio::data;
 using namespace std;
 
-namespace neuroio
+namespace neuroh5
 {
   namespace graph
   {

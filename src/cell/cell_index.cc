@@ -16,6 +16,7 @@
 
 #include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
+#include "file_access.hh"
 #include "path_names.hh"
 #include "read_template.hh"
 #include "write_template.hh"
@@ -85,16 +86,25 @@ namespace neuroh5
      )
     {
       herr_t ierr = 0;
+      int srank, ssize; size_t rank, size;
     
-      hid_t file = hdf5::file_open(comm, file_name, rdwr=true);
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) >= 0);
+      assert(rank >= 0);
+      assert(size > 0);
+      
+      rank = (size_t)srank;
+      size = (size_t)ssize;
+      
+      hid_t file = hdf5::open_file(comm, file_name, true);
       assert(file >= 0);
 
       hsize_t local_index_size = cell_index.size();
 
       std::vector<uint64_t> index_size_vector;
       index_size_vector.resize(size);
-      status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
+      ierr = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
+      assert(ierr == MPI_SUCCESS);
 
       hsize_t local_index_start = start;
       for (size_t i=0; i<rank; i++)
@@ -107,9 +117,15 @@ namespace neuroh5
           global_index_size = global_index_size + index_size_vector[i];
         }
 
-      status = hdf5::write<CELL_IDX_T> (file, hdf5::cell_attribute_path(hdf5::POPS, pop_name, hdf5::CELL_INDEX),
-                                        global_index_size, local_index_start, local_index_size,
-                                        CELL_IDX_H5_NATIVE_T, cell_index, wapl);
+      /* Create property list for collective dataset write. */
+      hid_t wapl;
+      wapl = H5Pcreate (H5P_DATASET_XFER);
+      ierr = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+      
+      ierr = hdf5::write<CELL_IDX_T> (file, hdf5::cell_attribute_path(hdf5::POPULATIONS, pop_name, hdf5::CELL_INDEX),
+                                      global_index_size, local_index_start, local_index_size,
+                                      CELL_IDX_H5_NATIVE_T, cell_index, wapl);
+      assert(ierr == 0);
       ierr = H5Fclose (file);
       assert(ierr == 0);
 

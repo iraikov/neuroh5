@@ -1,24 +1,25 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file attrmap.cc
+///  @file attr_map.cc
 ///
 ///  Template specialization for AttrMap. 
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
-
-#include "attrmap.hh"
 
 #include <map>
 #include <set>
 #include <vector>
 
-using namespace std;
-using namespace neuroio;
+#include "attr_map.hh"
 
-namespace neuroio
+using namespace std;
+
+namespace neuroh5
 {
 
+  namespace data
+  {
 
   template<>
   const map< CELL_IDX_T, vector<float> >& AttrMap::attr_map<float> (size_t i) const
@@ -748,5 +749,5 @@ namespace neuroio
     return index;
   }
 
-  
+  }
 }

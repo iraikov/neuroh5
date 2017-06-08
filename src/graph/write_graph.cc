@@ -11,10 +11,9 @@
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "attr_map.hh"
-#include "model_types.hh"
-#include "population_reader.hh"
-#include "read_population.hh"
+#include "cell_populations.hh"
 #include "write_graph.hh"
 #include "write_projection.hh"
 #include "path_names.hh"
@@ -78,10 +77,10 @@ namespace neuroh5
         }
       
       // read the population info
-      set< pair<model::pop_t, model::pop_t> > pop_pairs;
-      vector<model::pop_range_t> pop_vector;
-      vector<pair <model::pop_t, string> > pop_labels;
-      map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
+      set< pair<pop_t, pop_t> > pop_pairs;
+      vector<pop_range_t> pop_vector;
+      vector<pair <pop_t, string> > pop_labels;
+      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
       size_t total_num_nodes;
       size_t dst_start, dst_end;

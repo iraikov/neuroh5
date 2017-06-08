@@ -8,12 +8,13 @@
 ///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
-#include "read_projection.hh"
-
+#include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
-#include "debug.hh"
 #include "read_template.hh"
 #include "path_names.hh"
+#include "debug.hh"
+#include "read_projection.hh"
+
 
 #include <iostream>
 #include <sstream>
@@ -24,7 +25,7 @@
 
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -65,7 +66,8 @@ namespace ngh5
      vector<DST_BLK_PTR_T>&     dst_blk_ptr,
      vector<NODE_IDX_T>&        dst_idx,
      vector<DST_PTR_T>&         dst_ptr,
-     vector<NODE_IDX_T>&        src_idx
+     vector<NODE_IDX_T>&        src_idx,
+     bool collective = true
      )
     {
       herr_t ierr = 0;
@@ -73,13 +75,28 @@ namespace ngh5
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
+
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      assert(fapl >= 0);
+      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+      assert(file >= 0);
+
       // determine number of blocks in projection
-      uint64_t num_blocks = dataset_num_elements
-        (comm, file_name, hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR)) - 1;
+      uint64_t num_blocks = hdf5::dataset_num_elements
+        (comm, file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR)) - 1;
 
       // determine number of edges in projection
-      nedges = dataset_num_elements
-        (comm, file_name, hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX));
+      nedges = hdf5::dataset_num_elements
+        (comm, file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX));
+
+      /* Create property list for collective dataset operations. */
+      hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+      if (collective)
+        {
+          ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+        }
 
       vector< pair<hsize_t,hsize_t> > bins;
 
@@ -98,13 +115,6 @@ namespace ngh5
       DEBUG("Task ",rank,": ","start = ", start, " stop = ", stop, "\n");
       DEBUG("Task ",rank,": ","block = ", block, "\n");
 
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
-
       DST_BLK_PTR_T block_rebase = 0;
 
       // read destination block pointers
@@ -117,11 +127,12 @@ namespace ngh5
           ierr = hdf5::read<DST_BLK_PTR_T>
             (
              file,
-             hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR),
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR),
              start,
              block,
              DST_BLK_PTR_H5_NATIVE_T,
-             dst_blk_ptr
+             dst_blk_ptr,
+             rapl
              );
           assert(ierr >= 0);
 
@@ -155,11 +166,12 @@ namespace ngh5
           ierr = hdf5::read<NODE_IDX_T>
             (
              file,
-             hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_IDX),
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_IDX),
              start,
              block,
              NODE_IDX_H5_NATIVE_T,
-             dst_idx
+             dst_idx,
+             rapl
              );
           assert(ierr >= 0);
         }
@@ -191,14 +203,15 @@ namespace ngh5
           DEBUG("Task ",rank,": ", "dst_ptr: start = ", start, "\n");
           DEBUG("Task ",rank,": ", "dst_ptr: block = ", block, "\n");
 
-          ierr = hdf5_read<DST_PTR_T>
+          ierr = hdf5::read<DST_PTR_T>
             (
              file,
-             hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_PTR),
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_PTR),
              start,
              block,
              DST_PTR_H5_NATIVE_T,
-             dst_ptr
+             dst_ptr,
+             rapl
              );
           assert(ierr >= 0);
 
@@ -232,14 +245,15 @@ namespace ngh5
               src_idx.resize(block);
               assert(src_idx.size() > 0);
 
-              ierr = hdf5_read<NODE_IDX_T>
+              ierr = hdf5::read<NODE_IDX_T>
                 (
                  file,
-                 hdf5::projection_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX),
+                 hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX),
                  start,
                  block,
                  NODE_IDX_H5_NATIVE_T,
-                 src_idx
+                 src_idx,
+                 rapl
                  );
               assert(ierr >= 0);
             }
@@ -249,6 +263,8 @@ namespace ngh5
 
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);
+      ierr = H5Pclose(rapl);
+      assert(ierr == 0);
 
       DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
       return ierr;

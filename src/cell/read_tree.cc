@@ -151,7 +151,7 @@ namespace neuroh5
         }
 
       // TODO; create separate functions for opening HDF5 file for reading and writing
-      hid_t file = hdf5::file_open(comm, file_name);
+      hid_t file = hdf5::open_file(comm, file_name);
       size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::ATTR_PTR))-1;
       size_t read_size = 0;
       if (numitems > 0) 
@@ -224,7 +224,7 @@ namespace neuroh5
             
               gid_vector.resize(block-1);
               status = hdf5::read<CELL_IDX_T> (file,
-                                               hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TREE_ID),
+                                               hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
                                                start, block-1,
                                                CELL_IDX_H5_NATIVE_T,
                                                gid_vector, rapl);
@@ -319,9 +319,7 @@ namespace neuroh5
             }
         }
     
-      status = hdf5::file_close (file);
-      assert(status == 0);
-      status = H5Pclose (fapl);
+      status = hdf5::close_file (file);
       assert(status == 0);
       status = H5Pclose(rapl);
       assert(status == 0);
