@@ -67,7 +67,7 @@ namespace neuroh5
      vector<NODE_IDX_T>&        dst_idx,
      vector<DST_PTR_T>&         dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
-     bool collective = true
+     bool collective
      )
     {
       herr_t ierr = 0;

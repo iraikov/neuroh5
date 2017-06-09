@@ -31,10 +31,10 @@ namespace neuroh5
     /// @return              HDF5 error code
     extern herr_t group_contents
     (
-     MPI_Comm                  comm,
-     const std::string&        file_name,
-     const std::string&        path,
-     std::vector <std::string> obj_names
+     MPI_Comm                   comm,
+     const hid_t&               file,
+     const std::string&         path,
+     std::vector <std::string>& obj_names
      );
   }
 }

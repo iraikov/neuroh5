@@ -24,7 +24,7 @@ namespace neuroh5
      * Prepare MPI packed data structures with attributes for a given tree.
      **************************************************************************/
 
-    void pack_size_gid
+    void pack_size_index
     (
      MPI_Comm comm,
      int &sendsize
@@ -52,23 +52,23 @@ namespace neuroh5
         }
     }
   
-    void pack_gid
+    void pack_index
     (
      MPI_Comm comm,
-     const CELL_IDX_T gid,
+     const CELL_IDX_T index,
      const int &sendbuf_size,
      vector<uint8_t> &sendbuf,
      int &sendpos
      )
     {
-      assert(MPI_Pack(&gid, 1, MPI_CELL_IDX_T, &sendbuf[0], sendbuf_size, &sendpos, comm)
+      assert(MPI_Pack(&index, 1, MPI_CELL_IDX_T, &sendbuf[0], sendbuf_size, &sendpos, comm)
              == MPI_SUCCESS);
     }
   
     int pack_tree
     (
      MPI_Comm comm,
-     const CELL_IDX_T &gid,
+     const CELL_IDX_T &index,
      const neurotree_t &tree,
      int &sendpos,
      vector<uint8_t> &sendbuf
@@ -92,8 +92,8 @@ namespace neuroh5
       const vector<PARENT_NODE_IDX_T> &parents = get<9>(tree);
       const vector<SWC_TYPE_T> &swc_types = get<10>(tree);
 
-      // gid size
-      pack_size_gid(comm, sendsize);
+      // index size
+      pack_size_index(comm, sendsize);
       // topology, section, attr size
       assert(MPI_Pack_size(3, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
       sendsize += packsize;
@@ -119,7 +119,7 @@ namespace neuroh5
       int sendbuf_size = sendbuf.size();
 
       // Create MPI_PACKED object with all the tree data
-      pack_gid(comm, gid, sendbuf_size, sendbuf, sendpos);
+      pack_index(comm, index, sendbuf_size, sendbuf, sendpos);
       vector<uint32_t> data_sizes;
       data_sizes.push_back(src_vector.size());
       data_sizes.push_back(sections.size());
@@ -146,17 +146,17 @@ namespace neuroh5
       return ierr;
     }
 
-    void unpack_gid
+    void unpack_index
     (
      MPI_Comm comm,
-     CELL_IDX_T &gid,
+     CELL_IDX_T &index,
      const size_t &recvbuf_size,
      const vector<uint8_t> &recvbuf,
      int &recvpos
      )
     {
       assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
-                        &gid, 1, MPI_CELL_IDX_T, comm) == MPI_SUCCESS);
+                        &index, 1, MPI_CELL_IDX_T, comm) == MPI_SUCCESS);
     }
 
     int unpack_tree
@@ -169,7 +169,7 @@ namespace neuroh5
     {
       int ierr = 0;
       
-      CELL_IDX_T gid;
+      CELL_IDX_T index;
       vector<SECTION_IDX_T> src_vector;
       vector<SECTION_IDX_T> dst_vector;
       vector<SECTION_IDX_T> sections;
@@ -183,7 +183,7 @@ namespace neuroh5
 
       size_t recvbuf_size = recvbuf.size();
       
-      unpack_gid(comm, gid, recvbuf_size, recvbuf, recvpos);
+      unpack_index(comm, index, recvbuf_size, recvbuf, recvpos);
       vector<uint32_t> data_sizes(3);
       assert(MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
                         &data_sizes[0], 3, MPI_UINT32_T, comm) == MPI_SUCCESS);
@@ -204,12 +204,12 @@ namespace neuroh5
       // SWC type
       unpack_attr_values<SWC_TYPE_T>(comm, MPI_SWC_TYPE_T, data_sizes[2], swc_types, recvbuf_size, recvbuf, recvpos);
 
-      neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sections,
-                                    xcoords,ycoords,zcoords,
-                                    radiuses,layers,parents,
+      neurotree_t tree = make_tuple(index, src_vector, dst_vector, sections,
+                                    xcoords, ycoords, zcoords,
+                                    radiuses, layers, parents,
                                     swc_types);
 
-      tree_map.insert(make_pair(gid, tree));
+      tree_map.insert(make_pair(index, tree));
       
       return ierr;
     }

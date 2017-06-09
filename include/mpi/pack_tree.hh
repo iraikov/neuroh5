@@ -14,7 +14,7 @@ namespace neuroh5
 
   namespace mpi
   {
-    void pack_size_gid
+    void pack_size_index
     (
      MPI_Comm comm,
      int &sendsize
@@ -28,10 +28,10 @@ namespace neuroh5
      int &sendsize
      );
   
-    void pack_gid
+    void pack_index
     (
      MPI_Comm comm,
-     const CELL_IDX_T gid,
+     const CELL_IDX_T index,
      const int &sendbuf_size,
      vector<uint8_t> &sendbuf,
      int &sendpos
@@ -40,7 +40,7 @@ namespace neuroh5
     int pack_tree
     (
      MPI_Comm comm,
-     const CELL_IDX_T &gid,
+     const CELL_IDX_T &index,
      const neurotree_t &tree,
      int &sendpos,
      vector<uint8_t> &sendbuf
@@ -48,10 +48,10 @@ namespace neuroh5
 
   
 
-    void unpack_gid
+    void unpack_index
     (
      MPI_Comm comm,
-     CELL_IDX_T &gid,
+     CELL_IDX_T &index,
      const size_t &recvbuf_size,
      const vector<uint8_t> &recvbuf,
      int &recvpos
@@ -71,7 +71,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
-     const CELL_IDX_T gid,
+     const CELL_IDX_T index,
      const vector< vector<T> > &values,
      int &sendsize
      )
@@ -111,7 +111,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
-     const CELL_IDX_T gid,
+     const CELL_IDX_T index,
      const vector< vector<T> > &values,
      const int &sendbuf_size,
      int &sendpos,
@@ -170,7 +170,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const MPI_Datatype mpi_type,
-     const CELL_IDX_T gid,
+     const CELL_IDX_T index,
      data::NamedAttrMap& m,
      const size_t &recvbuf_size,
      const vector<uint8_t> &recvbuf,
@@ -194,7 +194,7 @@ namespace neuroh5
                 {
                   vector<T> v(num_elems[k]);
                   unpack_attr_values<T>(comm, mpi_type, num_elems[k], v, recvbuf_size, recvbuf, recvpos);
-                  m.insert<T>(k, gid, v);
+                  m.insert<T>(k, index, v);
                 }
             }
         }

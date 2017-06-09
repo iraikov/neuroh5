@@ -172,7 +172,6 @@ int main(int argc, char** argv)
 {
   int status=0;
   string dst_pop_name, src_pop_name;
-  string prj_name;
   string output_file_name;
   string txt_filelist_file_name;
   vector <string> txt_input_file_names;
@@ -312,8 +311,7 @@ int main(int argc, char** argv)
     {
       src_pop_name     = std::string(argv[optind]);
       dst_pop_name     = std::string(argv[optind+1]);
-      prj_name         = std::string(argv[optind+2]);
-      output_file_name = std::string(argv[optind+3]);
+      output_file_name = std::string(argv[optind+2]);
       if (!opt_hdf5_syn && (!opt_txt))
         {
           print_usage_full(argv);
@@ -346,14 +344,14 @@ int main(int argc, char** argv)
                                               pop_vector, n_nodes) >= 0);
       assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
       
-      status = graph::read_syn_projection (all_comm,
-                                           hdf5_input_file_name,
-                                           hdf5_input_dsetpath,
-                                           dst_idx,
-                                           src_idx_ptr,
-                                           src_idx,
-                                           syn_idx_ptr,
-                                           syn_idx);
+      status = io::read_syn_projection (all_comm,
+                                        hdf5_input_file_name,
+                                        hdf5_input_dsetpath,
+                                        dst_idx,
+                                        src_idx_ptr,
+                                        src_idx,
+                                        syn_idx_ptr,
+                                        syn_idx);
 
       for (size_t i=0; i< pop_labels.size(); i++)
         {
@@ -427,7 +425,9 @@ int main(int argc, char** argv)
 
   vector<vector<string>> edge_attr_names(data::AttrVal::num_attr_types);
   edge_attr_names[data::AttrVal::attr_index_uint32].push_back("syn_id");
-  status = graph::write_graph (all_comm, io_size, output_file_name, src_pop_name, dst_pop_name, prj_name, edge_attr_names, edge_map);
+  status = graph::write_graph (all_comm, io_size, output_file_name,
+                               src_pop_name, dst_pop_name,
+                               edge_attr_names, edge_map);
 
   MPI_Comm_free(&all_comm);
   

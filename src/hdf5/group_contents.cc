@@ -56,7 +56,7 @@ namespace neuroh5
 
         // MPI rank 0 reads and broadcasts the number of ranges
         hsize_t num_objs;
-        hid_t file = -1, grp = -1;
+        hid_t grp = -1;
 
         // MPI rank 0 reads the object names
         if (rank == 0)

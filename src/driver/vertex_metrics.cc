@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 
   if (!opt_iosize) iosize = 4;
 
-  vector<string> prj_names;
+  vector<pair<string, string>> prj_names;
   assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
   vector<prj_tuple_t> prj_list;

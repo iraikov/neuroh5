@@ -13,7 +13,7 @@
 
 namespace neuroh5
 {
-  namespace graph
+  namespace io
   {
     herr_t read_syn_projection
     (

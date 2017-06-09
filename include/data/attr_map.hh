@@ -33,7 +33,7 @@ namespace neuroh5
       static const size_t attr_index_uint32 = 5;
       static const size_t attr_index_int32  = 6;
       
-      std::set<CELL_IDX_T> gid_set;
+      std::set<CELL_IDX_T> index_set;
       std::vector <std::map < CELL_IDX_T, std::vector <float> > >    float_values;
       std::vector <std::map < CELL_IDX_T, std::vector <uint8_t> > >  uint8_values;
       std::vector <std::map < CELL_IDX_T, std::vector <int8_t> > >   int8_values;
@@ -43,12 +43,12 @@ namespace neuroh5
       std::vector <std::map < CELL_IDX_T, std::vector <int32_t> > >  int32_values;
 
       template<class T>
-      size_t insert (const std::vector<CELL_IDX_T> &gid,
+      size_t insert (const std::vector<CELL_IDX_T> &index,
                      const std::vector<ATTR_PTR_T> &ptr,
                      const std::vector<T> &value);
       template<class T>
       size_t insert (const size_t index,
-                     const CELL_IDX_T &gid,
+                     const CELL_IDX_T &cell_index,
                      const std::vector<T> &value);
 
       
@@ -63,7 +63,7 @@ namespace neuroh5
       size_t num_attr () const;
 
       template<class T>
-      const vector<vector<T>> find (CELL_IDX_T gid);
+      const vector<vector<T>> find (CELL_IDX_T index);
 
       void append (AttrMap a)
       {
@@ -90,37 +90,37 @@ namespace neuroh5
                             a.int32_values.end());
       }
 
-      void erase (const CELL_IDX_T &gid)
+      void erase (const CELL_IDX_T &index)
       {
         for (size_t i=0; i<float_values.size(); i++)
           {
-            float_values[i].erase(gid);
+            float_values[i].erase(index);
           }
         for (size_t i=0; i<uint8_values.size(); i++)
           {
-            uint8_values[i].erase(gid);
+            uint8_values[i].erase(index);
           }
         for (size_t i=0; i<int8_values.size(); i++)
           {
-            int8_values[i].erase(gid);
+            int8_values[i].erase(index);
           }
         for (size_t i=0; i<uint16_values.size(); i++)
           {
-            uint16_values[i].erase(gid);
+            uint16_values[i].erase(index);
           }
         for (size_t i=0; i<int16_values.size(); i++)
           {
-            int16_values[i].erase(gid);
+            int16_values[i].erase(index);
           }
         for (size_t i=0; i<uint32_values.size(); i++)
           {
-            uint32_values[i].erase(gid);
+            uint32_values[i].erase(index);
           }
         for (size_t i=0; i<int32_values.size(); i++)
           {
-            int32_values[i].erase(gid);
+            int32_values[i].erase(index);
           }
-        gid_set.erase(gid);
+        index_set.erase(index);
       }
 
       void clear ()
@@ -132,7 +132,7 @@ namespace neuroh5
         int16_values.clear();
         uint32_values.clear();
         int32_values.clear();
-        gid_set.clear();
+        index_set.clear();
       }
       
     };
@@ -160,12 +160,12 @@ namespace neuroh5
 
       template<class T>
       size_t insert (std::string name,
-                     const std::vector<CELL_IDX_T> &gid,
+                     const std::vector<CELL_IDX_T> &index,
                      const std::vector<ATTR_PTR_T> &ptr,
                      const std::vector<T> &value);
       template<class T>
       size_t insert (const size_t index,
-                     const CELL_IDX_T &gid,
+                     const CELL_IDX_T &cell_index,
                      const std::vector<T> &value);
 
     };

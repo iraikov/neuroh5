@@ -1,5 +1,5 @@
-#ifndef HDF5_CELL_ATTRIBUTES
-#define HDF5_CELL_ATTRIBUTES
+#ifndef HDF5_NODE_ATTRIBUTES
+#define HDF5_NODE_ATTRIBUTES
 
 #include <hdf5.h>
 
@@ -9,6 +9,7 @@
 #include "neuroh5_types.hh"
 #include "rank_range.hh"
 #include "dataset_num_elements.hh"
+#include "create_group.hh"
 #include "read_template.hh"
 #include "write_template.hh"
 
@@ -16,30 +17,95 @@ namespace neuroh5
 {
   namespace hdf5
   {
+
+    void size_node_attributes
+    (
+     MPI_Comm         comm,
+     hid_t            loc,
+     const string&    path,
+     hsize_t&         ptr_size,
+     hsize_t&         index_size,
+     hsize_t&         value_size
+     )
+    {
+      ptr_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::ATTR_PTR);
+      index_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::NODE_INDEX);
+      value_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::ATTR_VAL);
+    }
+
+    void create_node_attribute_datasets
+    (
+     const hid_t&   file,
+     const string&  attr_namespace,
+     const string&  attr_name,
+     const hid_t&   ftype,
+     const size_t   chunk_size,
+     const size_t   value_chunk_size
+     )
+    {
+      herr_t status;
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hsize_t cdims[1]   = {chunk_size}; /* chunking dimensions */		
+      hsize_t initial_size = 0;
     
-    void size_cell_attributes
-    (
-     MPI_Comm                   comm,
-     hid_t                      loc,
-     const std::string&         path,
-     hsize_t&                   ptr_size,
-     hsize_t&                   index_size,
-     hsize_t&                   value_size
-     );
-  
-    void create_cell_attribute_datasets
-    (
-     const hid_t&                    file,
-     const std::string&              attr_namespace,
-     const std::string&              pop_name,
-     const std::string&              attr_name,
-     const hid_t&                    ftype,
-     const size_t chunk_size = 4000,
-     const size_t value_chunk_size = 4000
-     );
+      hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
+      status = H5Pset_chunk(plist, 1, cdims);
+      assert(status == 0);
+
+      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
+      hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
+      status = H5Pset_chunk(value_plist, 1, value_cdims);
+      assert(status == 0);
+    
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+    
+      if (!(H5Lexists (file, ("/" + hdf5::NODES).c_str(), H5P_DEFAULT) > 0))
+        {
+          create_group(file, ("/" + hdf5::NODES).c_str());
+        }
+
+      string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
+      if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0))
+        {
+          create_group(file, attr_prefix);
+        }
+
+      string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
+      
+      hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
+      assert(mspace >= 0);
+      hid_t dset = H5Dcreate2(file, (attr_path + "/" + hdf5::NODE_INDEX).c_str(), NODE_IDX_H5_FILE_T,
+                              mspace, lcpl, plist, H5P_DEFAULT);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+
+      mspace = H5Screate_simple(1, &initial_size, maxdims);
+      assert(mspace >= 0);
+      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), ATTR_PTR_H5_FILE_T,
+                        mspace, lcpl, plist, H5P_DEFAULT);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+    
+      mspace = H5Screate_simple(1, &initial_size, maxdims);
+      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_VAL).c_str(), ftype, mspace,
+                        lcpl, value_plist, H5P_DEFAULT);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+    
+      assert(H5Pclose(lcpl) >= 0);
+    
+      status = H5Pclose(plist);
+      assert(status == 0);
+      status = H5Pclose(value_plist);
+      assert(status == 0);
+    
+    }
+
 
     template <typename T>
-    herr_t read_cell_attribute
+    herr_t read_node_attribute
     (
      MPI_Comm                  comm,
      const hid_t&              loc,
@@ -57,7 +123,7 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      hsize_t dset_size = dataset_num_elements (comm, loc, path + "/" + CELL_INDEX);
+      hsize_t dset_size = dataset_num_elements (comm, loc, path + "/" + NODE_INDEX);
       size_t read_size = 0;
       if (numitems > 0) 
         {
@@ -88,7 +154,7 @@ namespace neuroh5
               hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
               status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
             
-              string index_path = path + "/" + CELL_INDEX;
+              string index_path = path + "/" + NODE_INDEX;
               // read index
               index.resize(block);
 
@@ -139,11 +205,11 @@ namespace neuroh5
 
     
     template <typename T>
-    void append_cell_attribute
+    void append_node_attribute
     (
      const hid_t&                    loc,
      const std::string&              path,
-     const std::vector<CELL_IDX_T>&  index,
+     const std::vector<NODE_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value
      )
@@ -203,7 +269,7 @@ namespace neuroh5
 
       // create datasets
       hsize_t ptr_size=0, index_size=0, value_size=0;
-      size_cell_attributes(comm, loc, path, ptr_size, index_size, value_size);
+      size_node_attributes(comm, loc, path, ptr_size, index_size, value_size);
 
       // Determine starting positions
       hsize_t ptr_start=0, index_start=0, value_start=0;
@@ -248,12 +314,12 @@ namespace neuroh5
 
       // TODO:
       // if option index_mode is:
-      // 1) create: create the cell index in /Populations, otherwise validate with index in /Populations
-      // 2) link: link to cell index already in this attribute namespace
+      // 1) create: create the node index in /Populations, otherwise validate with index in /Populations
+      // 2) link: link to node index already in this attribute namespace
       
-      status = write<CELL_IDX_T> (file, path + "/" + CELL_INDEX,
+      status = write<NODE_IDX_T> (file, path + "/" + NODE_INDEX,
                                   global_index_size, local_index_start, local_index_size,
-                                  CELL_IDX_H5_NATIVE_T,
+                                  NODE_IDX_H5_NATIVE_T,
                                   index, wapl);
     
       status = write<ATTR_PTR_T> (file, path + "/" + ATTR_PTR,
@@ -290,12 +356,12 @@ namespace neuroh5
 
   
     template <typename T>
-    void write_cell_attribute
+    void write_node_attribute
     (
      MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
-     const std::vector<CELL_IDX_T>&  index,
+     const std::vector<NODE_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value
      )
@@ -371,9 +437,9 @@ namespace neuroh5
         {
           // write to datasets
         
-          status = write<CELL_IDX_T> (loc, path + "/" + CELL_INDEX,
+          status = write<NODE_IDX_T> (loc, path + "/" + NODE_INDEX,
                                       global_index_size, local_index_start, local_index_size,
-                                      CELL_IDX_H5_NATIVE_T,
+                                      NODE_IDX_H5_NATIVE_T,
                                       index);
         
           status = write<ATTR_PTR_T> (loc, path + "/" + ATTR_PTR,

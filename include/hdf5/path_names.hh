@@ -10,6 +10,7 @@ namespace neuroh5
     
     const std::string POPULATIONS = "Populations";
     const std::string PROJECTIONS = "Projections";
+    const std::string NODES       = "Nodes";
     const std::string H5_TYPES    = "H5Types";
     const std::string POP_LABELS  = "Population labels";
     const std::string POP_COMBS   = "Population combinations";
@@ -26,10 +27,12 @@ namespace neuroh5
     const std::string PARENT     = "Parent Point";
     const std::string SWCTYPE    = "SWC Type";
     const std::string CELL_INDEX = "Cell Index";
+    const std::string NODE_INDEX = "Node Index";
 
     const std::string ATTR_PTR   = "Attribute Pointer";
     const std::string TOPO_PTR   = "Topology Pointer";
     const std::string SEC_PTR    = "Section Pointer";
+    const std::string ATTR_VAL   = "Attribute Value";
 
     const std::string DST_BLK_PTR = "Destination Block Pointer";
     const std::string DST_BLK_IDX = "Destination Block Index";
@@ -103,6 +106,17 @@ namespace neuroh5
     (
      const std::string& src_pop_name,
      const std::string& dst_pop_name
+     );
+
+    std::string node_attribute_path
+    (
+     const std::string& name_space,
+     const std::string& attr_name
+     );
+
+    std::string node_attribute_prefix
+    (
+     const std::string& name_space
      );
     
   }

@@ -20,6 +20,14 @@ namespace neuroh5
       return H5_TYPES + "/" + name;
     }
     
+    string population_path
+    (
+     const string& pop_name
+     )
+    {
+      return "/" + POPULATIONS + "/" + pop_name;
+    }
+
     string cell_attribute_prefix
     (
      const string& name_space,
@@ -58,12 +66,21 @@ namespace neuroh5
       return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name;
     }
     
-    string population_path
+    string node_attribute_prefix
     (
-     const string& pop_name
+     const string& name_space
      )
     {
-      return "/" + POPULATIONS + "/" + pop_name;
+      return "/" + NODES + "/" + name_space;
+    }
+    
+    string node_attribute_path
+    (
+     const string& name_space,
+     const string& attr_name
+     )
+    {
+      return "/" + NODES + "/" + name_space + "/" + attr_name;
     }
     
     

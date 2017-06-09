@@ -61,7 +61,7 @@ namespace neuroh5
         vector<string> prj_src_pop_names, prj_dst_pop_names;
         
         // MPI rank 0 reads and broadcasts the number of ranges
-        hid_t file = -1, grp = -1;
+        hid_t file = -1;
 
         // MPI rank 0 reads and broadcasts the projection names
         if (rank == 0)
@@ -70,14 +70,14 @@ namespace neuroh5
             file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
             assert(file >= 0);
 
-            assert(hdf5::group_contents(file, hdf5::PROJECTIONS, dst_pop_names) >= 0);
+            assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS, dst_pop_names) >= 0);
 
             for (size_t i=0; i<dst_pop_names.size(); i++)
               {
                 vector <string> src_pop_names;
-                const string& dst_pop_name = dst_population_names[i];
+                const string& dst_pop_name = dst_pop_names[i];
 
-                assert(hdf5::group_contents(file, hdf5::PROJECTIONS+"/"+dst_pop_name, src_pop_names) >= 0);
+                assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS+"/"+dst_pop_name, src_pop_names) >= 0);
 
                 for (size_t j=0; j<src_pop_names.size(); j++)
                   {

@@ -5,7 +5,7 @@
 
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace hdf5
   {

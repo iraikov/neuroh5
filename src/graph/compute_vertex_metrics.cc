@@ -16,7 +16,7 @@
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
 #include "validate_edge_list.hh"
-#include "cell_attributes.hh"
+#include "node_attributes.hh"
 
 #include <getopt.h>
 #include <cassert>
@@ -152,31 +152,26 @@ namespace neuroh5
         }
       
       vector <NODE_IDX_T> node_id;
+      vector <ATTR_PTR_T> attr_ptr;
       vector <uint32_t> vertex_indegree_value;
       vector <float> vertex_norm_indegree_value;
 
+      attr_ptr.push_back(0);
       for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
         {
           if (it->second == rank)
             {
               node_id.push_back(it->first);
+              attr_ptr.push_back(attr_ptr.back() + 1);
               vertex_indegree_value.push_back(vertex_indegrees[it->first]);
               vertex_norm_indegree_value.push_back(vertex_norm_indegrees[it->first]);
             }
         }
-
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
       
-      cell::append_cell_attribute (file, "Vertex indegree", node_id, vertex_indegree_value);
-      cell::append_cell_attribute (file, "Vertex norm indegree", node_id, vertex_norm_indegree_value);
-
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex indegree",
+                                   node_id, attr_ptr, vertex_indegree_value);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex norm indegree",
+                                    node_id, attr_ptr, vertex_norm_indegree_value);
 
       return status;
     }
@@ -253,15 +248,19 @@ namespace neuroh5
           vertex_norm_outdegrees[v] = norm_outdegree;
         }
       
+      
+      vector <ATTR_PTR_T> attr_ptr;
       vector <NODE_IDX_T> node_id;
       vector <uint32_t> vertex_outdegree_value;
       vector <float> vertex_norm_outdegree_value;
 
+      attr_ptr.push_back(0);
       for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
         {
           if (it->second == rank)
             {
               node_id.push_back(it->first);
+              attr_ptr.push_back(attr_ptr.back() + 1);
               vertex_outdegree_value.push_back(vertex_outdegrees[it->first]);
               vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[it->first]);
             }
@@ -271,14 +270,11 @@ namespace neuroh5
       assert(fapl >= 0);
       assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
       
-      graph::write_node_attribute (file, "Vertex outdegree", node_id, vertex_outdegree_value);
-      graph::write_node_attribute (file, "Vertex norm outdegree", node_id, vertex_norm_outdegree_value);
-
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex outdegree",
+                                    node_id, attr_ptr, vertex_outdegree_value);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex norm outdegree",
+                                    node_id, attr_ptr, vertex_norm_outdegree_value);
 
       return status;
     }

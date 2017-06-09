@@ -15,6 +15,7 @@
 #include "write_template.hh"
 #include "hdf5_cell_attributes.hh"
 #include "dataset_num_elements.hh"
+#include "create_group.hh"
 #include "attr_map.hh"
 #include "infer_datatype.hh"
 
@@ -45,7 +46,7 @@ namespace neuroh5
      void*             op_data
      )
     {
-      string value_path = string(name) + "/value";
+      string value_path = string(name) + "/" + hdf5::ATTR_VAL;
       hid_t dset = H5Dopen2(grp, value_path.c_str(), H5P_DEFAULT);
       if (dset < 0) // skip the link, if this is not a dataset
         {
@@ -157,40 +158,15 @@ namespace neuroh5
      hid_t            loc,
      const string&    path,
      hsize_t&         ptr_size,
-     hsize_t&         gid_size,
+     hsize_t&         index_size,
      hsize_t&         value_size
      )
     {
-      ptr_size = hdf5::dataset_num_elements(comm, loc, path+"/ptr");
-      gid_size = hdf5::dataset_num_elements(comm, loc, path+"/gid");
-      value_size = hdf5::dataset_num_elements(comm, loc, path+"/value");
+      ptr_size   = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_PTR);
+      index_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::CELL_INDEX);
+      value_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_VAL);
     }
 
-    herr_t hdf5_create_group
-    (
-     const hid_t&    file,
-     const string&   path
-     )
-    {
-      herr_t status;
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
-        {
-        
-          hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-          assert(lcpl >= 0);
-          assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
-        
-          hid_t group = H5Gcreate2(file, path.c_str(),
-                                   lcpl, H5P_DEFAULT, H5P_DEFAULT);
-          assert(group >= 0);
-          status = H5Gclose(group);
-          assert(status == 0);
-          status = H5Pclose(lcpl);
-          assert(status == 0);
-        }
-    
-      return status;
-    }
 
     void create_cell_attribute_datasets
     (
@@ -223,18 +199,18 @@ namespace neuroh5
     
       if (!(H5Lexists (file, ("/" + hdf5::POPULATIONS).c_str(), H5P_DEFAULT) > 0))
         {
-          hdf5_create_group(file, ("/" + hdf5::POPULATIONS).c_str());
+          hdf5::create_group(file, ("/" + hdf5::POPULATIONS).c_str());
         }
 
       if (!(H5Lexists (file, hdf5::population_path(pop_name).c_str(), H5P_DEFAULT) > 0))
         {
-          hdf5_create_group(file, hdf5::population_path(pop_name));
+          hdf5::create_group(file, hdf5::population_path(pop_name));
         }
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0))
         {
-          hdf5_create_group(file, attr_prefix);
+          hdf5::create_group(file, attr_prefix);
         }
 
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
@@ -441,17 +417,17 @@ namespace neuroh5
           const map< CELL_IDX_T, vector<float> > &float_values = all_float_values[i];
           for (auto const& element : float_values)
             {
-              const CELL_IDX_T gid = element.first;
+              const CELL_IDX_T index = element.first;
               const vector<float> &v = element.second;
-              auto it = node_rank_map.find(gid);
+              auto it = node_rank_map.find(index);
               if(it == node_rank_map.end())
                 {
-                  printf("gid  %u not in node rank map\n", gid);
+                  printf("index %u not in node rank map\n", index);
                 }
               assert(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, gid, v);
+              attr_map.insert(i, index, v);
             }
         }
 
@@ -460,13 +436,13 @@ namespace neuroh5
           const map< CELL_IDX_T, vector<uint8_t> > &uint8_values = all_uint8_values[i];
           for (auto const& element : uint8_values)
             {
-              const CELL_IDX_T gid = element.first;
+              const CELL_IDX_T index = element.first;
               const vector<uint8_t> &v = element.second;
-              auto it = node_rank_map.find(gid);
+              auto it = node_rank_map.find(index);
               assert(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, gid, v);
+              attr_map.insert(i, index, v);
             }
         }
 
@@ -475,13 +451,13 @@ namespace neuroh5
           const map< CELL_IDX_T, vector<int8_t> > &int8_values = all_int8_values[i];
           for (auto const& element : int8_values)
             {
-              const CELL_IDX_T gid = element.first;
+              const CELL_IDX_T index = element.first;
               const vector<int8_t> &v = element.second;
-              auto it = node_rank_map.find(gid);
+              auto it = node_rank_map.find(index);
               assert(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, gid, v);
+              attr_map.insert(i, index, v);
             }
         }
 
@@ -490,13 +466,13 @@ namespace neuroh5
           const map< CELL_IDX_T, vector<uint16_t> > &uint16_values = all_uint16_values[i];
           for (auto const& element : uint16_values)
             {
-              const CELL_IDX_T gid = element.first;
+              const CELL_IDX_T index = element.first;
               const vector<uint16_t> &v = element.second;
-              auto it = node_rank_map.find(gid);
+              auto it = node_rank_map.find(index);
               assert(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, gid, v);
+              attr_map.insert(i, index, v);
             }
         }
 
@@ -505,13 +481,13 @@ namespace neuroh5
           const map< CELL_IDX_T, vector<int16_t> > &int16_values = all_int16_values[i];
           for (auto const& element : int16_values)
             {
-              const CELL_IDX_T gid = element.first;
+              const CELL_IDX_T index = element.first;
               const vector<int16_t> &v = element.second;
-              auto it = node_rank_map.find(gid);
+              auto it = node_rank_map.find(index);
               assert(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, gid, v);
+              attr_map.insert(i, index, v);
             }
         }
 
@@ -520,13 +496,13 @@ namespace neuroh5
           const map< CELL_IDX_T, vector<uint32_t> > &uint32_values = all_uint32_values[i];
           for (auto const& element : uint32_values)
             {
-              const CELL_IDX_T gid = element.first;
+              const CELL_IDX_T index = element.first;
               const vector<uint32_t> &v = element.second;
-              auto it = node_rank_map.find(gid);
+              auto it = node_rank_map.find(index);
               assert(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, gid, v);
+              attr_map.insert(i, index, v);
             }
         }
 
@@ -535,13 +511,13 @@ namespace neuroh5
           const map< CELL_IDX_T, vector<int32_t> > &int32_values = all_int32_values[i];
           for (auto const& element : int32_values)
             {
-              const CELL_IDX_T gid = element.first;
+              const CELL_IDX_T index = element.first;
               const vector<int32_t> &v = element.second;
-              auto it = node_rank_map.find(gid);
+              auto it = node_rank_map.find(index);
               assert(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, gid, v);
+              attr_map.insert(i, index, v);
             }
         }
 
@@ -632,46 +608,46 @@ namespace neuroh5
 		
                   // Create MPI_PACKED object with the number of gids for this rank
                   int packsize=0;
-                  uint32_t rank_numitems = m.gid_set.size();
+                  uint32_t rank_numitems = m.index_set.size();
                   assert(MPI_Pack_size(1, MPI_UINT32_T, all_comm, &packsize) == MPI_SUCCESS);
                   sendbuf.resize(sendbuf.size() + packsize);
                   assert(MPI_Pack(&rank_numitems, 1, MPI_UINT32_T, &sendbuf[0],
                                   (int)sendbuf.size(), &sendpos, all_comm) == MPI_SUCCESS);
 		
-                  for (auto it2 = m.gid_set.begin(); it2 != m.gid_set.end(); ++it2)
+                  for (auto it2 = m.index_set.begin(); it2 != m.index_set.end(); ++it2)
                     {
                       int packsize = 0;
-                      CELL_IDX_T gid = *it2;
+                      CELL_IDX_T index = *it2;
 		    
 
-                      const vector<vector<float>>    float_values  = m.find<float>(gid);
-                      const vector<vector<uint8_t>>  uint8_values  = m.find<uint8_t>(gid);
-                      const vector<vector<int8_t>>   int8_values   = m.find<int8_t>(gid);
-                      const vector<vector<uint16_t>> uint16_values = m.find<uint16_t>(gid);
-                      const vector<vector<int16_t>>  int16_values  = m.find<int16_t>(gid);
-                      const vector<vector<uint32_t>> uint32_values = m.find<uint32_t>(gid);
-                      const vector<vector<int32_t>>  int32_values  = m.find<int32_t>(gid);
+                      const vector<vector<float>>    float_values  = m.find<float>(index);
+                      const vector<vector<uint8_t>>  uint8_values  = m.find<uint8_t>(index);
+                      const vector<vector<int8_t>>   int8_values   = m.find<int8_t>(index);
+                      const vector<vector<uint16_t>> uint16_values = m.find<uint16_t>(index);
+                      const vector<vector<int16_t>>  int16_values  = m.find<int16_t>(index);
+                      const vector<vector<uint32_t>> uint32_values = m.find<uint32_t>(index);
+                      const vector<vector<int32_t>>  int32_values  = m.find<int32_t>(index);
 		    
-                      mpi::pack_size_gid(all_comm, packsize);
-                      mpi::pack_size_attr<float>(all_comm, MPI_FLOAT, gid, float_values, packsize);
-                      mpi::pack_size_attr<uint8_t>(all_comm, MPI_UINT8_T, gid, uint8_values, packsize);
-                      mpi::pack_size_attr<int8_t>(all_comm, MPI_INT8_T, gid, int8_values, packsize);
-                      mpi::pack_size_attr<uint16_t>(all_comm, MPI_UINT16_T, gid, uint16_values, packsize);
-                      mpi::pack_size_attr<int16_t>(all_comm, MPI_INT16_T, gid, int16_values, packsize);
-                      mpi::pack_size_attr<uint32_t>(all_comm, MPI_UINT32_T, gid, uint32_values, packsize);
-                      mpi::pack_size_attr<int32_t>(all_comm, MPI_INT32_T, gid, int32_values, packsize);
+                      mpi::pack_size_index(all_comm, packsize);
+                      mpi::pack_size_attr<float>(all_comm, MPI_FLOAT, index, float_values, packsize);
+                      mpi::pack_size_attr<uint8_t>(all_comm, MPI_UINT8_T, index, uint8_values, packsize);
+                      mpi::pack_size_attr<int8_t>(all_comm, MPI_INT8_T, index, int8_values, packsize);
+                      mpi::pack_size_attr<uint16_t>(all_comm, MPI_UINT16_T, index, uint16_values, packsize);
+                      mpi::pack_size_attr<int16_t>(all_comm, MPI_INT16_T, index, int16_values, packsize);
+                      mpi::pack_size_attr<uint32_t>(all_comm, MPI_UINT32_T, index, uint32_values, packsize);
+                      mpi::pack_size_attr<int32_t>(all_comm, MPI_INT32_T, index, int32_values, packsize);
                     
                       sendbuf.resize(sendbuf.size()+packsize);
                       int sendbuf_size = sendbuf.size();
                     
-                      mpi::pack_gid(all_comm, gid, sendbuf_size, sendbuf, sendpos);
-                      mpi::pack_attr<float>(all_comm, MPI_FLOAT, gid, float_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<uint8_t>(all_comm, MPI_UINT8_T, gid, uint8_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<int8_t>(all_comm, MPI_INT8_T, gid, int8_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<uint16_t>(all_comm, MPI_UINT16_T, gid, uint16_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<int16_t>(all_comm, MPI_INT16_T, gid, int16_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<uint32_t>(all_comm, MPI_UINT32_T, gid, uint32_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<int32_t>(all_comm, MPI_INT32_T, gid, int32_values, sendbuf_size, sendpos, sendbuf);
+                      mpi::pack_index(all_comm, index, sendbuf_size, sendbuf, sendpos);
+                      mpi::pack_attr<float>(all_comm, MPI_FLOAT, index, float_values, sendbuf_size, sendpos, sendbuf);
+                      mpi::pack_attr<uint8_t>(all_comm, MPI_UINT8_T, index, uint8_values, sendbuf_size, sendpos, sendbuf);
+                      mpi::pack_attr<int8_t>(all_comm, MPI_INT8_T, index, int8_values, sendbuf_size, sendpos, sendbuf);
+                      mpi::pack_attr<uint16_t>(all_comm, MPI_UINT16_T, index, uint16_values, sendbuf_size, sendpos, sendbuf);
+                      mpi::pack_attr<int16_t>(all_comm, MPI_INT16_T, index, int16_values, sendbuf_size, sendpos, sendbuf);
+                      mpi::pack_attr<uint32_t>(all_comm, MPI_UINT32_T, index, uint32_values, sendbuf_size, sendpos, sendbuf);
+                      mpi::pack_attr<int32_t>(all_comm, MPI_INT32_T, index, int32_values, sendbuf_size, sendpos, sendbuf);
                     }
                 }
               sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
@@ -771,22 +747,22 @@ namespace neuroh5
 	
           for (size_t i=0; i<num_recv_items; i++)
             {
-              CELL_IDX_T gid;
-              mpi::unpack_gid(all_comm, gid, recvbuf_size, recvbuf, recvpos);
+              CELL_IDX_T index;
+              mpi::unpack_index(all_comm, index, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<float>(all_comm, MPI_FLOAT, gid, attr_map, recvbuf_size, recvbuf, recvpos);
+              mpi::unpack_attr<float>(all_comm, MPI_FLOAT, index, attr_map, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<uint8_t>(all_comm, MPI_UINT8_T, gid, attr_map, recvbuf_size, recvbuf, recvpos);
+              mpi::unpack_attr<uint8_t>(all_comm, MPI_UINT8_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<int8_t>(all_comm, MPI_INT8_T, gid, attr_map, recvbuf_size, recvbuf, recvpos);
+              mpi::unpack_attr<int8_t>(all_comm, MPI_INT8_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<uint16_t>(all_comm, MPI_UINT16_T, gid, attr_map, recvbuf_size, recvbuf, recvpos);
+              mpi::unpack_attr<uint16_t>(all_comm, MPI_UINT16_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<int16_t>(all_comm, MPI_INT16_T, gid, attr_map, recvbuf_size, recvbuf, recvpos);
+              mpi::unpack_attr<int16_t>(all_comm, MPI_INT16_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<uint32_t>(all_comm, MPI_UINT32_T, gid, attr_map, recvbuf_size, recvbuf, recvpos);
+              mpi::unpack_attr<uint32_t>(all_comm, MPI_UINT32_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<int32_t>(all_comm, MPI_INT32_T, gid, attr_map, recvbuf_size, recvbuf, recvpos);
+              mpi::unpack_attr<int32_t>(all_comm, MPI_INT32_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
               assert((size_t)recvpos <= recvbuf_size);
             }
         }
@@ -855,7 +831,7 @@ namespace neuroh5
         
           for (size_t i=0; i<attr_info.size(); i++)
             {
-              vector<CELL_IDX_T>  gid;
+              vector<CELL_IDX_T>  index;
               vector<ATTR_PTR_T>  ptr;
             
               string attr_name  = attr_info[i].first;
@@ -872,15 +848,15 @@ namespace neuroh5
                         {
                           vector<uint32_t> attr_map_uint32;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_uint32);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_uint32);
+                                                            index, ptr, attr_map_uint32);
+                          attr_map.insert(attr_name, index, ptr, attr_map_uint32);
                         }
                       else
                         {
                           vector<int32_t> attr_map_int32;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_int32);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_int32);
+                                                            index, ptr, attr_map_int32);
+                          attr_map.insert(attr_name, index, ptr, attr_map_int32);
                         }
                     }
                   else if (attr_size == 2)
@@ -889,15 +865,15 @@ namespace neuroh5
                         {
                           vector<uint16_t> attr_map_uint16;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_uint16);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_uint16);
+                                                            index, ptr, attr_map_uint16);
+                          attr_map.insert(attr_name, index, ptr, attr_map_uint16);
                         }
                       else
                         {
                           vector<int16_t> attr_map_int16;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_int16);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_int16);
+                                                            index, ptr, attr_map_int16);
+                          attr_map.insert(attr_name, index, ptr, attr_map_int16);
                         }
                     }
                   else if (attr_size == 1)
@@ -906,15 +882,15 @@ namespace neuroh5
                         {
                           vector<uint8_t> attr_map_uint8;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_uint8);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_uint8);
+                                                            index, ptr, attr_map_uint8);
+                          attr_map.insert(attr_name, index, ptr, attr_map_uint8);
                         }
                       else
                         {
                           vector<int8_t> attr_map_int8;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_int8);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_int8);
+                                                            index, ptr, attr_map_int8);
+                          attr_map.insert(attr_name, index, ptr, attr_map_int8);
                         }
                     }
                   else
@@ -926,8 +902,8 @@ namespace neuroh5
                   {
                     vector<float> attr_map_float;
                     status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                      gid, ptr, attr_map_float);
-                    attr_map.insert(attr_name, gid, ptr, attr_map_float);
+                                                      index, ptr, attr_map_float);
+                    attr_map.insert(attr_name, index, ptr, attr_map_float);
                   }
                   break;
                 case H5T_ENUM:
@@ -937,15 +913,15 @@ namespace neuroh5
                         {
                           vector<uint8_t> attr_map_uint8;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_uint8);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_uint8);
+                                                            index, ptr, attr_map_uint8);
+                          attr_map.insert(attr_name, index, ptr, attr_map_uint8);
                         }
                       else
                         {
                           vector<int8_t> attr_map_int8;
                           status = hdf5::read_cell_attribute(io_comm, file, attr_path,
-                                                            gid, ptr, attr_map_int8);
-                          attr_map.insert(attr_name, gid, ptr, attr_map_int8);
+                                                            index, ptr, attr_map_int8);
+                          attr_map.insert(attr_name, index, ptr, attr_map_int8);
                         }
                     }
                   else
@@ -970,45 +946,45 @@ namespace neuroh5
           // Create MPI_PACKED object with the number of gids
           int sendpos = 0;
           int packsize=0;
-          uint32_t numitems = attr_map.gid_set.size();
+          uint32_t numitems = attr_map.index_set.size();
           assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
           sendrecvbuf.resize(sendrecvbuf.size() + packsize);
           assert(MPI_Pack(&numitems, 1, MPI_UINT32_T, &sendrecvbuf[0],
                           (int)sendrecvbuf.size(), &sendpos, comm) == MPI_SUCCESS);
 		
-          for (auto it = attr_map.gid_set.begin(); it != attr_map.gid_set.end(); ++it)
+          for (auto it = attr_map.index_set.begin(); it != attr_map.index_set.end(); ++it)
             {
               int packsize = 0;
-              CELL_IDX_T gid = *it;
+              CELL_IDX_T index = *it;
 
-              const vector<vector<float>>    float_values = attr_map.find<float>(gid);
-              const vector<vector<uint8_t>>  uint8_values = attr_map.find<uint8_t>(gid);
-              const vector<vector<int8_t>>   int8_values = attr_map.find<int8_t>(gid);
-              const vector<vector<uint16_t>> uint16_values = attr_map.find<uint16_t>(gid);
-              const vector<vector<int16_t>>  int16_values = attr_map.find<int16_t>(gid);
-              const vector<vector<uint32_t>> uint32_values = attr_map.find<uint32_t>(gid);
-              const vector<vector<int32_t>>  int32_values = attr_map.find<int32_t>(gid);
+              const vector<vector<float>>    float_values = attr_map.find<float>(index);
+              const vector<vector<uint8_t>>  uint8_values = attr_map.find<uint8_t>(index);
+              const vector<vector<int8_t>>   int8_values = attr_map.find<int8_t>(index);
+              const vector<vector<uint16_t>> uint16_values = attr_map.find<uint16_t>(index);
+              const vector<vector<int16_t>>  int16_values = attr_map.find<int16_t>(index);
+              const vector<vector<uint32_t>> uint32_values = attr_map.find<uint32_t>(index);
+              const vector<vector<int32_t>>  int32_values = attr_map.find<int32_t>(index);
 		    
-              mpi::pack_size_gid(comm, packsize);
-              mpi::pack_size_attr<float>(comm, MPI_FLOAT, gid, float_values, packsize);
-              mpi::pack_size_attr<uint8_t>(comm, MPI_UINT8_T, gid, uint8_values, packsize);
-              mpi::pack_size_attr<int8_t>(comm, MPI_INT8_T, gid, int8_values, packsize);
-              mpi::pack_size_attr<uint16_t>(comm, MPI_UINT16_T, gid, uint16_values, packsize);
-              mpi::pack_size_attr<int16_t>(comm, MPI_INT16_T, gid, int16_values, packsize);
-              mpi::pack_size_attr<uint32_t>(comm, MPI_UINT32_T, gid, uint32_values, packsize);
-              mpi::pack_size_attr<int32_t>(comm, MPI_INT32_T, gid, int32_values, packsize);
+              mpi::pack_size_index(comm, packsize);
+              mpi::pack_size_attr<float>(comm, MPI_FLOAT, index, float_values, packsize);
+              mpi::pack_size_attr<uint8_t>(comm, MPI_UINT8_T, index, uint8_values, packsize);
+              mpi::pack_size_attr<int8_t>(comm, MPI_INT8_T, index, int8_values, packsize);
+              mpi::pack_size_attr<uint16_t>(comm, MPI_UINT16_T, index, uint16_values, packsize);
+              mpi::pack_size_attr<int16_t>(comm, MPI_INT16_T, index, int16_values, packsize);
+              mpi::pack_size_attr<uint32_t>(comm, MPI_UINT32_T, index, uint32_values, packsize);
+              mpi::pack_size_attr<int32_t>(comm, MPI_INT32_T, index, int32_values, packsize);
               
               sendrecvbuf.resize(sendrecvbuf.size()+packsize);
               int sendrecvbuf_size = sendrecvbuf.size();
               
-              mpi::pack_gid(comm, gid, sendrecvbuf_size, sendrecvbuf, sendpos);
-              mpi::pack_attr<float>(comm, MPI_FLOAT, gid, float_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<uint8_t>(comm, MPI_UINT8_T, gid, uint8_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<int8_t>(comm, MPI_INT8_T, gid, int8_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<uint16_t>(comm, MPI_UINT16_T, gid, uint16_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<int16_t>(comm, MPI_INT16_T, gid, int16_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<uint32_t>(comm, MPI_UINT32_T, gid, uint32_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<int32_t>(comm, MPI_INT32_T, gid, int32_values, sendrecvbuf_size, sendpos, sendrecvbuf);
+              mpi::pack_index(comm, index, sendrecvbuf_size, sendrecvbuf, sendpos);
+              mpi::pack_attr<float>(comm, MPI_FLOAT, index, float_values, sendrecvbuf_size, sendpos, sendrecvbuf);
+              mpi::pack_attr<uint8_t>(comm, MPI_UINT8_T, index, uint8_values, sendrecvbuf_size, sendpos, sendrecvbuf);
+              mpi::pack_attr<int8_t>(comm, MPI_INT8_T, index, int8_values, sendrecvbuf_size, sendpos, sendrecvbuf);
+              mpi::pack_attr<uint16_t>(comm, MPI_UINT16_T, index, uint16_values, sendrecvbuf_size, sendpos, sendrecvbuf);
+              mpi::pack_attr<int16_t>(comm, MPI_INT16_T, index, int16_values, sendrecvbuf_size, sendpos, sendrecvbuf);
+              mpi::pack_attr<uint32_t>(comm, MPI_UINT32_T, index, uint32_values, sendrecvbuf_size, sendpos, sendrecvbuf);
+              mpi::pack_attr<int32_t>(comm, MPI_INT32_T, index, int32_values, sendrecvbuf_size, sendpos, sendrecvbuf);
             }
         }
 
@@ -1081,22 +1057,22 @@ namespace neuroh5
             
               for (size_t i=0; i<num_recv_items; i++)
                 {
-                  CELL_IDX_T gid;
-                  mpi::unpack_gid(comm, gid, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  CELL_IDX_T index;
+                  mpi::unpack_index(comm, index, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<float>(comm, MPI_FLOAT, gid, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  mpi::unpack_attr<float>(comm, MPI_FLOAT, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<uint8_t>(comm, MPI_UINT8_T, gid, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  mpi::unpack_attr<uint8_t>(comm, MPI_UINT8_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<int8_t>(comm, MPI_INT8_T, gid, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  mpi::unpack_attr<int8_t>(comm, MPI_INT8_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<uint16_t>(comm, MPI_UINT16_T, gid, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  mpi::unpack_attr<uint16_t>(comm, MPI_UINT16_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<int16_t>(comm, MPI_INT16_T, gid, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  mpi::unpack_attr<int16_t>(comm, MPI_INT16_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<uint32_t>(comm, MPI_UINT32_T, gid, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  mpi::unpack_attr<uint32_t>(comm, MPI_UINT32_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<int32_t>(comm, MPI_INT32_T, gid, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
+                  mpi::unpack_attr<int32_t>(comm, MPI_INT32_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
                   assert((size_t)recvpos <= sendrecvbuf_size);
                 }
             }
