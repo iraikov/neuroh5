@@ -3,7 +3,7 @@
 #include "neuroh5_types.hh"
 #include "cell_populations.hh"
 
-#include "read_dbs_projection.hh"
+#include "read_projection.hh"
 #include "read_graph.hh"
 #include "scatter_graph.hh"
 #include "cell_populations.hh"
@@ -88,7 +88,7 @@ int filter_edge_list
 
 int main(int argc, char** argv)
 {
-  string input_file_name, projection_name;
+  string input_file_name, src_pop_name, dst_pop_name;
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -98,14 +98,15 @@ int main(int argc, char** argv)
 
   // parse arguments
 
-  if (argc < 2) 
+  if (argc < 3) 
     {
-      std::cout << "Usage: reader <FILE> <PROJECTION> <SELECTION> ..." << std::endl;
+      std::cout << "Usage: reader <FILE> <SRC> <DST> <SELECTION> ..." << std::endl;
       exit(1);
     }
 
   input_file_name = string(argv[1]);
-  projection_name = string(argv[2]);
+  src_pop_name = string(argv[2]);
+  dst_pop_name = string(argv[3]);
 
   // determine src and dst node selections
   set <NODE_IDX_T> src_selection;
@@ -154,7 +155,7 @@ int main(int argc, char** argv)
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
   assert(cell::read_population_ranges(MPI_COMM_WORLD, input_file_name.c_str(), pop_ranges, pop_vector, total_num_nodes) >= 0);
 
-  vector<string> prj_names;
+  vector< pair<string, string> > prj_names;
   assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name.c_str(), prj_names) >= 0);
       
   vector<NODE_IDX_T> edge_list;
@@ -171,13 +172,14 @@ int main(int argc, char** argv)
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
 
-      if (projection_name.compare(prj_names[i]) == 0)
+      if ((src_pop_name.compare(prj_names[i].first) == 0) &&
+          (dst_pop_name.compare(prj_names[i].second) == 0))
         {
-          printf("Reading projection %lu (%s)\n", i, prj_names[i].c_str());
+          printf("Reading projection %lu (%s -> %s)\n", i, prj_names[i].first.c_str(), prj_names[i].second.c_str());
           
-          assert(graph::read_dbs_projection(MPI_COMM_WORLD, input_file_name.c_str(), prj_names[i].c_str(), 
-                                            dst_start, src_start, total_prj_num_edges, block_base, edge_base,
-                                            dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+          assert(graph::read_projection(MPI_COMM_WORLD, input_file_name, prj_names[i].first, prj_names[i].second, 
+                                        dst_start, src_start, total_prj_num_edges, block_base, edge_base,
+                                        dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
 
           
           // validate the edges

@@ -132,7 +132,7 @@ namespace neuroh5
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
-      if (!(H5Lexists (file, ("/" + hdf5::POPS).c_str(), H5P_DEFAULT) > 0) ||
+      if (!(H5Lexists (file, ("/" + hdf5::POPULATIONS).c_str(), H5P_DEFAULT) > 0) ||
           !(H5Lexists (file, hdf5::population_path(pop_name).c_str(), H5P_DEFAULT) > 0) ||
           !(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0) ||
           !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))

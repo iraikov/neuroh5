@@ -187,7 +187,7 @@ namespace neuroh5
         {
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           assert(file >= 0);
-          dset = H5Dopen2(file, hdf5::h5types_path_join(hdf5::POPS).c_str(), H5P_DEFAULT);
+          dset = H5Dopen2(file, hdf5::h5types_path_join(hdf5::POPULATIONS).c_str(), H5P_DEFAULT);
           assert(dset >= 0);
 
           hid_t fspace = H5Dget_space(dset);

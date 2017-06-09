@@ -287,7 +287,7 @@ namespace neuroh5
 
             gid_vector.resize(block-1);
             status = hdf5::read<CELL_IDX_T> (file,
-                                             hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TREE_ID),
+                                             hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
                                              start, block-1,
                                              CELL_IDX_H5_NATIVE_T,
                                              gid_vector, rapl);

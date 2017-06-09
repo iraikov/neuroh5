@@ -26,7 +26,7 @@
 #include "neuroh5_types.hh"
 #include "path_names.hh"
 #include "scatter_read_tree.hh"
-#include "write_tree.hh"
+#include "append_tree.hh"
 #include "cell_attributes.hh"
 #include "cell_populations.hh"
 
@@ -409,9 +409,9 @@ int main(int argc, char** argv)
       status = H5Fclose (output_file);
       assert(status == 0);
       
-      status = cell::write_trees(all_comm, output_file_name, pop_name, 
-                                 ptr_start, attr_start, sec_start, topo_start, 
-                                 tree_subset);
+      status = cell::append_trees(all_comm, output_file_name, pop_name, 
+                                  ptr_start, attr_start, sec_start, topo_start, 
+                                  tree_subset);
       
       assert(status == 0);
 

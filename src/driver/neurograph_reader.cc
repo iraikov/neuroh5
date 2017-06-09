@@ -168,7 +168,7 @@ int main(int argc, char** argv)
       exit(1);
     }
 
-  vector<string> prj_names;
+  vector< pair<string, string> > prj_names;
   assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name,
                                       prj_names) >= 0);
 

@@ -221,9 +221,9 @@ namespace neuroh5
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
     
-      if (!(H5Lexists (file, ("/" + hdf5::POPS).c_str(), H5P_DEFAULT) > 0))
+      if (!(H5Lexists (file, ("/" + hdf5::POPULATIONS).c_str(), H5P_DEFAULT) > 0))
         {
-          hdf5_create_group(file, ("/" + hdf5::POPS).c_str());
+          hdf5_create_group(file, ("/" + hdf5::POPULATIONS).c_str());
         }
 
       if (!(H5Lexists (file, hdf5::population_path(pop_name).c_str(), H5P_DEFAULT) > 0))

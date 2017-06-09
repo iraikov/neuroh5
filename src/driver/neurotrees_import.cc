@@ -30,7 +30,7 @@
 #include "read_layer_swc.hh"
 #include "dataset_num_elements.hh"
 #include "rank_range.hh"
-#include "write_tree.hh"
+#include "append_tree.hh"
 
 #include "path_names.hh"
 #include "create_file_toplevel.hh"
@@ -266,9 +266,9 @@ int main(int argc, char** argv)
   sec_start  = sec_num;
   topo_start = topo_num;
 
-  status = cell::write_trees(all_comm, output_file_name, pop_name, 
-                             ptr_start, attr_start, sec_start, topo_start, 
-                             tree_list);
+  status = cell::append_trees(all_comm, output_file_name, pop_name, 
+                              ptr_start, attr_start, sec_start, topo_start, 
+                              tree_list);
   assert(status == 0);
 
 

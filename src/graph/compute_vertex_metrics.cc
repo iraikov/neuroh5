@@ -10,13 +10,13 @@
 
 #include "debug.hh"
 
-#include "read_dbs_projection.hh"
+#include "read_projection.hh"
 #include "cell_populations.hh"
 #include "scatter_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
 #include "validate_edge_list.hh"
-#include "node_attributes.hh"
+#include "cell_attributes.hh"
 
 #include <getopt.h>
 #include <cassert>
@@ -85,7 +85,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const std::string& file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size
      )
     {
@@ -172,8 +172,8 @@ namespace neuroh5
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(file >= 0);
       
-      graph::write_node_attribute (file, "Vertex indegree", node_id, vertex_indegree_value);
-      graph::write_node_attribute (file, "Vertex norm indegree", node_id, vertex_norm_indegree_value);
+      cell::append_cell_attribute (file, "Vertex indegree", node_id, vertex_indegree_value);
+      cell::append_cell_attribute (file, "Vertex norm indegree", node_id, vertex_norm_indegree_value);
 
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);
@@ -186,7 +186,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const std::string& file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size
      )
     {

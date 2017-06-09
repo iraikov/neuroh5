@@ -4,7 +4,7 @@
 ///
 ///  Function definitions for balancing graphs.
 ///
-///  Copyright (C) 2016 Project NeuroH5.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
@@ -45,7 +45,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const std::string& input_file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size,
      const size_t Nparts,
      std::vector<NODE_IDX_T> &parts,
