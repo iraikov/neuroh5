@@ -69,13 +69,13 @@ else:
 NUMPY_INCDIR= os.environ.get("NUMPY_INCDIR", np.get_include())
 
 setup(
-    name='neurograph',
+    name='NeuroH5',
     package_dir = {'': 'python'},
-    packages = ["neurograph"],
+    packages = ["neuroh5"],
     version='0.0.1',
     maintainer = "Ivan Raikov",
     maintainer_email = "ivan.g.raikov@gmail.com",
-    description = "Neurograph library",
+    description = "NeuroH5 library",
     url = "http://github.com/gheber/neurographdf5",
     include_package_data=True,
     install_requires=[
@@ -83,11 +83,10 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        importdbs=neurograph.importdbs:cli
-        importpairs=neurograph.importpairs:cli
+        importdbs=neuroh5.importdbs:cli
     ''',
     ext_modules = [
-        Extension('neurograph.io',
+        Extension('neuroh5.io',
                   extra_compile_args = extra_compile_args,
                   extra_link_args = extra_link_args,
                   libraries = libraries,
