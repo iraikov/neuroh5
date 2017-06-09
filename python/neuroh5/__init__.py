@@ -1,11 +1,11 @@
-"""Python routines to import connectivity data in the neurograph storage format and bindings to the neurograph reader functions.
+"""Python bindings to the NeuroH5 procedures.
 
 
-The neurograph library implements an HDF5-based format for storing
-connectivity information of large neural networks, perform parallel
-graph partitioning and analysis.
+The NeuroH5 library implements an HDF5-based format for storing
+morphological and connectivity information of large neural networks,
+perform parallel graph partitioning and analysis.
 
-neurograph assumes that synaptic connectivity between neurons in
+NeuroH5 assumes that synaptic connectivity between neurons in
 neuronal network models is represented as directed graphs stored as
 adjacency lists, where the vertices represent the neurons in the
 network and are identified by unsigned integers called unique global
