@@ -2,7 +2,7 @@
 //==============================================================================
 ///  @file iomodule.cc
 ///
-///  Python module for reading edge information in DBS (Destination Block Sparse) format.
+///  Python module for reading and writing neuronal connectivity and morphological information.
 ///
 ///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
@@ -30,6 +30,21 @@
 
 #undef NDEBUG
 #include <cassert>
+
+#include "neurotrees_types.hh"
+#include "cell_attributes.hh"
+#include "hdf5_path_names.hh"
+#include "hdf5_exists_tree_dataset.hh"
+#include "read_tree.hh"
+#include "scatter_read_tree.hh"
+#include "enum_population_names.hh"
+#include "read_population_names.hh"
+#include "read_population_ranges.hh"
+#include "read_tree_index.hh"
+#include "read_cell_index.hh"
+#include "dataset_num_elements.hh"
+#include "dataset_type.hh"
+#include "attrmap.hh"
 
 #include "model_types.hh"
 #include "read_dbs_projection.hh"
@@ -780,93 +795,8 @@ extern "C"
   }
   */
   
-  static PyMethodDef module_methods[] = {
-    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
-      "Reads graph connectivity in Destination Block Sparse format." },
-    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS | METH_KEYWORDS,
-      "Reads and scatters graph connectivity in Destination Block Sparse format." },
-    { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
-      "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
-    { NULL, NULL, 0, NULL }
-  };
-}
-
-PyMODINIT_FUNC
-initio(void) {
-  import_array();
-  Py_InitModule3("io", module_methods, "HDF5 graph I/O module");
-}
 
   
-
-// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
-//==============================================================================
-///  @file iomodule.cc
-///
-///  Python module for reading neuronal morphologies.
-///
-///  Copyright (C) 2016-2017 Project Neurotrees.
-//==============================================================================
-
-#include "debug.hh"
-
-#include <Python.h>
-#include <numpy/numpyconfig.h>
-#include <numpy/arrayobject.h>
-
-#include <getopt.h>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <map>
-#include <set>
-#include <vector>
-
-#include <hdf5.h>
-#include <mpi.h>
-#include <algorithm>
-
-#undef NDEBUG
-#include <cassert>
-
-#include "neurotrees_types.hh"
-#include "cell_attributes.hh"
-#include "hdf5_path_names.hh"
-#include "hdf5_exists_tree_dataset.hh"
-#include "read_tree.hh"
-#include "scatter_read_tree.hh"
-#include "enum_population_names.hh"
-#include "read_population_names.hh"
-#include "read_population_ranges.hh"
-#include "read_tree_index.hh"
-#include "read_cell_index.hh"
-#include "dataset_num_elements.hh"
-#include "dataset_type.hh"
-#include "attrmap.hh"
-
-using namespace std;
-using namespace neurotrees;
-
-void throw_err(char const* err_message)
-{
-  fprintf(stderr, "Error: %s\n", err_message);
-  MPI_Abort(MPI_COMM_WORLD, 1);
-}
-
-void throw_err(char const* err_message, int32_t task)
-{
-  fprintf(stderr, "Task %d Error: %s\n", task, err_message);
-  MPI_Abort(MPI_COMM_WORLD, 1);
-}
-
-void throw_err(char const* err_message, int32_t task, int32_t thread)
-{
-  fprintf(stderr, "Task %d Thread %d Error: %s\n", task, thread, err_message);
-  MPI_Abort(MPI_COMM_WORLD, 1);
-}
 
 void create_node_rank_map (PyObject *py_node_rank_map,
                            map<CELL_IDX_T,size_t>& node_rank_map)
@@ -2667,6 +2597,12 @@ extern "C"
       "Writes additional attributes for the given range of cells." },
     { "append_cell_attributes", (PyCFunction)py_append_cell_attributes, METH_VARARGS | METH_KEYWORDS,
       "Appends additional attributes for the given range of cells." },
+    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
+      "Reads graph connectivity in Destination Block Sparse format." },
+    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS | METH_KEYWORDS,
+      "Reads and scatters graph connectivity in Destination Block Sparse format." },
+    { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
+      "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };
 }
@@ -2675,7 +2611,7 @@ PyMODINIT_FUNC
 initio(void) {
   import_array();
 
-  PyObject *module = Py_InitModule3("io", module_methods, "Neurotrees I/O");
+  PyObject *module = Py_InitModule3("io", module_methods, "NeuroH5 I/O module");
   
   if (PyType_Ready(&PyNeurotreeGen_Type) < 0)
     {
