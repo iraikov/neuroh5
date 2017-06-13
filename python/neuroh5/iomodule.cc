@@ -31,29 +31,22 @@
 #undef NDEBUG
 #include <cassert>
 
-#include "neurotrees_types.hh"
+#include "neuroh5_types.hh"
+#include "cell_populations.hh"
 #include "cell_attributes.hh"
-#include "hdf5_path_names.hh"
-#include "hdf5_exists_tree_dataset.hh"
+#include "path_names.hh"
+#include "exists_tree_dataset.hh"
 #include "read_tree.hh"
 #include "scatter_read_tree.hh"
-#include "enum_population_names.hh"
-#include "read_population_names.hh"
-#include "read_population_ranges.hh"
-#include "read_tree_index.hh"
-#include "read_cell_index.hh"
+#include "cell_index.hh"
 #include "dataset_num_elements.hh"
-#include "dataset_type.hh"
-#include "attrmap.hh"
+#include "attr_map.hh"
 
-#include "model_types.hh"
-#include "read_dbs_projection.hh"
-#include "population_reader.hh"
+#include "read_projection.hh"
 #include "read_graph.hh"
 #include "scatter_graph.hh"
 #include "bcast_graph.hh"
 #include "write_graph.hh"
-#include "read_population.hh"
 #include "projection_names.hh"
 
 using namespace std;
@@ -78,742 +71,21 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
   MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
-
-
-
-extern "C"
-{
   
-  void create_node_rank_map (PyObject *py_node_rank_map,
-                             map<NODE_IDX_T,rank_t>& node_rank_map)
-  {
-    PyObject *gid_key, *gid_value;
-    Py_ssize_t map_pos = 0;
-    
-    while (PyDict_Next(py_node_rank_map, &map_pos, &gid_key, &gid_value))
-      {
-        NODE_IDX_T gid = PyInt_AsLong(gid_key);
-        rank_t rank = PyInt_AsLong(gid_value);
-        node_rank_map.insert(make_pair(gid,rank));
-      }
-  }
-
-  /*
-  static PyObject *py_append_connections (PyObject *self, PyObject *args, PyObject *kwds)
-  {
-    int status; 
-    PyObject *gid_values;
-    const unsigned long default_cache_size = 4*1024*1024;
-    const unsigned long default_chunk_size = 4000;
-    const unsigned long default_value_chunk_size = 4000;
-    unsigned long commptr;
-    unsigned long chunk_size = default_chunk_size;
-    unsigned long value_chunk_size = default_value_chunk_size;
-    unsigned long cache_size = default_cache_size;
-    char *file_name_arg, *prj_name_arg, *src_pop_arg, *dst_pop_arg;
-    
-    static const char *kwlist[] = {"commptr",
-                                   "file_name",
-                                   "src_pop_name",
-                                   "dst_pop_name",
-                                   "prj_name",
-                                   "edges",
-                                   "attributes",
-                                   "chunk_size",
-                                   "value_chunk_size",
-                                   "cache_size",
-                                   NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|skkk", (char **)kwlist,
-                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
-                                     &name_space_arg, &chunk_size, &value_chunk_size, &cache_size))
-        return NULL;
-
-    string file_name      = string(file_name_arg);
-    string pop_name       = string(pop_name_arg);
-    string attr_namespace = string(name_space_arg);
-    
-    int npy_type=0;
-    
-    vector<string> attr_names;
-    vector<int> attr_types;
-        
-    vector< map<TREE_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-    vector< map<TREE_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-    vector< map<TREE_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-    vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
-    
-
-    create_value_maps(gid_values,
-                      attr_names,
-                      attr_types,
-                      all_attr_values_uint32,
-                      all_attr_values_uint16,
-                      all_attr_values_uint8,
-                      all_attr_values_float);
-
-    size_t attr_idx=0;
-    vector<size_t> attr_type_idx(AttrMap::num_attr_types);
-    for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
-      {
-        const string attr_name = *it;
-        npy_type=attr_types[attr_idx];
-
-        switch (npy_type)
-          {
-          case NPY_UINT32:
-            {
-              append_tree_attribute_map<uint32_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                  attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
-              attr_type_idx[AttrMap::attr_index_uint32]++;
-              break;
-            }
-          case NPY_UINT16:
-            {
-              append_tree_attribute_map<uint16_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                  attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
-              attr_type_idx[AttrMap::attr_index_uint16]++;
-              break;
-            }
-          case NPY_UINT8:
-            {
-              append_tree_attribute_map<uint8_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                 attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
-              attr_type_idx[AttrMap::attr_index_uint8]++;
-              break;
-            }
-          case NPY_FLOAT:
-            {
-              append_tree_attribute_map<float> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
-              attr_type_idx[AttrMap::attr_index_float]++;
-              break;
-            }
-          default:
-            throw runtime_error("Unsupported attribute type");
-            break;
-          }
-      }
-    
-    return Py_None;
-  }
-  */
-
-  
-  static PyObject *py_read_graph (PyObject *self, PyObject *args)
-  {
-    int status;
-    vector<prj_tuple_t> prj_vector;
-    vector<string> prj_names;
-    PyObject *py_prj_dict = PyDict_New();
-    unsigned long commptr;
-    char *input_file_name;
-    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
-
-    if (!PyArg_ParseTuple(args, "ks", &commptr, &input_file_name))
-      return NULL;
-
-    assert(io::hdf5::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
-
-    graph::read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name), true,
-               prj_names, prj_vector,
-               total_num_nodes, local_num_edges, total_num_edges);
-    
-    for (size_t i = 0; i < prj_vector.size(); i++)
-      {
-        const prj_tuple_t& prj = prj_vector[i];
-        
-        const vector<NODE_IDX_T>& src_vector = get<0>(prj);
-        const vector<NODE_IDX_T>& dst_vector = get<1>(prj);
-        const AttrVal&  edge_attr_values    = get<2>(prj);
-
-        std::vector <PyObject*> py_float_edge_attrs;
-        std::vector <PyObject*> py_uint8_edge_attrs;
-        std::vector <PyObject*> py_uint16_edge_attrs;
-        std::vector <PyObject*> py_uint32_edge_attrs;
-
-        std::vector <float*> py_float_edge_attrs_ptr;
-        std::vector <uint8_t*> py_uint8_edge_attrs_ptr;
-        std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
-        std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
-        
-        npy_intp dims[1], ind = 0;
-        dims[0] = src_vector.size();
-        
-        PyObject *src_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
-        PyObject *dst_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
-        uint32_t *src_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)src_arr, &ind);
-        uint32_t *dst_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)dst_arr, &ind);
-        
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-          {
-            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-            float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-            py_float_edge_attrs.push_back(arr);
-            py_float_edge_attrs_ptr.push_back(ptr);
-          }
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-          {
-            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-            uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-            py_uint8_edge_attrs.push_back(arr);
-            py_uint8_edge_attrs_ptr.push_back(ptr);
-          }
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-          {
-            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-            uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-            py_uint16_edge_attrs.push_back(arr);
-            py_uint16_edge_attrs_ptr.push_back(ptr);
-          }
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-          {
-            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-            uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-            py_uint32_edge_attrs.push_back(arr);
-            py_uint32_edge_attrs_ptr.push_back(ptr);
-          }
-        
-        
-        for (size_t j = 0; j < src_vector.size(); j++)
-          {
-            src_ptr[j] = src_vector[j];
-            dst_ptr[j] = dst_vector[j];
-            for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
-              {
-                py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
-              }
-            for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
-              {
-                py_uint8_edge_attrs_ptr[k][j] = edge_attr_values.at<uint8_t>(k,j); 
-              }
-            for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
-              {
-                py_uint16_edge_attrs_ptr[k][j] = edge_attr_values.at<uint16_t>(k,j); 
-              }
-            for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
-              {
-                py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
-              }
-          }
-        
-        PyObject *py_prjval  = PyList_New(0);
-        status = PyList_Append(py_prjval, src_arr);
-        assert (status == 0);
-        status = PyList_Append(py_prjval, dst_arr);
-        assert (status == 0);
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-          {
-            status = PyList_Append(py_prjval, py_float_edge_attrs[j]);
-            assert(status == 0);
-          }
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-          {
-            status = PyList_Append(py_prjval, py_uint8_edge_attrs[j]);
-            assert(status == 0);
-          }
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-          {
-            status = PyList_Append(py_prjval, py_uint16_edge_attrs[j]);
-            assert(status == 0);
-          }
-        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-          {
-            status = PyList_Append(py_prjval, py_uint32_edge_attrs[j]);
-            assert(status == 0);
-          }
-        
-        PyDict_SetItemString(py_prj_dict, prj_names[i].c_str(), py_prjval);
-        
-      }
-
-    return py_prj_dict;
-  }
-
-  
-  static PyObject *py_scatter_graph (PyObject *self, PyObject *args, PyObject *kwds)
-  {
-    int status; int opt_attrs=1; int opt_edge_map_type=0;
-    graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
-    // A vector that maps nodes to compute ranks
-    PyObject *py_node_rank_map=NULL;
-    map<NODE_IDX_T, rank_t> node_rank_map;
-    vector < edge_map_t > prj_vector;
-    vector < vector <vector<string>> > edge_attr_name_vector;
-    vector<pop_range_t> pop_vector;
-    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-    vector<string> prj_names;
-    PyObject *py_prj_dict = PyDict_New();
-    unsigned long commptr; unsigned long io_size; int size;
-    char *input_file_name;
-    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
-    
-    static const char *kwlist[] = {"commptr",
-                                   "file_name",
-                                   "io_size",
-                                   "node_rank_map",
-                                   "attributes",
-                                   "map_type",
-                                   NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ksk|OiOi", (char **)kwlist,
-                                     &commptr, &input_file_name, &io_size,
-                                     &py_node_rank_map, &opt_attrs, 
-                                     &opt_edge_map_type))
-      return NULL;
-
-    if (opt_edge_map_type == 1)
-      {
-        edge_map_type = graph::EdgeMapSrc;
-      }
-    
-    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
-
-    assert(io::hdf5::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
-
-    // Read population info to determine total_num_nodes
-    assert(io::hdf5::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
-
-    // Create C++ map for node_rank_map:
-    if (py_node_rank_map != NULL)
-      {
-        create_node_rank_map(py_node_rank_map, node_rank_map);
-      }
-    else
-      {
-        // round-robin node to rank assignment from file
-        for (size_t i = 0; i < total_num_nodes; i++)
-          {
-            node_rank_map.insert(make_pair(i, i%size));
-          }
-      }
-
-    graph::scatter_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
-                         io_size, opt_attrs>0, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
-                         total_num_nodes, local_num_edges, total_num_edges);
-
-    PyObject *py_attribute_info = PyDict_New();
-    if (opt_attrs>0)
-      {
-        for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
-          {
-            PyObject *py_prj_attr_info  = PyDict_New();
-            int attr_index=0;
-            for (size_t n = 0; n<edge_attr_name_vector[p].size(); n++)
-              {
-                for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
-                  {
-                    PyObject *py_attr_key = PyString_FromString(edge_attr_name_vector[p][n][t].c_str());
-                    PyObject *py_attr_index = PyInt_FromLong(attr_index);
-                    
-                    PyDict_SetItem(py_prj_attr_info, py_attr_key, py_attr_index);
-                    attr_index++;
-                  }
-              }
-            PyObject *prj_key = PyString_FromString(prj_names[p].c_str());
-            PyDict_SetItem(py_attribute_info, prj_key, py_prj_attr_info);
-
-          }
-      }
-
-    
-    for (size_t i = 0; i < prj_vector.size(); i++)
-      {
-        PyObject *py_edge_dict = PyDict_New();
-        edge_map_t prj_edge_map = prj_vector[i];
-        
-        if (prj_edge_map.size() > 0)
-          {
-            for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
-              {
-                NODE_IDX_T key_node   = it->first;
-                edge_tuple_t& et = it->second;
-                
-                std::vector <PyObject*> py_float_edge_attrs;
-                std::vector <PyObject*> py_uint8_edge_attrs;
-                std::vector <PyObject*> py_uint16_edge_attrs;
-                std::vector <PyObject*> py_uint32_edge_attrs;
-                
-                std::vector <float*> py_float_edge_attrs_ptr;
-                std::vector <uint8_t*> py_uint8_edge_attrs_ptr;
-                std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
-                std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
-                
-                vector<NODE_IDX_T> adj_vector = get<0>(et);
-                const AttrVal&   edge_attr_values = get<1>(et);
-
-                npy_intp dims[1], ind = 0;
-                dims[0] = adj_vector.size();
-                
-                PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
-                uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
-
-                if (opt_attrs>0)
-                  {
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-                        float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_float_edge_attrs.push_back(arr);
-                        py_float_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-                        uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_uint8_edge_attrs.push_back(arr);
-                        py_uint8_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-                        uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_uint16_edge_attrs.push_back(arr);
-                        py_uint16_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-                        uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_uint32_edge_attrs.push_back(arr);
-                        py_uint32_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < adj_vector.size(); j++)
-                      {
-                        adj_ptr[j] = adj_vector[j];
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
-                          {
-                            py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
-                          }
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
-                          {
-                            py_uint8_edge_attrs_ptr[k][j] = edge_attr_values.at<uint8_t>(k,j); 
-                          }
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
-                          {
-                            py_uint16_edge_attrs_ptr[k][j] = edge_attr_values.at<uint16_t>(k,j); 
-                          }
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
-                          {
-                            py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
-                          }
-                      }
-                  }
-                
-                PyObject *py_edgeval  = PyList_New(0);
-                status = PyList_Append(py_edgeval, adj_arr);
-                assert (status == 0);
-                if (opt_attrs > 0)
-                  {
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_float_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_uint8_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_uint16_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_uint32_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                  }
-                PyObject *key = PyInt_FromLong(key_node);
-                PyDict_SetItem(py_edge_dict, key, py_edgeval);
-              }
-          }
-        
-         PyDict_SetItemString(py_prj_dict, prj_names[i].c_str(), py_edge_dict);
-        
-      }
-
-    if (opt_attrs > 0)
-      {
-        PyObject *py_prj_tuple = PyTuple_New(2);
-        PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
-        PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
-        return py_prj_tuple;
-      }
-    else
-      {
-        return py_prj_dict;
-      }
-  }
-
-  
-  static PyObject *py_bcast_graph (PyObject *self, PyObject *args, PyObject *kwds)
-  {
-    int status; int opt_attrs=1; int opt_edge_map_type=0;
-    graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
-    vector < edge_map_t > prj_vector;
-    vector < vector <vector<string>> > edge_attr_name_vector;
-    vector<pop_range_t> pop_vector;
-    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-    vector<string> prj_names;
-    PyObject *py_prj_dict = PyDict_New();
-    unsigned long commptr; int size;
-    char *input_file_name;
-    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
-    
-    static const char *kwlist[] = {"commptr",
-                                   "file_name",
-                                   "attributes",
-                                   "map_type",
-                                   NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ks|ii", (char **)kwlist,
-                                     &commptr, &input_file_name, 
-                                     &opt_attrs, &opt_edge_map_type))
-      return NULL;
-
-    if (opt_edge_map_type == 1)
-      {
-        edge_map_type = graph::EdgeMapSrc;
-      }
-    
-    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
-
-    assert(io::hdf5::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
-
-    // Read population info to determine total_num_nodes
-    assert(io::hdf5::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
-
-    graph::bcast_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
-                         opt_attrs>0, prj_names, prj_vector, edge_attr_name_vector, 
-                         total_num_nodes, local_num_edges, total_num_edges);
-
-    PyObject *py_attribute_info = PyDict_New();
-    if (opt_attrs>0)
-      {
-        for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
-          {
-            PyObject *py_prj_attr_info  = PyDict_New();
-            int attr_index=0;
-            for (size_t n = 0; n<edge_attr_name_vector[p].size(); n++)
-              {
-                for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
-                  {
-                    PyObject *py_attr_key = PyString_FromString(edge_attr_name_vector[p][n][t].c_str());
-                    PyObject *py_attr_index = PyInt_FromLong(attr_index);
-                    
-                    PyDict_SetItem(py_prj_attr_info, py_attr_key, py_attr_index);
-                    attr_index++;
-                  }
-              }
-            PyObject *prj_key = PyString_FromString(prj_names[p].c_str());
-            PyDict_SetItem(py_attribute_info, prj_key, py_prj_attr_info);
-
-          }
-      }
-
-    for (size_t i = 0; i < prj_vector.size(); i++)
-      {
-        PyObject *py_edge_dict = PyDict_New();
-        edge_map_t prj_edge_map = prj_vector[i];
-        
-        printf("projection %s\n", prj_names[i].c_str());
-
-        if (prj_edge_map.size() > 0)
-          {
-            for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
-              {
-                NODE_IDX_T key_node   = it->first;
-                edge_tuple_t& et = it->second;
-                
-                std::vector <PyObject*> py_float_edge_attrs;
-                std::vector <PyObject*> py_uint8_edge_attrs;
-                std::vector <PyObject*> py_uint16_edge_attrs;
-                std::vector <PyObject*> py_uint32_edge_attrs;
-                
-                std::vector <float*> py_float_edge_attrs_ptr;
-                std::vector <uint8_t*> py_uint8_edge_attrs_ptr;
-                std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
-                std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
-                
-                vector<NODE_IDX_T> adj_vector = get<0>(et);
-                const AttrVal&   edge_attr_values = get<1>(et);
-
-                npy_intp dims[1], ind = 0;
-                dims[0] = adj_vector.size();
-                
-                PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
-                uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
-
-                if (opt_attrs>0)
-                  {
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-                        float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_float_edge_attrs.push_back(arr);
-                        py_float_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-                        uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_uint8_edge_attrs.push_back(arr);
-                        py_uint8_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-                        uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_uint16_edge_attrs.push_back(arr);
-                        py_uint16_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-                      {
-                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-                        uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_uint32_edge_attrs.push_back(arr);
-                        py_uint32_edge_attrs_ptr.push_back(ptr);
-                      }
-                    for (size_t j = 0; j < adj_vector.size(); j++)
-                      {
-                        adj_ptr[j] = adj_vector[j];
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
-                          {
-                            py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
-                          }
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
-                          {
-                            py_uint8_edge_attrs_ptr[k][j] = edge_attr_values.at<uint8_t>(k,j); 
-                          }
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
-                          {
-                            py_uint16_edge_attrs_ptr[k][j] = edge_attr_values.at<uint16_t>(k,j); 
-                          }
-                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
-                          {
-                            py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
-                          }
-                      }
-                  }
-                
-                PyObject *py_edgeval  = PyList_New(0);
-                status = PyList_Append(py_edgeval, adj_arr);
-                assert (status == 0);
-                if (opt_attrs > 0)
-                  {
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_float_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_uint8_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_uint16_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-                      {
-                        status = PyList_Append(py_edgeval, py_uint32_edge_attrs[j]);
-                        assert(status == 0);
-                      }
-                  }
-                PyObject *key = PyInt_FromLong(key_node);
-                PyDict_SetItem(py_edge_dict, key, py_edgeval);
-              }
-          }
-        
-         PyDict_SetItemString(py_prj_dict, prj_names[i].c_str(), py_edge_dict);
-        
-      }
-
-    if (opt_attrs > 0)
-      {
-        PyObject *py_prj_tuple = PyTuple_New(2);
-        PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
-        PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
-        return py_prj_tuple;
-      }
-    else
-      {
-        return py_prj_dict;
-      }
-  }
-
-  /*
-  static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
-  {
-    PyObject *gid_values;
-    unsigned long commptr;
-    char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg, *prj_name_arg;
-    
-    static const char *kwlist[] = {"commptr",
-                                   "file_name",
-                                   "src_pop_name",
-                                   "dst_pop_name",
-                                   "prj_name",
-                                   "edges",
-                                   NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|s", (char **)kwlist,
-                                     &commptr, &file_name_arg,
-                                     &src_pop_name_arg, &dst_pop_name_arg,
-                                     &prj_name_arg, 
-                                     &edge_values_arg,
-                                     &attributes_arg))
-        return NULL;
-
-    string file_name = string(file_name_arg);
-    string pop_name = string(pop_name_arg);
-    string attr_namespace = string(name_space_arg);
-    
-    int npy_type=0;
-    
-    vector<string> attr_names;
-    vector<int> attr_types;
-        
-    vector< map<TREE_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-    vector< map<TREE_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-    vector< map<TREE_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-    vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
-    
-
-    create_value_maps(gid_values,
-                      attr_names,
-                      attr_types,
-                      all_attr_values_uint32,
-                      all_attr_values_uint16,
-                      all_attr_values_uint8,
-                      all_attr_values_float);
-  }
-  */
-  
-
-  
-
 void create_node_rank_map (PyObject *py_node_rank_map,
-                           map<CELL_IDX_T,size_t>& node_rank_map)
+                           map<NODE_IDX_T, rank_t>& node_rank_map)
 {
   PyObject *gid_key, *gid_value;
   Py_ssize_t map_pos = 0;
-
+  
   while (PyDict_Next(py_node_rank_map, &map_pos, &gid_key, &gid_value))
     {
-      assert(gid_key != Py_None);
-      assert(gid_value != Py_None);
-
-      CELL_IDX_T gid = PyInt_AsLong(gid_key);
-      size_t rank = PyInt_AsLong(gid_value);
+      NODE_IDX_T gid = PyInt_AsLong(gid_key);
+      rank_t rank = PyInt_AsLong(gid_value);
       node_rank_map.insert(make_pair(gid,rank));
     }
 }
+
 
 template<class T>
 PyObject *py_attr_values (const CELL_IDX_T gid,
@@ -847,6 +119,7 @@ PyObject *py_attr_values (const CELL_IDX_T gid,
   return attr_dict;
 }
 
+
 template<class T>
 void py_merge_values (PyObject *py_list,
                       const size_t len,
@@ -860,7 +133,7 @@ void py_merge_values (PyObject *py_list,
       vector<T> attr_values;
       PyObject *pyval = PyList_GetItem(py_list, i);
       T *pyval_ptr = (T *)PyArray_GetPtr((PyArrayObject *)pyval, &ind);
-      dims = PyArray_DIMS(pyval);
+      dims = PyArray_DIMS((PyArrayObject *)pyval);
       attr_values.resize(dims[0]);
       for (size_t j=0; j<attr_values.size(); j++)
         {
@@ -880,7 +153,7 @@ void py_append_value (PyObject *pyval,
 {
   npy_intp *dims, ind = 0;
   T *pyval_ptr = (T *)PyArray_GetPtr((PyArrayObject *)pyval, &ind);
-  dims = PyArray_DIMS(pyval);
+  dims = PyArray_DIMS((PyArrayObject*)pyval);
   size_t value_size = dims[0];
   vector<T> &attr_values = all_attr_values[attr_pos];
   typename vector<T>::size_type base = attr_values.size();
@@ -901,7 +174,7 @@ void py_append_value_map (CELL_IDX_T gid,
                           map<CELL_IDX_T, vector<T> >& all_attr_values)
 {
   npy_intp *dims, ind = 0;
-  dims = PyArray_DIMS(pyval);
+  dims = PyArray_DIMS((PyArrayObject *)pyval);
   size_t value_size = dims[0];
   T *pyval_ptr = (T *)PyArray_GetPtr((PyArrayObject *)pyval, &ind);
   vector<T> attr_values(value_size);
@@ -942,7 +215,7 @@ void create_value_maps (PyObject *gid_values,
           assert(attr_key != Py_None);
           assert(attr_values != Py_None);
 
-          npy_type = PyArray_TYPE(attr_values);
+          npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
           if (attr_names.size() < (size_t)attr_idx+1)
             {
               string attr_name = string(PyString_AsString(attr_key));
@@ -1009,6 +282,7 @@ void create_value_maps (PyObject *gid_values,
         }
     }
 }
+
 
 PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                               const bool attrs, NamedAttrMap& attr_map,
@@ -1360,6 +634,733 @@ extern "C"
 {
 
   
+  static PyObject *py_read_graph (PyObject *self, PyObject *args)
+  {
+    int status;
+    vector<prj_tuple_t> prj_vector;
+    vector< pair<string,string> > prj_names;
+    PyObject *py_prj_dict = PyDict_New();
+    unsigned long commptr;
+    char *input_file_name;
+    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
+
+    if (!PyArg_ParseTuple(args, "ks", &commptr, &input_file_name))
+      return NULL;
+
+    assert(graph::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+
+    graph::read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name), true,
+                      prj_names, prj_vector,
+                      total_num_nodes, local_num_edges, total_num_edges);
+    
+    for (size_t i = 0; i < prj_vector.size(); i++)
+      {
+        const prj_tuple_t& prj = prj_vector[i];
+        
+        const vector<NODE_IDX_T>& src_vector = get<0>(prj);
+        const vector<NODE_IDX_T>& dst_vector = get<1>(prj);
+        const AttrVal&  edge_attr_values    = get<2>(prj);
+
+        std::vector <PyObject*> py_float_edge_attrs;
+        std::vector <PyObject*> py_uint8_edge_attrs;
+        std::vector <PyObject*> py_uint16_edge_attrs;
+        std::vector <PyObject*> py_uint32_edge_attrs;
+
+        std::vector <float*> py_float_edge_attrs_ptr;
+        std::vector <uint8_t*> py_uint8_edge_attrs_ptr;
+        std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
+        std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
+        
+        npy_intp dims[1], ind = 0;
+        dims[0] = src_vector.size();
+        
+        PyObject *src_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
+        PyObject *dst_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
+        uint32_t *src_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)src_arr, &ind);
+        uint32_t *dst_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)dst_arr, &ind);
+        
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+          {
+            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+            float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+            py_float_edge_attrs.push_back(arr);
+            py_float_edge_attrs_ptr.push_back(ptr);
+          }
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
+          {
+            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
+            uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+            py_uint8_edge_attrs.push_back(arr);
+            py_uint8_edge_attrs_ptr.push_back(ptr);
+          }
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
+          {
+            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+            uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+            py_uint16_edge_attrs.push_back(arr);
+            py_uint16_edge_attrs_ptr.push_back(ptr);
+          }
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+          {
+            PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
+            uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+            py_uint32_edge_attrs.push_back(arr);
+            py_uint32_edge_attrs_ptr.push_back(ptr);
+          }
+        
+        
+        for (size_t j = 0; j < src_vector.size(); j++)
+          {
+            src_ptr[j] = src_vector[j];
+            dst_ptr[j] = dst_vector[j];
+            for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
+              {
+                py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
+              }
+            for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
+              {
+                py_uint8_edge_attrs_ptr[k][j] = edge_attr_values.at<uint8_t>(k,j); 
+              }
+            for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
+              {
+                py_uint16_edge_attrs_ptr[k][j] = edge_attr_values.at<uint16_t>(k,j); 
+              }
+            for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
+              {
+                py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
+              }
+          }
+        
+        PyObject *py_prjval  = PyList_New(0);
+        status = PyList_Append(py_prjval, src_arr);
+        assert (status == 0);
+        status = PyList_Append(py_prjval, dst_arr);
+        assert (status == 0);
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+          {
+            status = PyList_Append(py_prjval, py_float_edge_attrs[j]);
+            assert(status == 0);
+          }
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
+          {
+            status = PyList_Append(py_prjval, py_uint8_edge_attrs[j]);
+            assert(status == 0);
+          }
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
+          {
+            status = PyList_Append(py_prjval, py_uint16_edge_attrs[j]);
+            assert(status == 0);
+          }
+        for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+          {
+            status = PyList_Append(py_prjval, py_uint32_edge_attrs[j]);
+            assert(status == 0);
+          }
+
+        PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
+        if (py_src_dict == NULL)
+          {
+            py_src_dict = PyDict_New();
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
+            PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+          }
+        else
+          {
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
+          }
+        
+      }
+
+    return py_prj_dict;
+  }
+
+  
+  static PyObject *py_scatter_graph (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status; int opt_attrs=1; int opt_edge_map_type=0;
+    graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
+    // A vector that maps nodes to compute ranks
+    PyObject *py_node_rank_map=NULL;
+    map<NODE_IDX_T, rank_t> node_rank_map;
+    vector < edge_map_t > prj_vector;
+    vector < vector <vector<string>> > edge_attr_name_vector;
+    vector<pop_range_t> pop_vector;
+    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    vector<pair<string,string> > prj_names;
+    PyObject *py_prj_dict = PyDict_New();
+    unsigned long commptr; unsigned long io_size; int size;
+    char *input_file_name;
+    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "io_size",
+                                   "node_rank_map",
+                                   "attributes",
+                                   "map_type",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ksk|OiOi", (char **)kwlist,
+                                     &commptr, &input_file_name, &io_size,
+                                     &py_node_rank_map, &opt_attrs, 
+                                     &opt_edge_map_type))
+      return NULL;
+
+    if (opt_edge_map_type == 1)
+      {
+        edge_map_type = graph::EdgeMapSrc;
+      }
+    
+    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
+
+    assert(graph::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+
+    // Read population info to determine total_num_nodes
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+
+    // Create C++ map for node_rank_map:
+    if (py_node_rank_map != NULL)
+      {
+        create_node_rank_map(py_node_rank_map, node_rank_map);
+      }
+    else
+      {
+        // round-robin node to rank assignment from file
+        for (size_t i = 0; i < total_num_nodes; i++)
+          {
+            node_rank_map.insert(make_pair(i, i%size));
+          }
+      }
+
+    graph::scatter_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
+                         io_size, opt_attrs>0, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
+                         total_num_nodes, local_num_edges, total_num_edges);
+
+    PyObject *py_attribute_info = PyDict_New();
+    if (opt_attrs>0)
+      {
+        for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
+          {
+            PyObject *py_prj_attr_info  = PyDict_New();
+            int attr_index=0;
+            for (size_t n = 0; n<edge_attr_name_vector[p].size(); n++)
+              {
+                for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
+                  {
+                    PyObject *py_attr_key = PyString_FromString(edge_attr_name_vector[p][n][t].c_str());
+                    PyObject *py_attr_index = PyInt_FromLong(attr_index);
+                    
+                    PyDict_SetItem(py_prj_attr_info, py_attr_key, py_attr_index);
+                    attr_index++;
+                  }
+              }
+            PyObject *py_prj_key = PyTuple_New(2);
+            PyTuple_SetItem(py_prj_key, 0, PyString_FromString(prj_names[p].first.c_str()));
+            PyTuple_SetItem(py_prj_key, 1, PyString_FromString(prj_names[p].second.c_str()));
+            PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
+          }
+      }
+
+    
+    for (size_t i = 0; i < prj_vector.size(); i++)
+      {
+        PyObject *py_edge_dict = PyDict_New();
+        edge_map_t prj_edge_map = prj_vector[i];
+        
+        if (prj_edge_map.size() > 0)
+          {
+            for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
+              {
+                NODE_IDX_T key_node   = it->first;
+                edge_tuple_t& et = it->second;
+                
+                std::vector <PyObject*> py_float_edge_attrs;
+                std::vector <PyObject*> py_uint8_edge_attrs;
+                std::vector <PyObject*> py_uint16_edge_attrs;
+                std::vector <PyObject*> py_uint32_edge_attrs;
+                
+                std::vector <float*> py_float_edge_attrs_ptr;
+                std::vector <uint8_t*> py_uint8_edge_attrs_ptr;
+                std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
+                std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
+                
+                vector<NODE_IDX_T> adj_vector = get<0>(et);
+                const AttrVal&   edge_attr_values = get<1>(et);
+
+                npy_intp dims[1], ind = 0;
+                dims[0] = adj_vector.size();
+                
+                PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
+                uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
+
+                if (opt_attrs>0)
+                  {
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+                        float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_float_edge_attrs.push_back(arr);
+                        py_float_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
+                        uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_uint8_edge_attrs.push_back(arr);
+                        py_uint8_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+                        uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_uint16_edge_attrs.push_back(arr);
+                        py_uint16_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
+                        uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_uint32_edge_attrs.push_back(arr);
+                        py_uint32_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < adj_vector.size(); j++)
+                      {
+                        adj_ptr[j] = adj_vector[j];
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
+                          {
+                            py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
+                          {
+                            py_uint8_edge_attrs_ptr[k][j] = edge_attr_values.at<uint8_t>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
+                          {
+                            py_uint16_edge_attrs_ptr[k][j] = edge_attr_values.at<uint16_t>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
+                          {
+                            py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
+                          }
+                      }
+                  }
+                
+                PyObject *py_edgeval  = PyList_New(0);
+                status = PyList_Append(py_edgeval, adj_arr);
+                assert (status == 0);
+                if (opt_attrs > 0)
+                  {
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_float_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_uint8_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_uint16_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_uint32_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                  }
+                PyObject *key = PyInt_FromLong(key_node);
+                PyDict_SetItem(py_edge_dict, key, py_edgeval);
+              }
+          }
+        
+         PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
+         if (py_src_dict == NULL)
+           {
+             py_src_dict = PyDict_New();
+             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
+             PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+           }
+         else
+           {
+             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
+           }
+        
+      }
+
+    if (opt_attrs > 0)
+      {
+        PyObject *py_prj_tuple = PyTuple_New(2);
+        PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
+        PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+        return py_prj_tuple;
+      }
+    else
+      {
+        return py_prj_dict;
+      }
+  }
+
+  
+  static PyObject *py_bcast_graph (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status; int opt_attrs=1; int opt_edge_map_type=0;
+    graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
+    vector < edge_map_t > prj_vector;
+    vector < vector <vector<string>> > edge_attr_name_vector;
+    vector<pop_range_t> pop_vector;
+    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    vector< pair<string,string> > prj_names;
+    PyObject *py_prj_dict = PyDict_New();
+    unsigned long commptr; int size;
+    char *input_file_name;
+    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "attributes",
+                                   "map_type",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ks|ii", (char **)kwlist,
+                                     &commptr, &input_file_name, 
+                                     &opt_attrs, &opt_edge_map_type))
+      return NULL;
+
+    if (opt_edge_map_type == 1)
+      {
+        edge_map_type = graph::EdgeMapSrc;
+      }
+    
+    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
+
+    assert(graph::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+
+    // Read population info to determine total_num_nodes
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+
+    graph::bcast_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
+                       opt_attrs>0, prj_names, prj_vector, edge_attr_name_vector, 
+                       total_num_nodes, local_num_edges, total_num_edges);
+
+    PyObject *py_attribute_info = PyDict_New();
+    if (opt_attrs>0)
+      {
+        for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
+          {
+            PyObject *py_prj_attr_info  = PyDict_New();
+            int attr_index=0;
+            for (size_t n = 0; n<edge_attr_name_vector[p].size(); n++)
+              {
+                for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
+                  {
+                    PyObject *py_attr_key = PyString_FromString(edge_attr_name_vector[p][n][t].c_str());
+                    PyObject *py_attr_index = PyInt_FromLong(attr_index);
+                    
+                    PyDict_SetItem(py_prj_attr_info, py_attr_key, py_attr_index);
+                    attr_index++;
+                  }
+              }
+            PyObject *py_prj_key = PyTuple_New(2);
+            PyTuple_SetItem(py_prj_key, 0, PyString_FromString(prj_names[p].first.c_str()));
+            PyTuple_SetItem(py_prj_key, 1, PyString_FromString(prj_names[p].second.c_str()));
+            PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
+          }
+      }
+
+    for (size_t i = 0; i < prj_vector.size(); i++)
+      {
+        PyObject *py_edge_dict = PyDict_New();
+        edge_map_t prj_edge_map = prj_vector[i];
+        
+        if (prj_edge_map.size() > 0)
+          {
+            for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
+              {
+                NODE_IDX_T key_node   = it->first;
+                edge_tuple_t& et = it->second;
+                
+                std::vector <PyObject*> py_float_edge_attrs;
+                std::vector <PyObject*> py_uint8_edge_attrs;
+                std::vector <PyObject*> py_uint16_edge_attrs;
+                std::vector <PyObject*> py_uint32_edge_attrs;
+                
+                std::vector <float*> py_float_edge_attrs_ptr;
+                std::vector <uint8_t*> py_uint8_edge_attrs_ptr;
+                std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
+                std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
+                
+                vector<NODE_IDX_T> adj_vector = get<0>(et);
+                const AttrVal&   edge_attr_values = get<1>(et);
+
+                npy_intp dims[1], ind = 0;
+                dims[0] = adj_vector.size();
+                
+                PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
+                uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
+
+                if (opt_attrs>0)
+                  {
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+                        float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_float_edge_attrs.push_back(arr);
+                        py_float_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
+                        uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_uint8_edge_attrs.push_back(arr);
+                        py_uint8_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+                        uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_uint16_edge_attrs.push_back(arr);
+                        py_uint16_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
+                        uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_uint32_edge_attrs.push_back(arr);
+                        py_uint32_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < adj_vector.size(); j++)
+                      {
+                        adj_ptr[j] = adj_vector[j];
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
+                          {
+                            py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
+                          {
+                            py_uint8_edge_attrs_ptr[k][j] = edge_attr_values.at<uint8_t>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
+                          {
+                            py_uint16_edge_attrs_ptr[k][j] = edge_attr_values.at<uint16_t>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
+                          {
+                            py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
+                          }
+                      }
+                  }
+                
+                PyObject *py_edgeval  = PyList_New(0);
+                status = PyList_Append(py_edgeval, adj_arr);
+                assert (status == 0);
+                if (opt_attrs > 0)
+                  {
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_float_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_uint8_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_uint16_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_uint32_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                  }
+                PyObject *key = PyInt_FromLong(key_node);
+                PyDict_SetItem(py_edge_dict, key, py_edgeval);
+              }
+          }
+        
+         PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
+         if (py_src_dict == NULL)
+           {
+             py_src_dict = PyDict_New();
+             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
+             PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+           }
+         else
+           {
+             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
+           }
+        
+      }
+
+    if (opt_attrs > 0)
+      {
+        PyObject *py_prj_tuple = PyTuple_New(2);
+        PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
+        PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+        return py_prj_tuple;
+      }
+    else
+      {
+        return py_prj_dict;
+      }
+  }
+
+  /*
+
+  static PyObject *py_append_edges (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status; 
+    PyObject *gid_values;
+    const unsigned long default_cache_size = 4*1024*1024;
+    const unsigned long default_chunk_size = 4000;
+    const unsigned long default_value_chunk_size = 4000;
+    unsigned long commptr;
+    unsigned long chunk_size = default_chunk_size;
+    unsigned long value_chunk_size = default_value_chunk_size;
+    unsigned long cache_size = default_cache_size;
+    char *file_name_arg, *prj_name_arg, *src_pop_arg, *dst_pop_arg;
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "src_pop_name",
+                                   "dst_pop_name",
+                                   "prj_name",
+                                   "edges",
+                                   "attributes",
+                                   "chunk_size",
+                                   "value_chunk_size",
+                                   "cache_size",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|skkk", (char **)kwlist,
+                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
+                                     &name_space_arg, &chunk_size, &value_chunk_size, &cache_size))
+        return NULL;
+
+    string file_name      = string(file_name_arg);
+    string pop_name       = string(pop_name_arg);
+    string attr_namespace = string(name_space_arg);
+    
+    int npy_type=0;
+    
+    vector<string> attr_names;
+    vector<int> attr_types;
+        
+    vector< map<TREE_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<TREE_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<TREE_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
+    
+
+    create_value_maps(gid_values,
+                      attr_names,
+                      attr_types,
+                      all_attr_values_uint32,
+                      all_attr_values_uint16,
+                      all_attr_values_uint8,
+                      all_attr_values_float);
+
+    size_t attr_idx=0;
+    vector<size_t> attr_type_idx(AttrMap::num_attr_types);
+    for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
+      {
+        const string attr_name = *it;
+        npy_type=attr_types[attr_idx];
+
+        switch (npy_type)
+          {
+          case NPY_UINT32:
+            {
+              append_tree_attribute_map<uint32_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                  attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
+              attr_type_idx[AttrMap::attr_index_uint32]++;
+              break;
+            }
+          case NPY_UINT16:
+            {
+              append_tree_attribute_map<uint16_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                  attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
+              attr_type_idx[AttrMap::attr_index_uint16]++;
+              break;
+            }
+          case NPY_UINT8:
+            {
+              append_tree_attribute_map<uint8_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                 attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
+              attr_type_idx[AttrMap::attr_index_uint8]++;
+              break;
+            }
+          case NPY_FLOAT:
+            {
+              append_tree_attribute_map<float> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
+              attr_type_idx[AttrMap::attr_index_float]++;
+              break;
+            }
+          default:
+            throw runtime_error("Unsupported attribute type");
+            break;
+          }
+      }
+    
+    return Py_None;
+  }
+
+
+  static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    PyObject *gid_values;
+    unsigned long commptr;
+    char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg, *prj_name_arg;
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "src_pop_name",
+                                   "dst_pop_name",
+                                   "prj_name",
+                                   "edges",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|s", (char **)kwlist,
+                                     &commptr, &file_name_arg,
+                                     &src_pop_name_arg, &dst_pop_name_arg,
+                                     &prj_name_arg, 
+                                     &edge_values_arg,
+                                     &attributes_arg))
+        return NULL;
+
+    string file_name = string(file_name_arg);
+    string pop_name = string(pop_name_arg);
+    string attr_namespace = string(name_space_arg);
+    
+    int npy_type=0;
+    
+    vector<string> attr_names;
+    vector<int> attr_types;
+        
+    vector< map<TREE_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<TREE_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<TREE_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
+    
+
+    create_value_maps(gid_values,
+                      attr_names,
+                      attr_types,
+                      all_attr_values_uint32,
+                      all_attr_values_uint16,
+                      all_attr_values_uint8,
+                      all_attr_values_float);
+  }
+  */
+  
+  
   static PyObject *py_population_names (PyObject *self, PyObject *args)
   {
     int status; 
@@ -1380,7 +1381,7 @@ extern "C"
     assert(file >= 0);
 
     vector <string> pop_names;
-    status = read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
     assert (status >= 0);
 
     status = H5Pclose (fapl);
@@ -1395,6 +1396,7 @@ extern "C"
     
     return py_population_names;
   }
+
   
   static PyObject *py_population_ranges (PyObject *self, PyObject *args)
   {
@@ -1417,7 +1419,7 @@ extern "C"
     hid_t file = H5Fopen(input_file_name, H5F_ACC_RDONLY, fapl);
     assert(file >= 0);
 
-    status = enum_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::enum_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
     assert (status >= 0);
 
     status = H5Pclose (fapl);
@@ -1426,10 +1428,10 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(read_population_ranges(*((MPI_Comm *)(commptr)),
-                                  string(input_file_name),
-                                  pop_ranges, pop_vector,
-                                  n_nodes) >= 0);
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)),
+                                        string(input_file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
 
     PyObject *py_population_ranges_dict = PyDict_New();
     for (auto range: pop_ranges)
@@ -1447,7 +1449,7 @@ extern "C"
   
   static PyObject *py_read_trees (PyObject *self, PyObject *args)
   {
-    int status; size_t start, end;
+    int status; size_t start=0, end=0;
     PyObject *py_cell_dict = PyDict_New();
     unsigned long commptr;
     char *file_name, *pop_name;
@@ -1463,7 +1465,7 @@ extern "C"
     assert(file >= 0);
     
     vector<string> pop_names;
-    status = read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
     assert (status >= 0);
     
     status = H5Pclose (fapl);
@@ -1472,10 +1474,11 @@ extern "C"
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
     size_t n_nodes;
+    
     // Read population info
-    assert(read_population_ranges(*((MPI_Comm *)(commptr)), string(file_name),
-                                  pop_ranges, pop_vector,
-                                  n_nodes) >= 0);
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
 
 
     vector<neurotree_t> tree_list;
@@ -1489,9 +1492,9 @@ extern "C"
       {
         throw runtime_error("Unrecognized population name");
       }
-    status = read_trees (*((MPI_Comm *)(commptr)), string(file_name),
-                         string(pop_name), pop_vector[pop_idx].start,
-                         tree_list, start, end);
+    status = cell::read_trees (*((MPI_Comm *)(commptr)), string(file_name),
+                               string(pop_name), pop_vector[pop_idx].start,
+                               tree_list, start, end);
     assert (status >= 0);
     NamedAttrMap attr_map;
     vector <vector <string>> attr_names;
@@ -1524,7 +1527,7 @@ extern "C"
     const string default_name_space = "Attributes";
     char *file_name, *pop_name, *attr_name_space = (char *)default_name_space.c_str();
     PyObject *py_node_rank_map=NULL;
-    map<CELL_IDX_T, size_t> node_rank_map;
+    map<CELL_IDX_T, rank_t> node_rank_map;
     static const char *kwlist[] = {"commptr",
                                    "file_name",
                                    "pop_name",
@@ -1548,10 +1551,10 @@ extern "C"
     vector< vector <string> > attr_names;
     size_t n_nodes;
     // Read population info
-    assert(read_population_ranges(*((MPI_Comm *)(commptr)), string(file_name),
-                                  pop_ranges, pop_vector,
-                                  n_nodes) >= 0);
-
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
+    
     // Create C++ map for node_rank_map:
     if (py_node_rank_map != NULL)
       {
@@ -1574,7 +1577,7 @@ extern "C"
     assert(file >= 0);
     
     vector<string> pop_names;
-    status = read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
     assert (status >= 0);
     
     status = H5Pclose (fapl);
@@ -1594,11 +1597,11 @@ extern "C"
     map<CELL_IDX_T, neurotree_t> tree_map;
     NamedAttrMap attr_map;
 
-    status = scatter_read_trees (*((MPI_Comm *)(commptr)), string(file_name),
-                                 io_size, opt_attrs>0, string(attr_name_space),
-                                 node_rank_map, string(pop_name),
-                                 pop_vector[pop_idx].start,
-                                 tree_map, attr_map);
+    status = cell::scatter_read_trees (*((MPI_Comm *)(commptr)), string(file_name),
+                                       io_size, opt_attrs>0, string(attr_name_space),
+                                       node_rank_map, string(pop_name),
+                                       pop_vector[pop_idx].start,
+                                       tree_map, attr_map);
     assert (status >= 0);
 
     if (opt_attrs)
@@ -1642,15 +1645,15 @@ extern "C"
         return NULL;
 
     NamedAttrMap attr_values;
-    read_cell_attributes (*((MPI_Comm *)(commptr)),
-                          string(file_name), string(name_space),
-                          string(pop_name), attr_values);
+    cell::read_cell_attributes (*((MPI_Comm *)(commptr)),
+                                string(file_name), string(name_space),
+                                string(pop_name), attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
     
     PyObject *py_gid_dict = PyDict_New();
-    for (auto it = attr_values.gid_set.begin(); it != attr_values.gid_set.end(); ++it)
+    for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
       {
         CELL_IDX_T gid = *it;
 
@@ -1713,15 +1716,15 @@ extern "C"
                                      &pop_name, &name_space))
         return NULL;
 
-    bcast_cell_attributes (*((MPI_Comm *)(commptr)), (int)root,
-                          string(file_name), string(name_space),
-                          string(pop_name), attr_values);
+    cell::bcast_cell_attributes (*((MPI_Comm *)(commptr)), (int)root,
+                                 string(file_name), string(name_space),
+                                 string(pop_name), attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
     
     PyObject *py_gid_dict = PyDict_New();
-    for (auto it = attr_values.gid_set.begin(); it != attr_values.gid_set.end(); ++it)
+    for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
       {
         CELL_IDX_T gid = *it;
 
@@ -1819,28 +1822,28 @@ extern "C"
           {
           case NPY_UINT32:
             {
-              write_cell_attribute_map<uint32_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                  attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
+              cell::write_cell_attribute_map<uint32_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+                                                        attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
               attr_type_idx[AttrMap::attr_index_uint32]++;
               break;
             }
           case NPY_UINT16:
             {
-              write_cell_attribute_map<uint16_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+              cell::write_cell_attribute_map<uint16_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
                                                   attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
               attr_type_idx[AttrMap::attr_index_uint16]++;
               break;
             }
           case NPY_UINT8:
             {
-              write_cell_attribute_map<uint8_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+              cell::write_cell_attribute_map<uint8_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
                                                  attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
               attr_type_idx[AttrMap::attr_index_uint8]++;
               break;
             }
           case NPY_FLOAT:
             {
-              write_cell_attribute_map<float> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
+              cell::write_cell_attribute_map<float> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
                                                attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
               attr_type_idx[AttrMap::attr_index_float]++;
               break;
@@ -1858,7 +1861,6 @@ extern "C"
   
   static PyObject *py_append_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; 
     MPI_Comm data_comm;
     PyObject *gid_values;
     const unsigned long default_cache_size = 4*1024*1024;
@@ -1953,33 +1955,33 @@ extern "C"
           {
           case NPY_UINT32:
             {
-              append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, 
-                                                   attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
-                                                   io_size);
+              cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                         all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
+                                                         io_size);
               attr_type_idx[AttrMap::attr_index_uint32]++;
               break;
             }
           case NPY_UINT16:
             {
-              append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, 
-                                                   attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
-                                                   io_size);
+              cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                         all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
+                                                         io_size);
               attr_type_idx[AttrMap::attr_index_uint16]++;
               break;
             }
           case NPY_UINT8:
             {
-              append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, 
-                                                  attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
-                                                  io_size);
+              cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                        all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
+                                                        io_size);
               attr_type_idx[AttrMap::attr_index_uint8]++;
               break;
             }
           case NPY_FLOAT:
             {
-              append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, 
-                                                attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
-                                                io_size);
+              cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                      all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
+                                                      io_size);
               attr_type_idx[AttrMap::attr_index_float]++;
               break;
             }
@@ -2022,7 +2024,7 @@ extern "C"
     bool opt_attrs;
     string attr_name_space;
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
-    map<CELL_IDX_T,size_t> node_rank_map; 
+    map<CELL_IDX_T, rank_t> node_rank_map; 
   } NeurotreeGenState;
 
   typedef struct {
@@ -2055,7 +2057,7 @@ extern "C"
     NamedAttrMap attr_map;
     vector< vector <string> > attr_names;
     set<CELL_IDX_T>::const_iterator it_idx;
-    map <CELL_IDX_T,size_t> node_rank_map;
+    map <CELL_IDX_T, rank_t> node_rank_map;
   } NeurotreeAttrGenState;
   
   typedef struct {
@@ -2093,7 +2095,7 @@ extern "C"
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
 
-    if (cache_size < size)
+    if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
     
     // TODO; create separate functions for opening HDF5 file for reading and writing
@@ -2104,7 +2106,7 @@ extern "C"
     assert(file >= 0);
     
     vector<string> pop_names;
-    status = read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
     assert (status >= 0);
     
     status = H5Pclose (fapl);
@@ -2113,10 +2115,10 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(read_population_ranges(*((MPI_Comm *)(commptr)),
-                                  string(file_name),
-                                  pop_ranges, pop_vector,
-                                  n_nodes) >= 0);
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)),
+                                        string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
 
     size_t pop_idx;
     for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
@@ -2128,25 +2130,25 @@ extern "C"
         throw runtime_error("Unrecognized population name");
       }
     vector<CELL_IDX_T> tree_index;
-    assert(read_tree_index(*((MPI_Comm *)(commptr)),
-                           string(file_name),
-                           pop_names[pop_idx],
-                           tree_index) >= 0);
+    assert(cell::read_cell_index(*((MPI_Comm *)(commptr)),
+                                 string(file_name),
+                                 pop_names[pop_idx],
+                                 tree_index) >= 0);
 
     /* Create a new generator state and initialize it */
     PyNeurotreeGenState *py_ntrg = (PyNeurotreeGenState *)type->tp_alloc(type, 0);
     if (!py_ntrg) return NULL;
     py_ntrg->state = new NeurotreeGenState();
 
-    map<CELL_IDX_T,size_t> node_rank_map;
+    map<CELL_IDX_T, rank_t> node_rank_map;
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
-    size_t r=0, count=0;
+    rank_t r=0; size_t count=0;
     for (size_t i = 0; i < tree_index.size(); i++)
       {
-        if (rank == r) count++;
+        if ((unsigned int)rank == r) count++;
         py_ntrg->state->node_rank_map.insert(make_pair(tree_index[i], r++));
-        if (size <= r) r=0;
+        if ((unsigned int)size <= r) r=0;
       }
 
     size_t m = tree_index.size() % size;
@@ -2156,7 +2158,7 @@ extern "C"
       }
     else
       {
-        if (rank < m)
+        if ((unsigned int)rank < m)
           {
             py_ntrg->state->pos = seq_last;
           }
@@ -2198,7 +2200,6 @@ extern "C"
     unsigned long commptr; unsigned int io_size=1, cache_size=100;
     const string default_name_space = "Attributes";
     char *file_name, *pop_name, *attr_name_space = (char *)default_name_space.c_str();
-    PyObject *py_node_rank_map=NULL;
 
     static const char *kwlist[] = {"commptr",
                                    "file_name",
@@ -2217,7 +2218,7 @@ extern "C"
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
 
-    if (cache_size < size)
+    if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
 
     // TODO; create separate functions for opening HDF5 file for reading and writing
@@ -2228,7 +2229,7 @@ extern "C"
     assert(file >= 0);
 
     vector<string> pop_names;
-    status = read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
     assert (status >= 0);
     
     status = H5Pclose (fapl);
@@ -2237,10 +2238,10 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(read_population_ranges(*((MPI_Comm *)(commptr)),
-                                  string(file_name),
-                                  pop_ranges, pop_vector,
-                                  n_nodes) >= 0);
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)),
+                                        string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
 
     size_t pop_idx;
     for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
@@ -2253,12 +2254,11 @@ extern "C"
       }
 
     vector<CELL_IDX_T> cell_index;
-    assert(read_cell_index(*((MPI_Comm *)(commptr)),
-                           string(file_name),
-                           pop_names[pop_idx],
-                           attr_name_space,
-                           cell_index) >= 0);
-
+    assert(cell::read_cell_index(*((MPI_Comm *)(commptr)),
+                                 string(file_name),
+                                 pop_names[pop_idx],
+                                 cell_index) >= 0);
+    
     /* Create a new generator state and initialize its state - pointing to the last
      * index in the sequence.
     */
@@ -2269,12 +2269,12 @@ extern "C"
 
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
-    size_t r=0, count=0;
+    rank_t r=0; size_t count=0;
     for (size_t i = 0; i < cell_index.size(); i++)
       {
-        if (rank == r) count++;
+        if ((unsigned int)rank == r) count++;
         py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
-        if (size <= r) r=0;
+        if ((unsigned int)size <= r) r=0;
       }
 
     size_t m = cell_index.size() % size;
@@ -2284,7 +2284,7 @@ extern "C"
       }
     else
       {
-        if (rank < m)
+        if ((unsigned int)rank < m)
           {
             py_ntrg->state->pos = seq_last;
           }
@@ -2309,7 +2309,7 @@ extern "C"
 
     NamedAttrMap attr_map;
     py_ntrg->state->attr_map  = attr_map;
-    py_ntrg->state->it_idx = py_ntrg->state->attr_map.gid_set.cbegin();
+    py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
 
     return (PyObject *)py_ntrg;
   }
@@ -2351,13 +2351,13 @@ extern "C"
             int status;
             py_ntrg->state->tree_map.clear();
             py_ntrg->state->attr_map.clear();
-            status = scatter_read_trees (py_ntrg->state->comm, py_ntrg->state->file_name,
-                                         py_ntrg->state->io_size,
-                                         py_ntrg->state->opt_attrs, py_ntrg->state->attr_name_space,
-                                         py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
-                                         py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
-                                         py_ntrg->state->tree_map, py_ntrg->state->attr_map,
-                                         py_ntrg->state->cache_index, py_ntrg->state->cache_size);
+            status = cell::scatter_read_trees (py_ntrg->state->comm, py_ntrg->state->file_name,
+                                               py_ntrg->state->io_size,
+                                               py_ntrg->state->opt_attrs, py_ntrg->state->attr_name_space,
+                                               py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
+                                               py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
+                                               py_ntrg->state->tree_map, py_ntrg->state->attr_map,
+                                               py_ntrg->state->cache_index, py_ntrg->state->cache_size);
             assert (status >= 0);
             if (py_ntrg->state->opt_attrs)
               {
@@ -2387,7 +2387,7 @@ extern "C"
           }
         else
           {
-            PyObject *result;
+            PyObject *result = NULL;
             switch (py_ntrg->state->pos)
               {
               case seq_next:
@@ -2427,7 +2427,7 @@ extern "C"
          * Returning NULL in this case is enough. The next() builtin will raise the
          * StopIteration error for us.
          */
-        if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.gid_set.cend()) &&
+        if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
             (py_ntrg->state->seq_index < py_ntrg->state->count))
           {
             // If the end of the current cache block has been reached,
@@ -2435,21 +2435,21 @@ extern "C"
             py_ntrg->state->attr_map.clear();
             
             int status;
-            status = scatter_read_cell_attributes (py_ntrg->state->comm, py_ntrg->state->file_name,
-                                                   py_ntrg->state->io_size, py_ntrg->state->attr_name_space,
-                                                   py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
-                                                   py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
-                                                   py_ntrg->state->attr_map,
-                                                   py_ntrg->state->cache_index, py_ntrg->state->cache_size);
+            status = cell::scatter_read_cell_attributes (py_ntrg->state->comm, py_ntrg->state->file_name,
+                                                         py_ntrg->state->io_size, py_ntrg->state->attr_name_space,
+                                                         py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
+                                                         py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
+                                                         py_ntrg->state->attr_map,
+                                                         py_ntrg->state->cache_index, py_ntrg->state->cache_size);
             assert (status >= 0);
             py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
             py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
-            py_ntrg->state->it_idx = py_ntrg->state->attr_map.gid_set.cbegin();
+            py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
           }
 
         PyObject *result = NULL;
 
-        if (py_ntrg->state->it_idx != py_ntrg->state->attr_map.gid_set.cend())
+        if (py_ntrg->state->it_idx != py_ntrg->state->attr_map.index_set.cend())
           {
             const CELL_IDX_T key = *(py_ntrg->state->it_idx);
             PyObject *elem = py_build_attr_value(key, py_ntrg->state->attr_map,

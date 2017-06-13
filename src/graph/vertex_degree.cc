@@ -42,11 +42,9 @@ namespace neuroh5
           local_degree_vector.push_back(degree);
         }
       
-      int srank, ssize;
+      int ssize;
       assert(MPI_Comm_size(comm, &ssize) >= 0);
-      assert(MPI_Comm_rank(comm, &srank) >= 0);
-      size_t rank, size;
-      rank = (size_t)srank;
+      size_t size;
       size = (size_t)ssize;
       
       vector<uint32_t> num_nodes_vector;

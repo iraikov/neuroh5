@@ -37,7 +37,7 @@ namespace neuroh5
     (
      const size_t start,
      const size_t num_trees,
-     const map<CELL_IDX_T, size_t>& node_rank_map,
+     const map<CELL_IDX_T, rank_t>& node_rank_map,
      const CELL_IDX_T pop_start,
      vector<SEC_PTR_T>& sec_ptr,
      vector<TOPO_PTR_T>& topo_ptr,
@@ -145,7 +145,7 @@ namespace neuroh5
      const bool                    opt_attrs,
      const string                 &attr_name_space,
      // A vector that maps nodes to compute ranks
-     const map<CELL_IDX_T,size_t> &node_rank_map,
+     const map<CELL_IDX_T, rank_t> &node_rank_map,
      const string                 &pop_name,
      const CELL_IDX_T              pop_start,
      map<CELL_IDX_T, neurotree_t> &tree_map,
@@ -154,7 +154,7 @@ namespace neuroh5
      size_t numitems = 0
      )
     {
-      herr_t status; hid_t fapl, rapl, file, hdf5_swc_type;
+      herr_t status; hid_t fapl=-1, rapl=-1, file=-1, hdf5_swc_type=-1;
       vector< pair<hsize_t,hsize_t> > ranges;
       size_t dset_size, read_size; hsize_t start=0, end=0, block=0;
     
@@ -175,7 +175,10 @@ namespace neuroh5
       assert(ssize > 0);
       rank = srank;
       size = ssize;
-    
+
+      /* Create HDF5 enumerated type for reading SWC type information */
+      hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
+
       // Am I an I/O rank?
       if (srank < io_size)
         {
@@ -183,8 +186,6 @@ namespace neuroh5
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
 
-          /* Create HDF5 enumerated type for reading SWC type information */
-          hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
         
           fapl = H5Pcreate(H5P_FILE_ACCESS);
           assert(fapl >= 0);

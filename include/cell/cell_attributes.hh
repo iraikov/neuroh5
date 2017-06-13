@@ -61,7 +61,7 @@ namespace neuroh5
      const int                     io_size,
      const string                 &attr_name_space,
      // A vector that maps nodes to compute ranks
-     const map<CELL_IDX_T,size_t> &node_rank_map,
+     const map<CELL_IDX_T, rank_t> &node_rank_map,
      const string                 &pop_name,
      const CELL_IDX_T              pop_start,
      data::NamedAttrMap                 &attr_map,
@@ -93,7 +93,7 @@ namespace neuroh5
      const std::string&                    attr_namespace,
      const std::string&                    pop_name,
      const std::string&                    attr_name,
-     const std::vector<CELL_IDX_T>&        gid,
+     const std::vector<CELL_IDX_T>&        index,
      const std::vector<ATTR_PTR_T>         attr_ptr,
      const std::vector<T>&                 values,
      const size_t chunk_size = 4000,
@@ -102,7 +102,7 @@ namespace neuroh5
      )
     {
       int status;
-      assert(gid.size() == attr_ptr.size()-1);
+      assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
       assert(values.size() > 0);
     
@@ -138,10 +138,10 @@ namespace neuroh5
           !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
         {
           create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
-                                               ftype, chunk_size, value_chunk_size);
+                                         ftype, chunk_size, value_chunk_size);
         }
 
-      hdf5::append_cell_attribute<T>(file, attr_path, gid, attr_ptr, values);
+      hdf5::append_cell_attribute<T>(file, attr_path, index, attr_ptr, values);
     
       status = H5Fclose(file);
       assert(status == 0);
@@ -377,10 +377,10 @@ namespace neuroh5
 
       if (rank < io_size)
         {
-          hdf5::append_cell_attribute<T>(io_comm, file_name,
-                                         attr_namespace, pop_name, attr_name,
-                                         gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
-                                         chunk_size, value_chunk_size, cache_size);
+          append_cell_attribute<T>(io_comm, file_name,
+                                   attr_namespace, pop_name, attr_name,
+                                   gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
+                                   chunk_size, value_chunk_size, cache_size);
         }
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
     }

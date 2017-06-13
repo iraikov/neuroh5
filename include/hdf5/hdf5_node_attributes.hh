@@ -26,12 +26,7 @@ namespace neuroh5
      hsize_t&         ptr_size,
      hsize_t&         index_size,
      hsize_t&         value_size
-     )
-    {
-      ptr_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::ATTR_PTR);
-      index_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::NODE_INDEX);
-      value_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::ATTR_VAL);
-    }
+     );
 
     void create_node_attribute_datasets
     (
@@ -41,67 +36,7 @@ namespace neuroh5
      const hid_t&   ftype,
      const size_t   chunk_size,
      const size_t   value_chunk_size
-     )
-    {
-      herr_t status;
-      hsize_t maxdims[1] = {H5S_UNLIMITED};
-      hsize_t cdims[1]   = {chunk_size}; /* chunking dimensions */		
-      hsize_t initial_size = 0;
-    
-      hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
-      status = H5Pset_chunk(plist, 1, cdims);
-      assert(status == 0);
-
-      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
-      hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
-      status = H5Pset_chunk(value_plist, 1, value_cdims);
-      assert(status == 0);
-    
-      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
-    
-      if (!(H5Lexists (file, ("/" + hdf5::NODES).c_str(), H5P_DEFAULT) > 0))
-        {
-          create_group(file, ("/" + hdf5::NODES).c_str());
-        }
-
-      string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
-      if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0))
-        {
-          create_group(file, attr_prefix);
-        }
-
-      string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
-      
-      hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
-      assert(mspace >= 0);
-      hid_t dset = H5Dcreate2(file, (attr_path + "/" + hdf5::NODE_INDEX).c_str(), NODE_IDX_H5_FILE_T,
-                              mspace, lcpl, plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-
-      mspace = H5Screate_simple(1, &initial_size, maxdims);
-      assert(mspace >= 0);
-      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), ATTR_PTR_H5_FILE_T,
-                        mspace, lcpl, plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-    
-      mspace = H5Screate_simple(1, &initial_size, maxdims);
-      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_VAL).c_str(), ftype, mspace,
-                        lcpl, value_plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-    
-      assert(H5Pclose(lcpl) >= 0);
-    
-      status = H5Pclose(plist);
-      assert(status == 0);
-      status = H5Pclose(value_plist);
-      assert(status == 0);
-    
-    }
+     );
 
 
     template <typename T>

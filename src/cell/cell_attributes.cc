@@ -398,7 +398,7 @@ namespace neuroh5
 
     void append_rank_attr_map
     (
-     const map<CELL_IDX_T,size_t> &node_rank_map,
+     const map<CELL_IDX_T, rank_t> &node_rank_map,
      const data::NamedAttrMap   &attr_values,
      map <size_t, data::AttrMap> &rank_attr_map)
     {
@@ -531,7 +531,7 @@ namespace neuroh5
      const int                     io_size,
      const string                 &attr_name_space,
      // A vector that maps nodes to compute ranks
-     const map<CELL_IDX_T,size_t> &node_rank_map,
+     const map<CELL_IDX_T, rank_t> &node_rank_map,
      const string                 &pop_name,
      const CELL_IDX_T              pop_start,
      data::NamedAttrMap           &attr_map,

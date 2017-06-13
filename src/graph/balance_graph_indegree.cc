@@ -59,7 +59,7 @@ namespace neuroh5
     }
 
     // Assign each node to a rank 
-    void compute_node_rank_map
+    static void compute_node_rank_map
     (
      size_t num_ranks,
      size_t num_nodes,

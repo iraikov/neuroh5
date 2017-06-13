@@ -18,6 +18,12 @@ namespace neuroh5
 {
   namespace cell
   {
+    herr_t enum_population_names
+    (
+     MPI_Comm             comm,
+     hid_t                file,
+     vector<string>&      pop_enum_names
+     );
 
     /// @brief Reads the valid combinations of source/destination populations.
     ///

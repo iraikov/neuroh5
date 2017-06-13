@@ -10,6 +10,7 @@
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "read_projection.hh"
 #include "cell_populations.hh"
 #include "scatter_graph.hh"
@@ -34,32 +35,14 @@
 #include <mpi.h>
 
 using namespace std;
+using namespace neuroh5;
 
 namespace neuroh5
 {
   namespace graph
   {
-
-    void throw_err(char const* err_message)
-    {
-      fprintf(stderr, "Error: %s\n", err_message);
-      MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
-    void throw_err(char const* err_message, int32_t task)
-    {
-      fprintf(stderr, "Task %d Error: %s\n", task, err_message);
-      MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
-    void throw_err(char const* err_message, int32_t task, int32_t thread)
-    {
-      fprintf(stderr, "Task %d Thread %d Error: %s\n", task, thread, err_message);
-      MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
     // Assign each node to a rank 
-    void compute_node_rank_map
+    static void compute_node_rank_map
     (
      size_t num_ranks,
      size_t num_nodes,
@@ -67,7 +50,7 @@ namespace neuroh5
      )
     {
       hsize_t remainder=0, offset=0, buckets=0;
-    
+      
       for (size_t i=0; i<num_ranks; i++)
         {
           remainder  = num_nodes - offset;
@@ -79,8 +62,7 @@ namespace neuroh5
           offset    += remainder / buckets;
         }
     }
-
-  
+    
     int compute_vertex_indegree
     (
      MPI_Comm comm,

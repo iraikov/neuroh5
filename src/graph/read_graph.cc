@@ -67,7 +67,7 @@ namespace neuroh5
           //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
           string src_pop_name = prj_names[i].first, dst_pop_name = prj_names[i].second;
-          uint32_t dst_pop_idx, src_pop_idx;
+          uint32_t dst_pop_idx = 0, src_pop_idx = 0;
           bool src_pop_set = false, dst_pop_set = false;
       
           for (size_t i=0; i< pop_labels.size(); i++)

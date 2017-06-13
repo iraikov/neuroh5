@@ -28,7 +28,7 @@ namespace neuroh5
      const bool                    opt_attrs,
      const string                 &attr_name_space,
      // A vector that maps nodes to compute ranks
-     const std::map<CELL_IDX_T, size_t>&    node_rank_map,
+     const std::map<CELL_IDX_T, rank_t>&    node_rank_map,
      const string                  &pop_name,
      const CELL_IDX_T              pop_start,
      std::map<CELL_IDX_T, neurotree_t>  &tree_map,

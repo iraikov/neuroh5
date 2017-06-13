@@ -511,7 +511,7 @@ namespace neuroh5
 #endif
           
        Size sizeval;
-       size_t num_recv_items=0; size_t num_recv_edges=0;
+       size_t num_recv_items=0; 
               
        // Unpack number of received blocks for this rank
        assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
@@ -528,7 +528,6 @@ namespace neuroh5
                       
                unpack_edge(comm, header_type, recvbuf, edge_attr_num, 
                            key_node, adj_vector, edge_attr_values, recvpos);
-               num_recv_edges = adj_vector.size();
                if (recvpos > (int)recvbuf_size)
                  {
                    printf("rank %d: unpacking projection has reached end of buffer; "
