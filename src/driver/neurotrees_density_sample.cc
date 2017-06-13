@@ -224,7 +224,9 @@ int main(int argc, char** argv)
 
   if (access( output_file_name.c_str(), F_OK ) != 0)
     {
-      status = hdf5::create_file_toplevel (all_comm, output_file_name);
+      vector <string> groups;
+      groups.push_back (hdf5::POPULATIONS);
+      status = hdf5::create_file_toplevel (all_comm, output_file_name, groups);
     }
   assert(status == 0);
   MPI_Barrier(all_comm);

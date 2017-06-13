@@ -32,12 +32,27 @@ namespace neuroh5
   namespace cell
   {
   
+    
     //////////////////////////////////////////////////////////////////////////
-    herr_t enum_population_names
+    herr_t iterate_cb
+    (
+     hid_t             grp,
+     const char*       name,
+     const H5L_info_t* info,
+     void*             op_data
+     )
+    {
+      vector<string>* ptr = (vector<string>*)op_data;
+      ptr->push_back(string(name));
+      return 0;
+    }
+    
+    //////////////////////////////////////////////////////////////////////////
+    herr_t read_population_names
     (
      MPI_Comm             comm,
      hid_t                file,
-     vector<string>&      pop_enum_names
+     vector<string>&      pop_names
      )
     {
       herr_t ierr = 0;
@@ -48,30 +63,34 @@ namespace neuroh5
       assert(MPI_Comm_rank(comm, &rank) >= 0);
     
       // MPI rank 0 reads and broadcasts the names of populations
-      hid_t ty = -1;
+      hid_t grp = -1;
 
+      // Rank 0 reads the names of populations and broadcasts
       if (rank == 0)
         {
-          ty = H5Topen( file, hdf5::h5types_path_join(hdf5::POP_LABELS).c_str(), H5P_DEFAULT);
-          assert(ty >= 0);
+          hsize_t num_populations;
+          grp = H5Gopen(file, hdf5::POPULATIONS.c_str(), H5P_DEFAULT);
+          assert(grp >= 0);
+          assert(H5Gget_num_objs(grp, &num_populations)>=0);
 
-          int num_members = H5Tget_nmembers(ty);
+          hsize_t idx = 0;
+          vector<string> op_data;
+          assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &iterate_cb, (void*)&op_data ) >= 0);
         
-          for (int i = 0; i < num_members; ++i)
+          assert(op_data.size() == num_populations);
+        
+          for (size_t i = 0; i < op_data.size(); ++i)
             {
-              char cname[MAX_POP_NAME_LEN]; string name;
-              ierr = H5Tenum_nameof(ty, &i, cname, MAX_POP_NAME_LEN);
-              assert(ierr >= 0);
-              name = string(cname);
-              pop_enum_names.push_back(name);
+              pop_names.push_back(op_data[i]);
             }
         
-          assert(H5Tclose(ty) >= 0);
+          assert(H5Gclose(grp) >= 0);
         }
 
       ierr = mpi::bcast_string_vector (comm, 0,
                                        MAX_POP_NAME_LEN,
-                                       pop_enum_names);
+                                       pop_names);
       return ierr;
     }
 

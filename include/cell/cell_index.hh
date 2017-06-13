@@ -31,7 +31,8 @@ namespace neuroh5
      MPI_Comm             comm,
      const string&        file_name,
      const string&        pop_name,
-     const vector<CELL_IDX_T>&  cell_index
+     const vector<CELL_IDX_T>&  cell_index,
+     const hsize_t start
      );
 
   }

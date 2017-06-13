@@ -34,7 +34,7 @@ using namespace neuroh5;
 namespace neuroh5
 {
   
-  namespace graph
+  namespace hdf5
   {
 
     void size_node_attributes
@@ -121,7 +121,10 @@ namespace neuroh5
       assert(status == 0);
     
     }
-    
+  }
+  
+  namespace graph
+  {
     // Callback for H5Literate
     static herr_t node_attribute_cb
     (

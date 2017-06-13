@@ -1996,6 +1996,113 @@ extern "C"
     return Py_None;
   }
 
+
+  /*
+    {
+  */
+  static PyObject *py_append_cell_trees (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    MPI_Comm data_comm;
+    PyObject *gid_values;
+    const unsigned long default_cache_size = 4*1024*1024;
+    const unsigned long default_chunk_size = 4000;
+    const unsigned long default_value_chunk_size = 4000;
+    unsigned long commptr;
+    unsigned long create_index = 0, io_size = 0;
+    unsigned long chunk_size = default_chunk_size;
+    unsigned long value_chunk_size = default_value_chunk_size;
+    unsigned long cache_size = default_cache_size;
+    char *file_name_arg, *pop_name_arg, *name_space_arg = (char *)default_name_space.c_str();
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "pop_name",
+                                   "values",
+                                   "create_index",
+                                   "io_size",
+                                   "chunk_size",
+                                   "value_chunk_size",
+                                   "cache_size",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|skkkkkk", (char **)kwlist,
+                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
+                                     &name_space_arg, &create_index,
+                                     &io_size, &chunk_size, &value_chunk_size, &cache_size))
+        return NULL;
+
+    Py_ssize_t dict_size = PyDict_Size(gid_values);
+    int data_color = 2;
+
+    // In cases where some ranks do not have any data to write, split
+    // the communicator, so that collective operations can be executed
+    // only on the ranks that do have data.
+    if (dict_size > 0)
+      {
+        MPI_Comm_split(*((MPI_Comm *)(commptr)),data_color,0,&data_comm);
+      }
+    else
+      {
+        MPI_Comm_split(*((MPI_Comm *)(commptr)),0,0,&data_comm);
+      }
+    MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
+    
+    
+    int srank, ssize; size_t size;
+    assert(MPI_Comm_size(data_comm, &ssize) >= 0);
+    assert(MPI_Comm_rank(data_comm, &srank) >= 0);
+    assert(ssize > 0);
+    assert(srank >= 0);
+    size = ssize;
+    
+    if ((io_size == 0) || (io_size > size))
+      {
+        io_size = size;
+      }
+    assert(io_size <= size);
+
+    
+    string file_name      = string(file_name_arg);
+    string pop_name       = string(pop_name_arg);
+    
+    int npy_type=0;
+    
+    vector<string> attr_names;
+    vector<int> attr_types;
+        
+    vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
+
+    vector<neurotree_t> tree_list;
+    
+    create_value_maps(gid_values,
+                      attr_names,
+                      attr_types,
+                      all_attr_values_uint32,
+                      all_attr_values_uint16,
+                      all_attr_values_uint8,
+                      all_attr_values_float);
+    
+    status = append_trees (
+                           MPI_Comm data_comm,
+                           file_name,
+                           pop_name,
+                           const hsize_t ptr_start,
+                           const hsize_t attr_start,
+                           const hsize_t sec_start,
+                           const hsize_t topo_start,
+                           tree_list,
+                           create_index>0
+                           );
+
+    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+    
+    return Py_None;
+  }
+  
   enum seq_pos {seq_next, seq_last, seq_done};
   
   /* NeurotreeGenState - neurotree generator instance.

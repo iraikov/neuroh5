@@ -222,7 +222,7 @@ int main(int argc, char** argv)
   MPI_Comm all_comm;
   std::string input_file_name, rank_file_name, attr_namespace = "Attributes";
   size_t n_nodes;
-  map<CELL_IDX_T, size_t> node_rank_map;
+  map<CELL_IDX_T, rank_t> node_rank_map;
   stringstream ss;
 
   assert(MPI_Init(&argc, &argv) >= 0);

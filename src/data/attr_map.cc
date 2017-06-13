@@ -78,6 +78,11 @@ namespace neuroh5
     return uint16_values;
   }
   template<>
+  const vector<map< CELL_IDX_T, vector<int16_t> > >& AttrMap::attr_maps<int16_t> () const
+  {
+    return int16_values;
+  }
+  template<>
   const vector<map< CELL_IDX_T, vector<uint32_t> > >& AttrMap::attr_maps<uint32_t> () const
   {
     return uint32_values;

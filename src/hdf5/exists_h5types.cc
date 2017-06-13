@@ -13,7 +13,7 @@ namespace neuroh5
     /*****************************************************************************
      * Check if dataset for type definitions exists
      *****************************************************************************/
-    int hdf5_exists_tree_h5types
+    int exists_tree_h5types
     (
      hid_t  file
      )

@@ -79,7 +79,7 @@ int main(int argc, char** argv)
   MPI_Comm all_comm;
   string pop_name, input_file_name, output_file_name, selection_file_name, rank_file_name, attr_namespace = "Attributes";
   size_t n_nodes;
-  map<CELL_IDX_T, size_t> node_rank_map;
+  map<CELL_IDX_T, rank_t> node_rank_map;
   stringstream ss;
 
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -96,6 +96,7 @@ int main(int argc, char** argv)
   // parse arguments
   int optflag_verbose   = 0;
   int optflag_rankfile  = 0;
+  int optflag_reindex   = 0;
   int optflag_iosize    = 0;
   int optflag_namespace = 0;
   int optflag_chunksize = 0;
@@ -108,11 +109,13 @@ int main(int argc, char** argv)
     opt_population  = false,
     opt_chunksize   = false,
     opt_value_chunksize  = false,
-    opt_cachesize   = false;
+    opt_cachesize   = false,
+    opt_reindex     = false;
   
   static struct option long_options[] = {
     {"verbose",   no_argument, &optflag_verbose,  1 },
     {"rankfile",  required_argument, &optflag_rankfile,  1 },
+    {"reindex",   no_argument, &optflag_reindex,  1 },
     {"iosize",    required_argument, &optflag_iosize,  1 },
     {"namespace", required_argument, &optflag_namespace,  1 },
     {"chunksize", required_argument, &optflag_chunksize,  1 },
@@ -131,6 +134,9 @@ int main(int argc, char** argv)
           if (optflag_rankfile == 1) {
             opt_rankfile = true;
             rank_file_name = std::string(strdup(optarg));
+          }
+          if (optflag_reindex == 1) {
+            opt_reindex = true;
           }
           if (optflag_namespace == 1) {
             opt_namespace = true;
@@ -236,6 +242,7 @@ int main(int argc, char** argv)
 
   // Read in selection gids
   set<CELL_IDX_T> tree_selection;
+  map<CELL_IDX_T, CELL_IDX_T> tree_index;
   {
     ifstream infile(selection_file_name.c_str());
     string line;
@@ -246,6 +253,16 @@ int main(int argc, char** argv)
         CELL_IDX_T n;
         assert (iss >> n);
         tree_selection.insert(n);
+        if (opt_reindex)
+          {
+            CELL_IDX_T n1;
+            assert (iss >> n1);
+            tree_index.insert(make_pair(n, n1));
+          }
+        else
+          {
+            tree_index.insert(make_pair(n, n));
+          }
       }
     
     infile.close();
@@ -378,7 +395,9 @@ int main(int argc, char** argv)
   if (global_subset_size > 0)
     {
       //status = access( output_file_name.c_str(), F_OK );
-      status = hdf5::create_file_toplevel (all_comm, output_file_name);
+      vector <string> groups;
+      groups.push_back (hdf5::POPULATIONS);
+      status = hdf5::create_file_toplevel (all_comm, output_file_name, groups);
       assert(status == 0);
       MPI_Barrier(all_comm);
       
@@ -411,7 +430,7 @@ int main(int argc, char** argv)
       
       status = cell::append_trees(all_comm, output_file_name, pop_name, 
                                   ptr_start, attr_start, sec_start, topo_start, 
-                                  tree_subset);
+                                  tree_subset, true);
       
       assert(status == 0);
 

@@ -60,13 +60,13 @@ namespace neuroh5
       }
     
       /* Create a trees group in the population group (it is an error if one already exists).  */  
-      if (H5Lexists (file, population_trees_path(pop_name).c_str(), H5P_DEFAULT))
+      if (H5Lexists (file, cell_attribute_prefix(TREES, pop_name).c_str(), H5P_DEFAULT))
         {
-          throw_err("Population trees group already exists");
+          throw_err("Trees group already exists");
         }
       else
         {
-          group = H5Gcreate2(file, population_trees_path(pop_name).c_str(), lcpl, H5P_DEFAULT, H5P_DEFAULT);
+          group = H5Gcreate2(file, cell_attribute_prefix(TREES, pop_name).c_str(), lcpl, H5P_DEFAULT, H5P_DEFAULT);
           assert(group >= 0);
           status = H5Gclose(group);
           assert(status == 0);

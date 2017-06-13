@@ -15,6 +15,7 @@
 #include "projection_names.hh"
 #include "read_syn_projection.hh"
 #include "read_txt_projection.hh"
+#include "rank_range.hh"
 #include "write_graph.hh"
 #include "attr_map.hh"
 #include "attr_val.hh"
@@ -70,28 +71,6 @@ void print_usage_full(char** argv)
   printf("\t\tInput format\n");
 
 }
-
-// Given a total number of elements and number of ranks, calculate the starting and length for each rank
-void rank_ranges
-(
- const size_t&                    num_elems,
- const size_t&                    size,
- vector< pair<hsize_t,hsize_t> >& ranges
- )
-{
-  hsize_t remainder=0, offset=0, buckets=0;
-  ranges.resize(size);
-  
-  for (size_t i=0; i<size; i++)
-    {
-      remainder = num_elems - offset;
-      buckets   = (size - i);
-      ranges[i] = make_pair(offset, remainder / buckets);
-      offset    += ranges[i].second;
-    }
-}
-
-  
   
 
 int append_syn_adj_map
@@ -396,7 +375,7 @@ int main(int argc, char** argv)
     {
       // determine which connection files are read by which rank
       vector< pair<hsize_t,hsize_t> > ranges;
-      rank_ranges(txt_input_file_names.size(), size, ranges);
+      mpi::rank_ranges(txt_input_file_names.size(), size, ranges);
       
       hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 

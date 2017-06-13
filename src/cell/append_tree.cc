@@ -217,7 +217,7 @@ namespace neuroh5
       // create the cell index if option create_index is true
       if (create_index)
         {
-          status = append_cell_index (comm, file_name, pop_name, all_index_vector);
+          status = append_cell_index (comm, file_name, pop_name, all_index_vector, ptr_start);
         }
       else
         {

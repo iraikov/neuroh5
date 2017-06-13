@@ -52,16 +52,6 @@ namespace neuroh5
      const std::string& pop_name
      );
   
-    /// @brief Returns the path to the trees group of population group
-    ///
-    /// @param pop_name         Population group name
-    ///
-    /// @return                  A string containing the full path to the
-    ///                          trees group for the given population
-    std::string population_trees_path
-    (
-     const std::string& pop_name
-     );
   
     /// @brief Returns the path to cell attributes
     ///

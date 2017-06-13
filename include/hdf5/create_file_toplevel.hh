@@ -16,7 +16,8 @@ namespace neuroh5
     int create_file_toplevel
     (
      MPI_Comm comm,
-     const std::string& file_name
+     const std::string& file_name,
+     const std::vector <std::string> & groups
      );
   }
 }
