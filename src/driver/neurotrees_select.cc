@@ -214,18 +214,21 @@ int main(int argc, char** argv)
   assert(cell::read_population_ranges(all_comm, input_file_name,
                                       pop_ranges, pop_vector,
                                       n_nodes) >= 0);
-  vector<string> pop_names;
-  status = cell::read_population_names(all_comm, input_file_name, pop_names);
+  vector<pair <pop_t, string> > pop_labels;
+  status = cell::read_population_labels(all_comm, input_file_name, pop_labels);
   assert (status >= 0);
 
   // Determine index of population to be read
-  size_t pop_idx;
-  for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
+  size_t pop_idx=0; bool pop_idx_set=false;
+  for (size_t i=0; i<pop_labels.size(); i++)
     {
-      if (pop_names[pop_idx] == pop_name)
-        break;
+      if (get<1>(pop_labels[i]) == pop_name)
+        {
+          pop_idx = get<0>(pop_labels[i]);
+          pop_idx_set = true;
+        }
     }
-  if (pop_idx >= pop_names.size())
+  if (!pop_idx_set)
     {
       throw_err("Population not found");
     }

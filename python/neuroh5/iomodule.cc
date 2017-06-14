@@ -1487,19 +1487,24 @@ extern "C"
     if (!PyArg_ParseTuple(args, "kss", &commptr, &file_name,  &pop_name))
       return NULL;
 
-    // TODO; create separate functions for opening HDF5 file for reading and writing
-    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-    assert(fapl >= 0);
-    assert(H5Pset_fapl_mpio(fapl, *((MPI_Comm *)(commptr)), MPI_INFO_NULL) >= 0);
-    hid_t file = H5Fopen(file_name, H5F_ACC_RDONLY, fapl);
-    assert(file >= 0);
-    
-    vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
     assert (status >= 0);
     
-    status = H5Pclose (fapl);
-    status = H5Fclose (file);
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
 
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
@@ -1513,15 +1518,6 @@ extern "C"
 
     vector<neurotree_t> tree_list;
 
-    size_t pop_idx;
-    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
-      {
-        if (pop_names[pop_idx] == string(pop_name)) break;
-      }
-    if (pop_idx >= pop_names.size())
-      {
-        throw runtime_error("Unrecognized population name");
-      }
     status = cell::read_trees (*((MPI_Comm *)(commptr)), string(file_name),
                                string(pop_name), pop_vector[pop_idx].start,
                                tree_list, start, end);
@@ -1599,21 +1595,25 @@ extern "C"
           }
       }
     
-    
-    vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
     assert (status >= 0);
-
-
-    size_t pop_idx;
-    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
       {
-        if (pop_names[pop_idx] == string(pop_name)) break;
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
       }
-    if (pop_idx >= pop_names.size())
+    if (!pop_idx_set)
       {
-        throw runtime_error("Unrecognized population name");
+        throw_err("Population not found");
       }
+    
 
     map<CELL_IDX_T, neurotree_t> tree_map;
     NamedAttrMap attr_map;
@@ -1666,9 +1666,24 @@ extern "C"
                                      &pop_name, &name_space))
         return NULL;
 
-    vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
     assert (status >= 0);
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -1678,16 +1693,7 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
-    size_t pop_idx;
-    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
-      {
-        if (pop_names[pop_idx] == string(pop_name)) break;
-      }
-    if (pop_idx >= pop_names.size())
-      {
-        throw runtime_error("Unrecognized population name");
-      }
-    
+
     NamedAttrMap attr_values;
     cell::read_cell_attributes (*((MPI_Comm *)(commptr)),
                                 string(file_name), string(name_space),
@@ -1762,9 +1768,24 @@ extern "C"
                                      &pop_name, &name_space))
         return NULL;
 
-    vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
     assert (status >= 0);
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -1774,15 +1795,6 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
-    size_t pop_idx;
-    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
-      {
-        if (pop_names[pop_idx] == string(pop_name)) break;
-      }
-    if (pop_idx >= pop_names.size())
-      {
-        throw runtime_error("Unrecognized population name");
-      }
 
     cell::bcast_cell_attributes (*((MPI_Comm *)(commptr)), (int)root,
                                  string(file_name), string(name_space),
@@ -2329,9 +2341,24 @@ extern "C"
     if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
     
-    vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
     assert (status >= 0);
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -2340,21 +2367,11 @@ extern "C"
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
-
-    size_t pop_idx;
-    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
-      {
-        if (pop_names[pop_idx] == string(pop_name)) break;
-      }
-    if (pop_idx >= pop_names.size())
-      {
-        throw runtime_error("Unrecognized population name");
-      }
     
     vector<CELL_IDX_T> tree_index;
     assert(cell::read_cell_index(*((MPI_Comm *)(commptr)),
                                  string(file_name),
-                                 pop_names[pop_idx],
+                                 get<1>(pop_labels[pop_idx]),
                                  tree_index) >= 0);
 
     /* Create a new generator state and initialize it */
@@ -2443,9 +2460,24 @@ extern "C"
     if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
 
-    vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
     assert (status >= 0);
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -2455,20 +2487,10 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
-    size_t pop_idx;
-    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
-      {
-        if (pop_names[pop_idx] == string(pop_name)) break;
-      }
-    if (pop_idx >= pop_names.size())
-      {
-        throw runtime_error("Unrecognized population name");
-      }
-
     vector<CELL_IDX_T> cell_index;
     assert(cell::read_cell_index(*((MPI_Comm *)(commptr)),
                                  string(file_name),
-                                 pop_names[pop_idx],
+                                 get<1>(pop_labels[pop_idx]),
                                  cell_index) >= 0);
     
     /* Create a new generator state and initialize its state - pointing to the last

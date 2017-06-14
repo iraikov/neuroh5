@@ -279,7 +279,7 @@ namespace neuroh5
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
-          vector<CELL_IDX_T>  gid;
+          vector<CELL_IDX_T>  index;
           vector<ATTR_PTR_T>  ptr;
 
           string attr_name  = attr_info[i].first;
@@ -296,17 +296,17 @@ namespace neuroh5
                     {
                       vector<uint32_t> attr_values_uint32;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                         gid, ptr, attr_values_uint32,
+                                                         index, ptr, attr_values_uint32,
                                                          offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_uint32);
+                      attr_values.insert(attr_name, index, ptr, attr_values_uint32);
                     }
                   else
                     {
                       vector<int32_t> attr_values_int32;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                        gid, ptr, attr_values_int32,
+                                                        index, ptr, attr_values_int32,
                                                         offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_int32);
+                      attr_values.insert(attr_name, index, ptr, attr_values_int32);
                     }
                 }
               else if (attr_size == 2)
@@ -315,17 +315,17 @@ namespace neuroh5
                     {
                       vector<uint16_t> attr_values_uint16;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                        gid, ptr, attr_values_uint16,
+                                                        index, ptr, attr_values_uint16,
                                                         offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_uint16);
+                      attr_values.insert(attr_name, index, ptr, attr_values_uint16);
                     }
                   else
                     {
                       vector<int16_t> attr_values_int16;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                        gid, ptr, attr_values_int16,
+                                                        index, ptr, attr_values_int16,
                                                         offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_int16);
+                      attr_values.insert(attr_name, index, ptr, attr_values_int16);
                     }
                 }
               else if (attr_size == 1)
@@ -334,17 +334,17 @@ namespace neuroh5
                     {
                       vector<uint8_t> attr_values_uint8;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                        gid, ptr, attr_values_uint8,
+                                                        index, ptr, attr_values_uint8,
                                                         offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_uint8);
+                      attr_values.insert(attr_name, index, ptr, attr_values_uint8);
                     }
                   else
                     {
                       vector<int8_t> attr_values_int8;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                        gid, ptr, attr_values_int8,
+                                                        index, ptr, attr_values_int8,
                                                         offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_int8);
+                      attr_values.insert(attr_name, index, ptr, attr_values_int8);
                     }
                 }
               else
@@ -356,9 +356,9 @@ namespace neuroh5
               {
                 vector<float> attr_values_float;
                 status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                  gid, ptr, attr_values_float,
+                                                  index, ptr, attr_values_float,
                                                   offset, numitems);
-                attr_values.insert(attr_name, gid, ptr, attr_values_float);
+                attr_values.insert(attr_name, index, ptr, attr_values_float);
               }
               break;
             case H5T_ENUM:
@@ -368,17 +368,17 @@ namespace neuroh5
                     {
                       vector<uint8_t> attr_values_uint8;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                        gid, ptr, attr_values_uint8,
+                                                        index, ptr, attr_values_uint8,
                                                         offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_uint8);
+                      attr_values.insert(attr_name, index, ptr, attr_values_uint8);
                     }
                   else
                     {
                       vector<int8_t> attr_values_int8;
                       status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                        gid, ptr, attr_values_int8,
+                                                        index, ptr, attr_values_int8,
                                                         offset, numitems);
-                      attr_values.insert(attr_name, gid, ptr, attr_values_int8);
+                      attr_values.insert(attr_name, index, ptr, attr_values_int8);
                     }
                 }
               else
