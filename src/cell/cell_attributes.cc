@@ -34,6 +34,24 @@ using namespace neuroh5;
 namespace neuroh5
 {
   
+  namespace hdf5
+  {
+    void size_cell_attributes
+    (
+     MPI_Comm         comm,
+     hid_t            loc,
+     const string&    path,
+     hsize_t&         ptr_size,
+     hsize_t&         index_size,
+     hsize_t&         value_size
+     )
+    {
+      ptr_size   = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_PTR);
+      index_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::CELL_INDEX);
+      value_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_VAL);
+    }
+  }
+  
   namespace cell
   {
     
@@ -150,21 +168,6 @@ namespace neuroh5
         }
 
       return ierr;
-    }
-
-    void size_cell_attributes
-    (
-     MPI_Comm         comm,
-     hid_t            loc,
-     const string&    path,
-     hsize_t&         ptr_size,
-     hsize_t&         index_size,
-     hsize_t&         value_size
-     )
-    {
-      ptr_size   = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_PTR);
-      index_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::CELL_INDEX);
-      value_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_VAL);
     }
 
 

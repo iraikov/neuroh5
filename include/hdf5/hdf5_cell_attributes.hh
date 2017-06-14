@@ -16,7 +16,7 @@ namespace neuroh5
 {
   namespace hdf5
   {
-    
+
     void size_cell_attributes
     (
      MPI_Comm                   comm,
@@ -26,18 +26,8 @@ namespace neuroh5
      hsize_t&                   index_size,
      hsize_t&                   value_size
      );
-  
-    void create_cell_attribute_datasets
-    (
-     const hid_t&                    file,
-     const std::string&              attr_namespace,
-     const std::string&              pop_name,
-     const std::string&              attr_name,
-     const hid_t&                    ftype,
-     const size_t chunk_size = 4000,
-     const size_t value_chunk_size = 4000
-     );
 
+    
     template <typename T>
     herr_t read_cell_attribute
     (
