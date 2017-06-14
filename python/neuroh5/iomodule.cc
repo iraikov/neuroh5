@@ -1419,7 +1419,7 @@ extern "C"
     hid_t file = H5Fopen(input_file_name, H5F_ACC_RDONLY, fapl);
     assert(file >= 0);
 
-    status = cell::enum_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
     assert (status >= 0);
 
     status = H5Pclose (fapl);
@@ -2012,7 +2012,8 @@ extern "C"
     unsigned long chunk_size = default_chunk_size;
     unsigned long value_chunk_size = default_value_chunk_size;
     unsigned long cache_size = default_cache_size;
-    char *file_name_arg, *pop_name_arg, *name_space_arg = (char *)default_name_space.c_str();
+    char *file_name_arg, *pop_name_arg;
+    herr_t status;
     
     static const char *kwlist[] = {"commptr",
                                    "file_name",
@@ -2025,10 +2026,9 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|skkkkkk", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|kkkkkk", (char **)kwlist,
                                      &commptr, &file_name_arg, &pop_name_arg, &gid_values,
-                                     &name_space_arg, &create_index,
-                                     &io_size, &chunk_size, &value_chunk_size, &cache_size))
+                                     &create_index, &io_size, &chunk_size, &value_chunk_size, &cache_size))
         return NULL;
 
     Py_ssize_t dict_size = PyDict_Size(gid_values);
@@ -2065,13 +2065,11 @@ extern "C"
     string file_name      = string(file_name_arg);
     string pop_name       = string(pop_name_arg);
     
-    int npy_type=0;
-    
     vector<string> attr_names;
     vector<int> attr_types;
         
     vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-    vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
     vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
     vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
     vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
@@ -2086,8 +2084,9 @@ extern "C"
                       all_attr_values_uint8,
                       all_attr_values_float);
     
+    /*
     status = append_trees (
-                           MPI_Comm data_comm,
+                           data_comm,
                            file_name,
                            pop_name,
                            const hsize_t ptr_start,
@@ -2097,7 +2096,7 @@ extern "C"
                            tree_list,
                            create_index>0
                            );
-
+    */
     assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     
     return Py_None;
