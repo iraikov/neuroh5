@@ -220,20 +220,20 @@ namespace neuroh5
       
       hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
       assert(mspace >= 0);
-      hid_t dset = H5Dcreate2(file, (attr_path + "/gid").c_str(), CELL_IDX_H5_FILE_T,
+      hid_t dset = H5Dcreate2(file, (attr_path + "/" + hdf5::CELL_INDEX).c_str(), CELL_IDX_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
 
       mspace = H5Screate_simple(1, &initial_size, maxdims);
       assert(mspace >= 0);
-      dset = H5Dcreate2(file, (attr_path + "/ptr").c_str(), ATTR_PTR_H5_FILE_T,
+      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), ATTR_PTR_H5_FILE_T,
                         mspace, lcpl, plist, H5P_DEFAULT);
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
     
       mspace = H5Screate_simple(1, &initial_size, maxdims);
-      dset = H5Dcreate2(file, (attr_path + "/value").c_str(), ftype, mspace,
+      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_VAL).c_str(), ftype, mspace,
                         lcpl, value_plist, H5P_DEFAULT);
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
@@ -412,8 +412,6 @@ namespace neuroh5
       const vector<map< CELL_IDX_T, vector<int16_t> > > &all_int16_values   = attr_values.attr_maps<int16_t>();
       const vector<map< CELL_IDX_T, vector<uint32_t> > > &all_uint32_values = attr_values.attr_maps<uint32_t>();
       const vector<map< CELL_IDX_T, vector<int32_t> > > &all_int32_values   = attr_values.attr_maps<int32_t>();
-
-    
     
       for (size_t i=0; i<all_float_values.size(); i++)
         {

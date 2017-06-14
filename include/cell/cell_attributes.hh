@@ -1,7 +1,6 @@
 #ifndef CELL_ATTRIBUTES_HH
 #define CELL_ATTRIBUTES_HH
 
-
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -125,6 +124,8 @@ namespace neuroh5
       /* Set cache size and instruct the cache to discard the fully read chunk */ 
       nbytes = cache_size; w0 = 1.;
       assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0);
+      
+      
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(file >= 0);
 
@@ -134,6 +135,7 @@ namespace neuroh5
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
+
       if (!(H5Lexists (file, ("/" + hdf5::POPULATIONS).c_str(), H5P_DEFAULT) > 0) ||
           !(H5Lexists (file, hdf5::population_path(pop_name).c_str(), H5P_DEFAULT) > 0) ||
           !(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0) ||

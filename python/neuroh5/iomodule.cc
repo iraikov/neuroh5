@@ -16,6 +16,9 @@
 #include <getopt.h>
 #include <cstdio>
 #include <cstdlib>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <iostream>
 #include <iostream>
 #include <fstream>
@@ -36,6 +39,7 @@
 #include "cell_attributes.hh"
 #include "path_names.hh"
 #include "exists_tree_dataset.hh"
+#include "create_file_toplevel.hh"
 #include "read_tree.hh"
 #include "scatter_read_tree.hh"
 #include "cell_index.hh"
@@ -75,20 +79,20 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 void create_node_rank_map (PyObject *py_node_rank_map,
                            map<NODE_IDX_T, rank_t>& node_rank_map)
 {
-  PyObject *gid_key, *gid_value;
+  PyObject *idx_key, *idx_value;
   Py_ssize_t map_pos = 0;
   
-  while (PyDict_Next(py_node_rank_map, &map_pos, &gid_key, &gid_value))
+  while (PyDict_Next(py_node_rank_map, &map_pos, &idx_key, &idx_value))
     {
-      NODE_IDX_T gid = PyInt_AsLong(gid_key);
-      rank_t rank = PyInt_AsLong(gid_value);
-      node_rank_map.insert(make_pair(gid,rank));
+      NODE_IDX_T idx = PyInt_AsLong(idx_key);
+      rank_t rank = PyInt_AsLong(idx_value);
+      node_rank_map.insert(make_pair(idx,rank));
     }
 }
 
 
 template<class T>
-PyObject *py_attr_values (const CELL_IDX_T gid,
+PyObject *py_attr_values (const CELL_IDX_T idx,
                           const vector< string >& attr_names,
                           const vector< map<CELL_IDX_T, vector<T> > >& attr_maps,
                           int npy_type,
@@ -98,7 +102,7 @@ PyObject *py_attr_values (const CELL_IDX_T gid,
   for (size_t k = 0; k < num_attrs; k++)
     {
       const map<CELL_IDX_T, vector<T> > &attr_values = attr_maps[k];
-      auto search = attr_values.find(gid);
+      auto search = attr_values.find(idx);
       if (search != attr_values.end())
         {
           const vector<T> &v = search->second;
@@ -134,6 +138,7 @@ void py_merge_values (PyObject *py_list,
       PyObject *pyval = PyList_GetItem(py_list, i);
       T *pyval_ptr = (T *)PyArray_GetPtr((PyArrayObject *)pyval, &ind);
       dims = PyArray_DIMS((PyArrayObject *)pyval);
+      assert(dims != NULL);
       attr_values.resize(dims[0]);
       for (size_t j=0; j<attr_values.size(); j++)
         {
@@ -152,8 +157,11 @@ void py_append_value (PyObject *pyval,
                       vector< vector<T> >& all_attr_values)
 {
   npy_intp *dims, ind = 0;
-  T *pyval_ptr = (T *)PyArray_GetPtr((PyArrayObject *)pyval, &ind);
-  dims = PyArray_DIMS((PyArrayObject*)pyval);
+  assert(PyArray_Check(pyval));
+  PyArrayObject* pyarr = (PyArrayObject*)PyArray_FROM_OTF(pyval, NPY_NOTYPE, NPY_ARRAY_IN_ARRAY);
+  T *pyarr_ptr = (T *)PyArray_GetPtr(pyarr, &ind);
+  dims = PyArray_DIMS(pyarr);
+  assert(dims != NULL);
   size_t value_size = dims[0];
   vector<T> &attr_values = all_attr_values[attr_pos];
   typename vector<T>::size_type base = attr_values.size();
@@ -161,56 +169,64 @@ void py_append_value (PyObject *pyval,
   attr_values.resize(newsize);
   for (size_t j=0; j<value_size; j++)
     {
-      attr_values[base+j] = pyval_ptr[j];
+      attr_values[base+j] = pyarr_ptr[j];
     }
   attr_ptr[attr_pos].push_back(newsize);
+  Py_DECREF(pyarr);
 }
 
 
 template<class T>
-void py_append_value_map (CELL_IDX_T gid,
+void py_append_value_map (CELL_IDX_T idx,
                           PyObject *pyval,
                           size_t attr_pos,
                           map<CELL_IDX_T, vector<T> >& all_attr_values)
 {
   npy_intp *dims, ind = 0;
-  dims = PyArray_DIMS((PyArrayObject *)pyval);
+  assert(PyArray_Check(pyval));
+  PyArrayObject* pyarr = (PyArrayObject*)PyArray_FROM_OTF(pyval, NPY_NOTYPE, NPY_ARRAY_IN_ARRAY);
+  dims = PyArray_DIMS(pyarr);
+  assert(dims != NULL);
   size_t value_size = dims[0];
-  T *pyval_ptr = (T *)PyArray_GetPtr((PyArrayObject *)pyval, &ind);
+  T *pyarr_ptr = (T *)PyArray_GetPtr(pyarr, &ind);
   vector<T> attr_values(value_size);
   for (size_t j=0; j<value_size; j++)
     {
-      attr_values[j] = pyval_ptr[j];
+      attr_values[j] = pyarr_ptr[j];
     }
-  all_attr_values.insert(make_pair(gid, attr_values));
+  all_attr_values.insert(make_pair(idx, attr_values));
+  Py_DECREF(pyarr);
 }
 
 
-void create_value_maps (PyObject *gid_values,
+void create_value_maps (PyObject *idx_values,
                         vector<string>& attr_names,
                         vector<int>& attr_types,
                         vector<map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
+                        vector<map<CELL_IDX_T, vector<int32_t>>>& all_attr_values_int32,
                         vector<map<CELL_IDX_T, vector<uint16_t>>>& all_attr_values_uint16,
+                        vector<map<CELL_IDX_T, vector<int16_t>>>& all_attr_values_int16,
                         vector<map<CELL_IDX_T, vector<uint8_t>>>& all_attr_values_uint8,
+                        vector<map<CELL_IDX_T, vector<int8_t>>>& all_attr_values_int8,
                         vector<map<CELL_IDX_T, vector<float>>>& all_attr_values_float)
 {
-  PyObject *gid_key, *gid_value;
-  Py_ssize_t gid_pos = 0;
+  PyObject *idx_key, *idx_value;
+  Py_ssize_t idx_pos = 0;
   int npy_type=0;
   
-  while (PyDict_Next(gid_values, &gid_pos, &gid_key, &gid_value))
+  while (PyDict_Next(idx_values, &idx_pos, &idx_key, &idx_value))
     {
-      assert(gid_key != Py_None);
-      assert(gid_value != Py_None);
+      assert(idx_key != Py_None);
+      assert(idx_value != Py_None);
 
-      CELL_IDX_T gid = PyInt_AsLong(gid_key);
+      CELL_IDX_T idx = PyInt_AsLong(idx_key);
 
       PyObject *attr_key, *attr_values;
       Py_ssize_t attr_pos = 0;
       size_t attr_idx = 0;
       vector<size_t> attr_type_idx(AttrMap::num_attr_types);
         
-      while (PyDict_Next(gid_value, &attr_pos, &attr_key, &attr_values))
+      while (PyDict_Next(idx_value, &attr_pos, &attr_key, &attr_values))
         {
           assert(attr_key != Py_None);
           assert(attr_values != Py_None);
@@ -236,9 +252,20 @@ void create_value_maps (PyObject *gid_values,
                   {
                     all_attr_values_uint32.resize(attr_type_idx[AttrMap::attr_index_uint32]+1);
                   }
-                py_append_value_map<uint32_t> (gid, attr_values, attr_idx,
+                py_append_value_map<uint32_t> (idx, attr_values, attr_idx,
                                                all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
                 attr_type_idx[AttrMap::attr_index_uint32]++;
+                break;
+              }
+            case NPY_INT32:
+              {
+                if (all_attr_values_int32.size() < (size_t)attr_type_idx[AttrMap::attr_index_int32]+1)
+                  {
+                    all_attr_values_int32.resize(attr_type_idx[AttrMap::attr_index_int32]+1);
+                  }
+                py_append_value_map<int32_t> (idx, attr_values, attr_idx,
+                                               all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]]);
+                attr_type_idx[AttrMap::attr_index_int32]++;
                 break;
               }
             case NPY_UINT16:
@@ -247,9 +274,20 @@ void create_value_maps (PyObject *gid_values,
                   {
                     all_attr_values_uint16.resize(attr_type_idx[AttrMap::attr_index_uint16]+1);
                   }
-                py_append_value_map<uint16_t> (gid, attr_values, attr_idx,
+                py_append_value_map<uint16_t> (idx, attr_values, attr_idx,
                                                all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
                 attr_type_idx[AttrMap::attr_index_uint16]++;
+                break;
+              }
+            case NPY_INT16:
+              {
+                if (all_attr_values_int16.size() < (size_t)attr_type_idx[AttrMap::attr_index_int16]+1)
+                  {
+                    all_attr_values_int16.resize(attr_type_idx[AttrMap::attr_index_int16]+1);
+                  }
+                py_append_value_map<int16_t> (idx, attr_values, attr_idx,
+                                               all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]]);
+                attr_type_idx[AttrMap::attr_index_int16]++;
                 break;
               }
             case NPY_UINT8:
@@ -258,9 +296,20 @@ void create_value_maps (PyObject *gid_values,
                   {
                     all_attr_values_uint8.resize(attr_type_idx[AttrMap::attr_index_uint8]+1);
                   }
-                py_append_value_map<uint8_t> (gid, attr_values, attr_idx,
+                py_append_value_map<uint8_t> (idx, attr_values, attr_idx,
                                               all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
                 attr_type_idx[AttrMap::attr_index_uint8]++;
+                break;
+              }
+            case NPY_INT8:
+              {
+                if (all_attr_values_int8.size() < (size_t)attr_type_idx[AttrMap::attr_index_int8]+1)
+                  {
+                    all_attr_values_int8.resize(attr_type_idx[AttrMap::attr_index_int8]+1);
+                  }
+                py_append_value_map<int8_t> (idx, attr_values, attr_idx,
+                                             all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]]);
+                attr_type_idx[AttrMap::attr_index_int8]++;
                 break;
               }
             case NPY_FLOAT:
@@ -269,7 +318,7 @@ void create_value_maps (PyObject *gid_values,
                   {
                     all_attr_values_float.resize(attr_type_idx[AttrMap::attr_index_float]+1);
                   }
-                py_append_value_map<float> (gid, attr_values, attr_idx,
+                py_append_value_map<float> (idx, attr_values, attr_idx,
                                             all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
                 attr_type_idx[AttrMap::attr_index_float]++;
                 break;
@@ -289,8 +338,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                               const string& attr_name_space,
                               const vector <vector<string> >& attr_names)
 {
-  const CELL_IDX_T gid = get<0>(tree);
-  assert(gid == key);
+  const CELL_IDX_T idx = get<0>(tree);
+  assert(idx == key);
   const vector<SECTION_IDX_T> & src_vector=get<1>(tree);
   const vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
   const vector<SECTION_IDX_T> & sections=get<3>(tree);
@@ -302,12 +351,12 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   const vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
   const vector<SWC_TYPE_T> & swc_types=get<10>(tree);
   
-  const vector <vector <float>> &float_attrs     = attr_map.find<float>(gid);
-  const vector <vector <uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(gid);
-  const vector <vector <int8_t>> &int8_attrs     = attr_map.find<int8_t>(gid);
-  const vector <vector <uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(gid);
-  const vector <vector <uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(gid);
-  const vector <vector <int32_t>> &int32_attrs   = attr_map.find<int32_t>(gid);
+  const vector <vector <float>> &float_attrs     = attr_map.find<float>(idx);
+  const vector <vector <uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(idx);
+  const vector <vector <int8_t>> &int8_attrs     = attr_map.find<int8_t>(idx);
+  const vector <vector <uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(idx);
+  const vector <vector <uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(idx);
+  const vector <vector <int32_t>> &int32_attrs   = attr_map.find<int32_t>(idx);
   
   size_t num_nodes = xcoords.size();
         
@@ -1216,7 +1265,7 @@ extern "C"
   static PyObject *py_append_edges (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
-    PyObject *gid_values;
+    PyObject *idx_values;
     const unsigned long default_cache_size = 4*1024*1024;
     const unsigned long default_chunk_size = 4000;
     const unsigned long default_value_chunk_size = 4000;
@@ -1239,7 +1288,7 @@ extern "C"
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|skkk", (char **)kwlist,
-                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
+                                     &commptr, &file_name_arg, &pop_name_arg, &idx_values,
                                      &name_space_arg, &chunk_size, &value_chunk_size, &cache_size))
         return NULL;
 
@@ -1258,7 +1307,7 @@ extern "C"
     vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
     
 
-    create_value_maps(gid_values,
+    create_value_maps(idx_values,
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
@@ -1315,7 +1364,7 @@ extern "C"
 
   static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    PyObject *gid_values;
+    PyObject *idx_values;
     unsigned long commptr;
     char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg, *prj_name_arg;
     
@@ -1350,7 +1399,7 @@ extern "C"
     vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
     
 
-    create_value_maps(gid_values,
+    create_value_maps(idx_values,
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
@@ -1501,13 +1550,13 @@ extern "C"
     
     for (size_t i = 0; i < tree_list.size(); i++)
       {
-        const CELL_IDX_T gid = get<0>(tree_list[i]);
+        const CELL_IDX_T idx = get<0>(tree_list[i]);
         const neurotree_t &tree = tree_list[i];
 
-        PyObject *py_treeval = py_build_tree_value(gid, tree, false, attr_map,
+        PyObject *py_treeval = py_build_tree_value(idx, tree, false, attr_map,
                                                    string("Attributes"), attr_names);
 
-        PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(gid), py_treeval);
+        PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);
       }
 
     PyObject *py_result_tuple = PyTuple_New(2);
@@ -1652,49 +1701,49 @@ extern "C"
     attr_values.attr_names(attr_names);
 
     
-    PyObject *py_gid_dict = PyDict_New();
+    PyObject *py_idx_dict = PyDict_New();
     for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
       {
-        CELL_IDX_T gid = *it;
+        CELL_IDX_T idx = *it;
 
         PyObject *py_attr_dict = PyDict_New();
 
-        py_attr_values<float> (gid,
+        py_attr_values<float> (idx,
                                attr_names[AttrMap::attr_index_float],
                                attr_values.attr_maps<float>(),
                                NPY_FLOAT,
                                py_attr_dict);
-        py_attr_values<uint8_t> (gid,
+        py_attr_values<uint8_t> (idx,
                                  attr_names[AttrMap::attr_index_uint8],
                                  attr_values.attr_maps<uint8_t>(),
                                  NPY_UINT8,
                                  py_attr_dict);
-        py_attr_values<int8_t> (gid,
+        py_attr_values<int8_t> (idx,
                                 attr_names[AttrMap::attr_index_int8],
                                 attr_values.attr_maps<int8_t>(),
                                 NPY_INT8,
                                 py_attr_dict);
-        py_attr_values<uint16_t> (gid,
+        py_attr_values<uint16_t> (idx,
                                   attr_names[AttrMap::attr_index_uint16],
                                   attr_values.attr_maps<uint16_t>(),
                                   NPY_UINT16,
                                   py_attr_dict);
-        py_attr_values<uint32_t> (gid,
+        py_attr_values<uint32_t> (idx,
                                   attr_names[AttrMap::attr_index_uint32],
                                   attr_values.attr_maps<uint32_t>(),
                                   NPY_UINT32,
                                   py_attr_dict);
-        py_attr_values<int32_t> (gid,
+        py_attr_values<int32_t> (idx,
                                  attr_names[AttrMap::attr_index_int32],
                                  attr_values.attr_maps<int32_t>(),
                                  NPY_INT32,
                                  py_attr_dict);
 
-        PyDict_SetItem(py_gid_dict, PyLong_FromUnsignedLong(gid), py_attr_dict);
+        PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
 
       }
     
-    return py_gid_dict;
+    return py_idx_dict;
   }
 
   static PyObject *py_bcast_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
@@ -1723,55 +1772,55 @@ extern "C"
     attr_values.attr_names(attr_names);
 
     
-    PyObject *py_gid_dict = PyDict_New();
+    PyObject *py_idx_dict = PyDict_New();
     for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
       {
-        CELL_IDX_T gid = *it;
+        CELL_IDX_T idx = *it;
 
         PyObject *py_attr_dict = PyDict_New();
 
-        py_attr_values<float> (gid,
+        py_attr_values<float> (idx,
                                attr_names[AttrMap::attr_index_float],
                                attr_values.attr_maps<float>(),
                                NPY_FLOAT,
                                py_attr_dict);
-        py_attr_values<uint8_t> (gid,
+        py_attr_values<uint8_t> (idx,
                                  attr_names[AttrMap::attr_index_uint8],
                                  attr_values.attr_maps<uint8_t>(),
                                  NPY_UINT8,
                                  py_attr_dict);
-        py_attr_values<int8_t> (gid,
+        py_attr_values<int8_t> (idx,
                                 attr_names[AttrMap::attr_index_int8],
                                 attr_values.attr_maps<int8_t>(),
                                 NPY_INT8,
                                 py_attr_dict);
-        py_attr_values<uint16_t> (gid,
+        py_attr_values<uint16_t> (idx,
                                   attr_names[AttrMap::attr_index_uint16],
                                   attr_values.attr_maps<uint16_t>(),
                                   NPY_UINT16,
                                   py_attr_dict);
-        py_attr_values<uint32_t> (gid,
+        py_attr_values<uint32_t> (idx,
                                   attr_names[AttrMap::attr_index_uint32],
                                   attr_values.attr_maps<uint32_t>(),
                                   NPY_UINT32,
                                   py_attr_dict);
-        py_attr_values<int32_t> (gid,
+        py_attr_values<int32_t> (idx,
                                  attr_names[AttrMap::attr_index_int32],
                                  attr_values.attr_maps<int32_t>(),
                                  NPY_INT32,
                                  py_attr_dict);
 
-        PyDict_SetItem(py_gid_dict, PyLong_FromUnsignedLong(gid), py_attr_dict);
+        PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
 
       }
     
-    return py_gid_dict;
+    return py_idx_dict;
   }
 
   
   static PyObject *py_write_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    PyObject *gid_values;
+    PyObject *idx_values;
     unsigned long commptr;
     const string default_name_space = "Attributes";
     char *file_name_arg, *pop_name_arg, *name_space_arg = (char *)default_name_space.c_str();
@@ -1784,7 +1833,7 @@ extern "C"
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|s", (char **)kwlist,
-                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
+                                     &commptr, &file_name_arg, &pop_name_arg, &idx_values,
                                      &name_space_arg))
         return NULL;
 
@@ -1798,17 +1847,23 @@ extern "C"
     vector<int> attr_types;
         
     vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
     vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
     vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
     vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
     
 
-    create_value_maps(gid_values,
+    create_value_maps(idx_values,
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
+                      all_attr_values_int32,
                       all_attr_values_uint16,
+                      all_attr_values_int16,
                       all_attr_values_uint8,
+                      all_attr_values_int8,
                       all_attr_values_float);
 
     size_t attr_idx=0;
@@ -1862,7 +1917,7 @@ extern "C"
   static PyObject *py_append_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
     MPI_Comm data_comm;
-    PyObject *gid_values;
+    PyObject *idx_values;
     const unsigned long default_cache_size = 4*1024*1024;
     const unsigned long default_chunk_size = 4000;
     const unsigned long default_value_chunk_size = 4000;
@@ -1873,6 +1928,7 @@ extern "C"
     unsigned long value_chunk_size = default_value_chunk_size;
     unsigned long cache_size = default_cache_size;
     char *file_name_arg, *pop_name_arg, *name_space_arg = (char *)default_name_space.c_str();
+    herr_t status;
     
     static const char *kwlist[] = {"commptr",
                                    "file_name",
@@ -1885,13 +1941,14 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
+
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|skkkkk", (char **)kwlist,
-                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
+                                     &commptr, &file_name_arg, &pop_name_arg, &idx_values,
                                      &name_space_arg,
                                      &io_size, &chunk_size, &value_chunk_size, &cache_size))
         return NULL;
 
-    Py_ssize_t dict_size = PyDict_Size(gid_values);
+    Py_ssize_t dict_size = PyDict_Size(idx_values);
     int data_color = 2;
 
     // In cases where some ranks do not have any data to write, split
@@ -1932,18 +1989,37 @@ extern "C"
     vector<int> attr_types;
         
     vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
     vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
     vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
     vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
 
-    create_value_maps(gid_values,
+    create_value_maps(idx_values,
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
+                      all_attr_values_int32,
                       all_attr_values_uint16,
+                      all_attr_values_int16,
                       all_attr_values_uint8,
+                      all_attr_values_int8,
                       all_attr_values_float);
 
+    if (access( file_name.c_str(), F_OK ) != 0)
+      {
+        vector <string> groups;
+        groups.push_back (hdf5::POPULATIONS);
+        status = hdf5::create_file_toplevel (data_comm, file_name, groups);
+      }
+    else
+      {
+        status = 0;
+      }
+    assert(status == 0);
+    MPI_Barrier(data_comm);
+    
     size_t attr_idx=0;
     vector<size_t> attr_type_idx(AttrMap::num_attr_types);
     for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
@@ -1961,6 +2037,14 @@ extern "C"
               attr_type_idx[AttrMap::attr_index_uint32]++;
               break;
             }
+          case NPY_INT32:
+            {
+              cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                         all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
+                                                         io_size);
+              attr_type_idx[AttrMap::attr_index_int32]++;
+              break;
+            }
           case NPY_UINT16:
             {
               cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
@@ -1969,12 +2053,28 @@ extern "C"
               attr_type_idx[AttrMap::attr_index_uint16]++;
               break;
             }
+          case NPY_INT16:
+            {
+              cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                        all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
+                                                        io_size);
+              attr_type_idx[AttrMap::attr_index_int16]++;
+              break;
+            }
           case NPY_UINT8:
             {
               cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                         all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
                                                         io_size);
               attr_type_idx[AttrMap::attr_index_uint8]++;
+              break;
+            }
+          case NPY_INT8:
+            {
+              cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                       all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
+                                                       io_size);
+              attr_type_idx[AttrMap::attr_index_int8]++;
               break;
             }
           case NPY_FLOAT:
@@ -2003,7 +2103,7 @@ extern "C"
   static PyObject *py_append_cell_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
     MPI_Comm data_comm;
-    PyObject *gid_values;
+    PyObject *idx_values;
     const unsigned long default_cache_size = 4*1024*1024;
     const unsigned long default_chunk_size = 4000;
     const unsigned long default_value_chunk_size = 4000;
@@ -2027,11 +2127,11 @@ extern "C"
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|kkkkkk", (char **)kwlist,
-                                     &commptr, &file_name_arg, &pop_name_arg, &gid_values,
+                                     &commptr, &file_name_arg, &pop_name_arg, &idx_values,
                                      &create_index, &io_size, &chunk_size, &value_chunk_size, &cache_size))
         return NULL;
 
-    Py_ssize_t dict_size = PyDict_Size(gid_values);
+    Py_ssize_t dict_size = PyDict_Size(idx_values);
     int data_color = 2;
 
     // In cases where some ranks do not have any data to write, split
@@ -2071,17 +2171,22 @@ extern "C"
     vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
     vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
     vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    vector< map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
     vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
     vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
 
     vector<neurotree_t> tree_list;
     
-    create_value_maps(gid_values,
+    create_value_maps(idx_values,
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
+                      all_attr_values_int32,
                       all_attr_values_uint16,
+                      all_attr_values_int16,
                       all_attr_values_uint8,
+                      all_attr_values_int8,
                       all_attr_values_float);
     
     /*
