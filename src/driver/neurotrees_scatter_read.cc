@@ -323,19 +323,9 @@ int main(int argc, char** argv)
   assert(cell::read_population_ranges(all_comm, input_file_name,
                                       pop_ranges, pop_vector,
                                       n_nodes) >= 0);
-  // TODO; create separate functions for opening HDF5 file for reading and writing
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-  assert(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
-  hid_t file = H5Fopen(input_file_name.c_str(), H5F_ACC_RDONLY, fapl);
-  assert(file >= 0);
-
   vector<string> pop_names;
-  status = cell::read_population_names(all_comm, file, pop_names);
+  status = cell::read_population_names(all_comm, input_file_name, pop_names);
   assert (status >= 0);
-
-  status = H5Pclose (fapl);
-  status = H5Fclose (file);
 
   // Determine which nodes are assigned to which compute ranks
   if (!opt_rankfile)

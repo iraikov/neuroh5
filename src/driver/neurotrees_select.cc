@@ -214,15 +214,8 @@ int main(int argc, char** argv)
   assert(cell::read_population_ranges(all_comm, input_file_name,
                                       pop_ranges, pop_vector,
                                       n_nodes) >= 0);
-  // TODO; create separate functions for opening HDF5 file for reading and writing
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-  assert(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
-  hid_t input_file = H5Fopen(input_file_name.c_str(), H5F_ACC_RDONLY, fapl);
-  assert(input_file >= 0);
-
   vector<string> pop_names;
-  status = cell::read_population_names(all_comm, input_file, pop_names);
+  status = cell::read_population_names(all_comm, input_file_name, pop_names);
   assert (status >= 0);
 
   // Determine index of population to be read
@@ -237,8 +230,6 @@ int main(int argc, char** argv)
       throw_err("Population not found");
     }
   
-  status = H5Pclose (fapl);
-  status = H5Fclose (input_file);
 
   // Read in selection gids
   set<CELL_IDX_T> tree_selection;
@@ -395,6 +386,7 @@ int main(int argc, char** argv)
   if (global_subset_size > 0)
     {
       //status = access( output_file_name.c_str(), F_OK );
+      hid_t input_file;
       vector <string> groups;
       groups.push_back (hdf5::POPULATIONS);
       status = hdf5::create_file_toplevel (all_comm, output_file_name, groups);
@@ -402,7 +394,7 @@ int main(int argc, char** argv)
       MPI_Barrier(all_comm);
       
       // TODO; create separate functions for opening HDF5 file for reading and writing
-      fapl = H5Pcreate(H5P_FILE_ACCESS);
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
       assert(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
       hid_t output_file = H5Fopen(output_file_name.c_str(), H5F_ACC_RDWR, fapl);

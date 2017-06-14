@@ -51,7 +51,7 @@ namespace neuroh5
     herr_t read_population_names
     (
      MPI_Comm             comm,
-     hid_t                file,
+     const std::string&   file_name,
      vector<string>&      pop_names
      )
     {
@@ -68,6 +68,10 @@ namespace neuroh5
       // Rank 0 reads the names of populations and broadcasts
       if (rank == 0)
         {
+          
+          hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+          assert(file >= 0);
+          
           hsize_t num_populations;
           grp = H5Gopen(file, hdf5::POPULATIONS.c_str(), H5P_DEFAULT);
           assert(grp >= 0);
@@ -86,6 +90,7 @@ namespace neuroh5
             }
         
           assert(H5Gclose(grp) >= 0);
+          assert(H5Fclose(file) >= 0);
         }
 
       ierr = mpi::bcast_string_vector (comm, 0,

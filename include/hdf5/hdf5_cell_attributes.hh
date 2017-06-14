@@ -34,6 +34,7 @@ namespace neuroh5
      MPI_Comm                  comm,
      const hid_t&              loc,
      const std::string&        path,
+     const CELL_IDX_T          pop_start,
      std::vector<NODE_IDX_T>&  index,
      std::vector<ATTR_PTR_T>&  ptr,
      std::vector<T> &          values,
@@ -86,7 +87,11 @@ namespace neuroh5
                                          start, block,
                                          NODE_IDX_H5_NATIVE_T,
                                          index, rapl);
-            
+              for (size_t i=0; i<index.size(); i++)
+                {
+                  index[i] += pop_start;
+                }
+              
               // read pointer and determine ranges
               string ptr_path = path + "/" + ATTR_PTR;
               ptr.resize(block+1);

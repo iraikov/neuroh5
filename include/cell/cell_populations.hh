@@ -73,7 +73,7 @@ namespace neuroh5
     herr_t read_population_names
     (
      MPI_Comm             comm,
-     hid_t                file,
+     const std::string&   file_name,
      vector<string>&      pop_names
      );
   }

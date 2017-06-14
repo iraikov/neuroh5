@@ -49,6 +49,7 @@ namespace neuroh5
      const string&    file_name,
      const string&    name_space,
      const string&    pop_name,
+     const CELL_IDX_T pop_start,
      data::NamedAttrMap&    attr_values,
      size_t offset = 0,
      size_t numitems = 0
@@ -80,6 +81,7 @@ namespace neuroh5
      const string&    file_name,
      const string&    name_space,
      const string&    pop_name,
+     const CELL_IDX_T pop_start,
      data::NamedAttrMap&    attr_values,
      size_t offset = 0,
      size_t numitems = 0

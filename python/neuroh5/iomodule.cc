@@ -1423,18 +1423,9 @@ extern "C"
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
 
-    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-    assert(fapl >= 0);
-    assert(H5Pset_fapl_mpio(fapl, *((MPI_Comm *)(commptr)), MPI_INFO_NULL) >= 0);
-    hid_t file = H5Fopen(input_file_name, H5F_ACC_RDONLY, fapl);
-    assert(file >= 0);
-
     vector <string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), input_file_name, pop_names);
     assert (status >= 0);
-
-    status = H5Pclose (fapl);
-    status = H5Fclose (file);
 
 
     PyObject *py_population_names = PyList_New(0);
@@ -1461,18 +1452,8 @@ extern "C"
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
 
-    // TODO; create separate functions for opening HDF5 file for reading and writing
-    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-    assert(fapl >= 0);
-    assert(H5Pset_fapl_mpio(fapl, *((MPI_Comm *)(commptr)), MPI_INFO_NULL) >= 0);
-    hid_t file = H5Fopen(input_file_name, H5F_ACC_RDONLY, fapl);
-    assert(file >= 0);
-
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), input_file_name, pop_names);
     assert (status >= 0);
-
-    status = H5Pclose (fapl);
-    status = H5Fclose (file);
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -1514,7 +1495,7 @@ extern "C"
     assert(file >= 0);
     
     vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
     assert (status >= 0);
     
     status = H5Pclose (fapl);
@@ -1618,19 +1599,10 @@ extern "C"
           }
       }
     
-    // TODO; create separate functions for opening HDF5 file for reading and writing
-    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-    assert(fapl >= 0);
-    assert(H5Pset_fapl_mpio(fapl, *((MPI_Comm *)(commptr)), MPI_INFO_NULL) >= 0);
-    hid_t file = H5Fopen(file_name, H5F_ACC_RDONLY, fapl);
-    assert(file >= 0);
     
     vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
     assert (status >= 0);
-    
-    status = H5Pclose (fapl);
-    status = H5Fclose (file);
 
 
     size_t pop_idx;
@@ -1678,6 +1650,7 @@ extern "C"
   
   static PyObject *py_read_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
+    herr_t status;
     unsigned long commptr;
     const string default_name_space = "Attributes";
     char *file_name, *pop_name, *name_space = (char *)default_name_space.c_str();
@@ -1693,10 +1666,33 @@ extern "C"
                                      &pop_name, &name_space))
         return NULL;
 
+    vector<string> pop_names;
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    assert (status >= 0);
+
+    size_t n_nodes;
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)),
+                                        string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
+
+    size_t pop_idx;
+    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
+      {
+        if (pop_names[pop_idx] == string(pop_name)) break;
+      }
+    if (pop_idx >= pop_names.size())
+      {
+        throw runtime_error("Unrecognized population name");
+      }
+    
     NamedAttrMap attr_values;
     cell::read_cell_attributes (*((MPI_Comm *)(commptr)),
                                 string(file_name), string(name_space),
-                                string(pop_name), attr_values);
+                                string(pop_name), pop_vector[pop_idx].start,
+                                attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
@@ -1748,6 +1744,7 @@ extern "C"
 
   static PyObject *py_bcast_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
+    herr_t status;
     unsigned long commptr, root;
     const string default_name_space = "Attributes";
     char *file_name, *pop_name, *name_space = (char *)default_name_space.c_str();
@@ -1765,9 +1762,32 @@ extern "C"
                                      &pop_name, &name_space))
         return NULL;
 
+    vector<string> pop_names;
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
+    assert (status >= 0);
+
+    size_t n_nodes;
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)),
+                                        string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
+
+    size_t pop_idx;
+    for (pop_idx=0; pop_idx<pop_names.size(); pop_idx++)
+      {
+        if (pop_names[pop_idx] == string(pop_name)) break;
+      }
+    if (pop_idx >= pop_names.size())
+      {
+        throw runtime_error("Unrecognized population name");
+      }
+
     cell::bcast_cell_attributes (*((MPI_Comm *)(commptr)), (int)root,
                                  string(file_name), string(name_space),
-                                 string(pop_name), attr_values);
+                                 string(pop_name), pop_vector[pop_idx].start,
+                                 attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
@@ -2309,19 +2329,9 @@ extern "C"
     if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
     
-    // TODO; create separate functions for opening HDF5 file for reading and writing
-    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-    assert(fapl >= 0);
-    assert(H5Pset_fapl_mpio(fapl, *((MPI_Comm *)(commptr)), MPI_INFO_NULL) >= 0);
-    hid_t file = H5Fopen(file_name, H5F_ACC_RDONLY, fapl);
-    assert(file >= 0);
-    
     vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
     assert (status >= 0);
-    
-    status = H5Pclose (fapl);
-    status = H5Fclose (file);
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -2340,6 +2350,7 @@ extern "C"
       {
         throw runtime_error("Unrecognized population name");
       }
+    
     vector<CELL_IDX_T> tree_index;
     assert(cell::read_cell_index(*((MPI_Comm *)(commptr)),
                                  string(file_name),
@@ -2432,19 +2443,9 @@ extern "C"
     if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
 
-    // TODO; create separate functions for opening HDF5 file for reading and writing
-    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-    assert(fapl >= 0);
-    assert(H5Pset_fapl_mpio(fapl, *((MPI_Comm *)(commptr)), MPI_INFO_NULL) >= 0);
-    hid_t file = H5Fopen(file_name, H5F_ACC_RDONLY, fapl);
-    assert(file >= 0);
-
     vector<string> pop_names;
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), file, pop_names);
+    status = cell::read_population_names(*((MPI_Comm *)(commptr)), string(file_name), pop_names);
     assert (status >= 0);
-    
-    status = H5Pclose (fapl);
-    status = H5Fclose (file);
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
