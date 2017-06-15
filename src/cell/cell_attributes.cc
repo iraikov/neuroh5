@@ -217,10 +217,11 @@ namespace neuroh5
         }
 
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
+      string index_path = attr_path + "/" + hdf5::CELL_INDEX;
       
       hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
       assert(mspace >= 0);
-      hid_t dset = H5Dcreate2(file, (attr_path + "/" + hdf5::CELL_INDEX).c_str(), CELL_IDX_H5_FILE_T,
+      hid_t dset = H5Dcreate2(file, (index_path).c_str(), CELL_IDX_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);

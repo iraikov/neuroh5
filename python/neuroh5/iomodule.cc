@@ -1469,8 +1469,11 @@ extern "C"
         PyObject *py_range_tuple = PyTuple_New(2);
         PyTuple_SetItem(py_range_tuple, 0, PyInt_FromLong((long)range.first));
         PyTuple_SetItem(py_range_tuple, 1, PyInt_FromLong((long)range.second.first));
-        
-        PyDict_SetItemString(py_population_ranges_dict, pop_names[range.second.second].c_str(), py_range_tuple);
+
+        if (range.second.second < pop_names.size())
+          {
+            PyDict_SetItemString(py_population_ranges_dict, pop_names[range.second.second].c_str(), py_range_tuple);
+          }
       }
     
     return py_population_ranges_dict;
@@ -2372,7 +2375,13 @@ extern "C"
     assert(cell::read_cell_index(*((MPI_Comm *)(commptr)),
                                  string(file_name),
                                  get<1>(pop_labels[pop_idx]),
+                                 hdf5::TREES,
                                  tree_index) >= 0);
+
+    for (size_t i=0; i<tree_index.size(); i++)
+      {
+        tree_index[i] += pop_vector[pop_idx].start;
+      }
 
     /* Create a new generator state and initialize it */
     PyNeurotreeGenState *py_ntrg = (PyNeurotreeGenState *)type->tp_alloc(type, 0);
@@ -2463,7 +2472,7 @@ extern "C"
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
     assert (status >= 0);
-    
+
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
     for (size_t i=0; i<pop_labels.size(); i++)
@@ -2487,11 +2496,21 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
+    vector< pair<string,hid_t> > attr_info;
+    assert(cell::get_cell_attributes (string(file_name), string(attr_name_space),
+                                      get<1>(pop_labels[pop_idx]), attr_info) >= 0);
+    
     vector<CELL_IDX_T> cell_index;
     assert(cell::read_cell_index(*((MPI_Comm *)(commptr)),
                                  string(file_name),
                                  get<1>(pop_labels[pop_idx]),
+                                 string(attr_name_space) + "/" + attr_info[0].first,
                                  cell_index) >= 0);
+
+    for (size_t i=0; i<cell_index.size(); i++)
+      {
+        cell_index[i] += pop_vector[pop_idx].start;
+      }
     
     /* Create a new generator state and initialize its state - pointing to the last
      * index in the sequence.

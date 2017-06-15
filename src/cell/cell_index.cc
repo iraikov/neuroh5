@@ -37,6 +37,7 @@ namespace neuroh5
      MPI_Comm             comm,
      const string&        file_name,
      const string&        pop_name,
+     const string&        attr_name,
      vector<CELL_IDX_T>&  cell_index
      )
     {
@@ -52,10 +53,10 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           assert(file >= 0);
 
-          size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX));
+          size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(attr_name, pop_name, hdf5::CELL_INDEX));
           cell_index.resize(dset_size-1);
           ierr = hdf5::read<CELL_IDX_T> (file,
-                                         hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
+                                         hdf5::cell_attribute_path(attr_name, pop_name, hdf5::CELL_INDEX),
                                          0, dset_size-1,
                                          CELL_IDX_H5_NATIVE_T,
                                          cell_index, H5P_DEFAULT);

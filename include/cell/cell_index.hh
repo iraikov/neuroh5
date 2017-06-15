@@ -23,6 +23,7 @@ namespace neuroh5
      MPI_Comm             comm,
      const string&        file_name,
      const string&        pop_name,
+     const string&        attr_name,
      vector<CELL_IDX_T>&  cell_index
      );
 

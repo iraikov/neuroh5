@@ -75,7 +75,6 @@ namespace neuroh5
     
           if (block > 0)
             {
-              printf ("read_cell_attributes: pop_start = %u\n", pop_start);
               /* Create property list for collective dataset operations. */
               hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
               status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
