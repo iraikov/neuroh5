@@ -2377,6 +2377,7 @@ extern "C"
                                  get<1>(pop_labels[pop_idx]),
                                  hdf5::TREES,
                                  tree_index) >= 0);
+    printf("tree index size is %u\n", tree_index.size());
 
     for (size_t i=0; i<tree_index.size(); i++)
       {

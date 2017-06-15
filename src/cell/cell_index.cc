@@ -54,10 +54,10 @@ namespace neuroh5
           assert(file >= 0);
 
           size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(attr_name, pop_name, hdf5::CELL_INDEX));
-          cell_index.resize(dset_size-1);
+          cell_index.resize(dset_size);
           ierr = hdf5::read<CELL_IDX_T> (file,
                                          hdf5::cell_attribute_path(attr_name, pop_name, hdf5::CELL_INDEX),
-                                         0, dset_size-1,
+                                         0, dset_size,
                                          CELL_IDX_H5_NATIVE_T,
                                          cell_index, H5P_DEFAULT);
           assert(ierr >= 0);
