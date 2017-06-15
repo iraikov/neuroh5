@@ -1,13 +1,14 @@
 from mpi4py import MPI
-from neurotrees.io import population_ranges, NeurotreeGen
+from neuroh5.io import population_ranges, NeurotreeGen, NeurotreeAttrGen
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 print "rank = ", rank
 
-g = NeurotreeGen(MPI._addressof(comm), "data/DGC_forest_syns_test_012717.h5", "GC", io_size=comm.size, attributes=True, namespace='Synapse_Attributes')
+g = NeurotreeAttrGen(MPI._addressof(comm), "data/DGC_forest_attr_test_20170614.h5", "GC", io_size=comm.size)
 
 for (i, e) in g:
-    print 'rank %i: gid = %i' % (rank, i)
+    if i is not None:
+        print 'rank %i: gid = %i' % (rank, i)
 #    print (i, e)
 

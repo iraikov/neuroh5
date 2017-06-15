@@ -1,12 +1,12 @@
 from mpi4py import MPI
-from neurotrees.io import read_trees, write_tree_attributes, append_tree_attributes, read_tree_attributes
+from neuroh5.io import read_trees, write_cell_attributes, append_cell_attributes, read_cell_attributes
 import numpy as np
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 print "rank = ", rank
 
-(g,_) = read_trees(MPI._addressof(comm), "data/DGC_forest_test.h5", "GC")
+(g,_) = read_trees(MPI._addressof(comm), "data/DGC_forest_test_20170614.h5", "GC")
 datasize=3000
 a = np.arange(rank*10,(rank+1)*10).astype('uint32')
 b = np.arange(rank*20,(rank+1)*20).astype('float32')
@@ -24,5 +24,5 @@ ranksize=5
 #d = {n:{'a': a+n, 'b': b, 'c': c, 'd': d+n, 'e': e+n} for n in g.keys()}
 d = {n:{'a': a+n, 'b': b+n} for n in range(rank*ranksize,(rank+1)*ranksize)}
 
-append_tree_attributes(MPI._addressof(comm), "data/DGC_forest_test_attrs.h5", "GC", d, io_size=2)
-append_tree_attributes(MPI._addressof(comm), "data/DGC_forest_test_attrs.h5", "GC", d, io_size=2)
+append_cell_attributes(MPI._addressof(comm), "data/DGC_forest_attr_test_20170614.h5", "GC", d, io_size=2)
+append_cell_attributes(MPI._addressof(comm), "data/DGC_forest_attr_test_20170614.h5", "GC", d, io_size=2)

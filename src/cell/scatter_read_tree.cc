@@ -184,8 +184,6 @@ namespace neuroh5
         {
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
-
-
         
           fapl = H5Pcreate(H5P_FILE_ACCESS);
           assert(fapl >= 0);
@@ -197,7 +195,7 @@ namespace neuroh5
 
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
           assert(file >= 0);
-          dset_size = hdf5::dataset_num_elements(io_comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::ATTR_PTR))-1;
+          dset_size = hdf5::dataset_num_elements(io_comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
 
           if (numitems > 0)
             {
@@ -219,9 +217,10 @@ namespace neuroh5
             {
               // determine which blocks of block_ptr are read by which I/O rank
               mpi::rank_ranges(read_size, io_size, ranges);
-            
+              
               start = ranges[rank].first + offset;
               end   = start + ranges[rank].second;
+
               block = end - start + 1;
             }
           else

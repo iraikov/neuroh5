@@ -152,7 +152,7 @@ namespace neuroh5
 
       // TODO; create separate functions for opening HDF5 file for reading and writing
       hid_t file = hdf5::open_file(comm, file_name);
-      size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::ATTR_PTR))-1;
+      size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
       size_t read_size = 0;
       if (numitems > 0) 
         {
