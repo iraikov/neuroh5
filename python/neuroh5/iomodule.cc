@@ -89,6 +89,7 @@ void create_node_rank_map (PyObject *py_node_rank_map,
       node_rank_map.insert(make_pair(idx,rank));
     }
 }
+  
 
 
 template<class T>
@@ -334,12 +335,11 @@ void create_value_maps (PyObject *idx_values,
 
 
 PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
-                              const bool attrs, NamedAttrMap& attr_map,
-                              const string& attr_name_space,
-                              const vector <vector<string> >& attr_names)
+                              map <string, NamedAttrMap>& attr_maps)
 {
   const CELL_IDX_T idx = get<0>(tree);
   assert(idx == key);
+
   const vector<SECTION_IDX_T> & src_vector=get<1>(tree);
   const vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
   const vector<SECTION_IDX_T> & sections=get<3>(tree);
@@ -350,13 +350,6 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   const vector<LAYER_IDX_T> & layers=get<8>(tree);
   const vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
   const vector<SWC_TYPE_T> & swc_types=get<10>(tree);
-  
-  const vector <vector <float>> &float_attrs     = attr_map.find<float>(idx);
-  const vector <vector <uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(idx);
-  const vector <vector <int8_t>> &int8_attrs     = attr_map.find<int8_t>(idx);
-  const vector <vector <uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(idx);
-  const vector <vector <uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(idx);
-  const vector <vector <int32_t>> &int32_attrs   = attr_map.find<int32_t>(idx);
   
   size_t num_nodes = xcoords.size();
         
@@ -455,9 +448,20 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   PyDict_SetItemString(py_treeval, "section_topology", py_section_topology);
 
   
-  if (attrs)
+  for (auto const& attr_map_entry : attr_maps)
     {
+      const string& attr_name_space  = attr_map_entry.first;
+      data::NamedAttrMap attr_map  = attr_map_entry.second;
+
       PyObject *py_namespace_dict = PyDict_New();
+
+      const vector <vector <float>> &float_attrs     = attr_map.find<float>(idx);
+      const vector <vector <uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(idx);
+      const vector <vector <int8_t>> &int8_attrs     = attr_map.find<int8_t>(idx);
+      const vector <vector <uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(idx);
+      const vector <vector <uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(idx);
+      const vector <vector <int32_t>> &int32_attrs   = attr_map.find<int32_t>(idx);
+
       for (size_t i=0; i<float_attrs.size(); i++)
         {
           const vector<float> &attr_value = float_attrs[i];
@@ -550,9 +554,10 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         }
 
       PyDict_SetItemString(py_treeval,
-                           string(attr_name_space).c_str(),
+                           attr_name_space.c_str(),
                            py_namespace_dict);
     }
+  
 
   return py_treeval;
 }
@@ -1525,16 +1530,14 @@ extern "C"
                                string(pop_name), pop_vector[pop_idx].start,
                                tree_list, start, end);
     assert (status >= 0);
-    NamedAttrMap attr_map;
-    vector <vector <string>> attr_names;
+    vector <string,NamedAttrMap> attr_maps;
     
     for (size_t i = 0; i < tree_list.size(); i++)
       {
         const CELL_IDX_T idx = get<0>(tree_list[i]);
         const neurotree_t &tree = tree_list[i];
-
-        PyObject *py_treeval = py_build_tree_value(idx, tree, false, attr_map,
-                                                   string("Attributes"), attr_names);
+          
+        PyObject *py_treeval = py_build_tree_value(idx, tree, attr_maps);
 
         PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);
       }
@@ -1550,12 +1553,12 @@ extern "C"
   
   static PyObject *py_scatter_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status, opt_attrs=0; 
+    int status;
     PyObject *py_cell_dict = PyDict_New();
     unsigned long commptr; unsigned int io_size;
-    const string default_name_space = "Attributes";
-    char *file_name, *pop_name, *attr_name_space = (char *)default_name_space.c_str();
+    char *file_name, *pop_name;
     PyObject *py_node_rank_map=NULL;
+    PyObject *py_attr_name_spaces=NULL;
     map<CELL_IDX_T, rank_t> node_rank_map;
     static const char *kwlist[] = {"commptr",
                                    "file_name",
@@ -1563,26 +1566,38 @@ extern "C"
                                    "io_size",
                                    "node_rank_map",
                                    "attributes",
-                                   "namespace",
+                                   "namespaces",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssI|Ois", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssI|OO", (char **)kwlist,
                                      &commptr, &file_name, &pop_name, &io_size,
-                                     &py_node_rank_map, &opt_attrs, &attr_name_space))
+                                     &py_node_rank_map, &py_attr_name_spaces))
       return NULL;
 
     int rank, size;
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
     
+    vector <string> attr_name_spaces;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
     vector< vector <string> > attr_names;
     size_t n_nodes;
+    
     // Read population info
     assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            char *str = PyString_AsString (pyval);
+            attr_name_spaces.push_back(string(str));
+          }
+      }
     
     // Create C++ map for node_rank_map:
     if (py_node_rank_map != NULL)
@@ -1619,27 +1634,21 @@ extern "C"
     
 
     map<CELL_IDX_T, neurotree_t> tree_map;
-    NamedAttrMap attr_map;
+    map<string, NamedAttrMap> attr_maps;
 
     status = cell::scatter_read_trees (*((MPI_Comm *)(commptr)), string(file_name),
-                                       io_size, opt_attrs>0, string(attr_name_space),
+                                       io_size, attr_name_spaces,
                                        node_rank_map, string(pop_name),
                                        pop_vector[pop_idx].start,
-                                       tree_map, attr_map);
+                                       tree_map, attr_maps);
     assert (status >= 0);
-
-    if (opt_attrs)
-      {
-        attr_map.attr_names(attr_names);
-      }
     
     for (auto const& element : tree_map)
       {
         const CELL_IDX_T key = element.first;
         const neurotree_t &tree = element.second;
 
-        PyObject *py_treeval = py_build_tree_value(key, tree, opt_attrs>0, attr_map,
-                                                   string(attr_name_space), attr_names);
+        PyObject *py_treeval = py_build_tree_value(key, tree, attr_maps);
         PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(key), py_treeval);
       }
 
@@ -2261,10 +2270,10 @@ extern "C"
     string pop_name;
     size_t pop_idx;
     string file_name;
-    string name_space;
     MPI_Comm comm;
     vector<pop_range_t> pop_vector;
     map<CELL_IDX_T, neurotree_t> tree_map;
+    vector<string> attr_name_spaces;
     map <string, NamedAttrMap> attr_maps;
     map <string, vector< vector <string> > > attr_names;
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;

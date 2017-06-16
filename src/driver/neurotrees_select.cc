@@ -29,6 +29,9 @@
 #include "append_tree.hh"
 #include "cell_attributes.hh"
 #include "cell_populations.hh"
+#include "pack_tree.hh"
+#include "alltoallv_packed.hh"
+#include "sort_permutation.hh"
 
 #include "dataset_num_elements.hh"
 #include "validate_tree.hh"
@@ -68,6 +71,30 @@ void print_usage_full(char** argv)
   printf("\t\tPrint verbose diagnostic information\n");
 }
 
+
+
+// Assign each cell ID to a rank 
+void compute_node_rank_map
+(
+ size_t num_ranks,
+ vector <CELL_IDX_T> index_vector, 
+ map< CELL_IDX_T, rank_t > &node_rank_map
+ )
+{
+  hsize_t remainder=0, offset=0, buckets=0;
+  size_t num_nodes = index_vector.size();
+  
+  for (size_t i=0; i<num_ranks; i++)
+    {
+      remainder  = num_nodes - offset;
+      buckets    = num_ranks - i;
+      for (size_t j = 0; j < remainder / buckets; j++)
+        {
+          node_rank_map.insert(make_pair(index_vector[offset+j], i));
+        }
+      offset    += remainder / buckets;
+    }
+}
 
 /*****************************************************************************
  * Main driver
@@ -260,7 +287,8 @@ int main(int argc, char** argv)
 
   // Read in selection indices
   set<CELL_IDX_T> tree_selection;
-  map<CELL_IDX_T, CELL_IDX_T> tree_index;
+  map<CELL_IDX_T, CELL_IDX_T> selection_map;
+
   {
     ifstream infile(selection_file_name.c_str());
     string line;
@@ -275,11 +303,11 @@ int main(int argc, char** argv)
           {
             CELL_IDX_T n1;
             assert (iss >> n1);
-            tree_index.insert(make_pair(n, n1));
+            selection_map.insert(make_pair(n, n1));
           }
         else
           {
-            tree_index.insert(make_pair(n, n));
+            selection_map.insert(make_pair(n, n));
           }
       }
     
@@ -314,11 +342,27 @@ int main(int argc, char** argv)
       infile.close();
     }
 
+  // Compute an assignment of subset trees to IO ranks
+  map<CELL_IDX_T, rank_t> subset_node_rank_map;
+  {
+    vector<CELL_IDX_T> selection_index;
+    for (auto const& element : selection_map)
+      {
+        selection_index.push_back(element.second);
+      }
+    compute_node_rank_map(io_size,
+                          selection_index,
+                          subset_node_rank_map);
+  }
+
+  
   map<CELL_IDX_T, neurotree_t>  tree_map;
   map<string, data::NamedAttrMap> attr_maps;
   map<string, vector<vector<string> > > attr_names_map;
 
   vector<neurotree_t> tree_subset;
+  map<rank_t, map<CELL_IDX_T, neurotree_t> > tree_subset_rank_map;
+
 
   map <string, vector<map< CELL_IDX_T, vector<float> > > >
     subset_float_value_map;
@@ -354,7 +398,6 @@ int main(int argc, char** argv)
   size_t local_num_trees = tree_map.size();
   
   printf("Task %d has received a total of %lu trees\n", rank,  local_num_trees);
-
   
   for (auto & element : tree_map)
     {
@@ -362,11 +405,10 @@ int main(int argc, char** argv)
       if (tree_selection.find(idx) != tree_selection.end())
         {
           neurotree_t &tree = element.second;
-          auto it = tree_index.find(idx);
-          assert(it != tree_index.end());
+          auto it = selection_map.find(idx);
+          assert(it != selection_map.end());
           CELL_IDX_T idx1 = it->second;
           get<0>(tree) = idx1;
-          
           tree_subset.push_back(tree);
 
           for (auto const& attr_map_entry : attr_maps)
@@ -450,6 +492,7 @@ int main(int argc, char** argv)
     }
 
   tree_map.clear();
+
   
   // Determine the total number of selected trees
   uint32_t global_subset_size=0, local_subset_size=tree_subset.size();
@@ -458,7 +501,38 @@ int main(int argc, char** argv)
                     MPI_SUM, 0, all_comm) >= 0);
   assert(MPI_Bcast(&global_subset_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
 
-  printf("Task %d local selection size is %u\n", rank, local_subset_size);
+  for (auto & tree : tree_subset)
+    {
+      CELL_IDX_T idx = get<0>(tree);
+      rank_t tree_rank = subset_node_rank_map[idx];
+      tree_subset_rank_map[tree_rank].insert(make_pair(idx, tree));
+    }
+  subset_node_rank_map.clear();
+  tree_subset.clear();
+
+  // Created packed representation of the tree subset arranged per rank
+  vector<uint8_t> sendbuf; int sendpos = 0;
+  vector<int> sendcounts, sdispls;
+  assert(mpi::pack_rank_tree_map (all_comm, tree_subset_rank_map, sendcounts, sdispls, sendpos, sendbuf) >= 0);
+  tree_subset_rank_map.clear();
+  
+  // Send packed representation of the tree subset to the respective ranks
+  vector<uint8_t> recvbuf; 
+  vector<int> recvcounts, rdispls;
+  assert(mpi::alltoallv_packed(all_comm, sendcounts, sdispls, sendbuf,
+                               recvcounts, rdispls, recvbuf) >= 0);
+  sendbuf.clear();
+
+  // Unpack tree subset on the owning ranks
+  int recvpos = 0;
+  assert(mpi::unpack_tree_vector (all_comm, recvbuf, recvpos, tree_subset) >= 0);
+  recvbuf.clear();
+
+  auto compare_trees = [](const neurotree_t& a, const neurotree_t& b) { return (get<0>(a) < get<0>(b)); };
+  vector<size_t> p = data::sort_permutation(tree_subset, compare_trees);
+  data::apply_permutation_in_place(tree_subset, p);
+  
+  printf("Task %d local selection size is %u\n", rank, tree_subset.size());
 
   hsize_t ptr_start = 0, attr_start = 0, sec_start = 0, topo_start = 0;
 

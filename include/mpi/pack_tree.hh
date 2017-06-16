@@ -46,7 +46,15 @@ namespace neuroh5
      vector<uint8_t> &sendbuf
      );
 
-  
+    int pack_rank_tree_map
+    (
+     MPI_Comm comm,
+     const map <rank_t, map<CELL_IDX_T, neurotree_t> >& rank_tree_map,
+     vector<int>& sendcounts, 
+     vector<int>& sdispls, 
+     int &sendpos,
+     vector<uint8_t> &sendbuf
+     );
 
     void unpack_index
     (
@@ -57,7 +65,14 @@ namespace neuroh5
      int &recvpos
      );
 
-    int unpack_tree
+    neurotree_t unpack_tree
+    (
+     MPI_Comm comm,
+     const vector<uint8_t> &recvbuf,
+     int &recvpos
+     );
+
+    int unpack_tree_map
     (
      MPI_Comm comm,
      const vector<uint8_t> &recvbuf,
@@ -65,6 +80,13 @@ namespace neuroh5
      map<CELL_IDX_T, neurotree_t> &tree_map
      );
 
+    int unpack_tree_vector
+    (
+     MPI_Comm comm,
+     const vector<uint8_t> &recvbuf,
+     int &recvpos,
+     vector<neurotree_t>& tree_vector
+     );
 
     template <class T>
     void pack_size_attr

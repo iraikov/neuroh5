@@ -18,6 +18,8 @@
 #include "attr_map.hh"
 #include "cell_attributes.hh"
 #include "rank_range.hh"
+#include "append_rank_tree_map.hh"
+#include "alltoallv_packed.hh"
 #include "pack_tree.hh"
 #include "dataset_num_elements.hh"
 #include "bcast_string_vector.hh"
@@ -32,107 +34,6 @@ namespace neuroh5
 
   namespace cell
   {
-    
-    void append_rank_tree_map
-    (
-     const size_t start,
-     const size_t num_trees,
-     const map<CELL_IDX_T, rank_t>& node_rank_map,
-     const CELL_IDX_T pop_start,
-     vector<SEC_PTR_T>& sec_ptr,
-     vector<TOPO_PTR_T>& topo_ptr,
-     vector<ATTR_PTR_T>& attr_ptr,
-     vector<CELL_IDX_T>& all_gid_vector,
-     vector<SECTION_IDX_T>& all_src_vector,
-     vector<SECTION_IDX_T>& all_dst_vector,
-     vector<SECTION_IDX_T>& all_sections,
-     vector<COORD_T>& all_xcoords,
-     vector<COORD_T>& all_ycoords,
-     vector<COORD_T>& all_zcoords,
-     vector<REALVAL_T>& all_radiuses,
-     vector<LAYER_IDX_T>& all_layers,
-     vector<PARENT_NODE_IDX_T>& all_parents,
-     vector<SWC_TYPE_T>& all_swc_types,
-     map <size_t, map<CELL_IDX_T, neurotree_t> > &rank_tree_map)
-    {
-      for (size_t i=0; i<num_trees; i++)
-        {
-          hsize_t topo_start = topo_ptr[i]-topo_ptr[0]; size_t topo_block = topo_ptr[i+1]-topo_ptr[0]-topo_start;
-
-          vector<SECTION_IDX_T>::const_iterator src_first = all_src_vector.begin() + topo_start;
-          vector<SECTION_IDX_T>::const_iterator src_last  = all_src_vector.begin() + topo_start + topo_block;
-          vector<SECTION_IDX_T> tree_src_vector;
-          tree_src_vector.insert(tree_src_vector.begin(),src_first,src_last);
-        
-          vector<SECTION_IDX_T>::const_iterator dst_first = all_dst_vector.begin() + topo_start;
-          vector<SECTION_IDX_T>::const_iterator dst_last  = all_dst_vector.begin() + topo_start + topo_block;
-          vector<SECTION_IDX_T> tree_dst_vector;
-          tree_dst_vector.insert(tree_dst_vector.begin(),dst_first,dst_last);
-        
-          hsize_t sec_start = sec_ptr[i]-sec_ptr[0]; size_t sec_block = sec_ptr[i+1]-sec_ptr[0]-sec_start;
-        
-          vector<SECTION_IDX_T>::const_iterator sec_first = all_sections.begin() + sec_start;
-          vector<SECTION_IDX_T>::const_iterator sec_last  = all_sections.begin() + sec_start + sec_block;
-          vector<SECTION_IDX_T> tree_sections;
-          tree_sections.insert(tree_sections.begin(),sec_first,sec_last);
-        
-          hsize_t attr_start = attr_ptr[i]-attr_ptr[0]; size_t attr_block = attr_ptr[i+1]-attr_ptr[0]-attr_start;
-
-          vector<COORD_T>::const_iterator xcoords_first = all_xcoords.begin() + attr_start;
-          vector<COORD_T>::const_iterator xcoords_last  = all_xcoords.begin() + attr_start + attr_block;
-          vector<COORD_T> tree_xcoords;
-          tree_xcoords.insert(tree_xcoords.begin(),xcoords_first,xcoords_last);
-
-          vector<COORD_T>::const_iterator ycoords_first = all_ycoords.begin() + attr_start;
-          vector<COORD_T>::const_iterator ycoords_last  = all_ycoords.begin() + attr_start + attr_block;
-          vector<COORD_T> tree_ycoords;
-          tree_ycoords.insert(tree_ycoords.begin(),ycoords_first,ycoords_last);
-
-          vector<COORD_T>::const_iterator zcoords_first = all_zcoords.begin() + attr_start;
-          vector<COORD_T>::const_iterator zcoords_last  = all_zcoords.begin() + attr_start + attr_block;
-          vector<COORD_T> tree_zcoords;
-          tree_zcoords.insert(tree_zcoords.begin(),zcoords_first,zcoords_last);
-
-          vector<REALVAL_T>::const_iterator radiuses_first = all_radiuses.begin() + attr_start;
-          vector<REALVAL_T>::const_iterator radiuses_last  = all_radiuses.begin() + attr_start + attr_block;
-          vector<REALVAL_T> tree_radiuses;
-          tree_radiuses.insert(tree_radiuses.begin(),radiuses_first,radiuses_last);
-
-          vector<LAYER_IDX_T>::const_iterator layers_first = all_layers.begin() + attr_start;
-          vector<LAYER_IDX_T>::const_iterator layers_last  = all_layers.begin() + attr_start + attr_block;
-          vector<LAYER_IDX_T> tree_layers;
-          tree_layers.insert(tree_layers.begin(),layers_first,layers_last);
-
-          vector<PARENT_NODE_IDX_T>::const_iterator parents_first = all_parents.begin() + attr_start;
-          vector<PARENT_NODE_IDX_T>::const_iterator parents_last  = all_parents.begin() + attr_start + attr_block;
-          vector<PARENT_NODE_IDX_T> tree_parents;
-          tree_parents.insert(tree_parents.begin(),parents_first,parents_last);
-        
-          vector<SWC_TYPE_T>::const_iterator swc_types_first = all_swc_types.begin() + attr_start;
-          vector<SWC_TYPE_T>::const_iterator swc_types_last  = all_swc_types.begin() + attr_start + attr_block;
-          vector<SWC_TYPE_T> tree_swc_types;
-          tree_swc_types.insert(tree_swc_types.begin(),swc_types_first,swc_types_last);
-
-          CELL_IDX_T gid = pop_start+all_gid_vector[i];
-          size_t dst_rank;
-          auto it = node_rank_map.find(gid);
-          if (it == node_rank_map.end())
-            {
-              printf("gid %d not found in node rank map\n", gid);
-            }
-          assert(it != node_rank_map.end());
-          dst_rank = it->second;
-          neurotree_t tree = make_tuple(gid,tree_src_vector,tree_dst_vector,tree_sections,
-                                        tree_xcoords,tree_ycoords,tree_zcoords,
-                                        tree_radiuses,tree_layers,tree_parents,
-                                        tree_swc_types);
-          map<CELL_IDX_T, neurotree_t> &tree_map = rank_tree_map[dst_rank];
-          tree_map.insert(make_pair(gid, tree));
-                                   
-        }
-    }
-
-
   
     /*****************************************************************************
      * Load tree data structures from HDF5 and scatter to all ranks
@@ -158,7 +59,7 @@ namespace neuroh5
       size_t dset_size, read_size; hsize_t start=0, end=0, block=0;
     
       vector<uint8_t> sendbuf; int sendpos = 0;
-      vector<int> sendcounts, sdispls, recvcounts, rdispls;
+      vector<int> sendcounts, sdispls;
     
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
@@ -236,12 +137,10 @@ namespace neuroh5
     
       sendcounts.resize(size,0);
       sdispls.resize(size,0);
-      recvcounts.resize(size,0);
-      rdispls.resize(size,0);
 
       if (block > 0)
         {
-          map <size_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
+          map <rank_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
 
           {
             vector<SEC_PTR_T>  sec_ptr;
@@ -386,78 +285,26 @@ namespace neuroh5
             status = H5Pclose(rapl);
             assert(status == 0);
 
-            append_rank_tree_map(start, block-1, 
-                                 node_rank_map, pop_start,
-                                 sec_ptr, topo_ptr, attr_ptr,
-                                 gid_vector, src_vector, dst_vector, sections,
-                                 xcoords, ycoords, zcoords,
-                                 radiuses, layers, parents,
-                                 swc_types, rank_tree_map);
+            data::append_rank_tree_map(start, block-1, 
+                                       node_rank_map, pop_start,
+                                       sec_ptr, topo_ptr, attr_ptr,
+                                       gid_vector, src_vector, dst_vector, sections,
+                                       xcoords, ycoords, zcoords,
+                                       radiuses, layers, parents,
+                                       swc_types, rank_tree_map);
           }
 
-          vector<int> rank_sequence;
-          // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
-          // (as opposed to starting at rank 0)
-          for (size_t dst_rank = rank; dst_rank < size; dst_rank++)
-            {
-              rank_sequence.push_back(dst_rank);
-            }
-          for (size_t dst_rank = 0; dst_rank < rank; dst_rank++)
-            {
-              rank_sequence.push_back(dst_rank);
-            }
-
-          for (const size_t& dst_rank : rank_sequence)
-            {
-              auto it1 = rank_tree_map.find(dst_rank); 
-              sdispls[dst_rank] = sendpos;
-
-              if (it1 != rank_tree_map.end())
-                {
-                  for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
-                    {
-                      CELL_IDX_T  gid   = it2->first;
-                      const neurotree_t &tree = it2->second;
-                    
-                      mpi::pack_tree(all_comm, gid, tree, sendpos, sendbuf);
-                    }
-                }
-              sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
-            }
-
+          assert(mpi::pack_rank_tree_map (all_comm, rank_tree_map, sendcounts, sdispls, sendpos, sendbuf) >= 0);
         }
 
-      // 1. Each ALL_COMM rank sends a tree size to
-      //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
-      //    and creates sendcounts and sdispls arrays
-
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                          &recvcounts[0], 1, MPI_INT, all_comm) >= 0);
-    
-      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
-      //    a receive buffer, recvcounts, and rdispls
-    
-      size_t recvbuf_size = recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
-      //assert(recvbuf_size > 0);
-      vector<uint8_t> recvbuf(recvbuf_size);
-    
-      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
-                           all_comm) >= 0);
+      vector<int> recvcounts, rdispls;
+      vector<uint8_t> recvbuf;
+      assert(mpi::alltoallv_packed(all_comm, sendcounts, sdispls, sendbuf,
+                                   recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
 
-      int recvpos = 0; 
-      while ((size_t)recvpos < recvbuf_size)
-        {
-          mpi::unpack_tree(all_comm, recvbuf, recvpos, tree_map);
-          assert((size_t)recvpos <= recvbuf_size);
-        }
+      int recvpos = 0;
+      assert(mpi::unpack_tree_map (all_comm, recvbuf, recvpos, tree_map) >= 0);
       recvbuf.clear();
 
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);

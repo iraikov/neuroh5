@@ -65,6 +65,7 @@ namespace neuroh5
              == MPI_SUCCESS);
     }
   
+
     int pack_tree
     (
      MPI_Comm comm,
@@ -146,6 +147,62 @@ namespace neuroh5
       return ierr;
     }
 
+
+    int pack_rank_tree_map
+    (
+     MPI_Comm comm,
+     const map <rank_t, map<CELL_IDX_T, neurotree_t> >& rank_tree_map,
+     vector<int>& sendcounts, 
+     vector<int>& sdispls, 
+     int &sendpos,
+     vector<uint8_t> &sendbuf
+     )
+    {
+      int srank, ssize; rank_t rank, size;
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) >= 0);
+      assert(srank >= 0);
+      assert(ssize > 0);
+      rank = srank;
+      size = ssize;
+
+      sendcounts.resize(size);
+      sdispls.resize(size);
+      
+      vector<int> rank_sequence;
+      // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
+      // (as opposed to starting at rank 0)
+      for (size_t dst_rank = rank; dst_rank < size; dst_rank++)
+        {
+          rank_sequence.push_back(dst_rank);
+        }
+      for (size_t dst_rank = 0; dst_rank < rank; dst_rank++)
+        {
+          rank_sequence.push_back(dst_rank);
+        }
+      
+      for (const size_t& dst_rank : rank_sequence)
+        {
+          auto it1 = rank_tree_map.find(dst_rank); 
+          sdispls[dst_rank] = sendpos;
+          
+          if (it1 != rank_tree_map.end())
+            {
+              for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
+                {
+                  CELL_IDX_T  idx   = it2->first;
+                  const neurotree_t &tree = it2->second;
+                  
+                  pack_tree(comm, idx, tree, sendpos, sendbuf);
+                }
+            }
+          sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
+        }
+
+      return 0;
+    }
+
+    
     void unpack_index
     (
      MPI_Comm comm,
@@ -159,15 +216,13 @@ namespace neuroh5
                         &index, 1, MPI_CELL_IDX_T, comm) == MPI_SUCCESS);
     }
 
-    int unpack_tree
+    neurotree_t unpack_tree
     (
      MPI_Comm comm,
      const vector<uint8_t> &recvbuf,
-     int &recvpos,
-     map<CELL_IDX_T, neurotree_t> &tree_map
+     int &recvpos
      )
     {
-      int ierr = 0;
       
       CELL_IDX_T index;
       vector<SECTION_IDX_T> src_vector;
@@ -209,9 +264,45 @@ namespace neuroh5
                                     radiuses, layers, parents,
                                     swc_types);
 
-      tree_map.insert(make_pair(index, tree));
       
-      return ierr;
+      return tree;
     }
+    
+    int unpack_tree_map
+    (
+     MPI_Comm comm,
+     const vector<uint8_t> &recvbuf,
+     int &recvpos,
+     map<CELL_IDX_T, neurotree_t> &tree_map
+     )
+    {
+      while ((size_t)recvpos < recvbuf.size())
+        {
+          neurotree_t tree = unpack_tree(comm, recvbuf, recvpos);
+          tree_map.insert(make_pair(get<0>(tree), tree));
+          assert((size_t)recvpos <= recvbuf.size());
+        }
+
+      return 0;
+    }
+
+    int unpack_tree_vector
+    (
+     MPI_Comm comm,
+     const vector<uint8_t> &recvbuf,
+     int &recvpos,
+     vector<neurotree_t> &tree_vector
+     )
+    {
+      while ((size_t)recvpos < recvbuf.size())
+        {
+          neurotree_t tree = unpack_tree(comm, recvbuf, recvpos);
+          tree_vector.push_back(tree);
+          assert((size_t)recvpos <= recvbuf.size());
+        }
+
+      return 0;
+    }
+
   }
 }

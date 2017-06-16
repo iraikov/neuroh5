@@ -17,6 +17,7 @@
 #include "validate_edge_list.hh"
 #include "scatter_graph.hh"
 #include "bcast_string_vector.hh"
+#include "alltoallv_packed.hh"
 #include "pack_edge.hh"
 
 #include <cstdio>
@@ -39,8 +40,6 @@ namespace neuroh5
 {
   namespace graph
   {
-
-
     
     /*****************************************************************************
      * Load and scatter edge data structures 
@@ -63,7 +62,7 @@ namespace neuroh5
       assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
       vector<uint8_t> sendbuf; 
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      vector<int> sendcounts(size,0), sdispls(size,0);
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
       edge_map_t prj_edge_map;
@@ -164,37 +163,17 @@ namespace neuroh5
               assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME, edge_attr_names[aidx]) == MPI_SUCCESS);
             }
         }
-      
-      // 1. Each ALL_COMM rank sends an edge vector size to
-      //    every other ALL_COMM rank (non IO_COMM ranks pass zero),
-      //    and creates sendcounts and sdispls arrays
-      
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
-      DEBUG("scatter: after MPI_Alltoall sendcounts for projection ", src_pop_name, " -> ", dst_pop_name);
-      
-      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
-      //    a receive buffer, recvcounts, and rdispls
-      
-      size_t recvbuf_size = recvcounts[0];
-      for (int p = 1; p < size; p++)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
 
       vector<uint8_t> recvbuf;
-      recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
-      
-      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
-                           all_comm) == MPI_SUCCESS);
+      vector<int> recvcounts, rdispls;
+      assert(mpi::alltoallv_packed(all_comm, sendcounts, sdispls, sendbuf,
+                                   recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
 
       uint64_t num_unpacked_edges=0;
-      if (recvbuf_size > 0)
+      if (recvbuf.size() > 0)
         {
           mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
                                      recvbuf, recvcounts, rdispls, edge_attr_num,
