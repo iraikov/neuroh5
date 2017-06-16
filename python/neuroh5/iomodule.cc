@@ -2265,10 +2265,8 @@ extern "C"
     MPI_Comm comm;
     vector<pop_range_t> pop_vector;
     map<CELL_IDX_T, neurotree_t> tree_map;
-    NamedAttrMap attr_map;
-    vector< vector <string> > attr_names;
-    bool opt_attrs;
-    string attr_name_space;
+    map <string, NamedAttrMap> attr_maps;
+    map <string, vector< vector <string> > > attr_names;
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
     map<CELL_IDX_T, rank_t> node_rank_map; 
   } NeurotreeGenState;
@@ -2341,6 +2339,9 @@ extern "C"
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
 
+    if (io_size > size)
+      io_size = size;
+    
     if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
     
@@ -2428,16 +2429,16 @@ extern "C"
     py_ntrg->state->io_size    = io_size;
     py_ntrg->state->comm_size  = size;
     py_ntrg->state->cache_size = cache_size;
-    py_ntrg->state->opt_attrs  = opt_attrs>0;
-    py_ntrg->state->attr_name_space  = string(attr_name_space);
+    py_ntrg->state->attr_name_spaces  = attr_name_spaces;
 
     map<CELL_IDX_T, neurotree_t> tree_map;
     py_ntrg->state->tree_map  = tree_map;
     py_ntrg->state->it_tree  = py_ntrg->state->tree_map.cbegin();
 
+    for (
     NamedAttrMap attr_map;
-    py_ntrg->state->attr_map  = attr_map;
-    
+    py_ntrg->state->attr_maps.insert(make_pair(attr_name_space, attr_map));
+
     return (PyObject *)py_ntrg;
   }
 
@@ -2466,6 +2467,9 @@ extern "C"
     int rank, size;
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
+
+    if (io_size > size)
+      io_size = size;
 
     if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
@@ -2676,9 +2680,6 @@ extern "C"
     assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
 
-    printf("rank %d: start->pos = %u\n", rank, py_ntrg->state->pos);
-    printf("rank %d: start->it_idx = %u\n", rank, *py_ntrg->state->it_idx);
-    printf("rank %d: start->seq_index = %u\n", rank, py_ntrg->state->seq_index);
     if (py_ntrg->state->pos != seq_done)
       {
         /* seq_index = count-1 means that the generator is exhausted.

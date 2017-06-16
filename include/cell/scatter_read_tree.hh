@@ -21,18 +21,17 @@ namespace neuroh5
      *****************************************************************************/
     
     int scatter_read_trees
-    (
-     MPI_Comm                      all_comm,
-     const std::string&            file_name,
-     const int                     io_size,
-     const bool                    opt_attrs,
-     const string                 &attr_name_space,
+    ( 
+     MPI_Comm                              all_comm,
+     const std::string&                    file_name,
+     const int                             io_size,
+     const std::vector<std::string>       &attr_name_spaces,
      // A vector that maps nodes to compute ranks
      const std::map<CELL_IDX_T, rank_t>&    node_rank_map,
-     const string                  &pop_name,
-     const CELL_IDX_T              pop_start,
-     std::map<CELL_IDX_T, neurotree_t>  &tree_map,
-     data::NamedAttrMap &attr_map,
+     const string                         &pop_name,
+     const CELL_IDX_T                      pop_start,
+     std::map<CELL_IDX_T, neurotree_t>    &tree_map,
+     std::map<string, data::NamedAttrMap> &attr_maps,
      size_t offset = 0,
      size_t numitems = 0
      );

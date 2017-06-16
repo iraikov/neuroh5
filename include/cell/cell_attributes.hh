@@ -33,6 +33,13 @@ namespace neuroh5
      const size_t   chunk_size,
      const size_t   value_chunk_size
      );
+
+    herr_t get_cell_attribute_name_spaces
+    (
+     const string&       file_name,
+     const string&       pop_name,
+     vector< string> >&  out_name_spaces
+     );
     
     herr_t get_cell_attributes
     (

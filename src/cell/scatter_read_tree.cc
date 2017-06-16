@@ -139,17 +139,16 @@ namespace neuroh5
      *****************************************************************************/
     int scatter_read_trees
     (
-     MPI_Comm                      all_comm,
-     const string                 &file_name,
-     const int                     io_size,
-     const bool                    opt_attrs,
-     const string                 &attr_name_space,
+     MPI_Comm                        all_comm,
+     const string                   &file_name,
+     const int                       io_size,
+     const vector<string>           &attr_name_spaces,
      // A vector that maps nodes to compute ranks
-     const map<CELL_IDX_T, rank_t> &node_rank_map,
-     const string                 &pop_name,
-     const CELL_IDX_T              pop_start,
-     map<CELL_IDX_T, neurotree_t> &tree_map,
-     data::NamedAttrMap           &attr_map,
+     const map<CELL_IDX_T, rank_t>   &node_rank_map,
+     const string                    &pop_name,
+     const CELL_IDX_T                 pop_start,
+     map<CELL_IDX_T, neurotree_t>    &tree_map,
+     map<string, data::NamedAttrMap> &attr_maps,
      size_t offset = 0,
      size_t numitems = 0
      )
@@ -463,11 +462,13 @@ namespace neuroh5
 
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
-      if (opt_attrs)
+      for (string attr_name_space : attr_name_spaces)
         {
+          data::NamedAttrMap> attr_map;
           scatter_read_cell_attributes(all_comm, file_name, io_size,
                                        attr_name_space, node_rank_map,
                                        pop_name, pop_start, attr_map);
+          make_pair(attr_name_space, attr_map);          
         }
 
     

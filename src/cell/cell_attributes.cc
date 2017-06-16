@@ -54,6 +54,48 @@ namespace neuroh5
   
   namespace cell
   {
+    herr_t name_space_iterate_cb
+    (
+     hid_t             grp,
+     const char*       name,
+     const H5L_info_t* info,
+     void*             op_data
+     )
+    {
+      vector<string>* ptr = (vector<string>*)op_data;
+      ptr->push_back(string(name));
+      return 0;
+    }
+
+    
+    herr_t get_cell_attribute_name_spaces
+    (
+     const string&       file_name,
+     const string&       pop_name,
+     vector< string> >&  out_name_spaces
+     )
+    {
+      hid_t in_file;
+      herr_t ierr;
+    
+      in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+      assert(in_file >= 0);
+      out_attributes.clear();
+    
+      string path = "/" + hdf5::POPULATIONS + "/" + pop_name;
+
+      hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+      assert(grp >= 0);
+    
+      hsize_t idx = 0;
+      ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                        &name_space_iterate_cb, (void*) &out_name_spaces);
+    
+      assert(H5Gclose(grp) >= 0);
+      ierr = H5Fclose(in_file);
+    
+      return ierr;
+    }
     
     // Callback for H5Literate
     static herr_t cell_attribute_cb
@@ -82,6 +124,7 @@ namespace neuroh5
     
       return 0;
     }
+
   
     herr_t get_cell_attributes
     (

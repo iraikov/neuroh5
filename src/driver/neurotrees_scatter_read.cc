@@ -141,8 +141,7 @@ void output_tree(string outfilename,
 void summarize_tree(const string outfilename,
                     const CELL_IDX_T gid,
                     const neurotree_t& tree,
-                    const vector<vector<string>> &attr_names,
-                    data::NamedAttrMap &attr_map)
+                    map <string, data::NamedAttrMap> &attr_maps)
 {
   /*const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);*/
   /*const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);*/
@@ -163,50 +162,63 @@ void summarize_tree(const string outfilename,
   fout << "  number of z points: " << zcoords.size() << endl;
   fout << "  number of section points: " << sections.size() << endl;
 
-  const vector<vector<float>> &float_attrs     = attr_map.find<float>(gid);
-  const vector<vector<uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(gid);
-  const vector<vector<int8_t>> &int8_attrs     = attr_map.find<int8_t>(gid);
-  const vector<vector<uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(gid);
-  const vector<vector<uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(gid);
-  const vector<vector<int32_t>> &int32_attrs   = attr_map.find<int32_t>(gid);
-  size_t attr_size = float_attrs.size() + 
-    uint8_attrs.size() +
-    int8_attrs.size() + 
-    uint16_attrs.size() + 
-    uint32_attrs.size() + 
-    int32_attrs.size();
-    
-  fout << "  total number of attributes: " << attr_size << endl;
-  
-  for (size_t i=0; i<float_attrs.size(); i++)
+
+  for (auto const& attr_map_entry : attr_maps)
     {
-      fout << "  float attribute " << attr_names[data::AttrMap::attr_index_float][i] <<
+      const string& attr_name_space  = attr_map_entry.first;
+      const data::AttrMap & attr_map = attr_map_entry.second;
+      
+      vector<vector<string>> attr_names;
+      attr_map.attr_names(attr_names);
+
+      const vector<vector<float>> &float_attrs     = attr_map.find<float>(gid);
+      const vector<vector<uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(gid);
+      const vector<vector<int8_t>> &int8_attrs     = attr_map.find<int8_t>(gid);
+      const vector<vector<uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(gid);
+      const vector<vector<int16_t>>  &int16_attrs  = attr_map.find<int16_t>(gid);
+      const vector<vector<uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(gid);
+      const vector<vector<int32_t>> &int32_attrs   = attr_map.find<int32_t>(gid);
+      size_t attr_size = float_attrs.size() + 
+        uint8_attrs.size() +
+        int8_attrs.size() + 
+        uint16_attrs.size() + 
+        int16_attrs.size() + 
+        uint32_attrs.size() + 
+        int32_attrs.size();
+      
+      fout << "Attribute namespace " << attr_name_space << ": " << endl;
+      fout << "  total number of attributes: " << attr_size << endl;
+      
+      for (size_t i=0; i<float_attrs.size(); i++)
+        {
+          fout << "  float attribute " << attr_names[data::AttrMap::attr_index_float][i] <<
         " is of size " << float_attrs[i].size() << endl;
-    }
-  for (size_t i=0; i<uint8_attrs.size(); i++)
-    {
-      fout << "  uint8 attribute " << attr_names[data::AttrMap::attr_index_uint8][i] <<
-        " is of size " << uint8_attrs[i].size() << endl;
-    }
-  for (size_t i=0; i<int8_attrs.size(); i++)
-    {
-      fout << "  int8 attribute " << attr_names[data::AttrMap::attr_index_int8][i] <<
-        " is of size " << int8_attrs[i].size() << endl;
-    }
-  for (size_t i=0; i<uint16_attrs.size(); i++)
-    {
-      fout << "  uint16 attribute " << attr_names[data::AttrMap::attr_index_uint16][i] <<
-        " is of size " << uint16_attrs[i].size() << endl;
-    }
-  for (size_t i=0; i<uint32_attrs.size(); i++)
-    {
-      fout << "  uint32 attribute " << attr_names[data::AttrMap::attr_index_uint32][i] <<
-        " is of size " << uint32_attrs[i].size() << endl;
-    }
-  for (size_t i=0; i<int32_attrs.size(); i++)
-    {
-      fout << "  int32 attribute " << attr_names[data::AttrMap::attr_index_int32][i] <<
-        " is of size " << int32_attrs[i].size() << endl;
+        }
+      for (size_t i=0; i<uint8_attrs.size(); i++)
+        {
+          fout << "  uint8 attribute " << attr_names[data::AttrMap::attr_index_uint8][i] <<
+            " is of size " << uint8_attrs[i].size() << endl;
+        }
+      for (size_t i=0; i<int8_attrs.size(); i++)
+        {
+          fout << "  int8 attribute " << attr_names[data::AttrMap::attr_index_int8][i] <<
+            " is of size " << int8_attrs[i].size() << endl;
+        }
+      for (size_t i=0; i<uint16_attrs.size(); i++)
+        {
+          fout << "  uint16 attribute " << attr_names[data::AttrMap::attr_index_uint16][i] <<
+            " is of size " << uint16_attrs[i].size() << endl;
+        }
+      for (size_t i=0; i<uint32_attrs.size(); i++)
+        {
+          fout << "  uint32 attribute " << attr_names[data::AttrMap::attr_index_uint32][i] <<
+            " is of size " << uint32_attrs[i].size() << endl;
+        }
+      for (size_t i=0; i<int32_attrs.size(); i++)
+        {
+          fout << "  int32 attribute " << attr_names[data::AttrMap::attr_index_int32][i] <<
+            " is of size " << int32_attrs[i].size() << endl;
+        }
     }
   fout.close();
 }
@@ -356,15 +368,15 @@ int main(int argc, char** argv)
     }
 
   map<CELL_IDX_T, neurotree_t>  tree_map;
-  data::NamedAttrMap attr_map;
+  map<string, data::NamedAttrMap> attr_maps;
   
   for (size_t i = 0; i<pop_names.size(); i++)
     {
       status = cell::scatter_read_trees (all_comm, input_file_name, io_size,
-                                         opt_attrs, attr_namespace,
+                                         opt_attrs, attr_name_spaces,
                                          node_rank_map,
                                          pop_names[i], pop_vector[i].start,
-                                         tree_map, attr_map);
+                                         tree_map, attr_maps);
 
       
       assert (status >= 0);
@@ -381,8 +393,6 @@ int main(int argc, char** argv)
   size_t local_num_trees = tree_map.size();
   
   printf("Task %d has received a total of %lu trees\n", rank,  local_num_trees);
-  vector<vector<string>> attr_names;
-  attr_map.attr_names(attr_names);
   
   if (opt_output)
     {
@@ -409,7 +419,7 @@ int main(int argc, char** argv)
           const CELL_IDX_T gid = element.first;
           const neurotree_t &tree = element.second;
 
-          summarize_tree(outfilename, gid, tree, attr_names, attr_map);
+          summarize_tree(outfilename, gid, tree, attr_map);
         }
     }
 
