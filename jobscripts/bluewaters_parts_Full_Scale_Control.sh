@@ -29,19 +29,19 @@ export results_path
 mkdir -p $results_path
 
 aprun -n 256 ./build/balance_indegree \
-      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170313.h5 \
       -i 128 -n 2048 -o ${results_path}/parts
 aprun -n 256 ./build/balance_indegree \
-      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170313.h5 \
       -i 128 -n 4096 -o ${results_path}/parts
 aprun -n 256 ./build/balance_indegree \
-      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170313.h5 \
       -i 128 -n 8192 -o ${results_path}/parts
 aprun -n 256 ./build/balance_indegree \
-      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170313.h5 \
       -i 128 -n 16384 -o ${results_path}/parts
 aprun -n 256 ./build/balance_indegree \
-      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5 \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170313.h5 \
       -i 128 -n 32768 -o ${results_path}/parts
 
 

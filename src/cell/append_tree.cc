@@ -109,7 +109,7 @@ namespace neuroh5
 
           hsize_t attr_size=0, sec_size=0, topo_size=0;
 
-          const CELL_IDX_T &gid = get<0>(tree);
+          const CELL_IDX_T &idx = get<0>(tree);
           const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);
           const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
           const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
@@ -141,7 +141,7 @@ namespace neuroh5
           sec_size = sections.size();
           sec_ptr.push_back(sec_size+sec_ptr.back());
 
-          all_index_vector.push_back(gid);
+          all_index_vector.push_back(idx);
           all_src_vector.insert(all_src_vector.end(),src_vector.begin(),src_vector.end());
           all_dst_vector.insert(all_dst_vector.end(),dst_vector.begin(),dst_vector.end());
           all_sections.insert(all_sections.end(),sections.begin(),sections.end());

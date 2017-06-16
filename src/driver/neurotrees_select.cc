@@ -258,13 +258,13 @@ int main(int argc, char** argv)
     }
   
 
-  // Read in selection gids
+  // Read in selection indices
   set<CELL_IDX_T> tree_selection;
   map<CELL_IDX_T, CELL_IDX_T> tree_index;
   {
     ifstream infile(selection_file_name.c_str());
     string line;
-    // reads gid per line
+    // reads index per line
     while (getline(infile, line))
       {
         istringstream iss(line);
@@ -358,11 +358,10 @@ int main(int argc, char** argv)
   
   for (auto & element : tree_map)
     {
-      const CELL_IDX_T gid = element.first;
-      if (tree_selection.find(gid) != tree_selection.end())
+      const CELL_IDX_T idx = element.first;
+      if (tree_selection.find(idx) != tree_selection.end())
         {
           neurotree_t &tree = element.second;
-          CELL_IDX_T idx = get<0>(tree);
           auto it = tree_index.find(idx);
           assert(it != tree_index.end());
           CELL_IDX_T idx1 = it->second;

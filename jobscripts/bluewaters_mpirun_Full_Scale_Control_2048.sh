@@ -18,7 +18,7 @@
 ### Get darsan profile data
 #PBS -lgres=darshan
 
-module load cray-hdf5-parallel
+module load cray-hdf5-parallel/1.8.16
 module load gcc/4.9.3
 
 set -x
