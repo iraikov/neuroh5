@@ -2677,7 +2677,7 @@ extern "C"
     assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
 
     printf("rank %d: start->pos = %u\n", rank, py_ntrg->state->pos);
-    printf("rank %d: start->it_idx = %u\n", rank, py_ntrg->state->it_idx);
+    printf("rank %d: start->it_idx = %u\n", rank, *py_ntrg->state->it_idx);
     printf("rank %d: start->seq_index = %u\n", rank, py_ntrg->state->seq_index);
     if (py_ntrg->state->pos != seq_done)
       {

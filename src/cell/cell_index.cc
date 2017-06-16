@@ -37,7 +37,7 @@ namespace neuroh5
      MPI_Comm             comm,
      const string&        file_name,
      const string&        pop_name,
-     const string&        attr_name,
+     const string&        attr_name_space,
      vector<CELL_IDX_T>&  cell_index
      )
     {
@@ -53,10 +53,10 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           assert(file >= 0);
 
-          size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(attr_name, pop_name, hdf5::CELL_INDEX));
+          size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX));
           cell_index.resize(dset_size);
           ierr = hdf5::read<CELL_IDX_T> (file,
-                                         hdf5::cell_attribute_path(attr_name, pop_name, hdf5::CELL_INDEX),
+                                         hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX),
                                          0, dset_size,
                                          CELL_IDX_H5_NATIVE_T,
                                          cell_index, H5P_DEFAULT);
@@ -82,6 +82,7 @@ namespace neuroh5
      MPI_Comm             comm,
      const string&        file_name,
      const string&        pop_name,
+     const string&        attr_name_space,
      const vector<CELL_IDX_T>&  cell_index,
      const hsize_t start
      )
@@ -123,7 +124,7 @@ namespace neuroh5
       wapl = H5Pcreate (H5P_DATASET_XFER);
       ierr = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
       
-      ierr = hdf5::write<CELL_IDX_T> (file, hdf5::cell_attribute_path(hdf5::POPULATIONS, pop_name, hdf5::CELL_INDEX),
+      ierr = hdf5::write<CELL_IDX_T> (file, hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX),
                                       global_index_size, local_index_start, local_index_size,
                                       CELL_IDX_H5_NATIVE_T, cell_index, wapl);
       assert(ierr == 0);

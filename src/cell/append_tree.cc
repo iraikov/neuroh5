@@ -217,7 +217,8 @@ namespace neuroh5
       // create the cell index if option create_index is true
       if (create_index)
         {
-          status = append_cell_index (comm, file_name, pop_name, all_index_vector, ptr_start);
+          status = append_cell_index (comm, file_name, pop_name, hdf5::TREES,
+                                      all_index_vector, ptr_start);
         }
       else
         {
@@ -226,12 +227,6 @@ namespace neuroh5
 
       hid_t file = hdf5::open_file(comm, file_name, true);
       assert(file >= 0);
-
-
-      
-      status = hdf5::write<CELL_IDX_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
-                                        global_index_size, local_index_start, local_index_size,
-                                        CELL_IDX_H5_NATIVE_T, all_index_vector, wapl);
 
 
       status = hdf5::write<ATTR_PTR_T> (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR),
