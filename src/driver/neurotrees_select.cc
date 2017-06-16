@@ -77,7 +77,8 @@ int main(int argc, char** argv)
 {
   herr_t status;
   MPI_Comm all_comm;
-  string pop_name, input_file_name, output_file_name, selection_file_name, rank_file_name, attr_namespace = "Attributes";
+  string pop_name, input_file_name, output_file_name, selection_file_name, rank_file_name;
+  vector<string> attr_name_spaces;
   size_t n_nodes;
   map<CELL_IDX_T, rank_t> node_rank_map;
   stringstream ss;
@@ -140,7 +141,18 @@ int main(int argc, char** argv)
           }
           if (optflag_namespace == 1) {
             opt_namespace = true;
-            attr_namespace = std::string(strdup(optarg));
+            string attr_name_space;
+            string arg = string(optarg);
+            string delimiter = ":";
+            size_t startpos=0, endpos = arg.find(delimiter);
+            while (startpos < arg.length()-1)
+              {
+                attr_name_space = arg.substr(startpos, endpos);
+                attr_name_spaces.push_back(attr_name_space);
+                startpos = endpos + delimiter.length();
+                endpos = arg.find(delimiter, startpos);
+              }
+
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
@@ -175,8 +187,20 @@ int main(int argc, char** argv)
           ss >> io_size;
           break;
         case 'n':
-          opt_namespace = true;
-          attr_namespace = std::string(strdup(optarg));
+          {
+            opt_namespace = true;
+            string attr_name_space;
+            string arg = string(optarg);
+            string delimiter = ":";
+            size_t startpos=0, endpos = arg.find(delimiter);
+            while (startpos < arg.length()-1)
+              {
+                attr_name_space = arg.substr(startpos, endpos);
+                attr_name_spaces.push_back(attr_name_space);
+                startpos = endpos + delimiter.length();
+                endpos = arg.find(delimiter, startpos);
+              }
+          }
           break;
         case 'p':
           opt_population  = true;
@@ -291,13 +315,31 @@ int main(int argc, char** argv)
     }
 
   map<CELL_IDX_T, neurotree_t>  tree_map;
-  data::NamedAttrMap attr_map;
+  map<string, data::NamedAttrMap> attr_maps;
+  map<string, vector<vector<string> > > attr_names_map;
+
+  vector<neurotree_t> tree_subset;
+
+  map <string, vector<map< CELL_IDX_T, vector<float> > > >
+    subset_float_value_map;
+  map <string, vector<map< CELL_IDX_T, vector<uint8_t> > > >
+    subset_uint8_value_map;
+  map <string, vector<map< CELL_IDX_T, vector<int8_t> > > >
+    subset_int8_value_map;
+  map <string, vector<map< CELL_IDX_T, vector<uint16_t> > > >
+    subset_uint16_value_map;
+  map <string, vector<map< CELL_IDX_T, vector<int16_t> > > >
+    subset_int16_value_map;
+  map <string, vector<map< CELL_IDX_T, vector<uint32_t> > > >
+    subset_uint32_value_map;
+  map <string, vector<map< CELL_IDX_T, vector<int32_t> > > >
+    subset_int32_value_map;
+
   
   status = cell::scatter_read_trees (all_comm, input_file_name, io_size,
-                                     opt_attrs, attr_namespace,
-                                     node_rank_map,
+                                     attr_name_spaces, node_rank_map,
                                      pop_name, pop_vector[pop_idx].start,
-                                     tree_map, attr_map);
+                                     tree_map, attr_maps);
   
   
   assert (status >= 0);
@@ -312,63 +354,98 @@ int main(int argc, char** argv)
   size_t local_num_trees = tree_map.size();
   
   printf("Task %d has received a total of %lu trees\n", rank,  local_num_trees);
-  vector <size_t> num_attrs;
-  num_attrs.resize(data::AttrMap::num_attr_types);
 
-  vector<vector<string>> attr_names;
-  attr_names.resize(data::AttrMap::num_attr_types);
-
-  attr_map.attr_names(attr_names);
-  attr_map.num_attrs(num_attrs);
-
-
-  vector<map< CELL_IDX_T, vector<float> > >    subset_float_values(num_attrs[data::AttrMap::attr_index_float]);
-  vector<map< CELL_IDX_T, vector<uint8_t> > >  subset_uint8_values(num_attrs[data::AttrMap::attr_index_uint8]);
-  vector<map< CELL_IDX_T, vector<int8_t> > >   subset_int8_values(num_attrs[data::AttrMap::attr_index_int8]);
-  vector<map< CELL_IDX_T, vector<uint16_t> > > subset_uint16_values(num_attrs[data::AttrMap::attr_index_uint16]);
-  vector<map< CELL_IDX_T, vector<uint32_t> > > subset_uint32_values(num_attrs[data::AttrMap::attr_index_uint32]);
-  vector<map< CELL_IDX_T, vector<int32_t> > >  subset_int32_values(num_attrs[data::AttrMap::attr_index_int32]);
-
-  vector<neurotree_t> tree_subset;
   
-  for (auto const& element : tree_map)
+  for (auto & element : tree_map)
     {
       const CELL_IDX_T gid = element.first;
       if (tree_selection.find(gid) != tree_selection.end())
         {
-          const neurotree_t &tree = element.second;
+          neurotree_t &tree = element.second;
+          CELL_IDX_T idx = get<0>(tree);
+          auto it = tree_index.find(idx);
+          assert(it != tree_index.end());
+          CELL_IDX_T idx1 = it->second;
+          get<0>(tree) = idx1;
+          
           tree_subset.push_back(tree);
 
-          const vector<vector<float>>    float_values  = attr_map.find<float>(gid);
-          const vector<vector<uint8_t>>  uint8_values  = attr_map.find<uint8_t>(gid);
-          const vector<vector<int8_t>>   int8_values   = attr_map.find<int8_t>(gid);
-          const vector<vector<uint16_t>> uint16_values = attr_map.find<uint16_t>(gid);
-          const vector<vector<uint32_t>> uint32_values = attr_map.find<uint32_t>(gid);
-          const vector<vector<int32_t>>  int32_values  = attr_map.find<int32_t>(gid);
+          for (auto const& attr_map_entry : attr_maps)
+            {
+              const string& attr_name_space  = attr_map_entry.first;
+              data::NamedAttrMap attr_map  = attr_map_entry.second;
 
-          for (size_t i=0; i<float_values.size(); i++)
-            {
-              subset_float_values[i].insert(make_pair(gid, float_values[i]));
-            }
-          for (size_t i=0; i<uint8_values.size(); i++)
-            {
-              subset_uint8_values[i].insert(make_pair(gid, uint8_values[i]));
-            }
-          for (size_t i=0; i<int8_values.size(); i++)
-            {
-              subset_int8_values[i].insert(make_pair(gid, int8_values[i]));
-            }
-          for (size_t i=0; i<uint16_values.size(); i++)
-            {
-              subset_uint16_values[i].insert(make_pair(gid, uint16_values[i]));
-            }
-          for (size_t i=0; i<uint32_values.size(); i++)
-            {
-              subset_uint32_values[i].insert(make_pair(gid, uint32_values[i]));
-            }
-          for (size_t i=0; i<int32_values.size(); i++)
-            {
-              subset_int32_values[i].insert(make_pair(gid, int32_values[i]));
+              vector <size_t> num_attrs;
+              num_attrs.resize(data::AttrMap::num_attr_types);
+          
+              vector<vector<string>> attr_names;
+              attr_names.resize(data::AttrMap::num_attr_types);
+          
+              attr_map.attr_names(attr_names);
+              attr_map.num_attrs(num_attrs);
+
+              attr_names_map.insert(make_pair(attr_name_space, attr_names));
+              
+              const vector<vector<float>>    float_values  = attr_map.find<float>(idx);
+              const vector<vector<uint8_t>>  uint8_values  = attr_map.find<uint8_t>(idx);
+              const vector<vector<int8_t>>   int8_values   = attr_map.find<int8_t>(idx);
+              const vector<vector<uint16_t>> uint16_values = attr_map.find<uint16_t>(idx);
+              const vector<vector<int16_t>>  int16_values = attr_map.find<int16_t>(idx);
+              const vector<vector<uint32_t>> uint32_values = attr_map.find<uint32_t>(idx);
+              const vector<vector<int32_t>>  int32_values  = attr_map.find<int32_t>(idx);
+
+              vector<map< CELL_IDX_T, vector<float> > > 
+                subset_float_values(num_attrs[data::AttrMap::attr_index_float]);
+              vector<map< CELL_IDX_T, vector<uint8_t> > > 
+                subset_uint8_values(num_attrs[data::AttrMap::attr_index_uint8]);
+              vector<map< CELL_IDX_T, vector<int8_t> > > 
+                subset_int8_values(num_attrs[data::AttrMap::attr_index_int8]);
+              vector<map< CELL_IDX_T, vector<uint16_t> > > 
+                subset_uint16_values(num_attrs[data::AttrMap::attr_index_uint16]);
+              vector<map< CELL_IDX_T, vector<int16_t> > > 
+                subset_int16_values(num_attrs[data::AttrMap::attr_index_int16]);
+              vector<map< CELL_IDX_T, vector<uint32_t> > > 
+                subset_uint32_values(num_attrs[data::AttrMap::attr_index_uint32]);
+              vector<map< CELL_IDX_T, vector<int32_t> > > 
+                subset_int32_values(num_attrs[data::AttrMap::attr_index_int32]);
+              
+              for (size_t i=0; i<float_values.size(); i++)
+                {
+                  subset_float_values[i].insert(make_pair(idx1, float_values[i]));
+                }
+              for (size_t i=0; i<uint8_values.size(); i++)
+                {
+                  subset_uint8_values[i].insert(make_pair(idx1, uint8_values[i]));
+                }
+              for (size_t i=0; i<int8_values.size(); i++)
+                {
+                  subset_int8_values[i].insert(make_pair(idx1, int8_values[i]));
+                }
+              for (size_t i=0; i<uint16_values.size(); i++)
+                {
+                  subset_uint16_values[i].insert(make_pair(idx1, uint16_values[i]));
+                }
+              for (size_t i=0; i<int16_values.size(); i++)
+                {
+                  subset_int16_values[i].insert(make_pair(idx1, int16_values[i]));
+                }
+              for (size_t i=0; i<uint32_values.size(); i++)
+                {
+                  subset_uint32_values[i].insert(make_pair(idx1, uint32_values[i]));
+                }
+              for (size_t i=0; i<int32_values.size(); i++)
+                {
+                  subset_int32_values[i].insert(make_pair(idx1, int32_values[i]));
+                }
+
+              subset_float_value_map[attr_name_space]  = subset_float_values;
+              subset_uint8_value_map[attr_name_space]  = subset_uint8_values;
+              subset_int8_value_map[attr_name_space]   = subset_int8_values;
+              subset_uint16_value_map[attr_name_space] = subset_uint16_values;
+              subset_int16_value_map[attr_name_space]  = subset_int16_values;
+              subset_uint32_value_map[attr_name_space] = subset_uint32_values;
+              subset_int32_value_map[attr_name_space]  = subset_int32_values;
+
             }
         }
     }
@@ -429,13 +506,30 @@ int main(int argc, char** argv)
       
       assert(status == 0);
 
-      if (opt_attrs)
+      for (string& attr_name_space : attr_name_spaces)
         {
+          const vector<map< CELL_IDX_T, vector<float> > > &
+            subset_float_values = subset_float_value_map[attr_name_space];
+          const vector<map< CELL_IDX_T, vector<uint8_t> > > &
+            subset_uint8_values = subset_uint8_value_map[attr_name_space];
+          const vector<map< CELL_IDX_T, vector<int8_t> > > 
+            subset_int8_values = subset_int8_value_map[attr_name_space];
+          const vector<map< CELL_IDX_T, vector<uint16_t> > > 
+            subset_uint16_values = subset_uint16_value_map[attr_name_space];
+          const vector<map< CELL_IDX_T, vector<int16_t> > > 
+            subset_int16_values = subset_int16_value_map[attr_name_space];
+          const vector<map< CELL_IDX_T, vector<uint32_t> > > 
+            subset_uint32_values = subset_uint32_value_map[attr_name_space];
+          const vector<map< CELL_IDX_T, vector<int32_t> > > 
+            subset_int32_values = subset_int32_value_map[attr_name_space];
+
+          const vector<vector<string>>& attr_names = attr_names_map[attr_name_space];
+
           for (size_t i=0; i<subset_float_values.size(); i++)
             {
               cell::write_cell_attribute_map<float>(all_comm,
                                                     output_file_name,
-                                                    attr_namespace,
+                                                    attr_name_space,
                                                     pop_name,
                                                     attr_names[data::AttrMap::attr_index_float][i],
                                                     subset_float_values[i],
@@ -447,7 +541,7 @@ int main(int argc, char** argv)
             {
               cell::write_cell_attribute_map<uint8_t>(all_comm,
                                                       output_file_name,
-                                                      attr_namespace,
+                                                      attr_name_space,
                                                       pop_name,
                                                       attr_names[data::AttrMap::attr_index_uint8][i],
                                                       subset_uint8_values[i],
@@ -459,7 +553,7 @@ int main(int argc, char** argv)
             {
               cell::write_cell_attribute_map<int8_t>(all_comm,
                                                      output_file_name,
-                                                     attr_namespace,
+                                                     attr_name_space,
                                                      pop_name,
                                                      attr_names[data::AttrMap::attr_index_int8][i],
                                                      subset_int8_values[i],
@@ -471,7 +565,7 @@ int main(int argc, char** argv)
             {
               cell::write_cell_attribute_map<uint16_t>(all_comm,
                                                        output_file_name,
-                                                       attr_namespace,
+                                                       attr_name_space,
                                                        pop_name,
                                                        attr_names[data::AttrMap::attr_index_uint16][i],
                                                        subset_uint16_values[i],
@@ -483,7 +577,7 @@ int main(int argc, char** argv)
             {
               cell::write_cell_attribute_map<uint32_t>(all_comm,
                                                        output_file_name,
-                                                       attr_namespace,
+                                                       attr_name_space,
                                                        pop_name,
                                                        attr_names[data::AttrMap::attr_index_uint32][i],
                                                        subset_uint32_values[i],
@@ -496,7 +590,7 @@ int main(int argc, char** argv)
             {
               cell::write_cell_attribute_map<int32_t>(all_comm,
                                                       output_file_name,
-                                                      attr_namespace,
+                                                      attr_name_space,
                                                       pop_name,
                                                       attr_names[data::AttrMap::attr_index_int32][i],
                                                       subset_int32_values[i],
@@ -506,6 +600,8 @@ int main(int argc, char** argv)
             }
         }
     }
+  
+
   MPI_Comm_free(&all_comm);
   
   MPI_Finalize();

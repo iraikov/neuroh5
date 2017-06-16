@@ -166,7 +166,7 @@ void summarize_tree(const string outfilename,
   for (auto const& attr_map_entry : attr_maps)
     {
       const string& attr_name_space  = attr_map_entry.first;
-      const data::AttrMap & attr_map = attr_map_entry.second;
+      data::NamedAttrMap attr_map  = attr_map_entry.second;
       
       vector<vector<string>> attr_names;
       attr_map.attr_names(attr_names);
@@ -232,7 +232,8 @@ int main(int argc, char** argv)
 {
   herr_t status;
   MPI_Comm all_comm;
-  std::string input_file_name, rank_file_name, attr_namespace = "Attributes";
+  std::string input_file_name, rank_file_name;
+  vector<string> attr_name_spaces;
   size_t n_nodes;
   map<CELL_IDX_T, rank_t> node_rank_map;
   stringstream ss;
@@ -282,7 +283,18 @@ int main(int argc, char** argv)
           }
           if (optflag_namespace == 1) {
             opt_namespace = true;
-            attr_namespace = std::string(strdup(optarg));
+            string attr_name_space;
+            string arg = string(optarg);
+            string delimiter = ":";
+            size_t startpos=0, endpos = arg.find(delimiter);
+            while (startpos < arg.length()-1)
+              {
+                attr_name_space = arg.substr(startpos, endpos);
+                attr_name_spaces.push_back(attr_name_space);
+                startpos = endpos + delimiter.length();
+                endpos = arg.find(delimiter, startpos);
+              }
+
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
@@ -302,8 +314,20 @@ int main(int argc, char** argv)
           opt_output = true;
           break;
         case 'n':
-          opt_namespace = true;
-          attr_namespace = std::string(strdup(optarg));
+          {
+            opt_namespace = true;
+            string attr_name_space;
+            string arg = string(optarg);
+            string delimiter = ":";
+            size_t startpos=0, endpos = arg.find(delimiter);
+            while (startpos < arg.length()-1)
+              {
+                attr_name_space = arg.substr(startpos, endpos);
+                attr_name_spaces.push_back(attr_name_space);
+                startpos = endpos + delimiter.length();
+                endpos = arg.find(delimiter, startpos);
+              }
+          }
           break;
         case 'r':
           opt_rankfile = true;
@@ -373,8 +397,7 @@ int main(int argc, char** argv)
   for (size_t i = 0; i<pop_names.size(); i++)
     {
       status = cell::scatter_read_trees (all_comm, input_file_name, io_size,
-                                         opt_attrs, attr_name_spaces,
-                                         node_rank_map,
+                                         attr_name_spaces, node_rank_map,
                                          pop_names[i], pop_vector[i].start,
                                          tree_map, attr_maps);
 
@@ -419,7 +442,7 @@ int main(int argc, char** argv)
           const CELL_IDX_T gid = element.first;
           const neurotree_t &tree = element.second;
 
-          summarize_tree(outfilename, gid, tree, attr_map);
+          summarize_tree(outfilename, gid, tree, attr_maps);
         }
     }
 

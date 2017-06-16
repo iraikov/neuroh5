@@ -72,7 +72,7 @@ namespace neuroh5
     (
      const string&       file_name,
      const string&       pop_name,
-     vector< string> >&  out_name_spaces
+     vector< string>&    out_name_spaces
      )
     {
       hid_t in_file;
@@ -80,7 +80,7 @@ namespace neuroh5
     
       in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       assert(in_file >= 0);
-      out_attributes.clear();
+      out_name_spaces.clear();
     
       string path = "/" + hdf5::POPULATIONS + "/" + pop_name;
 

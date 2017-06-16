@@ -38,7 +38,7 @@ namespace neuroh5
     (
      const string&       file_name,
      const string&       pop_name,
-     vector< string> >&  out_name_spaces
+     vector<string>&     out_name_spaces
      );
     
     herr_t get_cell_attributes

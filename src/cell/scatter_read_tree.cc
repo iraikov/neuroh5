@@ -464,11 +464,11 @@ namespace neuroh5
 
       for (string attr_name_space : attr_name_spaces)
         {
-          data::NamedAttrMap> attr_map;
+          data::NamedAttrMap attr_map;
           scatter_read_cell_attributes(all_comm, file_name, io_size,
                                        attr_name_space, node_rank_map,
                                        pop_name, pop_start, attr_map);
-          make_pair(attr_name_space, attr_map);          
+          attr_maps.insert(make_pair(attr_name_space, attr_map));
         }
 
     
