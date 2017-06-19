@@ -452,7 +452,10 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
     {
       const string& attr_name_space  = attr_map_entry.first;
       data::NamedAttrMap attr_map  = attr_map_entry.second;
+      vector <vector<string> > attr_names;
 
+      attr_map.attr_names(attr_names);
+        
       PyObject *py_namespace_dict = PyDict_New();
 
       const vector <vector <float>> &float_attrs     = attr_map.find<float>(idx);
@@ -1491,9 +1494,22 @@ extern "C"
     PyObject *py_cell_dict = PyDict_New();
     unsigned long commptr;
     char *file_name, *pop_name;
+    PyObject *py_attr_name_spaces=NULL;
 
-    if (!PyArg_ParseTuple(args, "kss", &commptr, &file_name,  &pop_name))
+    if (!PyArg_ParseTuple(args, "kss|O", &commptr, &file_name,  &pop_name, &py_attr_name_spaces))
       return NULL;
+
+    vector <string> attr_name_spaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            char *str = PyString_AsString (pyval);
+            attr_name_spaces.push_back(string(str));
+          }
+      }
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
@@ -1530,8 +1546,17 @@ extern "C"
                                string(pop_name), pop_vector[pop_idx].start,
                                tree_list, start, end);
     assert (status >= 0);
-    vector <string,NamedAttrMap> attr_maps;
+    map <string, NamedAttrMap> attr_maps;
     
+    for (string attr_name_space : attr_name_spaces)
+      {
+        data::NamedAttrMap attr_map;
+        cell::read_cell_attributes(*((MPI_Comm *)(commptr)), string(file_name), 
+                                   attr_name_space, pop_name,
+                                   pop_vector[pop_idx].start, attr_map);
+        attr_maps.insert(make_pair(attr_name_space, attr_map));
+      }
+
     for (size_t i = 0; i < tree_list.size(); i++)
       {
         const CELL_IDX_T idx = get<0>(tree_list[i]);
@@ -1591,7 +1616,7 @@ extern "C"
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
       {
-        for (size_t i = 0; i < PyList_Size(py_attr_name_spaces); i++)
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
             char *str = PyString_AsString (pyval);
@@ -2157,7 +2182,6 @@ extern "C"
     unsigned long value_chunk_size = default_value_chunk_size;
     unsigned long cache_size = default_cache_size;
     char *file_name_arg, *pop_name_arg;
-    herr_t status;
     
     static const char *kwlist[] = {"commptr",
                                    "file_name",
@@ -2326,21 +2350,22 @@ extern "C"
   {
     int status, opt_attrs=0; 
     unsigned long commptr; unsigned int io_size, cache_size=100;
-    const string default_name_space = "Attributes";
-    char *file_name, *pop_name, *attr_name_space = (char *)default_name_space.c_str();
+    char *file_name, *pop_name;
+    PyObject* py_attr_name_spaces;
+    vector<string> attr_name_spaces;
 
     static const char *kwlist[] = {"commptr",
                                    "file_name",
                                    "pop_name",
                                    "io_size",
                                    "attributes",
-                                   "namespace",
+                                   "namespaces",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "kssI|isi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "kssI|iOi", (char **)kwlist,
                                      &commptr, &file_name, &pop_name, &io_size,
-                                     &opt_attrs, &attr_name_space,
+                                     &opt_attrs, &py_attr_name_spaces,
                                      &cache_size))
       return NULL;
 
@@ -2348,11 +2373,24 @@ extern "C"
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
 
-    if (io_size > size)
+    assert(size > 0);
+    
+    if ((size > 0) && (io_size < (unsigned int)size))
       io_size = size;
     
     if ((size > 0) && (cache_size < (unsigned int)size))
       cache_size = size;
+
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            char *str = PyString_AsString (pyval);
+            attr_name_spaces.push_back(string(str));
+          }
+      }
     
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
@@ -2444,10 +2482,6 @@ extern "C"
     py_ntrg->state->tree_map  = tree_map;
     py_ntrg->state->it_tree  = py_ntrg->state->tree_map.cbegin();
 
-    for (
-    NamedAttrMap attr_map;
-    py_ntrg->state->attr_maps.insert(make_pair(attr_name_space, attr_map));
-
     return (PyObject *)py_ntrg;
   }
 
@@ -2477,7 +2511,9 @@ extern "C"
     assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
     assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
 
-    if (io_size > size)
+    assert(size > 0);
+    
+    if (io_size > (unsigned int)size)
       io_size = size;
 
     if ((size > 0) && (cache_size < (unsigned int)size))
@@ -2617,19 +2653,14 @@ extern "C"
           {
             int status;
             py_ntrg->state->tree_map.clear();
-            py_ntrg->state->attr_map.clear();
+            py_ntrg->state->attr_maps.clear();
             status = cell::scatter_read_trees (py_ntrg->state->comm, py_ntrg->state->file_name,
-                                               py_ntrg->state->io_size,
-                                               py_ntrg->state->opt_attrs, py_ntrg->state->attr_name_space,
+                                               py_ntrg->state->io_size, py_ntrg->state->attr_name_spaces,
                                                py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
                                                py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
-                                               py_ntrg->state->tree_map, py_ntrg->state->attr_map,
+                                               py_ntrg->state->tree_map, py_ntrg->state->attr_maps,
                                                py_ntrg->state->cache_index, py_ntrg->state->cache_size);
             assert (status >= 0);
-            if (py_ntrg->state->opt_attrs)
-              {
-                py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
-              }
 
             py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
             py_ntrg->state->it_tree = py_ntrg->state->tree_map.cbegin();
@@ -2639,9 +2670,7 @@ extern "C"
           {
             CELL_IDX_T key = py_ntrg->state->it_tree->first;
             const neurotree_t &tree = py_ntrg->state->it_tree->second;
-            PyObject *elem = py_build_tree_value(key, tree,
-                                                 py_ntrg->state->opt_attrs, py_ntrg->state->attr_map,
-                                                 py_ntrg->state->attr_name_space, py_ntrg->state->attr_names);
+            PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps);
             assert(elem != NULL);
         
             /* Exceptions from PySequence_GetItem are propagated to the caller
