@@ -146,17 +146,6 @@ namespace neuroh5
             vector<SEC_PTR_T>  sec_ptr;
             vector<TOPO_PTR_T> topo_ptr;
             vector<ATTR_PTR_T> attr_ptr;
-
-            vector<CELL_IDX_T> gid_vector;
-            vector<SECTION_IDX_T> src_vector, dst_vector;
-            vector<SECTION_IDX_T> sections;
-            vector<COORD_T> xcoords;
-            vector<COORD_T> ycoords;
-            vector<COORD_T> zcoords;
-            vector<REALVAL_T> radiuses;
-            vector<LAYER_IDX_T> layers;
-            vector<PARENT_NODE_IDX_T> parents;
-            vector<SWC_TYPE_T> swc_types;
           
             // allocate buffer and memory dataspace
             attr_ptr.resize(block);
@@ -182,13 +171,24 @@ namespace neuroh5
                                              TOPO_PTR_H5_NATIVE_T,
                                              topo_ptr, rapl);
             assert(status >= 0);
+            
+            vector<CELL_IDX_T> index_vector;
+            vector<SECTION_IDX_T> src_vector, dst_vector;
+            vector<SECTION_IDX_T> sections;
+            vector<COORD_T> xcoords;
+            vector<COORD_T> ycoords;
+            vector<COORD_T> zcoords;
+            vector<REALVAL_T> radiuses;
+            vector<LAYER_IDX_T> layers;
+            vector<PARENT_NODE_IDX_T> parents;
+            vector<SWC_TYPE_T> swc_types;
 
-            gid_vector.resize(block-1);
+            index_vector.resize(block-1);
             status = hdf5::read<CELL_IDX_T> (file,
                                              hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
                                              start, block-1,
                                              CELL_IDX_H5_NATIVE_T,
-                                             gid_vector, rapl);
+                                             index_vector, rapl);
 
           
             hsize_t topo_start = topo_ptr[0];
@@ -288,7 +288,7 @@ namespace neuroh5
             data::append_rank_tree_map(start, block-1, 
                                        node_rank_map, pop_start,
                                        sec_ptr, topo_ptr, attr_ptr,
-                                       gid_vector, src_vector, dst_vector, sections,
+                                       index_vector, src_vector, dst_vector, sections,
                                        xcoords, ycoords, zcoords,
                                        radiuses, layers, parents,
                                        swc_types, rank_tree_map);

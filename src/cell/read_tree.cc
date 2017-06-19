@@ -35,7 +35,7 @@ namespace neuroh5
      std::vector<SEC_PTR_T>& sec_ptr,
      std::vector<TOPO_PTR_T>& topo_ptr,
      std::vector<ATTR_PTR_T>& attr_ptr,
-     std::vector<CELL_IDX_T>& all_gid_vector,
+     std::vector<CELL_IDX_T>& all_index_vector,
      std::vector<SECTION_IDX_T>& all_src_vector,
      std::vector<SECTION_IDX_T>& all_dst_vector,
      std::vector<SECTION_IDX_T>& all_sections,
@@ -106,7 +106,34 @@ namespace neuroh5
           vector<SWC_TYPE_T> tree_swc_types;
           tree_swc_types.insert(tree_swc_types.begin(),swc_types_first,swc_types_last);
 
-          CELL_IDX_T gid = pop_start+all_gid_vector[i];
+          CELL_IDX_T gid = pop_start+all_index_vector[i];
+          tree_list.push_back(make_tuple(gid,tree_src_vector,tree_dst_vector,tree_sections,
+                                         tree_xcoords,tree_ycoords,tree_zcoords,
+                                         tree_radiuses,tree_layers,tree_parents,
+                                         tree_swc_types));
+        }
+    }
+
+    
+    void singleton_tree_list
+    (
+     const CELL_IDX_T pop_start,
+     std::vector<CELL_IDX_T>& index_vector,
+     std::vector<SECTION_IDX_T>& tree_src_vector,
+     std::vector<SECTION_IDX_T>& tree_dst_vector,
+     std::vector<SECTION_IDX_T>& tree_sections,
+     std::vector<COORD_T>& tree_xcoords,
+     std::vector<COORD_T>& tree_ycoords,
+     std::vector<COORD_T>& tree_zcoords,
+     std::vector<REALVAL_T>& tree_radiuses,
+     std::vector<LAYER_IDX_T>& tree_layers,
+     std::vector<PARENT_NODE_IDX_T>& tree_parents,
+     std::vector<SWC_TYPE_T>& tree_swc_types,
+     std::vector<neurotree_t> &tree_list)
+    {
+      for (size_t i=0; i<index_vector.size(); i++)
+        {
+          CELL_IDX_T gid = pop_start+index_vector[i];
           tree_list.push_back(make_tuple(gid,tree_src_vector,tree_dst_vector,tree_sections,
                                          tree_xcoords,tree_ycoords,tree_zcoords,
                                          tree_radiuses,tree_layers,tree_parents,
@@ -131,10 +158,6 @@ namespace neuroh5
      )
     {
       herr_t status; hid_t rapl;
-
-      std::vector<SEC_PTR_T> sec_ptr;
-      std::vector<TOPO_PTR_T> topo_ptr;
-      std::vector<ATTR_PTR_T> attr_ptr;
 
       unsigned int rank, size;
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
@@ -182,33 +205,44 @@ namespace neuroh5
 
           if (block > 0)
             {
-              // allocate buffer and memory dataspace
-              attr_ptr.resize(block);
-            
-              status = hdf5::read<ATTR_PTR_T> (file,
-                                               hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR),
-                                               start, block,
-                                               ATTR_PTR_H5_NATIVE_T,
-                                               attr_ptr, rapl);
-              assert(status >= 0);
-            
-              sec_ptr.resize(block);
-              status = hdf5::read<SEC_PTR_T> (file,
-                                              hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SEC_PTR),
-                                              start, block,
-                                              SEC_PTR_H5_NATIVE_T,
-                                              sec_ptr, rapl);
-              assert(status >= 0);
-            
-              topo_ptr.resize(block);
-              status = hdf5::read<TOPO_PTR_T> (file,
-                                               hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TOPO_PTR),
-                                               start, block,
-                                               TOPO_PTR_H5_NATIVE_T,
-                                               topo_ptr, rapl);
-              assert(status >= 0);
 
-              std::vector<CELL_IDX_T> gid_vector;
+              std::vector<SEC_PTR_T> sec_ptr;
+              std::vector<TOPO_PTR_T> topo_ptr;
+              std::vector<ATTR_PTR_T> attr_ptr;
+
+              // Check if pointer structure exists
+              status = H5Lexists (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR).c_str(), H5P_DEFAULT);
+
+              if (status)
+                {
+                  // allocate buffer and memory dataspace
+                  attr_ptr.resize(block);
+                  
+                  status = hdf5::read<ATTR_PTR_T> (file,
+                                                   hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR),
+                                                   start, block,
+                                                   ATTR_PTR_H5_NATIVE_T,
+                                                   attr_ptr, rapl);
+                  assert(status >= 0);
+                  
+                  sec_ptr.resize(block);
+                  status = hdf5::read<SEC_PTR_T> (file,
+                                                  hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SEC_PTR),
+                                                  start, block,
+                                                  SEC_PTR_H5_NATIVE_T,
+                                              sec_ptr, rapl);
+                  assert(status >= 0);
+                  
+                  topo_ptr.resize(block);
+                  status = hdf5::read<TOPO_PTR_T> (file,
+                                                   hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TOPO_PTR),
+                                                   start, block,
+                                                   TOPO_PTR_H5_NATIVE_T,
+                                                   topo_ptr, rapl);
+                  assert(status >= 0);
+                }
+
+              std::vector<CELL_IDX_T> index_vector;
               std::vector<SECTION_IDX_T> src_vector, dst_vector;
               std::vector<SECTION_IDX_T> sections;
               std::vector<COORD_T> xcoords;
@@ -222,12 +256,12 @@ namespace neuroh5
               hsize_t topo_start = topo_ptr[0];
               size_t topo_block = topo_ptr.back()-topo_start;
             
-              gid_vector.resize(block-1);
+              index_vector.resize(block-1);
               status = hdf5::read<CELL_IDX_T> (file,
                                                hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
                                                start, block-1,
                                                CELL_IDX_H5_NATIVE_T,
-                                               gid_vector, rapl);
+                                               index_vector, rapl);
             
               src_vector.resize(topo_block);
               status = hdf5::read<SECTION_IDX_T> (file,
@@ -310,12 +344,25 @@ namespace neuroh5
                                               swc_types, rapl);
               assert(status == 0);
 
-              append_tree_list(start, block-1, pop_start,
-                               sec_ptr, topo_ptr, attr_ptr,
-                               gid_vector, src_vector, dst_vector, sections,
-                               xcoords, ycoords, zcoords,
-                               radiuses, layers, parents,
-                               swc_types, tree_list);
+              if (attr_ptr.size() > 0)
+                {
+                  // Pointer structure exists; one unique tree structure per cell id
+                  append_tree_list(start, block-1, pop_start,
+                                   sec_ptr, topo_ptr, attr_ptr,
+                                   index_vector, src_vector, dst_vector, sections,
+                                   xcoords, ycoords, zcoords,
+                                   radiuses, layers, parents,
+                                   swc_types, tree_list);
+                }
+              else
+                {
+                  // Pointer structure does not exist; tree structure is shared by all ids
+                  singleton_tree_list(pop_start, index_vector,
+                                      src_vector, dst_vector, sections,
+                                      xcoords, ycoords, zcoords,
+                                      radiuses, layers, parents,
+                                      swc_types, tree_list);
+                }
             }
         }
     
