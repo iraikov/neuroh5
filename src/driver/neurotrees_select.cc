@@ -304,6 +304,7 @@ int main(int argc, char** argv)
             CELL_IDX_T n1;
             assert (iss >> n1);
             selection_map.insert(make_pair(n, n1));
+            if (rank == 0) printf("selection_map: %u -> %u\n", n, n1);
           }
         else
           {
@@ -348,8 +349,14 @@ int main(int argc, char** argv)
     vector<CELL_IDX_T> selection_index;
     for (auto const& element : selection_map)
       {
+        if (rank == 0) printf("selection_index: %u\n", element.second);
         selection_index.push_back(element.second);
       }
+
+    auto compare_idx = [](const CELL_IDX_T& a, const CELL_IDX_T& b) { return (a < b); };
+    vector<size_t> p = data::sort_permutation(selection_index, compare_idx);
+    data::apply_permutation_in_place(selection_index, p);
+
     compute_node_rank_map(io_size,
                           selection_index,
                           subset_node_rank_map);
@@ -504,7 +511,10 @@ int main(int argc, char** argv)
   for (auto & tree : tree_subset)
     {
       CELL_IDX_T idx = get<0>(tree);
-      rank_t tree_rank = subset_node_rank_map[idx];
+
+      auto it = subset_node_rank_map.find(idx);
+      assert(it != subset_node_rank_map.end());
+      rank_t tree_rank = it->second;
       tree_subset_rank_map[tree_rank].insert(make_pair(idx, tree));
     }
   subset_node_rank_map.clear();
