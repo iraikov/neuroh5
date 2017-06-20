@@ -30,6 +30,9 @@ namespace neuroh5
      const string&  pop_name,
      const string&  attr_name,
      const hid_t&   ftype,
+     CellIndex index_type,
+     CellPtr ptr_type,
+     const string   shared_ptr_name,
      const size_t   chunk_size,
      const size_t   value_chunk_size
      );
@@ -106,6 +109,9 @@ namespace neuroh5
      const std::vector<CELL_IDX_T>&        index,
      const std::vector<ATTR_PTR_T>         attr_ptr,
      const std::vector<T>&                 values,
+     const CellIndex index_type = IndexOwner,
+     const CellPtr ptr_type = PtrOwner,
+     const string shared_ptr_name = "",
      const size_t chunk_size = 4000,
      const size_t value_chunk_size = 4000,
      const size_t cache_size = 1*1024*1024
@@ -151,10 +157,13 @@ namespace neuroh5
           !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
         {
           create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
-                                         ftype, chunk_size, value_chunk_size);
+                                         ftype, index_type, ptr_type, shared_ptr_name,
+                                         chunk_size, value_chunk_size
+                                         );
         }
 
-      hdf5::append_cell_attribute<T>(file, attr_path, index, attr_ptr, values);
+      hdf5::append_cell_attribute<T>(file, attr_path, index, attr_ptr, values,
+                                     index_type, ptr_type);
     
       status = H5Fclose(file);
       assert(status == 0);
@@ -173,12 +182,15 @@ namespace neuroh5
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, vector<T>>& value_map,
      const size_t io_size,
+     const CellIndex index_type = IndexOwner,
+     const CellPtr ptr_type = PtrOwner,
+     const string shared_ptr_name = "",
      const size_t chunk_size = 4000,
      const size_t value_chunk_size = 4000,
      const size_t cache_size = 1*1024*1024
      )
     {
-      vector<CELL_IDX_T>  gid_vector;
+      vector<CELL_IDX_T>  index_vector;
       vector<T>  value_vector;
     
       int ssize, srank; size_t size, rank;
@@ -245,7 +257,7 @@ namespace neuroh5
         {
           const CELL_IDX_T gid = element.first;
           const vector<T> &v = element.second;
-          gid_vector.push_back(gid);
+          index_vector.push_back(gid);
           attr_ptr.push_back(value_offset);
           value_vector.insert(value_vector.end(),v.begin(),v.end());
           value_offset = value_offset + v.size();
@@ -336,7 +348,7 @@ namespace neuroh5
       ptr_rdispls.clear();
 
       vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
-      idx_sendcounts[io_dests[rank]] = gid_vector.size();
+      idx_sendcounts[io_dests[rank]] = index_vector.size();
 
       // Compute number of values to receive for all I/O rank
       if (rank < io_size)
@@ -361,10 +373,10 @@ namespace neuroh5
 
       vector<CELL_IDX_T> gid_recvbuf(idx_recvbuf_size);
     
-      assert(MPI_Alltoallv(&gid_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
+      assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
                            &gid_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_CELL_IDX_T,
                            comm) >= 0);
-      gid_vector.clear();
+      index_vector.clear();
       idx_sendcounts.clear();
       idx_sdispls.clear();
       idx_recvcounts.clear();
@@ -393,6 +405,7 @@ namespace neuroh5
           append_cell_attribute<T>(io_comm, file_name,
                                    attr_namespace, pop_name, attr_name,
                                    gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
+                                   index_type, ptr_type, shared_ptr_name,
                                    chunk_size, value_chunk_size, cache_size);
         }
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
@@ -408,16 +421,19 @@ namespace neuroh5
      const std::string&              attr_namespace,
      const std::string&              pop_name,
      const std::string&              attr_name,
-     const std::vector<CELL_IDX_T>&  gid,
+     const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value,
+     const CellIndex index_type = IndexOwner,
+     const CellPtr ptr_type = PtrOwner,
+     const string shared_ptr_name = "",
      const size_t chunk_size = 4000,
      const size_t value_chunk_size = 4000,
      const size_t cache_size = 1*1024*1024
      )
     {
       int status;
-      assert(gid.size() == attr_ptr.size()-1);
+      assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
     
@@ -446,10 +462,12 @@ namespace neuroh5
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
 
       create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
-                                     ftype, chunk_size, value_chunk_size);
+                                     ftype, index_type, ptr_type, shared_ptr_name,
+                                     chunk_size, value_chunk_size);
     
       hdf5::write_cell_attribute<T> (comm, file, attr_path,
-                                     gid, attr_ptr, value);
+                                     index, attr_ptr, value,
+                                     index_type, ptr_type);
 
       status = H5Fclose(file);
       assert(status == 0);
@@ -467,13 +485,16 @@ namespace neuroh5
      const std::string&              pop_name,
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, vector<T>>& value_map,
+     const CellIndex index_type = IndexOwner,
+     const CellPtr ptr_type = PtrOwner,
+     const string shared_ptr_name = "",
      const size_t chunk_size = 4000,
      const size_t value_chunk_size = 4000,
      const size_t cache_size = 1*1024*1024
      )
     {
       vector<ATTR_PTR_T>  attr_ptr;
-      vector<CELL_IDX_T>  gid_vector;
+      vector<CELL_IDX_T>  index_vector;
       vector<T>  value_vector;
     
       // Create gid, attr_ptr, value arrays
@@ -482,7 +503,7 @@ namespace neuroh5
         {
           const CELL_IDX_T gid = element.first;
           const vector<T> &v = element.second;
-          gid_vector.push_back(gid);
+          index_vector.push_back(gid);
           attr_ptr.push_back(value_offset);
           value_vector.insert(value_vector.end(),v.begin(),v.end());
           value_offset = value_offset + v.size();
@@ -491,7 +512,8 @@ namespace neuroh5
     
       write_cell_attribute<T>(comm, file_name,
                               attr_namespace, pop_name, attr_name,
-                              gid_vector, attr_ptr, value_vector,
+                              index_vector, attr_ptr, value_vector,
+                              index_type, ptr_type, shared_ptr_name,
                               chunk_size, value_chunk_size, cache_size);
     }
 

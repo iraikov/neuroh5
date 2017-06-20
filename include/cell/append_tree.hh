@@ -1,9 +1,11 @@
-#ifndef WRITE_TREE_HH
-#define WRITE_TREE_HH
+#ifndef APPEND_TREE_HH
+#define APPEND_TREE_HH
 
-#include "hdf5.h"
+#include <hdf5.h>
 
 #include <vector>
+
+#include "neuroh5_types.hh"
 
 namespace neuroh5
 {
@@ -23,7 +25,7 @@ namespace neuroh5
      const hsize_t sec_start,
      const hsize_t topo_start,
      std::vector<neurotree_t> &tree_list,
-     bool create_index = false
+     CellIndex index_type = IndexOwner
      );
   }
 }

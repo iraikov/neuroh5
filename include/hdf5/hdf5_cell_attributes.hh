@@ -140,7 +140,9 @@ namespace neuroh5
      const std::string&              path,
      const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
-     const std::vector<T>&           value
+     const std::vector<T>&           value,
+     const CellIndex index_type = IndexOwner,
+     const CellPtr ptr_type = PtrOwner
      )
     {
       int status;
@@ -241,20 +243,26 @@ namespace neuroh5
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
         }
 
-      // TODO:
-      // if option index_mode is:
-      // 1) create: create the cell index in /Populations, otherwise validate with index in /Populations
-      // 2) link: link to cell index already in this attribute namespace
-      
-      status = write<CELL_IDX_T> (file, path + "/" + CELL_INDEX,
-                                  global_index_size, local_index_start, local_index_size,
-                                  CELL_IDX_H5_NATIVE_T,
-                                  index, wapl);
+
+      switch (index_type)
+        {
+        case IndexOwner:
+          status = write<CELL_IDX_T> (file, path + "/" + CELL_INDEX,
+                                      global_index_size, local_index_start, local_index_size,
+                                      CELL_IDX_H5_NATIVE_T,
+                                      index, wapl);
+          break;
+        }
     
-      status = write<ATTR_PTR_T> (file, path + "/" + ATTR_PTR,
-                                  global_ptr_size, local_ptr_start, local_ptr_size,
-                                  ATTR_PTR_H5_NATIVE_T,
-                                  local_attr_ptr, wapl);
+      switch (ptr_type)
+        {
+        case PtrOwner:
+          status = write<ATTR_PTR_T> (file, path + "/" + ATTR_PTR,
+                                      global_ptr_size, local_ptr_start, local_ptr_size,
+                                      ATTR_PTR_H5_NATIVE_T,
+                                      local_attr_ptr, wapl);
+          break;
+        }
     
       status = write<T> (file, path + "/" + ATTR_VAL,
                          global_value_size, local_value_start, local_value_size,
@@ -292,7 +300,9 @@ namespace neuroh5
      const std::string&              path,
      const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
-     const std::vector<T>&           value
+     const std::vector<T>&           value,
+     const CellIndex index_type = IndexOwner,
+     const CellPtr ptr_type = PtrOwner
      )
     {
       int status;
@@ -365,16 +375,26 @@ namespace neuroh5
       if (global_value_size > 0)
         {
           // write to datasets
-        
-          status = write<CELL_IDX_T> (loc, path + "/" + CELL_INDEX,
-                                      global_index_size, local_index_start, local_index_size,
-                                      CELL_IDX_H5_NATIVE_T,
-                                      index);
-        
-          status = write<ATTR_PTR_T> (loc, path + "/" + ATTR_PTR,
-                                      global_ptr_size, local_ptr_start, local_ptr_size,
-                                      ATTR_PTR_H5_NATIVE_T,
-                                      local_attr_ptr);
+
+          switch (index_type)
+            {
+            case IndexOwner:
+              status = write<CELL_IDX_T> (loc, path + "/" + CELL_INDEX,
+                                          global_index_size, local_index_start, local_index_size,
+                                          CELL_IDX_H5_NATIVE_T,
+                                          index);
+              break;
+            }
+
+          switch (ptr_type)
+            {
+            case PtrOwner:
+              status = write<ATTR_PTR_T> (loc, path + "/" + ATTR_PTR,
+                                          global_ptr_size, local_ptr_start, local_ptr_size,
+                                          ATTR_PTR_H5_NATIVE_T,
+                                          local_attr_ptr);
+              break;
+            }
         
           status = write<T> (loc, path + "/" + ATTR_VAL,
                              global_value_size, local_value_start, local_value_size,

@@ -164,7 +164,7 @@ namespace neuroh5
      )
     {
       herr_t ierr = 0;
-      num_attrs.resize(4);
+      num_attrs.resize(AttrMap::num_attr_types);
       for (size_t i = 0; i < attributes.size(); i++)
         {
           hid_t attr_h5type = attributes[i].second;
@@ -174,15 +174,36 @@ namespace neuroh5
             case H5T_INTEGER:
               if (attr_size == 4)
                 {
-                  num_attrs[3]++;
+                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+                    {
+                      num_attrs[AttrMap::attr_index_uint32]++;
+                    }
+                  else
+                    {
+                      num_attrs[AttrMap::attr_index_int32]++;
+                    }
                 }
               else if (attr_size == 2)
                 {
-                  num_attrs[2]++;
+                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+                    {
+                      num_attrs[AttrMap::attr_index_uint16]++;
+                    }
+                  else
+                    {
+                      num_attrs[AttrMap::attr_index_int16]++;
+                    }
                 }
               else if (attr_size == 1)
                 {
-                  num_attrs[1]++;
+                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+                    {
+                      num_attrs[AttrMap::attr_index_uint8]++;
+                    }
+                  else
+                    {
+                      num_attrs[AttrMap::attr_index_int8]++;
+                    }
                 }
               else
                 {
@@ -190,12 +211,12 @@ namespace neuroh5
                 };
               break;
             case H5T_FLOAT:
-              num_attrs[0]++;
+              num_attrs[AttrMap::attr_index_float]++;
               break;
             case H5T_ENUM:
               if (attr_size == 1)
                 {
-                  num_attrs[1]++;
+                  num_attrs[AttrMap::attr_index_uint8]++;
                 }
               else
                 {
@@ -214,6 +235,131 @@ namespace neuroh5
     }
 
 
+    void append_rank_attr_map
+    (
+     const map<CELL_IDX_T, rank_t> &node_rank_map,
+     const data::NamedAttrMap   &attr_values,
+     map <size_t, data::AttrMap> &rank_attr_map)
+    {
+      const vector<map< CELL_IDX_T, vector<float> > > &all_float_values     = attr_values.attr_maps<float>();
+      const vector<map< CELL_IDX_T, vector<int8_t> > > &all_int8_values     = attr_values.attr_maps<int8_t>();
+      const vector<map< CELL_IDX_T, vector<uint8_t> > > &all_uint8_values   = attr_values.attr_maps<uint8_t>();
+      const vector<map< CELL_IDX_T, vector<uint16_t> > > &all_uint16_values = attr_values.attr_maps<uint16_t>();
+      const vector<map< CELL_IDX_T, vector<int16_t> > > &all_int16_values   = attr_values.attr_maps<int16_t>();
+      const vector<map< CELL_IDX_T, vector<uint32_t> > > &all_uint32_values = attr_values.attr_maps<uint32_t>();
+      const vector<map< CELL_IDX_T, vector<int32_t> > > &all_int32_values   = attr_values.attr_maps<int32_t>();
+    
+      for (size_t i=0; i<all_float_values.size(); i++)
+        {
+          const map< CELL_IDX_T, vector<float> > &float_values = all_float_values[i];
+          for (auto const& element : float_values)
+            {
+              const CELL_IDX_T index = element.first;
+              const vector<float> &v = element.second;
+              auto it = node_rank_map.find(index);
+              if(it == node_rank_map.end())
+                {
+                  printf("index %u not in node rank map\n", index);
+                }
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              data::AttrMap &attr_map = rank_attr_map[dst_rank];
+              attr_map.insert(i, index, v);
+            }
+        }
+
+      for (size_t i=0; i<all_uint8_values.size(); i++)
+        {
+          const map< CELL_IDX_T, vector<uint8_t> > &uint8_values = all_uint8_values[i];
+          for (auto const& element : uint8_values)
+            {
+              const CELL_IDX_T index = element.first;
+              const vector<uint8_t> &v = element.second;
+              auto it = node_rank_map.find(index);
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              data::AttrMap &attr_map = rank_attr_map[dst_rank];
+              attr_map.insert(i, index, v);
+            }
+        }
+
+      for (size_t i=0; i<all_int8_values.size(); i++)
+        {
+          const map< CELL_IDX_T, vector<int8_t> > &int8_values = all_int8_values[i];
+          for (auto const& element : int8_values)
+            {
+              const CELL_IDX_T index = element.first;
+              const vector<int8_t> &v = element.second;
+              auto it = node_rank_map.find(index);
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              data::AttrMap &attr_map = rank_attr_map[dst_rank];
+              attr_map.insert(i, index, v);
+            }
+        }
+
+      for (size_t i=0; i<all_uint16_values.size(); i++)
+        {
+          const map< CELL_IDX_T, vector<uint16_t> > &uint16_values = all_uint16_values[i];
+          for (auto const& element : uint16_values)
+            {
+              const CELL_IDX_T index = element.first;
+              const vector<uint16_t> &v = element.second;
+              auto it = node_rank_map.find(index);
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              data::AttrMap &attr_map = rank_attr_map[dst_rank];
+              attr_map.insert(i, index, v);
+            }
+        }
+
+      for (size_t i=0; i<all_int16_values.size(); i++)
+        {
+          const map< CELL_IDX_T, vector<int16_t> > &int16_values = all_int16_values[i];
+          for (auto const& element : int16_values)
+            {
+              const CELL_IDX_T index = element.first;
+              const vector<int16_t> &v = element.second;
+              auto it = node_rank_map.find(index);
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              data::AttrMap &attr_map = rank_attr_map[dst_rank];
+              attr_map.insert(i, index, v);
+            }
+        }
+
+      for (size_t i=0; i<all_uint32_values.size(); i++)
+        {
+          const map< CELL_IDX_T, vector<uint32_t> > &uint32_values = all_uint32_values[i];
+          for (auto const& element : uint32_values)
+            {
+              const CELL_IDX_T index = element.first;
+              const vector<uint32_t> &v = element.second;
+              auto it = node_rank_map.find(index);
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              data::AttrMap &attr_map = rank_attr_map[dst_rank];
+              attr_map.insert(i, index, v);
+            }
+        }
+
+      for (size_t i=0; i<all_int32_values.size(); i++)
+        {
+          const map< CELL_IDX_T, vector<int32_t> > &int32_values = all_int32_values[i];
+          for (auto const& element : int32_values)
+            {
+              const CELL_IDX_T index = element.first;
+              const vector<int32_t> &v = element.second;
+              auto it = node_rank_map.find(index);
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              data::AttrMap &attr_map = rank_attr_map[dst_rank];
+              attr_map.insert(i, index, v);
+            }
+        }
+
+    }
+
     void create_cell_attribute_datasets
     (
      const hid_t&   file,
@@ -221,6 +367,9 @@ namespace neuroh5
      const string&  pop_name,
      const string&  attr_name,
      const hid_t&   ftype,
+     CellIndex index_type = IndexOwner,
+     CellPtr ptr_type = PtrOwner,
+     const string   shared_ptr_name = "",
      const size_t   chunk_size,
      const size_t   value_chunk_size
      )
@@ -259,23 +408,57 @@ namespace neuroh5
           hdf5::create_group(file, attr_prefix);
         }
 
+      string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
-      string index_path = attr_path + "/" + hdf5::CELL_INDEX;
+      hid_t mspace, dset;
       
-      hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
-      assert(mspace >= 0);
-      hid_t dset = H5Dcreate2(file, (index_path).c_str(), CELL_IDX_H5_FILE_T,
+      switch (index_type)
+        {
+        case IndexOwner:
+          {
+            mspace = H5Screate_simple(1, &initial_size, maxdims);
+            assert(mspace >= 0);
+            dset = H5Dcreate2(file, (attr_path + "/" + hdf5::CELL_INDEX).c_str(),
+                              CELL_IDX_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
+            assert(H5Dclose(dset) >= 0);
+            assert(H5Sclose(mspace) >= 0);
+          }
+          break;
+        case IndexShared:
+          {
+            dset = H5Dopen2(file, (attr_prefix + "/" + hdf5::CELL_INDEX).c_str(), H5P_DEFAULT);
+            assert(dset >= 0);
+            status = H5Olink(dset, file, (attr_path + "/" + hdf5::CELL_INDEX).c_str(), H5P_DEFAULT, H5P_DEFAULT);
+            assert(status >= 0);
+            assert(H5Dclose(dset) >= 0);
+          }
+          break;
+        }
 
-      mspace = H5Screate_simple(1, &initial_size, maxdims);
-      assert(mspace >= 0);
-      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), ATTR_PTR_H5_FILE_T,
-                        mspace, lcpl, plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-    
+      switch (ptr_type)
+        {
+        case PtrOwner:
+          {
+            mspace = H5Screate_simple(1, &initial_size, maxdims);
+            assert(mspace >= 0);
+            dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), ATTR_PTR_H5_FILE_T,
+                              mspace, lcpl, plist, H5P_DEFAULT);
+            assert(H5Dclose(dset) >= 0);
+            assert(H5Sclose(mspace) >= 0);
+          }
+          break;
+        case PtrShared:
+          {
+            dset = H5Dopen2(file, (attr_prefix + "/" + shared_ptr_name).c_str(), H5P_DEFAULT);
+            assert(dset >= 0);
+            status = H5Olink(dset, file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), H5P_DEFAULT, H5P_DEFAULT);
+            assert(status >= 0);
+            assert(H5Dclose(dset) >= 0);
+          }
+          break;
+        }
+      
       mspace = H5Screate_simple(1, &initial_size, maxdims);
       dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_VAL).c_str(), ftype, mspace,
                         lcpl, value_plist, H5P_DEFAULT);
@@ -443,131 +626,6 @@ namespace neuroh5
       assert(status == 0);
     }
 
-
-    void append_rank_attr_map
-    (
-     const map<CELL_IDX_T, rank_t> &node_rank_map,
-     const data::NamedAttrMap   &attr_values,
-     map <size_t, data::AttrMap> &rank_attr_map)
-    {
-      const vector<map< CELL_IDX_T, vector<float> > > &all_float_values     = attr_values.attr_maps<float>();
-      const vector<map< CELL_IDX_T, vector<int8_t> > > &all_int8_values     = attr_values.attr_maps<int8_t>();
-      const vector<map< CELL_IDX_T, vector<uint8_t> > > &all_uint8_values   = attr_values.attr_maps<uint8_t>();
-      const vector<map< CELL_IDX_T, vector<uint16_t> > > &all_uint16_values = attr_values.attr_maps<uint16_t>();
-      const vector<map< CELL_IDX_T, vector<int16_t> > > &all_int16_values   = attr_values.attr_maps<int16_t>();
-      const vector<map< CELL_IDX_T, vector<uint32_t> > > &all_uint32_values = attr_values.attr_maps<uint32_t>();
-      const vector<map< CELL_IDX_T, vector<int32_t> > > &all_int32_values   = attr_values.attr_maps<int32_t>();
-    
-      for (size_t i=0; i<all_float_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<float> > &float_values = all_float_values[i];
-          for (auto const& element : float_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<float> &v = element.second;
-              auto it = node_rank_map.find(index);
-              if(it == node_rank_map.end())
-                {
-                  printf("index %u not in node rank map\n", index);
-                }
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_uint8_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<uint8_t> > &uint8_values = all_uint8_values[i];
-          for (auto const& element : uint8_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<uint8_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_int8_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<int8_t> > &int8_values = all_int8_values[i];
-          for (auto const& element : int8_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<int8_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_uint16_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<uint16_t> > &uint16_values = all_uint16_values[i];
-          for (auto const& element : uint16_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<uint16_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_int16_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<int16_t> > &int16_values = all_int16_values[i];
-          for (auto const& element : int16_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<int16_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_uint32_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<uint32_t> > &uint32_values = all_uint32_values[i];
-          for (auto const& element : uint32_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<uint32_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_int32_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<int32_t> > &int32_values = all_int32_values[i];
-          for (auto const& element : int32_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<int32_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-    }
 
 
     int scatter_read_cell_attributes

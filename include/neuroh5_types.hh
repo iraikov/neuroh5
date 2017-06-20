@@ -74,6 +74,20 @@ namespace neuroh5
     uint32_t size;
   };
 
+  enum CellIndex
+    {
+      IndexOwner,
+      IndexShared,
+      IndexNone
+    };
+
+  enum CellPtr
+    {
+      PtrOwner,
+      PtrShared,
+      PtrNone
+    };
+
   typedef float      COORD_T;
   typedef float      REALVAL_T;
   typedef int8_t     SWC_TYPE_T;

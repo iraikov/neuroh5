@@ -585,7 +585,7 @@ int main(int argc, char** argv)
       
       status = cell::append_trees(all_comm, output_file_name, pop_name, 
                                   ptr_start, attr_start, sec_start, topo_start, 
-                                  tree_subset, true);
+                                  tree_subset);
       
       assert(status == 0);
 
@@ -616,6 +616,7 @@ int main(int argc, char** argv)
                                                     pop_name,
                                                     attr_names[data::AttrMap::attr_index_float][i],
                                                     subset_float_values[i],
+
                                                     chunksize,
                                                     value_chunksize,
                                                     cachesize);
@@ -628,6 +629,7 @@ int main(int argc, char** argv)
                                                       pop_name,
                                                       attr_names[data::AttrMap::attr_index_uint8][i],
                                                       subset_uint8_values[i],
+                                                      
                                                       chunksize,
                                                       value_chunksize,
                                                       cachesize);
