@@ -367,9 +367,8 @@ namespace neuroh5
      const string&  pop_name,
      const string&  attr_name,
      const hid_t&   ftype,
-     CellIndex index_type = IndexOwner,
-     CellPtr ptr_type = PtrOwner,
-     const string   shared_ptr_name = "",
+     CellIndex      index_type,
+     CellPtr        ptr_type,
      const size_t   chunk_size,
      const size_t   value_chunk_size
      )
@@ -436,7 +435,7 @@ namespace neuroh5
           break;
         }
 
-      switch (ptr_type)
+      switch (ptr_type.type)
         {
         case PtrOwner:
           {
@@ -450,7 +449,8 @@ namespace neuroh5
           break;
         case PtrShared:
           {
-            dset = H5Dopen2(file, (attr_prefix + "/" + shared_ptr_name).c_str(), H5P_DEFAULT);
+            assert(ptr_type.shared_ptr_name.has_value());
+            dset = H5Dopen2(file, (attr_prefix + "/" + ptr_type.shared_ptr_name.value()).c_str(), H5P_DEFAULT);
             assert(dset >= 0);
             status = H5Olink(dset, file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), H5P_DEFAULT, H5P_DEFAULT);
             assert(status >= 0);

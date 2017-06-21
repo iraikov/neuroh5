@@ -12,6 +12,7 @@
 #include "read_template.hh"
 #include "write_template.hh"
 
+
 namespace neuroh5
 {
   namespace hdf5
@@ -80,31 +81,42 @@ namespace neuroh5
               status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
             
               string index_path = path + "/" + CELL_INDEX;
+              string ptr_path = path + "/" + ATTR_PTR;
+              string value_path = path + "/" + ATTR_VAL;
+
               // read index
               index.resize(block);
 
-              status = read<NODE_IDX_T> (loc, index_path,
-                                         start, block,
-                                         NODE_IDX_H5_NATIVE_T,
-                                         index, rapl);
+              status = read<NODE_IDX_T> (loc, index_path, start, block,
+                                         NODE_IDX_H5_NATIVE_T, index, rapl);
               for (size_t i=0; i<index.size(); i++)
                 {
                   index[i] += pop_start;
                 }
               
               // read pointer and determine ranges
-              string ptr_path = path + "/" + ATTR_PTR;
-              ptr.resize(block+1);
-              status = read<ATTR_PTR_T> (loc, ptr_path,
-                                         start, block+1,
-                                         ATTR_PTR_H5_NATIVE_T,
-                                         ptr, rapl);
-            
-              hsize_t value_start = ptr[0];
-              hsize_t value_block = ptr.back()-value_start;
+              status = H5Lexists (loc, ptr_path.c_str(), H5P_DEFAULT);
+              if (status)
+                {
+                  ptr.resize(block+1);
+                  status = read<ATTR_PTR_T> (loc, ptr_path, start, block+1,
+                                             ATTR_PTR_H5_NATIVE_T, ptr, rapl);
+                  assert (status >= 0);
+                }
+              
+              hsize_t value_start, value_block;
+              if (ptr.size() > 0)
+                {
+                  value_start = ptr[0];
+                  value_block = ptr.back()-value_start;
+                }
+              else
+                {
+                  value_start = 0;
+                  value_block = dataset_num_elements (comm, loc, value_path);
+                }
             
               // read values
-              string value_path = path + "/" + ATTR_VAL;
               hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
               assert(dset >= 0);
               hid_t ftype = H5Dget_type(dset);
@@ -114,18 +126,19 @@ namespace neuroh5
               assert(H5Tclose(ftype)  >= 0);
             
               values.resize(value_block);
-              status = read<T> (loc, value_path,
-                                value_start, value_block,
-                                ntype,
-                                values, rapl);
+              status = read<T> (loc, value_path, value_start, value_block,
+                                ntype, values, rapl);
             
               assert(H5Tclose(ntype)  >= 0);
               status = H5Pclose(rapl);
               assert(status == 0);
-            
-              for (size_t i=0; i<block+1; i++)
+
+              if (ptr.size() > 0)
                 {
-                  ptr[i] -= value_start;
+                  for (size_t i=0; i<block+1; i++)
+                    {
+                      ptr[i] -= value_start;
+                    }
                 }
             }
         }
@@ -141,8 +154,8 @@ namespace neuroh5
      const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value,
-     const CellIndex index_type = IndexOwner,
-     const CellPtr ptr_type = PtrOwner
+     const CellIndex                 index_type,
+     const CellPtr                   ptr_type
      )
     {
       int status;
@@ -247,6 +260,7 @@ namespace neuroh5
       switch (index_type)
         {
         case IndexOwner:
+          // TODO: save to prefix and link to index in path
           status = write<CELL_IDX_T> (file, path + "/" + CELL_INDEX,
                                       global_index_size, local_index_start, local_index_size,
                                       CELL_IDX_H5_NATIVE_T,
@@ -254,9 +268,10 @@ namespace neuroh5
           break;
         }
     
-      switch (ptr_type)
+      switch (ptr_type.type)
         {
         case PtrOwner:
+          // TODO: save to prefix and link to index in path
           status = write<ATTR_PTR_T> (file, path + "/" + ATTR_PTR,
                                       global_ptr_size, local_ptr_start, local_ptr_size,
                                       ATTR_PTR_H5_NATIVE_T,
@@ -301,8 +316,8 @@ namespace neuroh5
      const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value,
-     const CellIndex index_type = IndexOwner,
-     const CellPtr ptr_type = PtrOwner
+     const CellIndex                 index_type,
+     const CellPtr                   ptr_type
      )
     {
       int status;
@@ -384,15 +399,25 @@ namespace neuroh5
                                           CELL_IDX_H5_NATIVE_T,
                                           index);
               break;
+            case IndexShared:
+              // TODO: validate index
+              break;
+            case IndexNone:
+              break;
             }
 
-          switch (ptr_type)
+          switch (ptr_type.type)
             {
             case PtrOwner:
               status = write<ATTR_PTR_T> (loc, path + "/" + ATTR_PTR,
                                           global_ptr_size, local_ptr_start, local_ptr_size,
                                           ATTR_PTR_H5_NATIVE_T,
                                           local_attr_ptr);
+            case PtrShared:
+              // TODO: validate ptr
+              break;
+
+            case PtrNone:
               break;
             }
         

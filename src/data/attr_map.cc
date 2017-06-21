@@ -258,8 +258,17 @@ namespace neuroh5
     for (size_t p=0; p<cell_index.size(); p++)
       {
         CELL_IDX_T vindex = cell_index[p];
-        vector<float>::const_iterator first = value.begin() + ptr[p];
-        vector<float>::const_iterator last = value.begin() + ptr[p+1];
+        vector<float>::const_iterator first, last;
+        if (ptr.size() > 0)
+          {
+            first = value.begin() + ptr[p];
+            last  = value.begin() + ptr[p+1];
+          }
+        else
+          {
+            first = value.begin();
+            last  = value.end();
+          }
         vector<float> v(first, last);
         float_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);
@@ -277,8 +286,17 @@ namespace neuroh5
     for (size_t p=0; p<cell_index.size(); p++)
       {
         CELL_IDX_T vindex = cell_index[p];
-        vector<uint8_t>::const_iterator first = value.begin() + ptr[p];
-        vector<uint8_t>::const_iterator last = value.begin() + ptr[p+1];
+        vector<uint8_t>::const_iterator first, last;
+        if (ptr.size() > 0)
+          {
+            first = value.begin() + ptr[p];
+            last  = value.begin() + ptr[p+1];
+          }
+        else
+          {
+            first = value.begin();
+            last  = value.end();
+          }
         vector<uint8_t> v(first, last);
         uint8_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);
@@ -295,8 +313,17 @@ namespace neuroh5
     for (size_t p=0; p<cell_index.size(); p++)
       {
         CELL_IDX_T vindex = cell_index[p];
-        vector<int8_t>::const_iterator first = value.begin() + ptr[p];
-        vector<int8_t>::const_iterator last = value.begin() + ptr[p+1];
+        vector<int8_t>::const_iterator first, last;
+        if (ptr.size() > 0)
+          {
+            first = value.begin() + ptr[p];
+            last  = value.begin() + ptr[p+1];
+          }
+        else
+          {
+            first = value.begin();
+            last  = value.end();
+          }
         vector<int8_t> v(first, last);
         int8_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);
@@ -314,8 +341,17 @@ namespace neuroh5
     for (size_t p=0; p<cell_index.size(); p++)
       {
         CELL_IDX_T vindex = cell_index[p];
-        vector<uint16_t>::const_iterator first = value.begin() + ptr[p];
-        vector<uint16_t>::const_iterator last = value.begin() + ptr[p+1];
+        vector<uint16_t>::const_iterator first, last;
+        if (ptr.size() > 0)
+          {
+            first = value.begin() + ptr[p];
+            last  = value.begin() + ptr[p+1];
+          }
+        else
+          {
+            first = value.begin();
+            last  = value.end();
+          }
         vector<uint16_t> v(first, last);
         uint16_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);
@@ -333,8 +369,17 @@ namespace neuroh5
     for (size_t p=0; p<cell_index.size(); p++)
       {
         CELL_IDX_T vindex = cell_index[p];
-        vector<int16_t>::const_iterator first = value.begin() + ptr[p];
-        vector<int16_t>::const_iterator last = value.begin() + ptr[p+1];
+        vector<int16_t>::const_iterator first, last;
+        if (ptr.size() > 0)
+          {
+            first = value.begin() + ptr[p];
+            last  = value.begin() + ptr[p+1];
+          }
+        else
+          {
+            first = value.begin();
+            last  = value.end();
+          }
         vector<int16_t> v(first, last);
         int16_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);
@@ -352,8 +397,17 @@ namespace neuroh5
     for (size_t p=0; p<cell_index.size(); p++)
       {
         CELL_IDX_T vindex = cell_index[p];
-        vector<uint32_t>::const_iterator first = value.begin() + ptr[p];
-        vector<uint32_t>::const_iterator last = value.begin() + ptr[p+1];
+        vector<uint32_t>::const_iterator first, last;
+        if (ptr.size() > 0)
+          {
+            first = value.begin() + ptr[p];
+            last  = value.begin() + ptr[p+1];
+          }
+        else
+          {
+            first = value.begin();
+            last  = value.end();
+          }
         vector<uint32_t> v(first, last);
         uint32_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);
@@ -371,8 +425,17 @@ namespace neuroh5
     for (size_t p=0; p<cell_index.size(); p++)
       {
         CELL_IDX_T vindex = cell_index[p];
-        vector<int32_t>::const_iterator first = value.begin() + ptr[p];
-        vector<int32_t>::const_iterator last = value.begin() + ptr[p+1];
+        vector<int32_t>::const_iterator first, last;
+        if (ptr.size() > 0)
+          {
+            first = value.begin() + ptr[p];
+            last  = value.begin() + ptr[p+1];
+          }
+        else
+          {
+            first = value.begin();
+            last  = value.end();
+          }
         vector<int32_t> v(first, last);
         int32_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);

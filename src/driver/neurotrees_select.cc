@@ -616,7 +616,9 @@ int main(int argc, char** argv)
                                                     pop_name,
                                                     attr_names[data::AttrMap::attr_index_float][i],
                                                     subset_float_values[i],
-
+                                                    IndexOwner,
+                                                    PtrOwner,
+                                                    "",
                                                     chunksize,
                                                     value_chunksize,
                                                     cachesize);
@@ -629,7 +631,9 @@ int main(int argc, char** argv)
                                                       pop_name,
                                                       attr_names[data::AttrMap::attr_index_uint8][i],
                                                       subset_uint8_values[i],
-                                                      
+                                                      IndexOwner,
+                                                      PtrOwner,
+                                                      "",
                                                       chunksize,
                                                       value_chunksize,
                                                       cachesize);
@@ -642,6 +646,9 @@ int main(int argc, char** argv)
                                                      pop_name,
                                                      attr_names[data::AttrMap::attr_index_int8][i],
                                                      subset_int8_values[i],
+                                                     IndexOwner,
+                                                     PtrOwner,
+                                                     "",
                                                      chunksize,
                                                      value_chunksize,
                                                      cachesize);
@@ -654,6 +661,9 @@ int main(int argc, char** argv)
                                                        pop_name,
                                                        attr_names[data::AttrMap::attr_index_uint16][i],
                                                        subset_uint16_values[i],
+                                                       IndexOwner,
+                                                       PtrOwner,
+                                                       "",
                                                        chunksize,
                                                        value_chunksize,
                                                        cachesize);
@@ -666,6 +676,9 @@ int main(int argc, char** argv)
                                                        pop_name,
                                                        attr_names[data::AttrMap::attr_index_uint32][i],
                                                        subset_uint32_values[i],
+                                                       IndexOwner,
+                                                       PtrOwner,
+                                                       "",
                                                        chunksize,
                                                        value_chunksize,
                                                        cachesize);
@@ -679,6 +692,9 @@ int main(int argc, char** argv)
                                                       pop_name,
                                                       attr_names[data::AttrMap::attr_index_int32][i],
                                                       subset_int32_values[i],
+                                                      IndexOwner,
+                                                      PtrOwner,
+                                                      "",
                                                       chunksize,
                                                       value_chunksize,
                                                       cachesize);

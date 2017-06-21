@@ -14,12 +14,8 @@
 #include <vector>
 
 #include "neuroh5_types.hh"
-#include "file_access.hh"
-#include "rank_range.hh"
-#include "dataset_num_elements.hh"
-#include "enum_type.hh"
-#include "path_names.hh"
-#include "read_template.hh"
+#include "cell_attributes.hh"
+#include "attr_map.hh"
 
 namespace neuroh5
 {
@@ -27,29 +23,14 @@ namespace neuroh5
   namespace cell
   {
 
-    void append_tree_list
-    (
-     const size_t start,
-     const size_t num_trees,
-     const CELL_IDX_T pop_start,
-     std::vector<SEC_PTR_T>& sec_ptr,
-     std::vector<TOPO_PTR_T>& topo_ptr,
-     std::vector<ATTR_PTR_T>& attr_ptr,
-     std::vector<CELL_IDX_T>& all_index_vector,
-     std::vector<SECTION_IDX_T>& all_src_vector,
-     std::vector<SECTION_IDX_T>& all_dst_vector,
-     std::vector<SECTION_IDX_T>& all_sections,
-     std::vector<COORD_T>& all_xcoords,
-     std::vector<COORD_T>& all_ycoords,
-     std::vector<COORD_T>& all_zcoords,
-     std::vector<REALVAL_T>& all_radiuses,
-     std::vector<LAYER_IDX_T>& all_layers,
-     std::vector<PARENT_NODE_IDX_T>& all_parents,
-     std::vector<SWC_TYPE_T>& all_swc_types,
-     std::vector<neurotree_t> &tree_list)
+    void append_tree_list (data::NamedAttrMap&       attr_values,
+                           std::vector<neurotree_t>& tree_list)
     {
-      for (size_t i=0; i<num_trees; i++)
+      
+      for (CELL_IDX_T idx : attr_values.index_set)
         {
+          
+          
           hsize_t topo_start = topo_ptr[i]-topo_ptr[0]; size_t topo_block = topo_ptr[i+1]-topo_ptr[0]-topo_start;
 
           vector<SECTION_IDX_T>::const_iterator src_first = all_src_vector.begin() + topo_start;
@@ -115,31 +96,6 @@ namespace neuroh5
     }
 
     
-    void singleton_tree_list
-    (
-     const CELL_IDX_T pop_start,
-     std::vector<CELL_IDX_T>& index_vector,
-     std::vector<SECTION_IDX_T>& tree_src_vector,
-     std::vector<SECTION_IDX_T>& tree_dst_vector,
-     std::vector<SECTION_IDX_T>& tree_sections,
-     std::vector<COORD_T>& tree_xcoords,
-     std::vector<COORD_T>& tree_ycoords,
-     std::vector<COORD_T>& tree_zcoords,
-     std::vector<REALVAL_T>& tree_radiuses,
-     std::vector<LAYER_IDX_T>& tree_layers,
-     std::vector<PARENT_NODE_IDX_T>& tree_parents,
-     std::vector<SWC_TYPE_T>& tree_swc_types,
-     std::vector<neurotree_t> &tree_list)
-    {
-      for (size_t i=0; i<index_vector.size(); i++)
-        {
-          CELL_IDX_T gid = pop_start+index_vector[i];
-          tree_list.push_back(make_tuple(gid,tree_src_vector,tree_dst_vector,tree_sections,
-                                         tree_xcoords,tree_ycoords,tree_zcoords,
-                                         tree_radiuses,tree_layers,tree_parents,
-                                         tree_swc_types));
-        }
-    }
 
   
     /*****************************************************************************
@@ -163,215 +119,13 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
-      /* Create HDF5 enumerated type for reading SWC type information */
-      hid_t hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
+      data::NamedAttrMap attr_values;
+      
+      read_cell_attributes (comm, file_name, hdf5::TREES,
+                            pop_name, pop_start, attr_values,
+                            offset, numitems);
 
-      /* Create property list for collective dataset operations. */
-      rapl = H5Pcreate (H5P_DATASET_XFER);
-      if (collective)
-        {
-          status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
-        }
-
-      // TODO; create separate functions for opening HDF5 file for reading and writing
-      hid_t file = hdf5::open_file(comm, file_name);
-      size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
-      size_t read_size = 0;
-      if (numitems > 0) 
-        {
-          if (offset < dset_size)
-            {
-              read_size = min(numitems*size, dset_size-offset);
-            }
-          else
-            {
-              read_size = 0;
-            }
-        }
-      else
-        {
-          read_size = dset_size;
-        }
-
-      if (read_size > 0)
-        {
-          // determine which blocks of block_ptr are read by which rank
-          vector< pair<hsize_t,hsize_t> > ranges;
-          mpi::rank_ranges(read_size, size, ranges);
-        
-          hsize_t start = ranges[rank].first + offset;
-          hsize_t end   = start + ranges[rank].second;
-          hsize_t block = end - start + 1;
-
-          if (block > 0)
-            {
-
-              std::vector<SEC_PTR_T> sec_ptr;
-              std::vector<TOPO_PTR_T> topo_ptr;
-              std::vector<ATTR_PTR_T> attr_ptr;
-
-              // Check if pointer structure exists
-              status = H5Lexists (file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR).c_str(), H5P_DEFAULT);
-
-              if (status)
-                {
-                  // allocate buffer and memory dataspace
-                  attr_ptr.resize(block);
-                  
-                  status = hdf5::read<ATTR_PTR_T> (file,
-                                                   hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR),
-                                                   start, block,
-                                                   ATTR_PTR_H5_NATIVE_T,
-                                                   attr_ptr, rapl);
-                  assert(status >= 0);
-                  
-                  sec_ptr.resize(block);
-                  status = hdf5::read<SEC_PTR_T> (file,
-                                                  hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SEC_PTR),
-                                                  start, block,
-                                                  SEC_PTR_H5_NATIVE_T,
-                                              sec_ptr, rapl);
-                  assert(status >= 0);
-                  
-                  topo_ptr.resize(block);
-                  status = hdf5::read<TOPO_PTR_T> (file,
-                                                   hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::TOPO_PTR),
-                                                   start, block,
-                                                   TOPO_PTR_H5_NATIVE_T,
-                                                   topo_ptr, rapl);
-                  assert(status >= 0);
-                }
-
-              std::vector<CELL_IDX_T> index_vector;
-              std::vector<SECTION_IDX_T> src_vector, dst_vector;
-              std::vector<SECTION_IDX_T> sections;
-              std::vector<COORD_T> xcoords;
-              std::vector<COORD_T> ycoords;
-              std::vector<COORD_T> zcoords;
-              std::vector<REALVAL_T> radiuses;
-              std::vector<LAYER_IDX_T> layers;
-              std::vector<PARENT_NODE_IDX_T> parents;
-              std::vector<SWC_TYPE_T> swc_types;
-            
-              hsize_t topo_start = topo_ptr[0];
-              size_t topo_block = topo_ptr.back()-topo_start;
-            
-              index_vector.resize(block-1);
-              status = hdf5::read<CELL_IDX_T> (file,
-                                               hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::CELL_INDEX),
-                                               start, block-1,
-                                               CELL_IDX_H5_NATIVE_T,
-                                               index_vector, rapl);
-            
-              src_vector.resize(topo_block);
-              status = hdf5::read<SECTION_IDX_T> (file,
-                                                 hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC),
-                                                 topo_start, topo_block,
-                                                 SECTION_IDX_H5_NATIVE_T,
-                                                 src_vector, rapl);
-              assert(status == 0);
-              dst_vector.resize(topo_block);
-              status = hdf5::read<SECTION_IDX_T> (file,
-                                                 hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::DSTSEC),
-                                                 topo_start, topo_block,
-                                                 SECTION_IDX_H5_NATIVE_T,
-                                                 dst_vector, rapl);
-              assert(status == 0);
-            
-              hsize_t sec_start = sec_ptr[0];
-              size_t sec_block = sec_ptr.back()-sec_start;
-            
-              sections.resize(sec_block);
-              status = hdf5::read<SECTION_IDX_T> (file,
-                                                 hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SECTION),
-                                                 sec_start, sec_block,
-                                                 SECTION_IDX_H5_NATIVE_T,
-                                                 sections, rapl);
-              assert(status == 0);
-            
-            
-            
-              hsize_t attr_start = attr_ptr[0];
-              size_t attr_block = attr_ptr.back()-attr_start;
-            
-              xcoords.resize(attr_block);
-              status = hdf5::read<COORD_T> (file,
-                                           hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD),
-                                           attr_start, attr_block,
-                                           COORD_H5_NATIVE_T,
-                                           xcoords, rapl);
-              assert(status == 0);
-              ycoords.resize(attr_block);
-              status = hdf5::read<COORD_T> (file,
-                                           hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::Y_COORD),
-                                           attr_start, attr_block,
-                                           COORD_H5_NATIVE_T,
-                                           ycoords, rapl);
-              assert(status == 0);
-              zcoords.resize(attr_block);
-              status = hdf5::read<COORD_T> (file,
-                                           hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::Z_COORD),
-                                           attr_start, attr_block,
-                                           COORD_H5_NATIVE_T,
-                                           zcoords, rapl);
-              assert(status == 0);
-              radiuses.resize(attr_block);
-              status = hdf5::read<REALVAL_T> (file,
-                                             hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::RADIUS),
-                                             attr_start, attr_block,
-                                             REAL_H5_NATIVE_T,
-                                             radiuses, rapl);
-              assert(status == 0);
-              layers.resize(attr_block);
-              status = hdf5::read<LAYER_IDX_T> (file,
-                                               hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::LAYER),
-                                               attr_start, attr_block,
-                                               LAYER_IDX_H5_NATIVE_T,
-                                               layers, rapl);
-              assert(status == 0);
-              parents.resize(attr_block);
-              status = hdf5::read<PARENT_NODE_IDX_T> (file,
-                                                     hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::PARENT),
-                                                     attr_start, attr_block,
-                                                     PARENT_NODE_IDX_H5_NATIVE_T,
-                                                     parents, rapl);
-              assert(status == 0);
-              swc_types.resize(attr_block);
-              status = hdf5::read<SWC_TYPE_T> (file,
-                                               hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SWCTYPE),
-                                              attr_start, attr_block,
-                                              hdf5_swc_type,
-                                              swc_types, rapl);
-              assert(status == 0);
-
-              if (attr_ptr.size() > 0)
-                {
-                  // Pointer structure exists; one unique tree structure per cell id
-                  append_tree_list(start, block-1, pop_start,
-                                   sec_ptr, topo_ptr, attr_ptr,
-                                   index_vector, src_vector, dst_vector, sections,
-                                   xcoords, ycoords, zcoords,
-                                   radiuses, layers, parents,
-                                   swc_types, tree_list);
-                }
-              else
-                {
-                  // Pointer structure does not exist; tree structure is shared by all ids
-                  singleton_tree_list(pop_start, index_vector,
-                                      src_vector, dst_vector, sections,
-                                      xcoords, ycoords, zcoords,
-                                      radiuses, layers, parents,
-                                      swc_types, tree_list);
-                }
-            }
-        }
-    
-      status = hdf5::close_file (file);
-      assert(status == 0);
-      status = H5Pclose(rapl);
-      assert(status == 0);
-      status = H5Tclose(hdf5_swc_type);
-      assert(status == 0);
+      append_tree_list (attr_values, tree_list);
     
       return 0;
     }

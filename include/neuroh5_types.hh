@@ -22,6 +22,8 @@
 
 #include "ngraph.hh"
 #include "attr_val.hh"
+#include "compact_optional.hh"
+#include "optional_value.hh"
 
 #define MAX_ATTR_NAME_LEN 128
 
@@ -81,12 +83,18 @@ namespace neuroh5
       IndexNone
     };
 
-  enum CellPtr
+  enum CellPtrType
     {
       PtrOwner,
       PtrShared,
       PtrNone
     };
+
+  struct CellPtr
+  {
+    CellPtrType type;
+    compact_optional<data::optional_string> shared_ptr_name;
+  }
 
   typedef float      COORD_T;
   typedef float      REALVAL_T;
