@@ -817,5 +817,121 @@ namespace neuroh5
     return index;
   }
 
+    
+  template<>
+  const vector<float> NamedAttrMap::find_name<float> (const std::string& name,
+                                                      CELL_IDX_T& index)
+  {
+    vector<float> result;
+    auto attr_it = float_names.find(name);
+    assert(attr_it != float_names.end());
+    size_t attr_index = attr_it->second;
+    auto it = float_values[attr_index].find(index);
+    if (it != float_values[attr_index].end())
+      {
+        result = it->second;
+      }
+    return result;
+  }
+
+  template<>
+  const vector<uint8_t> NamedAttrMap::find_name<uint8_t> (const std::string& name,
+                                                          CELL_IDX_T& index)
+  {
+    vector<uint8_t> result;
+    auto attr_it = uint8_names.find(name);
+    assert(attr_it != uint8_names.end());
+    size_t attr_index = attr_it->second;
+    auto it = uint8_values[attr_index].find(index);
+    if (it != uint8_values[attr_index].end())
+      {
+        result = it->second;
+      }
+    return result;
+  }
+
+  template<>
+  const vector<int8_t> NamedAttrMap::find_name<int8_t> (const std::string& name,
+                                                        CELL_IDX_T& index)
+  {
+    vector<int8_t> result;
+    auto attr_it = int8_names.find(name);
+    assert(attr_it != int8_names.end());
+    size_t attr_index = attr_it->second;
+    auto it = int8_values[attr_index].find(index);
+    if (it != int8_values[attr_index].end())
+      {
+        result = it->second;
+      }
+    return result;
+  }
+
+
+  template<>
+  const vector<uint16_t> NamedAttrMap::find_name<uint16_t> (const std::string& name,
+                                                            CELL_IDX_T& index)
+  {
+    vector<uint16_t> result;
+    auto attr_it = uint16_names.find(name);
+    assert(attr_it != uint16_names.end());
+    size_t attr_index = attr_it->second;
+    auto it = uint16_values[attr_index].find(index);
+    if (it != uint16_values[attr_index].end())
+      {
+        result = it->second;
+      }
+    return result;
+  }
+
+  template<>
+  const vector<int16_t> NamedAttrMap::find_name<int16_t> (const std::string& name,
+                                                      CELL_IDX_T& index)
+  {
+    vector<int16_t> result;
+    auto attr_it = int16_names.find(name);
+    assert(attr_it != int16_names.end());
+    size_t attr_index = attr_it->second;
+    auto it = int16_values[attr_index].find(index);
+    if (it != int16_values[attr_index].end())
+      {
+        result = it->second;
+      }
+    return result;
+  }
+
+
+  template<>
+  const vector<uint32_t> NamedAttrMap::find_name<uint32_t> (const std::string& name,
+                                                            CELL_IDX_T& index)
+  {
+    vector<uint32_t> result;
+    auto attr_it = uint32_names.find(name);
+    assert(attr_it != uint32_names.end());
+    size_t attr_index = attr_it->second;
+    auto it = uint32_values[attr_index].find(index);
+    if (it != uint32_values[attr_index].end())
+      {
+        result = it->second;
+      }
+    return result;
+  }
+
+  template<>
+  const vector<int32_t> NamedAttrMap::find_name<int32_t> (const std::string& name,
+                                                          CELL_IDX_T& index)
+  {
+    vector<int32_t> result;
+    auto attr_it = int32_names.find(name);
+    assert(attr_it != int32_names.end());
+    size_t attr_index = attr_it->second;
+    auto it = int32_values[attr_index].find(index);
+    if (it != int32_values[attr_index].end())
+      {
+        result = it->second;
+      }
+    return result;
+  }
+
+    
   }
 }

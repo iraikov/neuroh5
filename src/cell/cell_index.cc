@@ -134,6 +134,49 @@ namespace neuroh5
       return ierr;
     }
 
+        
+    herr_t link_cell_index
+    (
+     MPI_Comm             comm,
+     const string&        file_name,
+     const string&        pop_name,
+     const string&        attr_name_space,
+     const string&        attr_name
+     )
+    {
+      herr_t ierr = 0;
+      int srank, ssize; size_t rank, size;
+    
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) >= 0);
+      assert(srank >= 0);
+      assert(ssize > 0);
+      
+      rank = (size_t)srank;
+      size = (size_t)ssize;
+
+      string attr_path = hdf5::cell_attribute_path(attr_name_space, pop_name, attr_name);
+      string attr_prefix = hdf5::cell_attribute_prefix(attr_name_space, pop_name);
+      
+      hid_t file = hdf5::open_file(comm, file_name, true);
+      assert(file >= 0);
+      
+      hid_t dset = H5Dopen2(file, (attr_prefix + "/" + hdf5::CELL_INDEX).c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
+      
+      ierr = H5Olink(dset, file, (attr_path + "/" + hdf5::CELL_INDEX).c_str(), H5P_DEFAULT, H5P_DEFAULT);
+      assert(ierr >= 0);
+
+      assert(H5Dclose(dset) >= 0);
+
+      ierr = H5Fclose (file);
+      assert(ierr == 0);
+
+      return ierr;
+    }
+
+
+
     
   }
 }

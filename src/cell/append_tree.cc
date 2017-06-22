@@ -65,9 +65,7 @@ namespace neuroh5
      std::vector<LAYER_IDX_T>& all_layers,        // Layer
      std::vector<SECTION_IDX_T>& all_sections,    // Section
      std::vector<PARENT_NODE_IDX_T>& all_parents, // Parent
-     std::vector<SWC_TYPE_T>& all_swc_types, // SWC Types
-
-     CellIndex index_type = IndexOwner
+     std::vector<SWC_TYPE_T>& all_swc_types // SWC Types
      )
     {
       herr_t status; 
@@ -235,9 +233,7 @@ namespace neuroh5
      std::vector<LAYER_IDX_T>& all_layers,        // Layer
      std::vector<SECTION_IDX_T>& all_sections,    // Section
      std::vector<PARENT_NODE_IDX_T>& all_parents, // Parent
-     std::vector<SWC_TYPE_T>& all_swc_types, // SWC Types
-
-     CellIndex index_type = IndexOwner
+     std::vector<SWC_TYPE_T>& all_swc_types // SWC Types
      )
     {
       unsigned int rank, size;
@@ -309,7 +305,7 @@ namespace neuroh5
      const hsize_t sec_start,
      const hsize_t topo_start,
      std::vector<neurotree_t> &tree_list,
-     CellIndex index_type = IndexOwner
+     CellPtr ptr_type = CellPtr(PtrOwner)
      )
     {
       herr_t status; 
@@ -344,7 +340,7 @@ namespace neuroh5
       std::vector<PARENT_NODE_IDX_T> all_parents; // Parent
       std::vector<SWC_TYPE_T> all_swc_types; // SWC Types
 
-      if (index_type == IndexNone)
+      if (ptr_type.type == PtrNone)
         {
           assert(tree_list.size() == 1); // singleton tree set
           status = build_singleton_tree_datasets(comm,
@@ -357,8 +353,7 @@ namespace neuroh5
                                                  all_src_vector, all_dst_vector,
                                                  all_xcoords, all_ycoords, all_zcoords, 
                                                  all_radiuses, all_layers, all_sections,
-                                                 all_parents, all_swc_types,
-                                                 index_type);
+                                                 all_parents, all_swc_types);
         }
       else
         {
@@ -374,25 +369,12 @@ namespace neuroh5
                                        all_index_vector, all_src_vector, all_dst_vector,
                                        all_xcoords, all_ycoords, all_zcoords, 
                                        all_radiuses, all_layers, all_sections,
-                                       all_parents, all_swc_types,
-                                       index_type);
+                                       all_parents, all_swc_types);
           assert(status >= 0);
         }
       
-      // create the cell index if option create_index is true
-      switch (index_type)
-        {
-        case IndexOwner:
-          status = append_cell_index (comm, file_name, pop_name, hdf5::TREES,
-                                      all_index_vector, ptr_start);
-          break;
-        case IndexShared:
-          // TODO: validate cell index
-          status = link_cell_index (comm, file_name, pop_name, hdf5::TREES);
-          break;
-        case IndexNone:
-          break;
-        }
+      status = append_cell_index (comm, file_name, pop_name, hdf5::TREES,
+                                  all_index_vector, ptr_start);
 
       const data::optional_hid dflt_data_type;
       const data::optional_hid coord_data_type(COORD_H5_NATIVE_T);

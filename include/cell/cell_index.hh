@@ -42,9 +42,9 @@ namespace neuroh5
      MPI_Comm             comm,
      const string&        file_name,
      const string&        pop_name,
-     const string&        attr_name_space
+     const string&        attr_name_space,
+     const string&        attr_name
      );
-
     
     
   }

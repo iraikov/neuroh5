@@ -25,7 +25,7 @@ namespace neuroh5
      const hsize_t sec_start,
      const hsize_t topo_start,
      std::vector<neurotree_t> &tree_list,
-     CellIndex index_type = IndexOwner
+     CellPtr ptr_type = CellPtr(PtrOwner)
      );
   }
 }
