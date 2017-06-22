@@ -16,6 +16,8 @@
 #include "path_names.hh"
 #include "hdf5_cell_attributes.hh"
 #include "attr_map.hh"
+#include "compact_optional.hh"
+#include "optional_value.hh"
 
 namespace neuroh5
 {
@@ -25,15 +27,15 @@ namespace neuroh5
   
     void create_cell_attribute_datasets
     (
-     const hid_t&   file,
-     const string&  attr_namespace,
-     const string&  pop_name,
-     const string&  attr_name,
-     const hid_t&   ftype,
-     CellIndex      index_type,
-     CellPtr        ptr_type,
-     const size_t   chunk_size,
-     const size_t   value_chunk_size
+     const hid_t&     file,
+     const string&    attr_namespace,
+     const string&    pop_name,
+     const string&    attr_name,
+     const hid_t&     ftype,
+     const CellIndex& index_type,
+     const CellPtr&   ptr_type,
+     const size_t     chunk_size,
+     const size_t     value_chunk_size
      );
 
     
@@ -110,7 +112,7 @@ namespace neuroh5
      const std::vector<CELL_IDX_T>&        index,
      const std::vector<ATTR_PTR_T>         attr_ptr,
      const std::vector<T>&                 values,
-     const optional_hid                    data_type,
+     const data::optional_hid              data_type,
      const CellIndex                       index_type,
      const CellPtr                         ptr_type,
      const size_t chunk_size = 4000,
@@ -148,9 +150,9 @@ namespace neuroh5
       T dummy;
       hid_t ftype;
       if (data_type.has_value())
-        ftype = infer_datatype(dummy);
-      else
         ftype = data_type.value();
+      else
+        ftype = infer_datatype(dummy);
       assert(ftype >= 0);
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
@@ -187,7 +189,7 @@ namespace neuroh5
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, vector<T>>& value_map,
      const size_t io_size,
-     const optional_hid              data_type,
+     const data::optional_hid        data_type,
      const CellIndex                 index_type,
      const CellPtr                   ptr_type,
      const size_t chunk_size = 4000,
@@ -429,7 +431,7 @@ namespace neuroh5
      const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value,
-     const optional_hid              data_type,
+     const data::optional_hid        data_type,
      const CellIndex                 index_type,
      const CellPtr                   ptr_type,
      const size_t chunk_size = 4000,
@@ -463,7 +465,7 @@ namespace neuroh5
       T dummy;
       hid_t ftype;
       if (data_type.has_value())
-        ftype = data_type;
+        ftype = data_type.value();
       else
         ftype = infer_datatype(dummy);
       assert(ftype >= 0);
@@ -494,7 +496,7 @@ namespace neuroh5
      const std::string&              pop_name,
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, vector<T>>& value_map,
-     const optional_hid              data_type,
+     const data::optional_hid        data_type,
      const CellIndex                 index_type,
      const CellPtr                   ptr_type,
      const size_t chunk_size = 4000,

@@ -92,9 +92,12 @@ namespace neuroh5
 
   struct CellPtr
   {
-    CellPtrType type;
-    compact_optional<data::optional_string> shared_ptr_name;
-  }
+    const CellPtrType type;
+    const data::optional_string shared_ptr_name;
+    CellPtr (const CellPtrType& p_type, const data::optional_string& p_shared_ptr_name) : type(p_type), shared_ptr_name (p_shared_ptr_name) {}
+    CellPtr (const CellPtrType& p_type) : type(p_type) {}
+
+  };
 
   typedef float      COORD_T;
   typedef float      REALVAL_T;

@@ -21,7 +21,7 @@ namespace neuroh5
   namespace data
   {
 
-    struct optional_string : compact_optional_type<std::string>
+    struct string_empty_value : compact_optional_type<std::string>
     {
       static std::string empty_value()
       {
@@ -34,8 +34,9 @@ namespace neuroh5
       }
     };
 
-
-    struct optional_hid : compact_optional_type<hid_t>
+    typedef compact_optional<string_empty_value> optional_string;
+    
+    struct hid_empty_value : compact_optional_type<hid_t>
     {
       static hid_t empty_value()
       {
@@ -47,6 +48,9 @@ namespace neuroh5
         return v == -1;
       }
     };
+
+    typedef compact_optional<hid_empty_value> optional_hid;
+
 
   }
 }

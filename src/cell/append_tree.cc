@@ -21,6 +21,9 @@
 #include "path_names.hh"
 #include "cell_index.hh"
 #include "cell_attributes.hh"
+#include "compact_optional.hh"
+#include "optional_value.hh"
+
 
 namespace neuroh5
 {
@@ -31,8 +34,7 @@ namespace neuroh5
     int build_tree_datasets
     (
      MPI_Comm comm,
-     const std::string& file_name,
-     const std::string& pop_name,
+
      const hsize_t ptr_start,
      const hsize_t attr_start,
      const hsize_t sec_start,
@@ -212,12 +214,12 @@ namespace neuroh5
     int build_singleton_tree_datasets
     (
      MPI_Comm comm,
-     const std::string& file_name,
-     const std::string& pop_name,
+
      const hsize_t ptr_start,
      const hsize_t attr_start,
      const hsize_t sec_start,
      const hsize_t topo_start,
+
      std::vector<neurotree_t> &tree_list,
 
      hsize_t& local_attr_start,
@@ -238,8 +240,6 @@ namespace neuroh5
      CellIndex index_type = IndexOwner
      )
     {
-      herr_t status; 
-
       unsigned int rank, size;
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
@@ -251,9 +251,8 @@ namespace neuroh5
         {
           neurotree_t &tree = tree_list[i];
 
-          hsize_t attr_size=0, sec_size=0, topo_size=0;
+          hsize_t attr_size=0, topo_size=0;
 
-          const CELL_IDX_T &idx = get<0>(tree);
           const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);
           const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
           const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
@@ -269,8 +268,6 @@ namespace neuroh5
           assert(src_vector.size() == topo_size);
           assert(dst_vector.size() == topo_size);
 
-          topo_ptr.push_back(topo_size+topo_ptr.back());
-        
           attr_size = xcoords.size();
           assert(xcoords.size()  == attr_size);
           assert(ycoords.size()  == attr_size);
@@ -279,11 +276,6 @@ namespace neuroh5
           assert(layers.size()   == attr_size);
           assert(parents.size()  == attr_size);
           assert(swc_types.size()  == attr_size);
-
-          attr_ptr.push_back(attr_size+attr_ptr.back());
-
-          sec_size = sections.size();
-          sec_ptr.push_back(sec_size+sec_ptr.back());
 
           all_src_vector.insert(all_src_vector.end(),src_vector.begin(),src_vector.end());
           all_dst_vector.insert(all_dst_vector.end(),dst_vector.begin(),dst_vector.end());
@@ -320,7 +312,7 @@ namespace neuroh5
      CellIndex index_type = IndexOwner
      )
     {
-      herr_t status; hid_t wapl;
+      herr_t status; 
 
       unsigned int rank, size;
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
@@ -330,14 +322,14 @@ namespace neuroh5
       /* Create HDF5 enumerated type for reading SWC type information */
       hid_t hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
       
-      hsize_t local_ptr_start,
-        local_attr_start,
-        local_sec_start,
-        local_topo_start,
-        global_ptr_size,
+      hsize_t global_ptr_size,
         global_attr_size,
         global_sec_size,
         global_topo_size;
+      hsize_t local_ptr_start,
+        local_attr_start,
+        local_sec_start,
+        local_topo_start;
       
       std::vector<SEC_PTR_T> sec_ptr;
       std::vector<TOPO_PTR_T> topo_ptr;
@@ -356,16 +348,24 @@ namespace neuroh5
         {
           assert(tree_list.size() == 1); // singleton tree set
           status = build_singleton_tree_datasets(comm,
-                                                 local_attr_start, local_sec_start, local_topo_start,
+                                                 ptr_start, attr_start,
+                                                 sec_start, topo_start,
+                                                 tree_list,
+                                                 local_attr_start,
+                                                 local_sec_start,
+                                                 local_topo_start,
                                                  all_src_vector, all_dst_vector,
                                                  all_xcoords, all_ycoords, all_zcoords, 
                                                  all_radiuses, all_layers, all_sections,
                                                  all_parents, all_swc_types,
-                                                 tree_list);
+                                                 index_type);
         }
       else
         {
           status = build_tree_datasets(comm,
+                                       ptr_start, attr_start,
+                                       sec_start, topo_start,
+                                       tree_list,
                                        local_ptr_start, local_attr_start,
                                        local_sec_start, local_topo_start,
                                        global_ptr_size, global_attr_size,
@@ -375,12 +375,12 @@ namespace neuroh5
                                        all_xcoords, all_ycoords, all_zcoords, 
                                        all_radiuses, all_layers, all_sections,
                                        all_parents, all_swc_types,
-                                       tree_list, index_type);
+                                       index_type);
           assert(status >= 0);
         }
       
       // create the cell index if option create_index is true
-      switch (cell_index_type)
+      switch (index_type)
         {
         case IndexOwner:
           status = append_cell_index (comm, file_name, pop_name, hdf5::TREES,
@@ -388,52 +388,61 @@ namespace neuroh5
           break;
         case IndexShared:
           // TODO: validate cell index
-          status = link_cell_index (comm, file_name, pop_name, hdf5::TREES,
-                                    all_index_vector, ptr_start);
+          status = link_cell_index (comm, file_name, pop_name, hdf5::TREES);
           break;
         case IndexNone:
           break;
         }
 
-      optional_hid dflt_data_type;
-      optional_hid coord_data_type(COORD_H5_NATIVE_T);
-      optional_hid layer_data_type(LAYER_H5_NATIVE_T);
-      optional_hid parent_node_data_type(PARENT_NODE_IDX_H5_NATIVE_T);
-      optional_hid section_data_type(SECTION_IDX_H5_NATIVE_T);
-      optional_hid swc_data_type(hdf5_swc_type);
+      const data::optional_hid dflt_data_type;
+      const data::optional_hid coord_data_type(COORD_H5_NATIVE_T);
+      const data::optional_hid layer_data_type(LAYER_IDX_H5_NATIVE_T);
+      const data::optional_hid parent_node_data_type(PARENT_NODE_IDX_H5_NATIVE_T);
+      const data::optional_hid section_data_type(SECTION_IDX_H5_NATIVE_T);
+      const data::optional_hid swc_data_type(hdf5_swc_type);
       
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::X_COORD,
                              all_index_vector, attr_ptr, all_xcoords,
-                             coord_data_type, IndexShared, PtrOwner, hdf5::ATTR_PTR);
+                             coord_data_type, IndexShared,
+                             CellPtr (PtrOwner, hdf5::ATTR_PTR));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::Y_COORD,
                              all_index_vector, attr_ptr, all_ycoords,
-                             coord_data_type, IndexShared, PtrShared, hdf5::ATTR_PTR);
+                             coord_data_type, IndexShared,
+                             CellPtr (PtrShared, hdf5::ATTR_PTR));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::Z_COORD,
                              all_index_vector, attr_ptr, all_zcoords,
-                             coord_data_type, IndexShared, PtrShared, hdf5::ATTR_PTR);
+                             coord_data_type, IndexShared,
+                             CellPtr (PtrShared, hdf5::ATTR_PTR));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::RADIUS,
                              all_index_vector, attr_ptr, all_radiuses,
-                             dflt_data_type, IndexShared, PtrShared, hdf5::ATTR_PTR);
+                             dflt_data_type, IndexShared,
+                             CellPtr (PtrShared, hdf5::ATTR_PTR));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::LAYER,
                              all_index_vector, attr_ptr, all_layers,
-                             layer_data_type, IndexShared, PtrShared, hdf5::ATTR_PTR);
+                             layer_data_type, IndexShared,
+                             CellPtr (PtrShared, hdf5::ATTR_PTR));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::PARENT,
                              all_index_vector, attr_ptr, all_parents,
-                             parent_node_data_type, IndexShared, PtrShared, hdf5::ATTR_PTR);
+                             parent_node_data_type, IndexShared,
+                             CellPtr (PtrShared, hdf5::ATTR_PTR));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SWCTYPE,
                              all_index_vector, attr_ptr, all_swc_types,
-                             swc_data_type, IndexShared, PtrShared, hdf5::ATTR_PTR);
+                             swc_data_type, IndexShared,
+                             CellPtr (PtrShared, hdf5::ATTR_PTR));
 
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SRCSEC,
                              all_index_vector, topo_ptr, all_src_vector,
-                             section_data_type, IndexShared, PtrOwner, hdf5::SEC_PTR);
+                             section_data_type, IndexShared,
+                             CellPtr (PtrOwner, hdf5::SEC_PTR));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::DSTSEC,
                              all_index_vector, topo_ptr, all_dst_vector,
-                             section_data_type, IndexShared, PtrShared, hdf5::SEC_PTR);
+                             section_data_type, IndexShared,
+                             CellPtr (PtrShared, hdf5::SEC_PTR));
 
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SECTION,
                              all_index_vector, sec_ptr, all_sections,
-                             section_data_type, IndexShared, PtrOwner, hdf5::SEC_PTR);
+                             section_data_type, IndexShared,
+                             CellPtr (PtrOwner, hdf5::SEC_PTR));
 
 
         

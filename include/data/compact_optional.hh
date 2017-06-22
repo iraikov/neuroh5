@@ -143,15 +143,15 @@ struct compact_optional_pod_storage_type_tag{};
 template <typename T, typename POD_T = typename std::aligned_storage<sizeof(T), alignof(T)>::type>
 #else
 template <typename T, typename POD_T>
-#endif // AK_TOOLBOX_NO_ARVANCED_CXX11
+#endif // AK_TOOLBOX_NO_ADVANCED_CXX11
 
 struct compact_optional_pod_storage_type : compact_optional_pod_storage_type_tag
 {
   static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
   static_assert(std::is_pod<POD_T>::value, "second argument must be a POD type");
-#ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
+#ifndef AK_TOOLBOX_NO_ADVANCED_CXX11
   static_assert(alignof(T) == alignof(POD_T), "pod storage for T has to have the same alignment as T");
-#endif // AK_TOOLBOX_NO_ARVANCED_CXX11
+#endif // AK_TOOLBOX_NO_ADVANCED_CXX11
 
   typedef T value_type;
   typedef POD_T storage_type;

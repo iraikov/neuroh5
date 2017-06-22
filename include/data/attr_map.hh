@@ -168,6 +168,9 @@ namespace neuroh5
                      const CELL_IDX_T &cell_index,
                      const std::vector<T> &value);
 
+      template<class T>
+      const vector<T> find_name (const std::string& name, CELL_IDX_T& index);
+
     };
   }
 }

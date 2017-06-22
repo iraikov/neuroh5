@@ -37,6 +37,16 @@ namespace neuroh5
      const hsize_t start
      );
 
+    herr_t link_cell_index
+    (
+     MPI_Comm             comm,
+     const string&        file_name,
+     const string&        pop_name,
+     const string&        attr_name_space
+     );
+
+    
+    
   }
 }
 

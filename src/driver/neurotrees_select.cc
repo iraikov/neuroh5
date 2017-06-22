@@ -607,7 +607,8 @@ int main(int argc, char** argv)
             subset_int32_values = subset_int32_value_map[attr_name_space];
 
           const vector<vector<string>>& attr_names = attr_names_map[attr_name_space];
-
+          const data::optional_hid dflt_data_type;
+          
           for (size_t i=0; i<subset_float_values.size(); i++)
             {
               cell::write_cell_attribute_map<float>(all_comm,
@@ -616,9 +617,9 @@ int main(int argc, char** argv)
                                                     pop_name,
                                                     attr_names[data::AttrMap::attr_index_float][i],
                                                     subset_float_values[i],
+                                                    dflt_data_type,
                                                     IndexOwner,
-                                                    PtrOwner,
-                                                    "",
+                                                    CellPtr(PtrOwner),
                                                     chunksize,
                                                     value_chunksize,
                                                     cachesize);
@@ -631,9 +632,9 @@ int main(int argc, char** argv)
                                                       pop_name,
                                                       attr_names[data::AttrMap::attr_index_uint8][i],
                                                       subset_uint8_values[i],
+                                                      dflt_data_type,
                                                       IndexOwner,
-                                                      PtrOwner,
-                                                      "",
+                                                      CellPtr(PtrOwner),
                                                       chunksize,
                                                       value_chunksize,
                                                       cachesize);
@@ -646,9 +647,9 @@ int main(int argc, char** argv)
                                                      pop_name,
                                                      attr_names[data::AttrMap::attr_index_int8][i],
                                                      subset_int8_values[i],
+                                                     dflt_data_type,
                                                      IndexOwner,
-                                                     PtrOwner,
-                                                     "",
+                                                     CellPtr(PtrOwner),
                                                      chunksize,
                                                      value_chunksize,
                                                      cachesize);
@@ -661,9 +662,9 @@ int main(int argc, char** argv)
                                                        pop_name,
                                                        attr_names[data::AttrMap::attr_index_uint16][i],
                                                        subset_uint16_values[i],
+                                                       dflt_data_type,
                                                        IndexOwner,
-                                                       PtrOwner,
-                                                       "",
+                                                       CellPtr(PtrOwner),
                                                        chunksize,
                                                        value_chunksize,
                                                        cachesize);
@@ -676,9 +677,9 @@ int main(int argc, char** argv)
                                                        pop_name,
                                                        attr_names[data::AttrMap::attr_index_uint32][i],
                                                        subset_uint32_values[i],
+                                                       dflt_data_type,
                                                        IndexOwner,
-                                                       PtrOwner,
-                                                       "",
+                                                       CellPtr(PtrOwner),
                                                        chunksize,
                                                        value_chunksize,
                                                        cachesize);
@@ -692,9 +693,9 @@ int main(int argc, char** argv)
                                                       pop_name,
                                                       attr_names[data::AttrMap::attr_index_int32][i],
                                                       subset_int32_values[i],
+                                                      dflt_data_type,
                                                       IndexOwner,
-                                                      PtrOwner,
-                                                      "",
+                                                      CellPtr(PtrOwner),
                                                       chunksize,
                                                       value_chunksize,
                                                       cachesize);

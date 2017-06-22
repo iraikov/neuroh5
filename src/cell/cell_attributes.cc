@@ -164,7 +164,7 @@ namespace neuroh5
      )
     {
       herr_t ierr = 0;
-      num_attrs.resize(AttrMap::num_attr_types);
+      num_attrs.resize(data::AttrMap::num_attr_types);
       for (size_t i = 0; i < attributes.size(); i++)
         {
           hid_t attr_h5type = attributes[i].second;
@@ -176,33 +176,33 @@ namespace neuroh5
                 {
                   if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
                     {
-                      num_attrs[AttrMap::attr_index_uint32]++;
+                      num_attrs[data::AttrMap::attr_index_uint32]++;
                     }
                   else
                     {
-                      num_attrs[AttrMap::attr_index_int32]++;
+                      num_attrs[data::AttrMap::attr_index_int32]++;
                     }
                 }
               else if (attr_size == 2)
                 {
                   if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
                     {
-                      num_attrs[AttrMap::attr_index_uint16]++;
+                      num_attrs[data::AttrMap::attr_index_uint16]++;
                     }
                   else
                     {
-                      num_attrs[AttrMap::attr_index_int16]++;
+                      num_attrs[data::AttrMap::attr_index_int16]++;
                     }
                 }
               else if (attr_size == 1)
                 {
                   if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
                     {
-                      num_attrs[AttrMap::attr_index_uint8]++;
+                      num_attrs[data::AttrMap::attr_index_uint8]++;
                     }
                   else
                     {
-                      num_attrs[AttrMap::attr_index_int8]++;
+                      num_attrs[data::AttrMap::attr_index_int8]++;
                     }
                 }
               else
@@ -211,12 +211,12 @@ namespace neuroh5
                 };
               break;
             case H5T_FLOAT:
-              num_attrs[AttrMap::attr_index_float]++;
+              num_attrs[data::AttrMap::attr_index_float]++;
               break;
             case H5T_ENUM:
               if (attr_size == 1)
                 {
-                  num_attrs[AttrMap::attr_index_uint8]++;
+                  num_attrs[data::AttrMap::attr_index_uint8]++;
                 }
               else
                 {
@@ -362,15 +362,15 @@ namespace neuroh5
 
     void create_cell_attribute_datasets
     (
-     const hid_t&   file,
-     const string&  attr_namespace,
-     const string&  pop_name,
-     const string&  attr_name,
-     const hid_t&   ftype,
-     CellIndex      index_type,
-     CellPtr        ptr_type,
-     const size_t   chunk_size,
-     const size_t   value_chunk_size
+     const hid_t&     file,
+     const string&    attr_namespace,
+     const string&    pop_name,
+     const string&    attr_name,
+     const hid_t&     ftype,
+     const CellIndex& index_type,
+     const CellPtr&   ptr_type,
+     const size_t     chunk_size,
+     const size_t     value_chunk_size
      )
     {
       herr_t status;
@@ -407,7 +407,6 @@ namespace neuroh5
           hdf5::create_group(file, attr_prefix);
         }
 
-      string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
       hid_t mspace, dset;
       
@@ -433,6 +432,8 @@ namespace neuroh5
             assert(H5Dclose(dset) >= 0);
           }
           break;
+        case IndexNone:
+          break;
         }
 
       switch (ptr_type.type)
@@ -456,6 +457,8 @@ namespace neuroh5
             assert(status >= 0);
             assert(H5Dclose(dset) >= 0);
           }
+          break;
+        case PtrNone:
           break;
         }
       

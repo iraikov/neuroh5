@@ -266,6 +266,10 @@ namespace neuroh5
                                       CELL_IDX_H5_NATIVE_T,
                                       index, wapl);
           break;
+        case IndexShared:
+          break;
+        case IndexNone:
+          break;
         }
     
       switch (ptr_type.type)
@@ -276,6 +280,10 @@ namespace neuroh5
                                       global_ptr_size, local_ptr_start, local_ptr_size,
                                       ATTR_PTR_H5_NATIVE_T,
                                       local_attr_ptr, wapl);
+          break;
+        case PtrShared:
+          break;
+        case PtrNone:
           break;
         }
     
