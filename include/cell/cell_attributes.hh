@@ -190,8 +190,8 @@ namespace neuroh5
      const std::map<CELL_IDX_T, vector<T>>& value_map,
      const size_t io_size,
      const data::optional_hid        data_type,
-     const CellIndex                 index_type,
-     const CellPtr                   ptr_type,
+     const CellIndex                 index_type = IndexOwner,
+     const CellPtr                   ptr_type = CellPtr(PtrOwner),
      const size_t chunk_size = 4000,
      const size_t value_chunk_size = 4000,
      const size_t cache_size = 1*1024*1024
@@ -497,8 +497,8 @@ namespace neuroh5
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, vector<T>>& value_map,
      const data::optional_hid        data_type,
-     const CellIndex                 index_type,
-     const CellPtr                   ptr_type,
+     const CellIndex                 index_type = IndexOwner,
+     const CellPtr                   ptr_type = CellPtr(PtrOwner),
      const size_t chunk_size = 4000,
      const size_t value_chunk_size = 4000,
      const size_t cache_size = 1*1024*1024

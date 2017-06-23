@@ -1934,7 +1934,7 @@ extern "C"
                       all_attr_values_uint8,
                       all_attr_values_int8,
                       all_attr_values_float);
-
+    const data::optional_hid dflt_data_type;
     size_t attr_idx=0;
     vector<size_t> attr_type_idx(AttrMap::num_attr_types);
     for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
@@ -1947,28 +1947,32 @@ extern "C"
           case NPY_UINT32:
             {
               cell::write_cell_attribute_map<uint32_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                        attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
+                                                        attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
+                                                        dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint32]++;
               break;
             }
           case NPY_UINT16:
             {
               cell::write_cell_attribute_map<uint16_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                  attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
+                                                        attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
+                                                        dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint16]++;
               break;
             }
           case NPY_UINT8:
             {
               cell::write_cell_attribute_map<uint8_t> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                                 attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
+                                                       attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
+                                                       dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint8]++;
               break;
             }
           case NPY_FLOAT:
             {
               cell::write_cell_attribute_map<float> (*((MPI_Comm *)(commptr)), file_name, attr_namespace, pop_name, 
-                                               attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
+                                                     attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
+                                                     dflt_data_type);
               attr_type_idx[AttrMap::attr_index_float]++;
               break;
             }
@@ -2088,7 +2092,8 @@ extern "C"
       }
     assert(status == 0);
     MPI_Barrier(data_comm);
-    
+
+    const data::optional_hid dflt_data_type;
     size_t attr_idx=0;
     vector<size_t> attr_type_idx(AttrMap::num_attr_types);
     for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
@@ -2102,7 +2107,7 @@ extern "C"
             {
               cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                          all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
-                                                         io_size);
+                                                         io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint32]++;
               break;
             }
@@ -2110,7 +2115,7 @@ extern "C"
             {
               cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                          all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
-                                                         io_size);
+                                                         io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_int32]++;
               break;
             }
@@ -2118,7 +2123,7 @@ extern "C"
             {
               cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                          all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
-                                                         io_size);
+                                                         io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint16]++;
               break;
             }
@@ -2126,7 +2131,7 @@ extern "C"
             {
               cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                         all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
-                                                        io_size);
+                                                        io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_int16]++;
               break;
             }
@@ -2134,7 +2139,7 @@ extern "C"
             {
               cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                         all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
-                                                        io_size);
+                                                        io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint8]++;
               break;
             }
@@ -2142,7 +2147,7 @@ extern "C"
             {
               cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                        all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
-                                                       io_size);
+                                                       io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_int8]++;
               break;
             }
@@ -2150,7 +2155,7 @@ extern "C"
             {
               cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                       all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
-                                                      io_size);
+                                                      io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_float]++;
               break;
             }
