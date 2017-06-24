@@ -17,6 +17,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const std::string& file_name,
+     const bool collective = false,
      const bool rdwr = false
      );
 

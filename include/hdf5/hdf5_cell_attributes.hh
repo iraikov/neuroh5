@@ -23,11 +23,11 @@ namespace neuroh5
      MPI_Comm                   comm,
      hid_t                      loc,
      const std::string&         path,
+     const CellPtr&             ptr_type,
      hsize_t&                   ptr_size,
      hsize_t&                   index_size,
      hsize_t&                   value_size
      );
-
     
     template <typename T>
     herr_t read_cell_attribute
@@ -154,6 +154,7 @@ namespace neuroh5
      const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
      const std::vector<T>&           value,
+     const data::optional_hid        data_type,
      const CellIndex                 index_type,
      const CellPtr                   ptr_type
      )
@@ -204,16 +205,21 @@ namespace neuroh5
       value_size_vector.resize(size);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
       assert(status == MPI_SUCCESS);
-
+      
       T dummy;
-      hid_t ftype = infer_datatype(dummy);
+      hid_t ftype;
+      if (data_type.has_value())
+        ftype = data_type.value();
+      else
+        ftype = infer_datatype(dummy);
       assert(ftype >= 0);
+
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
       assert(mtype >= 0);
 
       // create datasets
       hsize_t ptr_size=0, index_size=0, value_size=0;
-      size_cell_attributes(comm, loc, path, ptr_size, index_size, value_size);
+      size_cell_attributes(comm, loc, path, ptr_type, ptr_size, index_size, value_size);
 
       // Determine starting positions
       hsize_t ptr_start=0, index_start=0, value_start=0;
@@ -275,11 +281,22 @@ namespace neuroh5
       switch (ptr_type.type)
         {
         case PtrOwner:
-          // TODO: save to prefix and link to index in path
-          status = write<ATTR_PTR_T> (file, path + "/" + ATTR_PTR,
-                                      global_ptr_size, local_ptr_start, local_ptr_size,
-                                      ATTR_PTR_H5_NATIVE_T,
-                                      local_attr_ptr, wapl);
+          {
+            // TODO: save to prefix and link to index in path
+            std::string ptr_name;
+            if (ptr_type.shared_ptr_name.has_value())
+              {
+                ptr_name = ptr_type.shared_ptr_name.value();
+              }
+            else
+              {
+                ptr_name = ATTR_PTR;
+              }
+            status = write<ATTR_PTR_T> (file, path + "/" + ptr_name,
+                                        global_ptr_size, local_ptr_start, local_ptr_size,
+                                        ATTR_PTR_H5_NATIVE_T,
+                                        local_attr_ptr, wapl);
+          }
           break;
         case PtrShared:
           break;

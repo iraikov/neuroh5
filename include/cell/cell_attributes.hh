@@ -150,7 +150,9 @@ namespace neuroh5
       T dummy;
       hid_t ftype;
       if (data_type.has_value())
-        ftype = data_type.value();
+        {
+          ftype = data_type.value();
+        }
       else
         ftype = infer_datatype(dummy);
       assert(ftype >= 0);
@@ -170,7 +172,7 @@ namespace neuroh5
         }
 
       hdf5::append_cell_attribute<T>(file, attr_path, index, attr_ptr, values,
-                                     index_type, ptr_type);
+                                     data_type, index_type, ptr_type);
     
       status = H5Fclose(file);
       assert(status == 0);

@@ -36,8 +36,6 @@
 #include "dataset_num_elements.hh"
 #include "validate_tree.hh"
 #include "create_file_toplevel.hh"
-#include "create_tree_dataset.hh"
-#include "exists_tree_dataset.hh"
 #include "exists_tree_h5types.hh"
 #include "copy_tree_h5types.hh"
 
@@ -544,8 +542,6 @@ int main(int argc, char** argv)
   
   printf("Task %d local selection size is %u\n", rank, tree_subset.size());
 
-  hsize_t ptr_start = 0, attr_start = 0, sec_start = 0, topo_start = 0;
-
   if (global_subset_size > 0)
     {
       //status = access( output_file_name.c_str(), F_OK );
@@ -563,11 +559,6 @@ int main(int argc, char** argv)
       hid_t output_file = H5Fopen(output_file_name.c_str(), H5F_ACC_RDWR, fapl);
       assert(output_file >= 0);
       
-      if (!hdf5::exists_tree_dataset(output_file, pop_name))
-        {
-          status = hdf5::create_tree_dataset(all_comm, output_file, pop_name);
-        }
-
       if (!hdf5::exists_tree_h5types(output_file))
         {
           input_file = H5Fopen(input_file_name.c_str(), H5F_ACC_RDONLY, fapl);
@@ -583,9 +574,7 @@ int main(int argc, char** argv)
       status = H5Fclose (output_file);
       assert(status == 0);
       
-      status = cell::append_trees(all_comm, output_file_name, pop_name, 
-                                  ptr_start, attr_start, sec_start, topo_start, 
-                                  tree_subset);
+      status = cell::append_trees(all_comm, output_file_name, pop_name, tree_subset);
       
       assert(status == 0);
 

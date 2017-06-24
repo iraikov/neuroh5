@@ -41,12 +41,40 @@ namespace neuroh5
      MPI_Comm         comm,
      hid_t            loc,
      const string&    path,
+     const CellPtr&   ptr_type,
      hsize_t&         ptr_size,
      hsize_t&         index_size,
      hsize_t&         value_size
      )
     {
-      ptr_size   = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_PTR);
+      string ptr_name;
+      switch (ptr_type.type)
+        {
+        case PtrOwner:
+          {
+            std::string ptr_name;
+            if (ptr_type.shared_ptr_name.has_value())
+              {
+                ptr_name = ptr_type.shared_ptr_name.value();
+              }
+            else
+              {
+                ptr_name = hdf5::ATTR_PTR;
+              }
+            ptr_size = hdf5::dataset_num_elements(comm, loc, path + "/" + ptr_name);
+          }
+          break;
+        case PtrShared:
+          {
+            std::string ptr_name;
+            assert (ptr_type.shared_ptr_name.has_value());
+            ptr_name = ptr_type.shared_ptr_name.value();
+            ptr_size = hdf5::dataset_num_elements(comm, loc, ptr_name);
+          }
+          break;
+        case PtrNone:
+          break;
+        }
       index_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::CELL_INDEX);
       value_size = hdf5::dataset_num_elements(comm, loc, path + "/" + hdf5::ATTR_VAL);
     }
@@ -408,6 +436,11 @@ namespace neuroh5
         }
 
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
+      if (!(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
+        {
+          hdf5::create_group(file, attr_path);
+        }
+
       hid_t mspace, dset;
       
       switch (index_type)
@@ -440,9 +473,19 @@ namespace neuroh5
         {
         case PtrOwner:
           {
+            std::string ptr_name;
+            if (ptr_type.shared_ptr_name.has_value())
+              {
+                ptr_name = ptr_type.shared_ptr_name.value();
+              }
+            else
+              {
+                ptr_name = hdf5::ATTR_PTR;
+              }
+
             mspace = H5Screate_simple(1, &initial_size, maxdims);
             assert(mspace >= 0);
-            dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), ATTR_PTR_H5_FILE_T,
+            dset = H5Dcreate2(file, (attr_path + "/" + ptr_name).c_str(), ATTR_PTR_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
             assert(H5Dclose(dset) >= 0);
             assert(H5Sclose(mspace) >= 0);
@@ -451,7 +494,7 @@ namespace neuroh5
         case PtrShared:
           {
             assert(ptr_type.shared_ptr_name.has_value());
-            dset = H5Dopen2(file, (attr_prefix + "/" + ptr_type.shared_ptr_name.value()).c_str(), H5P_DEFAULT);
+            dset = H5Dopen2(file, (ptr_type.shared_ptr_name.value()).c_str(), H5P_DEFAULT);
             assert(dset >= 0);
             status = H5Olink(dset, file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), H5P_DEFAULT, H5P_DEFAULT);
             assert(status >= 0);

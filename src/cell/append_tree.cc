@@ -35,21 +35,11 @@ namespace neuroh5
     (
      MPI_Comm comm,
 
-     const hsize_t ptr_start,
      const hsize_t attr_start,
      const hsize_t sec_start,
      const hsize_t topo_start,
+
      std::vector<neurotree_t> &tree_list,
-
-     hsize_t& local_ptr_start,
-     hsize_t& local_attr_start,
-     hsize_t& local_sec_start,
-     hsize_t& local_topo_start,
-
-     hsize_t& global_ptr_size,
-     hsize_t& global_attr_size,
-     hsize_t& global_sec_size,
-     hsize_t& global_topo_size,
 
      std::vector<SEC_PTR_T>& sec_ptr,
      std::vector<TOPO_PTR_T>& topo_ptr,
@@ -70,11 +60,13 @@ namespace neuroh5
     {
       herr_t status; 
 
+      hsize_t local_attr_start, local_sec_start, local_topo_start;
+
       unsigned int rank, size;
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
-      uint64_t all_attr_size, all_sec_size,  all_topo_size;
+      uint64_t all_attr_size=0, all_sec_size=0,  all_topo_size=0;
       std::vector<uint64_t> attr_size_vector, sec_size_vector, topo_size_vector;
 
       attr_ptr.push_back(0);
@@ -91,19 +83,6 @@ namespace neuroh5
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
       assert(status == MPI_SUCCESS);
-      local_ptr_start = ptr_start;
-
-      for (size_t i=0; i<rank; i++)
-        {
-          local_ptr_start = local_ptr_start + ptr_size_vector[i];
-        }
-
-      global_ptr_size = ptr_start;
-
-      for (size_t i=0; i<size; i++)
-        {
-          global_ptr_size = global_ptr_size + ptr_size_vector[i];
-        }
 
       size_t block  = tree_list.size();
 
@@ -186,15 +165,8 @@ namespace neuroh5
           local_sec_start  = local_sec_start  + sec_size_vector[i];
           local_topo_start = local_topo_start + topo_size_vector[i];
         }
-      // calculate the new sizes of the datasets
-      global_attr_size=attr_start; global_sec_size=sec_start; global_topo_size=topo_start;
-      for (size_t i=0; i<size; i++)
-        {
-          global_attr_size  = global_attr_size  + attr_size_vector[i];
-          global_sec_size   = global_sec_size   + sec_size_vector[i];
-          global_topo_size  = global_topo_size  + topo_size_vector[i];
-        }
-    
+
+      printf("build_tree_datasets: rank %d: local_attr_start = %lu\n", rank, local_attr_start);
 
       // calculate the pointer positions relative to the local pointer starting position 
       for (size_t i=0; i<block+1; i++)
@@ -213,16 +185,11 @@ namespace neuroh5
     (
      MPI_Comm comm,
 
-     const hsize_t ptr_start,
      const hsize_t attr_start,
      const hsize_t sec_start,
      const hsize_t topo_start,
 
      std::vector<neurotree_t> &tree_list,
-
-     hsize_t& local_attr_start,
-     hsize_t& local_sec_start,
-     hsize_t& local_topo_start,
     
      std::vector<SECTION_IDX_T>& all_src_vector,
      std::vector<SECTION_IDX_T>& all_dst_vector,
@@ -286,10 +253,67 @@ namespace neuroh5
 
         }
       
-      local_attr_start=attr_start; local_sec_start=sec_start; local_topo_start=topo_start;
+      return 0;
+    }
+
+
+    herr_t size_tree_attributes
+    (
+     MPI_Comm comm,
+     const std::string& file_name,
+     const std::string& pop_name,
+     const std::string& attr_name_space,
+     hsize_t& attr_start,
+     hsize_t& sec_start,
+     hsize_t& topo_start
+     )
+    {
+      hsize_t value_size, index_size;
+      
+      unsigned int rank, size;
+      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
+      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+
+      if (rank == 0)
+        {
+          hid_t file = hdf5::open_file(comm, file_name);
+          assert(file >= 0);
+
+          string path;
+
+          if (H5Lexists (file, ("/" + hdf5::POPULATIONS + "/" + pop_name).c_str(), H5P_DEFAULT))
+            {
+              if (H5Lexists (file, hdf5::cell_attribute_prefix(hdf5::TREES, pop_name).c_str(), H5P_DEFAULT))
+                {
+                  path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::X_COORD);
+                  hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::ATTR_PTR),
+                                             attr_start, index_size, value_size);
+                  
+                  path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SECTION);
+                  hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
+                                             sec_start, index_size, value_size);
+                  
+                  path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SRCSEC);
+                  hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
+                                         topo_start, index_size, value_size);
+                }
+              else
+                {
+                  attr_start = 0;
+                  sec_start = 0;
+                  topo_start = 0;
+                }
+            }
+          assert(hdf5::close_file(file) >= 0);
+        }
+
+      assert(MPI_Bcast(&attr_start, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&sec_start, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&topo_start, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
 
       return 0;
     }
+    
 
     
     /*****************************************************************************
@@ -300,10 +324,6 @@ namespace neuroh5
      MPI_Comm comm,
      const std::string& file_name,
      const std::string& pop_name,
-     const hsize_t ptr_start,
-     const hsize_t attr_start,
-     const hsize_t sec_start,
-     const hsize_t topo_start,
      std::vector<neurotree_t> &tree_list,
      CellPtr ptr_type = CellPtr(PtrOwner)
      )
@@ -318,15 +338,6 @@ namespace neuroh5
       /* Create HDF5 enumerated type for reading SWC type information */
       hid_t hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
       
-      hsize_t global_ptr_size,
-        global_attr_size,
-        global_sec_size,
-        global_topo_size;
-      hsize_t local_ptr_start,
-        local_attr_start,
-        local_sec_start,
-        local_topo_start;
-      
       std::vector<SEC_PTR_T> sec_ptr;
       std::vector<TOPO_PTR_T> topo_ptr;
       std::vector<ATTR_PTR_T> attr_ptr;
@@ -340,16 +351,18 @@ namespace neuroh5
       std::vector<PARENT_NODE_IDX_T> all_parents; // Parent
       std::vector<SWC_TYPE_T> all_swc_types; // SWC Types
 
+      hsize_t attr_start=0, sec_start=0, topo_start=0;
+      assert(size_tree_attributes (comm, file_name, pop_name, hdf5::TREES,
+                                   attr_start, sec_start, topo_start) >= 0);
+
+      printf("append_trees: attr_start = %lu\n",  attr_start);
+      
       if (ptr_type.type == PtrNone)
         {
           assert(tree_list.size() == 1); // singleton tree set
           status = build_singleton_tree_datasets(comm,
-                                                 ptr_start, attr_start,
-                                                 sec_start, topo_start,
+                                                 attr_start, sec_start, topo_start,
                                                  tree_list,
-                                                 local_attr_start,
-                                                 local_sec_start,
-                                                 local_topo_start,
                                                  all_src_vector, all_dst_vector,
                                                  all_xcoords, all_ycoords, all_zcoords, 
                                                  all_radiuses, all_layers, all_sections,
@@ -358,13 +371,8 @@ namespace neuroh5
       else
         {
           status = build_tree_datasets(comm,
-                                       ptr_start, attr_start,
-                                       sec_start, topo_start,
+                                       attr_start, sec_start, topo_start,
                                        tree_list,
-                                       local_ptr_start, local_attr_start,
-                                       local_sec_start, local_topo_start,
-                                       global_ptr_size, global_attr_size,
-                                       global_sec_size,  global_topo_size,
                                        sec_ptr, topo_ptr, attr_ptr,
                                        all_index_vector, all_src_vector, all_dst_vector,
                                        all_xcoords, all_ycoords, all_zcoords, 
@@ -374,7 +382,7 @@ namespace neuroh5
         }
       
       status = append_cell_index (comm, file_name, pop_name, hdf5::TREES,
-                                  all_index_vector, ptr_start);
+                                  all_index_vector);
 
       const data::optional_hid dflt_data_type;
       const data::optional_hid coord_data_type(COORD_H5_NATIVE_T);
@@ -382,6 +390,9 @@ namespace neuroh5
       const data::optional_hid parent_node_data_type(PARENT_NODE_IDX_H5_NATIVE_T);
       const data::optional_hid section_data_type(SECTION_IDX_H5_NATIVE_T);
       const data::optional_hid swc_data_type(hdf5_swc_type);
+
+      string attr_ptr_owner_path = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD) + "/" + hdf5::ATTR_PTR;
+      string sec_ptr_owner_path  = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC) + "/" + hdf5::SEC_PTR;
       
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::X_COORD,
                              all_index_vector, attr_ptr, all_xcoords,
@@ -390,27 +401,27 @@ namespace neuroh5
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::Y_COORD,
                              all_index_vector, attr_ptr, all_ycoords,
                              coord_data_type, IndexShared,
-                             CellPtr (PtrShared, hdf5::ATTR_PTR));
+                             CellPtr (PtrShared, attr_ptr_owner_path));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::Z_COORD,
                              all_index_vector, attr_ptr, all_zcoords,
                              coord_data_type, IndexShared,
-                             CellPtr (PtrShared, hdf5::ATTR_PTR));
+                             CellPtr (PtrShared, attr_ptr_owner_path));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::RADIUS,
                              all_index_vector, attr_ptr, all_radiuses,
                              dflt_data_type, IndexShared,
-                             CellPtr (PtrShared, hdf5::ATTR_PTR));
+                             CellPtr (PtrShared, attr_ptr_owner_path));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::LAYER,
                              all_index_vector, attr_ptr, all_layers,
                              layer_data_type, IndexShared,
-                             CellPtr (PtrShared, hdf5::ATTR_PTR));
+                             CellPtr (PtrShared, attr_ptr_owner_path));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::PARENT,
                              all_index_vector, attr_ptr, all_parents,
                              parent_node_data_type, IndexShared,
-                             CellPtr (PtrShared, hdf5::ATTR_PTR));
+                             CellPtr (PtrShared, attr_ptr_owner_path));
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SWCTYPE,
                              all_index_vector, attr_ptr, all_swc_types,
                              swc_data_type, IndexShared,
-                             CellPtr (PtrShared, hdf5::ATTR_PTR));
+                             CellPtr (PtrShared, attr_ptr_owner_path));
 
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SRCSEC,
                              all_index_vector, topo_ptr, all_src_vector,
@@ -419,7 +430,7 @@ namespace neuroh5
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::DSTSEC,
                              all_index_vector, topo_ptr, all_dst_vector,
                              section_data_type, IndexShared,
-                             CellPtr (PtrShared, hdf5::SEC_PTR));
+                             CellPtr (PtrShared, sec_ptr_owner_path));
 
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SECTION,
                              all_index_vector, sec_ptr, all_sections,

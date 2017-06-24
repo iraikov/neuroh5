@@ -17,7 +17,7 @@ namespace neuroh5
      )
     {
       hsize_t result = 0;
-      
+
       hid_t dset = H5Dopen2(loc, path.c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);

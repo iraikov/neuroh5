@@ -34,8 +34,6 @@
 
 #include "path_names.hh"
 #include "create_file_toplevel.hh"
-#include "create_tree_dataset.hh"
-#include "exists_tree_dataset.hh"
 
 
 using namespace std;
@@ -240,39 +238,9 @@ int main(int argc, char** argv)
     }
   assert(status == 0);
   MPI_Barrier(all_comm);
-  
-  // TODO; create separate functions for opening HDF5 file for reading and writing
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-  assert(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
-  hid_t file = H5Fopen(output_file_name.c_str(), H5F_ACC_RDWR, fapl);
-  assert(file >= 0);
 
-  if (!hdf5::exists_tree_dataset(file, pop_name))
-    {
-      status = hdf5::create_tree_dataset(all_comm, file, pop_name);
-    }
+  status = cell::append_trees(all_comm, output_file_name, pop_name, tree_list);
   assert(status == 0);
-
-  // Reads the current attribute extent to determine number of entries for that population
-  hsize_t ptr_num   = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::ATTR_PTR));
-  hsize_t attr_num  = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD));
-  hsize_t sec_num   = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SECTION));
-  hsize_t topo_num  = hdf5::dataset_num_elements(all_comm, file, hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC));
-  hsize_t ptr_start = 0, attr_start = 0, sec_start = 0, topo_start = 0;
-  status = H5Pclose (fapl);
-  status = H5Fclose (file);
-  
-  if (ptr_num > 0)  ptr_start  = ptr_num-1;
-  attr_start = attr_num;
-  sec_start  = sec_num;
-  topo_start = topo_num;
-
-  status = cell::append_trees(all_comm, output_file_name, pop_name, 
-                              ptr_start, attr_start, sec_start, topo_start, 
-                              tree_list);
-  assert(status == 0);
-
 
   MPI_Comm_free(&all_comm);
   

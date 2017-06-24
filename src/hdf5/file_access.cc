@@ -17,12 +17,18 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const std::string& file_name,
+     const bool collective = false,
      const bool rdwr = false
      )
     {
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+
+      if (collective)
+        {
+          assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+        }
+      
       hid_t file;
 
       if (rdwr)
