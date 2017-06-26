@@ -487,8 +487,12 @@ namespace neuroh5
             assert(mspace >= 0);
             dset = H5Dcreate2(file, (attr_path + "/" + ptr_name).c_str(), ATTR_PTR_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
-            status = H5Olink(dset, file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), H5P_DEFAULT, H5P_DEFAULT);
             assert(status >= 0);
+            if (ptr_name.compare(hdf5::ATTR_PTR) != 0)
+              {
+                status = H5Olink(dset, file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), H5P_DEFAULT, H5P_DEFAULT);
+                assert(status >= 0);
+              }
             assert(H5Dclose(dset) >= 0);
             assert(H5Sclose(mspace) >= 0);
           }
