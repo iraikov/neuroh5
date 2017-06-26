@@ -130,8 +130,6 @@ setup(
                       'src/hdf5/path_names.cc',
                       'src/hdf5/group_contents.cc',
                       'src/hdf5/dataset_type.cc',
-                      'src/hdf5/create_tree_dataset.cc',
-                      'src/hdf5/exists_tree_dataset.cc',
                       'src/hdf5/create_group.cc',
                       'src/hdf5/file_access.cc',
                       'python/neuroh5/iomodule.cc'

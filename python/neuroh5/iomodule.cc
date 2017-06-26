@@ -38,7 +38,6 @@
 #include "cell_populations.hh"
 #include "cell_attributes.hh"
 #include "path_names.hh"
-#include "exists_tree_dataset.hh"
 #include "create_file_toplevel.hh"
 #include "read_tree.hh"
 #include "scatter_read_tree.hh"
