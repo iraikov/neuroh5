@@ -60,8 +60,6 @@ namespace neuroh5
     {
       herr_t status; 
 
-      hsize_t local_attr_start, local_sec_start, local_topo_start;
-
       unsigned int rank, size;
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
@@ -141,41 +139,6 @@ namespace neuroh5
           all_topo_size = all_topo_size + topo_size;
 
         }
-
-      assert(all_index_vector.size() == block);
-      assert(topo_ptr.size() == block+1);
-      assert(sec_ptr.size()  == block+1);
-      assert(attr_ptr.size() == block+1);
-    
-      attr_size_vector.resize(size);
-      sec_size_vector.resize(size);
-      topo_size_vector.resize(size);
-
-      // establish the extents of data for all ranks
-      status = MPI_Allgather(&all_attr_size, 1, MPI_UINT64_T, &attr_size_vector[0], 1, MPI_UINT64_T, comm);
-      status = MPI_Allgather(&all_sec_size, 1, MPI_UINT64_T, &sec_size_vector[0], 1, MPI_UINT64_T, comm);
-      status = MPI_Allgather(&all_topo_size, 1, MPI_UINT64_T, &topo_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status >= 0);
-
-      local_attr_start=attr_start; local_sec_start=sec_start; local_topo_start=topo_start;
-      // calculate the starting position of this rank
-      for (size_t i=0; i<rank; i++)
-        {
-          local_attr_start = local_attr_start + attr_size_vector[i];
-          local_sec_start  = local_sec_start  + sec_size_vector[i];
-          local_topo_start = local_topo_start + topo_size_vector[i];
-        }
-
-      printf("build_tree_datasets: rank %d: local_attr_start = %lu\n", rank, local_attr_start);
-
-      // calculate the pointer positions relative to the local pointer starting position 
-      for (size_t i=0; i<block+1; i++)
-        {
-          topo_ptr[i] = topo_ptr[i] + local_topo_start;
-          sec_ptr[i]  = sec_ptr[i]  + local_sec_start;
-          attr_ptr[i] = attr_ptr[i] + local_attr_start;
-        }
-
 
       return 0;
     }
