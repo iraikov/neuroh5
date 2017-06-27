@@ -18,6 +18,7 @@ namespace neuroh5
     {
       hsize_t result = 0;
 
+      printf("dataset_num_elements: path = %s\n", path.c_str());
       hid_t dset = H5Dopen2(loc, path.c_str(), H5P_DEFAULT);
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);

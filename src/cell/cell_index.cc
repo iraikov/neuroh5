@@ -205,7 +205,7 @@ namespace neuroh5
       hsize_t start = hdf5::dataset_num_elements(comm, file, path);
 
       ierr = hdf5::write<CELL_IDX_T> (file, path,
-                                      global_index_size, start+local_index_start, local_index_size,
+                                      start+global_index_size, start+local_index_start, local_index_size,
                                       CELL_IDX_H5_NATIVE_T, cell_index, wapl);
       assert(ierr == 0);
       ierr = H5Fclose (file);

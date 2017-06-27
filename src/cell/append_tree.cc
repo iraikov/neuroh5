@@ -35,10 +35,6 @@ namespace neuroh5
     (
      MPI_Comm comm,
 
-     const hsize_t attr_start,
-     const hsize_t sec_start,
-     const hsize_t topo_start,
-
      std::vector<neurotree_t> &tree_list,
 
      std::vector<SEC_PTR_T>& sec_ptr,
@@ -148,10 +144,6 @@ namespace neuroh5
     (
      MPI_Comm comm,
 
-     const hsize_t attr_start,
-     const hsize_t sec_start,
-     const hsize_t topo_start,
-
      std::vector<neurotree_t> &tree_list,
     
      std::vector<SECTION_IDX_T>& all_src_vector,
@@ -226,9 +218,9 @@ namespace neuroh5
      const std::string& file_name,
      const std::string& pop_name,
      const std::string& attr_name_space,
-     hsize_t& attr_start,
-     hsize_t& sec_start,
-     hsize_t& topo_start
+     hsize_t& attr_size,
+     hsize_t& sec_size,
+     hsize_t& topo_size
      )
     {
       hsize_t value_size, index_size;
@@ -250,29 +242,30 @@ namespace neuroh5
                 {
                   path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::X_COORD);
                   hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::ATTR_PTR),
-                                             attr_start, index_size, value_size);
+                                             attr_size, index_size, value_size);
                   
                   path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SECTION);
                   hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
-                                             sec_start, index_size, value_size);
+                                             sec_size, index_size, value_size);
                   
                   path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SRCSEC);
                   hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
-                                         topo_start, index_size, value_size);
+                                         topo_size, index_size, value_size);
+
                 }
               else
                 {
-                  attr_start = 0;
-                  sec_start = 0;
-                  topo_start = 0;
+                  attr_size = 0;
+                  sec_size = 0;
+                  topo_size = 0;
                 }
             }
           assert(hdf5::close_file(file) >= 0);
         }
 
-      assert(MPI_Bcast(&attr_start, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
-      assert(MPI_Bcast(&sec_start, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
-      assert(MPI_Bcast(&topo_start, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&attr_size, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&sec_size, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&topo_size, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
 
       return 0;
     }
@@ -314,17 +307,10 @@ namespace neuroh5
       std::vector<PARENT_NODE_IDX_T> all_parents; // Parent
       std::vector<SWC_TYPE_T> all_swc_types; // SWC Types
 
-      hsize_t attr_start=0, sec_start=0, topo_start=0;
-      assert(size_tree_attributes (comm, file_name, pop_name, hdf5::TREES,
-                                   attr_start, sec_start, topo_start) >= 0);
-
-      printf("append_trees: attr_start = %lu\n",  attr_start);
-      
       if (ptr_type.type == PtrNone)
         {
           assert(tree_list.size() == 1); // singleton tree set
           status = build_singleton_tree_datasets(comm,
-                                                 attr_start, sec_start, topo_start,
                                                  tree_list,
                                                  all_src_vector, all_dst_vector,
                                                  all_xcoords, all_ycoords, all_zcoords, 
@@ -334,7 +320,6 @@ namespace neuroh5
       else
         {
           status = build_tree_datasets(comm,
-                                       attr_start, sec_start, topo_start,
                                        tree_list,
                                        sec_ptr, topo_ptr, attr_ptr,
                                        all_index_vector, all_src_vector, all_dst_vector,

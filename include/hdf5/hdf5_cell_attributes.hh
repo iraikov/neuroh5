@@ -247,6 +247,7 @@ namespace neuroh5
           global_ptr_size  = global_ptr_size + ptr_size_vector[i];
         }
 
+
       // add local value offset to attr_ptr
       local_attr_ptr.resize(attr_ptr.size());
       for (size_t i=0; i<local_attr_ptr.size(); i++)
@@ -303,7 +304,8 @@ namespace neuroh5
         case PtrNone:
           break;
         }
-    
+
+
       status = write<T> (file, path + "/" + ATTR_VAL,
                          global_value_size, local_value_start, local_value_size,
                          mtype, value, wapl);
