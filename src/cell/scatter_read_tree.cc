@@ -144,8 +144,8 @@ namespace neuroh5
 
           {
             data::NamedAttrMap attr_values;
-            
-            read_cell_attributes (all_comm, file_name, hdf5::TREES,
+
+            read_cell_attributes (io_comm, file_name, hdf5::TREES,
                                   pop_name, pop_start, attr_values,
                                   offset, numitems);
 

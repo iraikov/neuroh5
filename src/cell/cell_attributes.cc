@@ -134,22 +134,40 @@ namespace neuroh5
      void*             op_data
      )
     {
-      string value_path = string(name) + "/" + hdf5::ATTR_VAL;
-      hid_t dset = H5Dopen2(grp, value_path.c_str(), H5P_DEFAULT);
-      if (dset < 0) // skip the link, if this is not a dataset
+      herr_t ierr;
+      
+      /* Save old error handler */
+      H5E_auto2_t old_func;
+      void *old_client_data;
+      H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
+      
+      /* Turn off error handling */
+      H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+ 
+      ierr = H5Gget_objinfo (grp, name, 0, NULL);
+      if (ierr == 0)
         {
-          return 0;
-        }
-    
-      hid_t ftype = H5Dget_type(dset);
-      assert(ftype >= 0);
-    
-      vector< pair<string,hid_t> >* ptr =
-        (vector< pair<string,hid_t> >*) op_data;
-      ptr->push_back(make_pair(name, ftype));
+          string value_path = string(name) + "/" + hdf5::ATTR_VAL;
 
-      assert(H5Dclose(dset) >= 0);
+          /* Restore previous error handler */
+          hid_t dset = H5Dopen2(grp, value_path.c_str(), H5P_DEFAULT);
+          if (dset < 0) // skip the link, if this is not a dataset
+            {
+              H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+              return 0;
+            }
     
+          hid_t ftype = H5Dget_type(dset);
+          assert(ftype >= 0);
+          
+          vector< pair<string,hid_t> >* ptr =
+            (vector< pair<string,hid_t> >*) op_data;
+          ptr->push_back(make_pair(name, ftype));
+          
+          assert(H5Dclose(dset) >= 0);
+        }
+      
+      H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
       return 0;
     }
 
@@ -173,14 +191,14 @@ namespace neuroh5
 
       hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
       assert(grp >= 0);
-    
+      
       hsize_t idx = 0;
       ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                         &cell_attribute_cb, (void*) &out_attributes);
-    
+      
       assert(H5Gclose(grp) >= 0);
       ierr = H5Fclose(in_file);
-    
+      
       return ierr;
     }
   
@@ -546,7 +564,7 @@ namespace neuroh5
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
       vector< pair<string,hid_t> > attr_info;
-    
+
       status = get_cell_attributes (file_name, name_space,
                                     pop_name, attr_info);
 
