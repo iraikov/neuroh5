@@ -347,7 +347,6 @@ int main(int argc, char** argv)
     vector<CELL_IDX_T> selection_index;
     for (auto const& element : selection_map)
       {
-        if (rank == 0) printf("selection_index: %u\n", element.second);
         selection_index.push_back(element.second);
       }
 
