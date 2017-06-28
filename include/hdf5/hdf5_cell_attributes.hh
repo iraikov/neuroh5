@@ -162,7 +162,6 @@ namespace neuroh5
       int status;
       assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
-      assert(value.size() > 0);
 
       hid_t file = H5Iget_file_id(loc);
       assert(file >= 0);
@@ -189,7 +188,18 @@ namespace neuroh5
       assert(status == MPI_SUCCESS);
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
-      hsize_t local_ptr_size=attr_ptr.size()-1;
+      hsize_t local_ptr_size;
+
+      if (attr_ptr.size() > 0)
+        {
+          local_ptr_size = attr_ptr.size()-1;
+        }
+      else
+        {
+          local_ptr_size = 0;
+        }
+        
+      
       if (rank == size-1)
         {
           local_ptr_size=local_ptr_size+1;
@@ -244,7 +254,7 @@ namespace neuroh5
         {
           global_value_size  = global_value_size + value_size_vector[i];
           global_index_size  = global_index_size + index_size_vector[i];
-          global_ptr_size  = global_ptr_size + ptr_size_vector[i];
+          global_ptr_size    = global_ptr_size + ptr_size_vector[i];
         }
 
 
