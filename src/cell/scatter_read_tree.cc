@@ -95,7 +95,7 @@ namespace neuroh5
 
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
           assert(file >= 0);
-          dset_size = hdf5::dataset_num_elements(io_comm, file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
+          dset_size = hdf5::dataset_num_elements(file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
 
           if (numitems > 0)
             {

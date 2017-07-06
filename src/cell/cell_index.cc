@@ -128,7 +128,7 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           assert(file >= 0);
 
-          size_t dset_size = hdf5::dataset_num_elements(comm, file, hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX));
+          size_t dset_size = hdf5::dataset_num_elements(file, hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX));
           cell_index.resize(dset_size);
           ierr = hdf5::read<CELL_IDX_T> (file,
                                          hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX),
@@ -202,7 +202,7 @@ namespace neuroh5
 
       string path = hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX);
       
-      hsize_t start = hdf5::dataset_num_elements(comm, file, path);
+      hsize_t start = hdf5::dataset_num_elements(file, path);
 
       ierr = hdf5::write<CELL_IDX_T> (file, path,
                                       start+global_index_size, start+local_index_start, local_index_size,

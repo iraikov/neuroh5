@@ -47,9 +47,9 @@ namespace neuroh5
      hsize_t&         value_size
      )
     {
-      ptr_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::ATTR_PTR);
-      index_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::NODE_INDEX);
-      value_size = hdf5::dataset_num_elements(comm, loc, path+"/"+hdf5::ATTR_VAL);
+      ptr_size = hdf5::dataset_num_elements(loc, path+"/"+hdf5::ATTR_PTR);
+      index_size = hdf5::dataset_num_elements(loc, path+"/"+hdf5::NODE_INDEX);
+      value_size = hdf5::dataset_num_elements(loc, path+"/"+hdf5::ATTR_VAL);
     }
 
     void create_node_attribute_datasets

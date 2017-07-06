@@ -85,11 +85,11 @@ namespace neuroh5
 
       // determine number of blocks in projection
       uint64_t num_blocks = hdf5::dataset_num_elements
-        (comm, file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR)) - 1;
+        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR)) - 1;
 
       // determine number of edges in projection
       nedges = hdf5::dataset_num_elements
-        (comm, file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX));
+        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX));
 
       /* Create property list for collective dataset operations. */
       hid_t rapl = H5Pcreate (H5P_DATASET_XFER);

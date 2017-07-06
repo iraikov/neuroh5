@@ -49,7 +49,7 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      hsize_t dset_size = dataset_num_elements (comm, loc, path + "/" + CELL_INDEX);
+      hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
       size_t read_size = 0;
       if (numitems > 0) 
         {
@@ -113,7 +113,7 @@ namespace neuroh5
               else
                 {
                   value_start = 0;
-                  value_block = dataset_num_elements (comm, loc, value_path);
+                  value_block = dataset_num_elements (loc, value_path);
                 }
             
               // read values
@@ -142,6 +142,89 @@ namespace neuroh5
                 }
             }
         }
+      return status;
+    }
+
+    
+    template <typename T>
+    herr_t read_cell_attribute_selection
+    (
+     const hid_t&              loc,
+     const std::string&        path,
+     const CELL_IDX_T          pop_start,
+     const std::vector<CELL_IDX_T>&  selection,
+     std::vector<ATTR_PTR_T> & selection_ptr,
+     std::vector<T> &          values
+     )
+    {
+      herr_t status;
+      std::vector<ATTR_PTR_T> ptr;
+      std::vector<CELL_IDX_T> index;
+      
+      hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
+      
+      if (dset_size > 0)
+        {
+          string index_path = path + "/" + CELL_INDEX;
+          string ptr_path = path + "/" + ATTR_PTR;
+          string value_path = path + "/" + ATTR_VAL;
+
+          // read index
+          index.resize(dset_size);
+
+          status = read<NODE_IDX_T> (loc, index_path, 0, dset_size,
+                                     NODE_IDX_H5_NATIVE_T, index, H5P_DEFAULT);
+          for (size_t i=0; i<index.size(); i++)
+            {
+              index[i] += pop_start;
+            }
+              
+          // read pointer and determine ranges
+          status = H5Lexists (loc, ptr_path.c_str(), H5P_DEFAULT);
+          if (status)
+            {
+              ptr.resize(dset_size+1);
+              status = read<ATTR_PTR_T> (loc, ptr_path, 0, dset_size,
+                                         ATTR_PTR_H5_NATIVE_T, ptr, H5P_DEFAULT);
+              assert (status >= 0);
+            }
+
+          if (ptr.size() > 0)
+            {
+              for (size_t s=0; s<selection.size()-1; s++)
+                {
+                  std::vector<T> value;
+
+                  auto it = std::find(index.begin(), index.end(), s-pop_start);
+                  assert(it != index.end());
+
+                  ptrdiff_t pos = it - index.begin();
+                  
+                  hsize_t value_start=ptr[pos];
+                  hsize_t value_block=ptr[pos+1]-value_start;
+            
+                  // read values
+                  hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
+                  assert(dset >= 0);
+                  hid_t ftype = H5Dget_type(dset);
+                  assert(ftype >= 0);
+                  hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
+                  assert(H5Dclose(dset)   >= 0);
+                  assert(H5Tclose(ftype)  >= 0);
+            
+                  value.resize(value_block);
+                  status = read<T> (loc, value_path, value_start, value_block,
+                                    ntype, value, H5P_DEFAULT);
+            
+                  assert(H5Tclose(ntype)  >= 0);
+
+                  selection_ptr.push_back(values.size());
+                  values.insert(values.end(), value.begin(), value.end());
+                }
+              selection_ptr.push_back(values.size());
+            }
+        }
+      
       return status;
     }
 

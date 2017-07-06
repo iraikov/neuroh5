@@ -86,7 +86,7 @@ namespace neuroh5
 
       // determine number of edges in projection
       uint64_t num_blocks = hdf5::dataset_num_elements
-        (comm, file, prefix+"/source_gid/gid");
+        (file, prefix+"/source_gid/gid");
 
       vector< pair<hsize_t,hsize_t> > bins;
 

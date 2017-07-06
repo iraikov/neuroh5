@@ -12,7 +12,6 @@ namespace neuroh5
   {
     hsize_t dataset_num_elements
     (
-     MPI_Comm           comm,
      const hid_t&       loc,
      const std::string& path
      );

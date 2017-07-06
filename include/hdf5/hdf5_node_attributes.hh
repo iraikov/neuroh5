@@ -58,7 +58,7 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      hsize_t dset_size = dataset_num_elements (comm, loc, path + "/" + NODE_INDEX);
+      hsize_t dset_size = dataset_num_elements (loc, path + "/" + NODE_INDEX);
       size_t read_size = 0;
       if (numitems > 0) 
         {
