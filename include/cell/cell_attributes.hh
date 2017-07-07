@@ -68,6 +68,15 @@ namespace neuroh5
      size_t numitems = 0
      );
 
+    void read_cell_attribute_selection
+    (
+     const string& file_name,
+     const string& name_space,
+     const string& pop_name,
+     const CELL_IDX_T pop_start,
+     const std::vector<CELL_IDX_T>&  selection,
+     data::NamedAttrMap& attr_values
+     );
     
     int scatter_read_cell_attributes
     (

@@ -26,6 +26,15 @@ namespace neuroh5
      size_t numitems = 0,
      bool collective = true
      );
+
+    int read_tree_selection
+    (
+     const std::string& file_name,
+     const std::string& pop_name,
+     const CELL_IDX_T pop_start,
+     std::vector<neurotree_t> &tree_list,
+     const std::vector<CELL_IDX_T>&  selection
+     );
   }
 
 }

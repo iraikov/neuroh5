@@ -1682,6 +1682,107 @@ extern "C"
 
     return py_result_tuple;
   }
+  
+  static PyObject *py_read_tree_selection (PyObject *self, PyObject *args)
+  {
+    int status; size_t start=0, end=0;
+    PyObject *py_cell_dict = PyDict_New();
+    unsigned long commptr;
+    char *file_name, *pop_name;
+    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_selection=NULL;
+    vector <CELL_IDX_T> selection;
+
+    if (!PyArg_ParseTuple(args, "kssO|O", &commptr, &file_name,  &pop_name,
+                          &py_selection, &py_attr_name_spaces))
+      return NULL;
+
+    vector <string> attr_name_spaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            char *str = PyString_AsString (pyval);
+            attr_name_spaces.push_back(string(str));
+          }
+      }
+
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
+            CELL_IDX_T n = PyInt_AsLong(pyval);
+            selection.push_back(n);
+          }
+      }
+
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
+    assert (status >= 0);
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
+
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    size_t n_nodes;
+    
+    // Read population info
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
+
+
+    vector<neurotree_t> tree_list;
+
+    status = cell::read_tree_selection (string(file_name),
+                                        string(pop_name), pop_vector[pop_idx].start,
+                                        tree_list, selection);
+    assert (status >= 0);
+    map <string, NamedAttrMap> attr_maps;
+    
+    for (string attr_name_space : attr_name_spaces)
+      {
+        data::NamedAttrMap attr_map;
+        cell::read_cell_attribute_selection(string(file_name), 
+                                            attr_name_space, pop_name,
+                                            pop_vector[pop_idx].start,
+                                            selection, attr_map);
+        attr_maps.insert(make_pair(attr_name_space, attr_map));
+      }
+
+    for (size_t i = 0; i < tree_list.size(); i++)
+      {
+        const CELL_IDX_T idx = get<0>(tree_list[i]);
+        const neurotree_t &tree = tree_list[i];
+          
+        PyObject *py_treeval = py_build_tree_value(idx, tree, attr_maps);
+
+        PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);
+      }
+
+    PyObject *py_result_tuple = PyTuple_New(2);
+    PyTuple_SetItem(py_result_tuple, 0, py_cell_dict);
+    PyTuple_SetItem(py_result_tuple, 1, PyInt_FromLong((long)n_nodes));
+
+    return py_result_tuple;
+  }
 
   
   static PyObject *py_read_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
@@ -1784,6 +1885,122 @@ extern "C"
     return py_idx_dict;
   }
 
+  
+  static PyObject *py_read_cell_attribute_selection (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    herr_t status;
+    unsigned long commptr;
+    const string default_name_space = "Attributes";
+    char *file_name, *pop_name, *name_space = (char *)default_name_space.c_str();
+    PyObject *py_selection = NULL;
+    vector <CELL_IDX_T> selection;
+    
+    static const char *kwlist[] = {"commptr",
+                                   "file_name",
+                                   "pop_name",
+                                   "selection",
+                                   "namespace",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|s", (char **)kwlist,
+                                     &commptr, &file_name,
+                                     &pop_name, &py_selection,
+                                     &name_space))
+        return NULL;
+
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(*((MPI_Comm *)(commptr)), string(file_name), pop_labels);
+    assert (status >= 0);
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
+
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
+            CELL_IDX_T n = PyInt_AsLong(pyval);
+            selection.push_back(n);
+          }
+      }
+
+    size_t n_nodes;
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)),
+                                        string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
+
+
+    NamedAttrMap attr_values;
+    cell::read_cell_attribute_selection (string(file_name), string(name_space),
+                                         string(pop_name), pop_vector[pop_idx].start,
+                                         selection, attr_values);
+    vector<vector<string>> attr_names;
+    attr_values.attr_names(attr_names);
+
+    
+    PyObject *py_idx_dict = PyDict_New();
+    for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
+      {
+        CELL_IDX_T idx = *it;
+
+        PyObject *py_attr_dict = PyDict_New();
+
+        py_attr_values<float> (idx,
+                               attr_names[AttrMap::attr_index_float],
+                               attr_values.attr_maps<float>(),
+                               NPY_FLOAT,
+                               py_attr_dict);
+        py_attr_values<uint8_t> (idx,
+                                 attr_names[AttrMap::attr_index_uint8],
+                                 attr_values.attr_maps<uint8_t>(),
+                                 NPY_UINT8,
+                                 py_attr_dict);
+        py_attr_values<int8_t> (idx,
+                                attr_names[AttrMap::attr_index_int8],
+                                attr_values.attr_maps<int8_t>(),
+                                NPY_INT8,
+                                py_attr_dict);
+        py_attr_values<uint16_t> (idx,
+                                  attr_names[AttrMap::attr_index_uint16],
+                                  attr_values.attr_maps<uint16_t>(),
+                                  NPY_UINT16,
+                                  py_attr_dict);
+        py_attr_values<uint32_t> (idx,
+                                  attr_names[AttrMap::attr_index_uint32],
+                                  attr_values.attr_maps<uint32_t>(),
+                                  NPY_UINT32,
+                                  py_attr_dict);
+        py_attr_values<int32_t> (idx,
+                                 attr_names[AttrMap::attr_index_int32],
+                                 attr_values.attr_maps<int32_t>(),
+                                 NPY_INT32,
+                                 py_attr_dict);
+
+        PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
+
+      }
+    
+    return py_idx_dict;
+  }
+
+  
   static PyObject *py_bcast_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
     herr_t status;
@@ -2170,9 +2387,6 @@ extern "C"
   }
 
 
-  /*
-    {
-  */
   static PyObject *py_append_cell_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
     MPI_Comm data_comm;
@@ -2429,7 +2643,6 @@ extern "C"
                                  get<1>(pop_labels[pop_idx]),
                                  hdf5::TREES,
                                  tree_index) >= 0);
-    printf("tree index size is %u\n", tree_index.size());
 
     for (size_t i=0; i<tree_index.size(); i++)
       {
@@ -2890,12 +3103,14 @@ extern "C"
       "Reads neuronal tree morphology." },
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
       "Reads neuronal tree morphology using scalable parallel read/scatter." },
+    { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
+      "Reads attributes for a selection of cells." },
     { "read_cell_attributes", (PyCFunction)py_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
       "Reads additional attributes for the given range of cells." },
     { "bcast_cell_attributes", (PyCFunction)py_bcast_cell_attributes, METH_VARARGS | METH_KEYWORDS,
-      "Reads additional attributes for the given range of cells and broadcasts to all ranks." },
+      "Reads attributes for the given range of cells and broadcasts to all ranks." },
     { "write_cell_attributes", (PyCFunction)py_write_cell_attributes, METH_VARARGS | METH_KEYWORDS,
-      "Writes additional attributes for the given range of cells." },
+      "Writes attributes for the given range of cells." },
     { "append_cell_attributes", (PyCFunction)py_append_cell_attributes, METH_VARARGS | METH_KEYWORDS,
       "Appends additional attributes for the given range of cells." },
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,

@@ -26,6 +26,14 @@ namespace neuroh5
      const bool split_layers,
      std::vector<neuroh5::neurotree_t> &tree_list
      );
+
+    int read_swc
+    (
+     const std::string& file_name,
+     const CELL_IDX_T gid,
+     const int id_offset,
+     vector<neurotree_t> &tree_list
+     );
   }
     
 }

@@ -85,5 +85,31 @@ namespace neuroh5
     
       return 0;
     }
+
+
+    /*****************************************************************************
+     * Load tree data structures from HDF5
+     *****************************************************************************/
+    int read_tree_selection
+    (
+     const std::string& file_name,
+     const std::string& pop_name,
+     const CELL_IDX_T pop_start,
+     std::vector<neurotree_t> &tree_list,
+     const std::vector<CELL_IDX_T>&  selection
+     )
+    {
+      data::NamedAttrMap attr_values;
+      
+      read_cell_attribute_selection (file_name, hdf5::TREES,
+                                     pop_name, pop_start, 
+                                     selection, attr_values);
+
+      append_tree_list (pop_start, attr_values, tree_list);
+    
+      return 0;
+    }
+
+    
   }
 }
