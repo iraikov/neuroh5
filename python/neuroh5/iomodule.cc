@@ -1751,10 +1751,12 @@ extern "C"
 
     vector<neurotree_t> tree_list;
 
+    printf("prior to calling read_tree_selection\n");
     status = cell::read_tree_selection (string(file_name),
                                         string(pop_name), pop_vector[pop_idx].start,
                                         tree_list, selection);
     assert (status >= 0);
+    printf("after calling read_tree_selection\n");
     map <string, NamedAttrMap> attr_maps;
     
     for (string attr_name_space : attr_name_spaces)
@@ -3101,6 +3103,8 @@ extern "C"
       "Returns the names of the populations contained in the given file." },
     { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS,
       "Reads neuronal tree morphology." },
+    { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS,
+      "Reads the selected neuronal tree morphologies." },
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
       "Reads neuronal tree morphology using scalable parallel read/scatter." },
     { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,

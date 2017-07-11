@@ -178,7 +178,7 @@ namespace neuroh5
             {
               index[i] += pop_start;
             }
-              
+
           // read pointer and determine ranges
           status = H5Lexists (loc, ptr_path.c_str(), H5P_DEFAULT);
           if (status)
@@ -191,18 +191,18 @@ namespace neuroh5
 
           if (ptr.size() > 0)
             {
-              for (size_t s=0; s<selection.size()-1; s++)
+              for (size_t s=0; s<selection.size(); s++)
                 {
                   std::vector<T> value;
 
-                  auto it = std::find(index.begin(), index.end(), s-pop_start);
+                  auto it = std::find(index.begin(), index.end(), selection[s]-pop_start);
                   assert(it != index.end());
 
                   ptrdiff_t pos = it - index.begin();
-                  
+
                   hsize_t value_start=ptr[pos];
                   hsize_t value_block=ptr[pos+1]-value_start;
-            
+                  
                   // read values
                   hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
                   assert(dset >= 0);
@@ -211,7 +211,8 @@ namespace neuroh5
                   hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
                   assert(H5Dclose(dset)   >= 0);
                   assert(H5Tclose(ftype)  >= 0);
-            
+
+
                   value.resize(value_block);
                   status = read<T> (loc, value_path, value_start, value_block,
                                     ntype, value, H5P_DEFAULT);
