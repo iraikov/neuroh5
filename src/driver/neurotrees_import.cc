@@ -168,6 +168,7 @@ int main(int argc, char** argv)
 
           if (getline(infile, line))
             {
+              stringstream ss;
               ss << line;
               ss >> filename;
             }
@@ -243,7 +244,7 @@ int main(int argc, char** argv)
   size_t filecount=0;
   hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
-  if (opt_swc_type) 
+  if (opt_swctype) 
     {
       // if swc type is given, then we are reading an swc file with layer encoding
       for (size_t i=start; i<end; i++)
