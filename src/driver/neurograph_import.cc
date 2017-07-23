@@ -155,7 +155,7 @@ int main(int argc, char** argv)
   string txt_filelist_file_name;
   vector <string> txt_input_file_names;
   string hdf5_input_file_name, hdf5_input_dsetpath;
-  vector <size_t> num_attrs;
+  vector <size_t> num_attrs(data::AttrMap::num_attr_types);
   MPI_Comm all_comm;
   
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
           {
             string arg = string(optarg);
             string delimiter = ",";
-            size_t pos=0, pos1;
+            size_t ntype=0, pos=0, pos1;
             do
               {
                 size_t nval;
@@ -257,11 +257,12 @@ int main(int argc, char** argv)
                 pos1 = arg.find(delimiter, pos);
                 ss << arg.substr(pos, pos1);
                 ss >> nval;
-                num_attrs.push_back(nval);
+                num_attrs[ntype] = nval;
                 if (pos != string::npos)
                   {
                     pos = pos1 + delimiter.length();
                   }
+                ntype += 1;
               } while (pos != string::npos);
           }
           break;
