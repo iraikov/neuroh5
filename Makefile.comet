@@ -1,6 +1,6 @@
 AR		:= ar
-CC		:= mpicxx
-LD        	:= mpicxx
+CC		:= $(CXX)
+LD        	:= $(CXX)
 
 MPI_INCDIR      = /opt/mvapich2/intel/ib/include
 MPI_LIBDIR      = /opt/mvapich2/intel/ib/lib
