@@ -13,7 +13,7 @@ namespace neuroh5
     const std::string NODES       = "Nodes";
     const std::string H5_TYPES    = "H5Types";
     const std::string POP_LABELS  = "Population labels";
-    const std::string POP_COMBS   = "Population combinations";
+    const std::string POP_COMBS   = "Valid population projections";
   
     const std::string TREES      = "Trees";
     const std::string X_COORD    = "X Coordinate";

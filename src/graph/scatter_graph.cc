@@ -89,8 +89,11 @@ namespace neuroh5
           uint32_t dst_pop_idx=0, src_pop_idx=0;
           bool src_pop_set = false, dst_pop_set = false;
       
+          printf("src_pop_name = %s\n", src_pop_name.c_str());
+          printf("dst_pop_name = %s\n", dst_pop_name.c_str());
           for (size_t i=0; i< pop_labels.size(); i++)
             {
+              printf("pop_labels[%d] = %s\n", i, get<1>(pop_labels[i]).c_str());
               if (src_pop_name == get<1>(pop_labels[i]))
                 {
                   src_pop_idx = get<0>(pop_labels[i]);

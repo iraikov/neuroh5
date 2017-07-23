@@ -333,7 +333,6 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname
         a = l.split(colsep)
         src = int(float(a[0]))+offset-source_base
         dst = int(float(a[1]))+offset-dest_base
-        print 'src = ', src
         if dst_min < 0:
             dst_min = dst
         else:
@@ -393,7 +392,6 @@ def import_ltdist_lines_dbs (lines,source_base,dest_base,colsep,offset,groupname
 @click.option("--bufsize", type=int, default=100000)
 def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, indextype_src, indextype_dst, colsep, offset, bufsize):
 
-    print "offset = ", offset
     population_mapping = { "GC": 0, "MC": 1, "HC": 2, "BC": 3, "AAC": 4,
                            "HCC": 5, "NGFC": 6, "MPP": 7, "LPP": 8 }
     layer_mapping = {"GRANULE_LAYER": 1, "INNER_MOLECULAR_LAYER": 2,

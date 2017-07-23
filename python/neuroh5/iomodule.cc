@@ -10,6 +10,7 @@
 #include "debug.hh"
 
 #include <Python.h>
+#include <bytesobject.h>
 #include <numpy/numpyconfig.h>
 #include <numpy/arrayobject.h>
 
@@ -83,8 +84,8 @@ void create_node_rank_map (PyObject *py_node_rank_map,
   
   while (PyDict_Next(py_node_rank_map, &map_pos, &idx_key, &idx_value))
     {
-      NODE_IDX_T idx = PyInt_AsLong(idx_key);
-      rank_t rank = PyInt_AsLong(idx_value);
+      NODE_IDX_T idx = PyLong_AsLong(idx_key);
+      rank_t rank = PyLong_AsLong(idx_value);
       node_rank_map.insert(make_pair(idx,rank));
     }
 }
@@ -219,7 +220,7 @@ void create_value_maps (PyObject *idx_values,
       assert(idx_key != Py_None);
       assert(idx_value != Py_None);
 
-      CELL_IDX_T idx = PyInt_AsLong(idx_key);
+      CELL_IDX_T idx = PyLong_AsLong(idx_key);
 
       PyObject *attr_key, *attr_values;
       Py_ssize_t attr_pos = 0;
@@ -234,13 +235,13 @@ void create_value_maps (PyObject *idx_values,
           npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
           if (attr_names.size() < (size_t)attr_idx+1)
             {
-              string attr_name = string(PyString_AsString(attr_key));
+              string attr_name = string(PyBytes_AsString(attr_key));
               attr_names.push_back(attr_name);
               attr_types.push_back(npy_type);
             }
           else
             {
-              assert(attr_names[attr_idx] == string(PyString_AsString(attr_key)));
+              assert(attr_names[attr_idx] == string(PyBytes_AsString(attr_key)));
               assert(attr_types[attr_idx] == npy_type);
             }
             
@@ -371,7 +372,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       size_t num_section_nodes = sections[sections_ptr];
       npy_intp nodes_dims[1], nodes_ind = 0;
       nodes_dims[0] = num_section_nodes;
-      py_section_key = PyInt_FromLong((long)section_idx);
+      py_section_key = PyLong_FromLong((long)section_idx);
       py_section_nodes = (PyObject *)PyArray_SimpleNew(1, nodes_dims, NPY_UINT32);
       NODE_IDX_T *section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
       sections_ptr++;
@@ -903,16 +904,16 @@ extern "C"
               {
                 for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
                   {
-                    PyObject *py_attr_key = PyString_FromString(edge_attr_name_vector[p][n][t].c_str());
-                    PyObject *py_attr_index = PyInt_FromLong(attr_index);
+                    PyObject *py_attr_key = PyBytes_FromString(edge_attr_name_vector[p][n][t].c_str());
+                    PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItem(py_prj_attr_info, py_attr_key, py_attr_index);
                     attr_index++;
                   }
               }
             PyObject *py_prj_key = PyTuple_New(2);
-            PyTuple_SetItem(py_prj_key, 0, PyString_FromString(prj_names[p].first.c_str()));
-            PyTuple_SetItem(py_prj_key, 1, PyString_FromString(prj_names[p].second.c_str()));
+            PyTuple_SetItem(py_prj_key, 0, PyBytes_FromString(prj_names[p].first.c_str()));
+            PyTuple_SetItem(py_prj_key, 1, PyBytes_FromString(prj_names[p].second.c_str()));
             PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
           }
       }
@@ -1027,7 +1028,7 @@ extern "C"
                         assert(status == 0);
                       }
                   }
-                PyObject *key = PyInt_FromLong(key_node);
+                PyObject *key = PyLong_FromLong(key_node);
                 PyDict_SetItem(py_edge_dict, key, py_edgeval);
               }
           }
@@ -1112,16 +1113,16 @@ extern "C"
               {
                 for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
                   {
-                    PyObject *py_attr_key = PyString_FromString(edge_attr_name_vector[p][n][t].c_str());
-                    PyObject *py_attr_index = PyInt_FromLong(attr_index);
+                    PyObject *py_attr_key = PyBytes_FromString(edge_attr_name_vector[p][n][t].c_str());
+                    PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItem(py_prj_attr_info, py_attr_key, py_attr_index);
                     attr_index++;
                   }
               }
             PyObject *py_prj_key = PyTuple_New(2);
-            PyTuple_SetItem(py_prj_key, 0, PyString_FromString(prj_names[p].first.c_str()));
-            PyTuple_SetItem(py_prj_key, 1, PyString_FromString(prj_names[p].second.c_str()));
+            PyTuple_SetItem(py_prj_key, 0, PyBytes_FromString(prj_names[p].first.c_str()));
+            PyTuple_SetItem(py_prj_key, 1, PyBytes_FromString(prj_names[p].second.c_str()));
             PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
           }
       }
@@ -1235,7 +1236,7 @@ extern "C"
                         assert(status == 0);
                       }
                   }
-                PyObject *key = PyInt_FromLong(key_node);
+                PyObject *key = PyLong_FromLong(key_node);
                 PyDict_SetItem(py_edge_dict, key, py_edgeval);
               }
           }
@@ -1438,7 +1439,7 @@ extern "C"
     PyObject *py_population_names = PyList_New(0);
     for (size_t i=0; i<pop_names.size(); i++)
       {
-        PyList_Append(py_population_names, PyString_FromString(pop_names[i].c_str()));
+        PyList_Append(py_population_names, PyBytes_FromString(pop_names[i].c_str()));
       }
     
     return py_population_names;
@@ -1474,8 +1475,8 @@ extern "C"
     for (auto range: pop_ranges)
       {
         PyObject *py_range_tuple = PyTuple_New(2);
-        PyTuple_SetItem(py_range_tuple, 0, PyInt_FromLong((long)range.first));
-        PyTuple_SetItem(py_range_tuple, 1, PyInt_FromLong((long)range.second.first));
+        PyTuple_SetItem(py_range_tuple, 0, PyLong_FromLong((long)range.first));
+        PyTuple_SetItem(py_range_tuple, 1, PyLong_FromLong((long)range.second.first));
 
         if (range.second.second < pop_names.size())
           {
@@ -1505,7 +1506,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyString_AsString (pyval);
+            char *str = PyBytes_AsString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -1568,7 +1569,7 @@ extern "C"
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_cell_dict);
-    PyTuple_SetItem(py_result_tuple, 1, PyInt_FromLong((long)n_nodes));
+    PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
 
     return py_result_tuple;
   }
@@ -1618,7 +1619,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyString_AsString (pyval);
+            char *str = PyBytes_AsString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -1678,7 +1679,7 @@ extern "C"
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_cell_dict);
-    PyTuple_SetItem(py_result_tuple, 1, PyInt_FromLong((long)n_nodes));
+    PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
 
     return py_result_tuple;
   }
@@ -1704,7 +1705,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyString_AsString (pyval);
+            char *str = PyBytes_AsString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -1715,7 +1716,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
           {
             PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyInt_AsLong(pyval);
+            CELL_IDX_T n = PyLong_AsLong(pyval);
             selection.push_back(n);
           }
       }
@@ -1781,7 +1782,7 @@ extern "C"
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_cell_dict);
-    PyTuple_SetItem(py_result_tuple, 1, PyInt_FromLong((long)n_nodes));
+    PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
 
     return py_result_tuple;
   }
@@ -1935,7 +1936,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
           {
             PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyInt_AsLong(pyval);
+            CELL_IDX_T n = PyLong_AsLong(pyval);
             selection.push_back(n);
           }
       }
@@ -2607,7 +2608,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyString_AsString (pyval);
+            char *str = PyBytes_AsString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -3127,16 +3128,46 @@ extern "C"
   };
 }
 
-PyMODINIT_FUNC
-initio(void) {
-  import_array();
+#if PY_MAJOR_VERSION >= 3
 
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "io",
+        NULL,
+        NULL,
+        module_methods,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+};
+
+#endif
+
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+PyInit_io(void)
+#else
+PyMODINIT_FUNC
+initio(void)
+#endif
+{
+  import_array();
+  
+#if PY_MAJOR_VERSION >= 3
+  PyObject *module = PyModule_Create(&moduledef);
+#else
   PyObject *module = Py_InitModule3("io", module_methods, "NeuroH5 I/O module");
+#endif
   
   if (PyType_Ready(&PyNeurotreeGen_Type) < 0)
     {
       printf("NeurotreeGen type cannot be added\n");
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else      
       return;
+#endif
     }
 
   Py_INCREF((PyObject *)&PyNeurotreeGen_Type);
@@ -3145,13 +3176,22 @@ initio(void) {
   if (PyType_Ready(&PyNeurotreeAttrGen_Type) < 0)
     {
       printf("NeurotreeAttrGen type cannot be added\n");
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else      
       return;
+#endif
     }
 
   Py_INCREF((PyObject *)&PyNeurotreeAttrGen_Type);
   PyModule_AddObject(module, "NeurotreeAttrGen", (PyObject *)&PyNeurotreeAttrGen_Type);
 
+  
+#if PY_MAJOR_VERSION >= 3
+  return module;
+#else
   return;
+#endif
 }
 
   
