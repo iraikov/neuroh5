@@ -4,20 +4,19 @@
 ///
 ///  Merge edges from multiple projections into a single edge map.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 #include "debug.hh"
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 
 #undef NDEBUG
 #include <cassert>
 
-using namespace ngh5::model;
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {

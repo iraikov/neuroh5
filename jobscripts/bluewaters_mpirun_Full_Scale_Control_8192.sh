@@ -5,7 +5,7 @@
 ### which queue to use
 #PBS -q debug
 ### set the wallclock time
-#PBS -l walltime=0:30:00
+#PBS -l walltime=0:10:00
 ### set the job name
 #PBS -N scatter_Full_Scale_Control
 ### set the job stdout and stderr
@@ -30,8 +30,8 @@ export results_path
 
 mkdir -p $results_path
 
-aprun -n 8192 ./build/scatter  -a -i 64  \
-      /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5
+aprun -n 8192 ./build/scatter  -a -i 256  \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP_20170308.h5
 
 
 

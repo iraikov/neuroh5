@@ -1,26 +1,26 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file scatter_graph.hh
+///  @file bcast_graph.hh
 ///
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
 #ifndef GRAPH_BCAST_HH
 #define GRAPH_BCAST_HH
 
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
-#include "model_types.hh"
 
 #include <mpi.h>
 
 #include <map>
 #include <vector>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -56,8 +56,8 @@ namespace ngh5
      const EdgeMapType                  edge_map_type,
      const std::string&                 file_name,
      const bool                         opt_attrs,
-     const std::vector<std::string>&    prj_names,
-     std::vector < model::edge_map_t >& prj_vector,
+     const std::vector< std::pair<std::string,std::string> >&    prj_names,
+     std::vector < edge_map_t >& prj_vector,
      std::vector < std::vector <std::vector<std::string>> >& edge_attr_names_vector,
      size_t                            &total_num_nodes,
      size_t                            &local_num_edges,

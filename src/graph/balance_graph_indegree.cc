@@ -4,18 +4,18 @@
 ///
 ///  Partition graph vertices according to their degree.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 
 #include "debug.hh"
 
-#include "read_dbs_projection.hh"
-#include "population_reader.hh"
+#include "neuroh5_types.hh"
+#include "read_projection.hh"
+#include "cell_populations.hh"
 #include "scatter_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
-#include "read_population.hh"
 #include "validate_edge_list.hh"
 
 #include <getopt.h>
@@ -34,9 +34,8 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace ngh5::model;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -60,7 +59,7 @@ namespace ngh5
     }
 
     // Assign each node to a rank 
-    void compute_node_rank_map
+    static void compute_node_rank_map
     (
      size_t num_ranks,
      size_t num_nodes,
@@ -109,7 +108,7 @@ namespace ngh5
     (
      MPI_Comm comm,
      const std::string& input_file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size,
      const size_t Nparts,
      std::vector<NODE_IDX_T> &parts,
@@ -128,7 +127,7 @@ namespace ngh5
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      assert(io::hdf5::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      assert(cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       map<NODE_IDX_T, rank_t> node_rank_map;

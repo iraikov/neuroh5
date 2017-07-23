@@ -18,7 +18,7 @@
 ### Get darsan profile data
 #PBS -lgres=darshan
 
-module load cray-hdf5-parallel
+module load cray-hdf5-parallel/1.8.16
 module load gcc/4.9.3
 
 set -x
@@ -30,7 +30,7 @@ export LD_LIBRARY_PATH=$HOME/bin/parmetis/lib:$LD_LIBRARY_PATH
 results_path=./results/Full_Scale_Control_4096_$PBS_JOBID
 export results_path
 
-aprun -n 4096 ./build/scatter -a -i 256  -r parts.4096 \
-      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5
+aprun -n 4096 ./build/scatter -a -i 256 \
+      /projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_20170510.h5
 
 

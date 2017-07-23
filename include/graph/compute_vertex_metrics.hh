@@ -4,14 +4,14 @@
 ///
 ///  Function definitions for vertex metrics.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016 Project NeuroH5.
 //==============================================================================
 
 
 #ifndef COMPUTE_VERTEX_METRICS_HH
 #define COMPUTE_VERTEX_METRICS_HH
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 
 
 #include <mpi.h>
@@ -20,7 +20,7 @@
 #include <map>
 #include <vector>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -40,7 +40,7 @@ namespace ngh5
     (
      MPI_Comm comm,
      const std::string& input_file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size
      );
     
@@ -48,7 +48,7 @@ namespace ngh5
     (
      MPI_Comm comm,
      const std::string& input_file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size
      );
 

@@ -5,19 +5,18 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "attr_map.hh"
-#include "model_types.hh"
-#include "population_reader.hh"
-#include "read_population.hh"
+#include "cell_populations.hh"
 #include "write_graph.hh"
 #include "write_projection.hh"
-#include "hdf5_path_names.hh"
+#include "path_names.hh"
 #include "sort_permutation.hh"
 #include "pack_edge.hh"
 
@@ -27,10 +26,10 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace ngh5::model;
+using namespace neuroh5::data;
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -66,7 +65,6 @@ namespace ngh5
      const string&    file_name,
      const string&    src_pop_name,
      const string&    dst_pop_name,
-     const string&    prj_name,
      const vector<vector<string>>& edge_attr_names,
      const edge_map_t&  input_edge_map
      )
@@ -79,10 +77,10 @@ namespace ngh5
         }
       
       // read the population info
-      set< pair<model::pop_t, model::pop_t> > pop_pairs;
-      vector<model::pop_range_t> pop_vector;
-      vector<pair <model::pop_t, string> > pop_labels;
-      map<NODE_IDX_T,pair<uint32_t,model::pop_t> > pop_ranges;
+      set< pair<pop_t, pop_t> > pop_pairs;
+      vector<pop_range_t> pop_vector;
+      vector<pair <pop_t, string> > pop_labels;
+      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
       size_t total_num_nodes;
       size_t dst_start, dst_end;
@@ -94,10 +92,10 @@ namespace ngh5
 
       DEBUG("Task ",rank,": ","write_graph: prior to reading population ranges\n");
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
-      assert(io::hdf5::read_population_ranges(all_comm, file_name,
+      assert(cell::read_population_ranges(all_comm, file_name,
                                               pop_ranges, pop_vector, total_num_nodes) >= 0);
       DEBUG("Task ",rank,": ","write_graph: prior to reading population labels\n");
-      assert(io::hdf5::read_population_labels(all_comm, file_name, pop_labels) >= 0);
+      assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
       DEBUG("Task ",rank,": ","write_graph: read population labels\n");
       
       for (size_t i=0; i< pop_labels.size(); i++)
@@ -152,9 +150,9 @@ namespace ngh5
           NODE_IDX_T dst = element.first;
           // all source/destination node IDs must be in range
           assert(dst_start <= dst && dst < dst_end);
-          model::edge_tuple_t et = element.second;
+          edge_tuple_t et        = element.second;
           vector<NODE_IDX_T> v   = get<0>(et);
-          model::EdgeAttr a      = get<1>(et);
+          AttrVal a        = get<1>(et);
 
           vector<NODE_IDX_T> adj_vector;
           for (auto & src: v)
@@ -195,7 +193,7 @@ namespace ngh5
           edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
-          EdgeAttr &edge_attr_vec = get<1>(et1);
+          AttrVal &edge_attr_vec = get<1>(et1);
           
           edge_attr_vec.float_values.resize(a.float_values.size());
           edge_attr_vec.uint8_values.resize(a.uint8_values.size());
@@ -273,7 +271,7 @@ namespace ngh5
       sdispls.clear();
 
       uint64_t num_unpacked_edges = 0;
-      model::edge_map_t prj_edge_map;
+      edge_map_t prj_edge_map;
       if (recvbuf_size > 0)
         {
           mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
@@ -291,9 +289,9 @@ namespace ngh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           assert(file >= 0);
           
-          io::hdf5::write_projection (file, prj_name, src_pop_idx, dst_pop_idx,
-                                      src_start, src_end, dst_start, dst_end,
-                                      num_unpacked_edges, prj_edge_map, edge_attr_names);
+          write_projection (file, src_pop_name, dst_pop_name,
+                            src_start, src_end, dst_start, dst_end,
+                            num_unpacked_edges, prj_edge_map, edge_attr_names);
           
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);

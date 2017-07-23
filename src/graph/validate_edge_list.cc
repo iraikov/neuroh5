@@ -1,12 +1,21 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file validate_edge_list.cc
+///
+///  Functions for validating edges in DBS (Destination Block Sparse)
+///  format.
+///
+///  Copyright (C) 2016-2017 Project Neurograph.
+//==============================================================================
 
 #include "validate_edge_list.hh"
 
 #include "debug.hh"
 
-using namespace ngh5::model;
 using namespace std;
+using namespace neuroh5;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {

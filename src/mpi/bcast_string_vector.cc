@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file mpi_bcast_string_vector.cc
+///  @file bcast_string_vector.cc
 ///
 ///  Function for broadcasting a string vector via MPI.
 ///
@@ -16,7 +16,7 @@
 
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
 
   namespace mpi

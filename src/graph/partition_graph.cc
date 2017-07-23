@@ -10,8 +10,8 @@
 
 #include "debug.hh"
 
-#include "read_dbs_projection.hh"
-#include "population_reader.hh"
+#include "cell_populations.hh"
+#include "read_projection.hh"
 #include "scatter_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
@@ -34,9 +34,9 @@
 #include <parmetis.h>
 
 using namespace std;
-using namespace ngh5::model;
+using namespace neuroh5::data;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {

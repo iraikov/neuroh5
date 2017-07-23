@@ -4,16 +4,16 @@
 ///
 ///  Driver program for graph vertex balancing functions.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 
 #include "debug.hh"
 
+#include "neuroh5_types.hh"
 #include "read_graph.hh"
-#include "balance_graph_indegree.hh"
-#include "model_types.hh"
 #include "projection_names.hh"
+#include "balance_graph_indegree.hh"
 
 #include <getopt.h>
 #include <cassert>
@@ -30,7 +30,7 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroh5;
 
 void throw_err(char const* err_message)
 {
@@ -150,11 +150,10 @@ int main(int argc, char** argv)
 
   if (!opt_iosize) iosize = 4;
 
-  vector<string> prj_names;
-  assert(io::hdf5::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
+  vector< pair<string,string> > prj_names;
+  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
 
-  vector<model::prj_tuple_t> prj_list;
-  size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
+  vector<prj_tuple_t> prj_list;
   
   std::vector<NODE_IDX_T> parts;
   std::vector<double> part_weights;

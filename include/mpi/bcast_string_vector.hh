@@ -13,7 +13,7 @@
 #include <string>
 
 
-namespace ngh5
+namespace neuroh5
 {
 
   namespace mpi

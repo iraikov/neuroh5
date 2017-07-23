@@ -4,18 +4,18 @@
 ///
 ///  Computes vertex metrics in the graph,
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 
 #include "debug.hh"
 
-#include "read_dbs_projection.hh"
-#include "population_reader.hh"
+#include "neuroh5_types.hh"
+#include "read_projection.hh"
+#include "cell_populations.hh"
 #include "scatter_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
-#include "read_population.hh"
 #include "validate_edge_list.hh"
 #include "node_attributes.hh"
 
@@ -35,33 +35,14 @@
 #include <mpi.h>
 
 using namespace std;
-using namespace ngh5::model;
+using namespace neuroh5;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
-
-    void throw_err(char const* err_message)
-    {
-      fprintf(stderr, "Error: %s\n", err_message);
-      MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
-    void throw_err(char const* err_message, int32_t task)
-    {
-      fprintf(stderr, "Task %d Error: %s\n", task, err_message);
-      MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
-    void throw_err(char const* err_message, int32_t task, int32_t thread)
-    {
-      fprintf(stderr, "Task %d Thread %d Error: %s\n", task, thread, err_message);
-      MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
     // Assign each node to a rank 
-    void compute_node_rank_map
+    static void compute_node_rank_map
     (
      size_t num_ranks,
      size_t num_nodes,
@@ -69,7 +50,7 @@ namespace ngh5
      )
     {
       hsize_t remainder=0, offset=0, buckets=0;
-    
+      
       for (size_t i=0; i<num_ranks; i++)
         {
           remainder  = num_nodes - offset;
@@ -81,30 +62,32 @@ namespace ngh5
           offset    += remainder / buckets;
         }
     }
-
-  
+    
     int compute_vertex_indegree
     (
      MPI_Comm comm,
      const std::string& file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size
      )
     {
       int status=0;
     
-      int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      int srank, ssize;
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) >= 0);
 
+      size_t rank, size;
+      rank = (size_t)srank;
+      size = (size_t)ssize;
     
       // Read population info to determine total_num_nodes
-      size_t local_num_nodes, total_num_nodes,
+      size_t total_num_nodes,
         local_num_edges, total_num_edges;
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      assert(io::hdf5::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      assert(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       map<NODE_IDX_T, rank_t> node_rank_map;
@@ -150,34 +133,27 @@ namespace ngh5
           vertex_norm_indegrees[v] = norm_indegree;
         }
       
-      float mean_norm_indegree = 1.0 / (float)nz_indegree;
-
       vector <NODE_IDX_T> node_id;
+      vector <ATTR_PTR_T> attr_ptr;
       vector <uint32_t> vertex_indegree_value;
       vector <float> vertex_norm_indegree_value;
 
+      attr_ptr.push_back(0);
       for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
         {
           if (it->second == rank)
             {
               node_id.push_back(it->first);
+              attr_ptr.push_back(attr_ptr.back() + 1);
               vertex_indegree_value.push_back(vertex_indegrees[it->first]);
               vertex_norm_indegree_value.push_back(vertex_norm_indegrees[it->first]);
             }
         }
-
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
       
-      ngh5::io::hdf5::write_node_attribute (file, "Vertex indegree", node_id, vertex_indegree_value);
-      ngh5::io::hdf5::write_node_attribute (file, "Vertex norm indegree", node_id, vertex_norm_indegree_value);
-
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex indegree",
+                                   node_id, attr_ptr, vertex_indegree_value);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex norm indegree",
+                                    node_id, attr_ptr, vertex_norm_indegree_value);
 
       return status;
     }
@@ -187,24 +163,27 @@ namespace ngh5
     (
      MPI_Comm comm,
      const std::string& file_name,
-     const std::vector<std::string> prj_names,
+     const std::vector< std::pair<std::string, std::string> > prj_names,
      const size_t io_size
      )
     {
       int status=0;
     
-      int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      int srank, ssize;
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) >= 0);
 
+      size_t rank, size;
+      rank = (size_t)srank;
+      size = (size_t)ssize;
     
       // Read population info to determine total_num_nodes
-      size_t local_num_nodes, total_num_nodes,
+      size_t total_num_nodes,
         local_num_edges, total_num_edges;
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      assert(io::hdf5::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      assert(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       map<NODE_IDX_T, rank_t> node_rank_map;
@@ -251,17 +230,19 @@ namespace ngh5
           vertex_norm_outdegrees[v] = norm_outdegree;
         }
       
-      float mean_norm_outdegree = 1.0 / (float)nz_outdegree;
-
+      
+      vector <ATTR_PTR_T> attr_ptr;
       vector <NODE_IDX_T> node_id;
       vector <uint32_t> vertex_outdegree_value;
       vector <float> vertex_norm_outdegree_value;
 
+      attr_ptr.push_back(0);
       for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
         {
           if (it->second == rank)
             {
               node_id.push_back(it->first);
+              attr_ptr.push_back(attr_ptr.back() + 1);
               vertex_outdegree_value.push_back(vertex_outdegrees[it->first]);
               vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[it->first]);
             }
@@ -271,14 +252,11 @@ namespace ngh5
       assert(fapl >= 0);
       assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
       
-      ngh5::io::hdf5::write_node_attribute (file, "Vertex outdegree", node_id, vertex_outdegree_value);
-      ngh5::io::hdf5::write_node_attribute (file, "Vertex norm outdegree", node_id, vertex_norm_outdegree_value);
-
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex outdegree",
+                                    node_id, attr_ptr, vertex_outdegree_value);
+      graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex norm outdegree",
+                                    node_id, attr_ptr, vertex_norm_outdegree_value);
 
       return status;
     }

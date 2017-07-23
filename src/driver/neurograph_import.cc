@@ -10,14 +10,15 @@
 
 #include "debug.hh"
 
-#include "model_types.hh"
-#include "population_reader.hh"
+#include "neuroh5_types.hh"
+#include "cell_populations.hh"
 #include "projection_names.hh"
 #include "read_syn_projection.hh"
 #include "read_txt_projection.hh"
+#include "rank_range.hh"
 #include "write_graph.hh"
 #include "attr_map.hh"
-#include "edge_attr.hh"
+#include "attr_val.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -37,7 +38,7 @@
 
 
 using namespace std;
-using namespace ngh5;
+using namespace neuroh5;
 
 
 void throw_err(char const* err_message)
@@ -70,28 +71,6 @@ void print_usage_full(char** argv)
   printf("\t\tInput format\n");
 
 }
-
-// Given a total number of elements and number of ranks, calculate the starting and length for each rank
-void rank_ranges
-(
- const size_t&                    num_elems,
- const size_t&                    size,
- vector< pair<hsize_t,hsize_t> >& ranges
- )
-{
-  hsize_t remainder=0, offset=0, buckets=0;
-  ranges.resize(size);
-  
-  for (size_t i=0; i<size; i++)
-    {
-      remainder = num_elems - offset;
-      buckets   = (size - i);
-      ranges[i] = make_pair(offset, remainder / buckets);
-      offset    += ranges[i].second;
-    }
-}
-
-  
   
 
 int append_syn_adj_map
@@ -104,7 +83,7 @@ int append_syn_adj_map
  const vector<DST_PTR_T>&   syn_idx_ptr,
  const vector<NODE_IDX_T>&  syn_idx,
  size_t&                    num_edges,
- model::edge_map_t&         edge_map
+ edge_map_t&                edge_map
  )
 {
   int ierr = 0; 
@@ -122,7 +101,7 @@ int append_syn_adj_map
             high_syn_ptr = syn_idx_ptr[d+1];
 
           vector<NODE_IDX_T> adj_vector;
-          model::EdgeAttr edge_attr_values;
+          data::AttrVal edge_attr_values;
           vector<NODE_IDX_T> syn_id_vector;
           
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
@@ -147,9 +126,9 @@ int append_syn_adj_map
             }
           else
             {
-              model::edge_tuple_t et = edge_map[dst];
+              edge_tuple_t et = edge_map[dst];
               vector<NODE_IDX_T> &v = get<0>(et);
-              model::EdgeAttr &a = get<1>(et);
+              data::AttrVal &a = get<1>(et);
               v.insert(v.end(),adj_vector.begin(),adj_vector.end());
               a.append(edge_attr_values);
               edge_map[dst] = make_tuple(v,a);
@@ -172,7 +151,6 @@ int main(int argc, char** argv)
 {
   int status=0;
   string dst_pop_name, src_pop_name;
-  string prj_name;
   string output_file_name;
   string txt_filelist_file_name;
   vector <string> txt_input_file_names;
@@ -312,8 +290,7 @@ int main(int argc, char** argv)
     {
       src_pop_name     = std::string(argv[optind]);
       dst_pop_name     = std::string(argv[optind+1]);
-      prj_name         = std::string(argv[optind+2]);
-      output_file_name = std::string(argv[optind+3]);
+      output_file_name = std::string(argv[optind+2]);
       if (!opt_hdf5_syn && (!opt_txt))
         {
           print_usage_full(argv);
@@ -326,9 +303,9 @@ int main(int argc, char** argv)
       exit(1);
     }
 
-  vector<model::pop_range_t> pop_vector;
-  map<NODE_IDX_T, pair<uint32_t,model::pop_t> > pop_ranges;
-  vector<pair <model::pop_t, string> > pop_labels;
+  vector<pop_range_t> pop_vector;
+  map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+  vector<pair <pop_t, string> > pop_labels;
   size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
   size_t n_nodes;
   vector<NODE_IDX_T>  src_range(2);
@@ -342,18 +319,18 @@ int main(int argc, char** argv)
   if (opt_hdf5_syn)
     {
       
-      assert(io::hdf5::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
+      assert(cell::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
                                               pop_vector, n_nodes) >= 0);
-      assert(io::hdf5::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
+      assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
       
-      status = io::hdf5::read_syn_projection (all_comm,
-                                              hdf5_input_file_name,
-                                              hdf5_input_dsetpath,
-                                              dst_idx,
-                                              src_idx_ptr,
-                                              src_idx,
-                                              syn_idx_ptr,
-                                              syn_idx);
+      status = io::read_syn_projection (all_comm,
+                                        hdf5_input_file_name,
+                                        hdf5_input_dsetpath,
+                                        dst_idx,
+                                        src_idx_ptr,
+                                        src_idx,
+                                        syn_idx_ptr,
+                                        syn_idx);
 
       for (size_t i=0; i< pop_labels.size(); i++)
         {
@@ -373,6 +350,8 @@ int main(int argc, char** argv)
       src_range[0] = pop_vector[src_pop_idx].start;
       src_range[1] = src_range[0] + pop_vector[src_pop_idx].count;
 
+      if (rank == 0)
+        printf("src range start = %u src range end = %u\n", src_range[0], src_range[1]);
     }
 
   if (opt_txt)
@@ -391,14 +370,13 @@ int main(int argc, char** argv)
         }
   
   vector<NODE_IDX_T>  dst, src;
-  model::EdgeAttr edge_attrs;
+  data::AttrVal edge_attrs;
   if (opt_txt)
     {
       // determine which connection files are read by which rank
       vector< pair<hsize_t,hsize_t> > ranges;
-      rank_ranges(txt_input_file_names.size(), size, ranges);
+      mpi::rank_ranges(txt_input_file_names.size(), size, ranges);
       
-      size_t filecount=0;
       hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
       for (size_t i=start; i<end; i++)
@@ -410,7 +388,7 @@ int main(int argc, char** argv)
         }
     }
 
-  model::edge_map_t edge_map;
+  edge_map_t edge_map;
   size_t num_edges;
 
   /*
@@ -424,9 +402,11 @@ int main(int argc, char** argv)
                                syn_idx_ptr, syn_idx,
                                num_edges, edge_map);
 
-  vector<vector<string>> edge_attr_names(model::EdgeAttr::num_attr_types);
-  edge_attr_names[model::EdgeAttr::attr_index_uint32].push_back("syn_id");
-  status = graph::write_graph (all_comm, io_size, output_file_name, src_pop_name, dst_pop_name, prj_name, edge_attr_names, edge_map);
+  vector<vector<string>> edge_attr_names(data::AttrVal::num_attr_types);
+  edge_attr_names[data::AttrVal::attr_index_uint32].push_back("syn_id");
+  status = graph::write_graph (all_comm, io_size, output_file_name,
+                               src_pop_name, dst_pop_name,
+                               edge_attr_names, edge_map);
 
   MPI_Comm_free(&all_comm);
   

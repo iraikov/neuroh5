@@ -1,12 +1,12 @@
 #ifndef VALIDATE_EDGE_LIST_HH
 #define VALIDATE_EDGE_LIST_HH
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 
 #include <set>
 #include <vector>
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -49,8 +49,8 @@ namespace ngh5
        std::vector<NODE_IDX_T>&                                 dst_idx,
        std::vector<DST_PTR_T>&                                  dst_ptr,
        std::vector<NODE_IDX_T>&                                 src_idx,
-       const model::pop_range_map_t&                            pop_ranges,
-       const std::set< std::pair<model::pop_t, model::pop_t> >& pop_pairs
+       const pop_range_map_t&                                   pop_ranges,
+       const std::set< std::pair<pop_t, pop_t> >&               pop_pairs
        );
   }
 }

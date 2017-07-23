@@ -4,12 +4,12 @@
 ///
 ///  Calculate vertex (in/out)degree from an edge map.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2017 Project Neurograph.
 //==============================================================================
 
 #include "debug.hh"
 
-#include "model_types.hh"
+#include "neuroh5_types.hh"
 #include <map>
 #include <vector>
 #include <mpi.h>
@@ -17,10 +17,10 @@
 #undef NDEBUG
 #include <cassert>
 
-using namespace ngh5::model;
+using namespace neuroh5;
 using namespace std;
 
-namespace ngh5
+namespace neuroh5
 {
   namespace graph
   {
@@ -30,23 +30,23 @@ namespace ngh5
                        const map<NODE_IDX_T, vector<NODE_IDX_T> > &edge_map,
                        vector< uint32_t > &degree_vector)
     {
-      int status; uint32_t local_num_nodes;
-      uint32_t max_degree=0, min_degree=0;
+      int status=0; uint32_t local_num_nodes;
       vector <uint32_t> local_degree_vector;
       local_num_nodes = edge_map.size();
       
       for (auto it = edge_map.begin(); it != edge_map.end(); ++it)
         {
-          NODE_IDX_T vertex = it->first;
           const vector<NODE_IDX_T>& adj_vector = it->second;
           uint32_t degree = adj_vector.size();
 
           local_degree_vector.push_back(degree);
         }
       
-      int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      int ssize;
+      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      size_t size;
+      size = (size_t)ssize;
+      
       vector<uint32_t> num_nodes_vector;
       num_nodes_vector.resize(size,0);
       assert(MPI_Allgather(&local_num_nodes, 1, MPI_UINT32_T, 
