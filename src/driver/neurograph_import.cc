@@ -63,7 +63,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s  <SRC-POP> <DST-POP> <PRJ-NAME> <OUTPUT-FILE> \n\n", argv[0]);
+  printf("Usage: %s  <SRC-POP> <DST-POP> <OUTPUT-FILE> \n\n", argv[0]);
   printf("Options:\n");
   printf("\t-i <FILE>:\n");
   printf("\t\tImport from given file\n");
@@ -286,7 +286,7 @@ int main(int argc, char** argv)
         }
     }
 
-  if (optind < argc-3)
+  if (optind < argc-2)
     {
       src_pop_name     = std::string(argv[optind]);
       dst_pop_name     = std::string(argv[optind+1]);
