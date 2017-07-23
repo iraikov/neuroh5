@@ -148,6 +148,14 @@ namespace neuroh5
       hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
       hid_t fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
+      if (chunk < dims)
+        {
+          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+        }
+      else
+        {
+          assert(H5Pset_chunk(dcpl, 1, &dims ) >= 0);
+        }
       hid_t dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
                               lcpl, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
@@ -200,6 +208,14 @@ namespace neuroh5
       dims = (hsize_t)total_num_blocks;
       fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
+      if (chunk < dims)
+        {
+          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+        }
+      else
+        {
+          assert(H5Pset_chunk(dcpl, 1, &dims ) >= 0);
+        }
       dset = H5Dcreate2(file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
                         fspace, lcpl, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
@@ -262,6 +278,14 @@ namespace neuroh5
 
       fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
+      if (chunk < dims)
+        {
+          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+        }
+      else
+        {
+          assert(H5Pset_chunk(dcpl, 1, &dims ) >= 0);
+        }
       dset = H5Dcreate2(file, path.c_str(), DST_PTR_H5_FILE_T,
                         fspace, lcpl, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
@@ -297,6 +321,14 @@ namespace neuroh5
 
       fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
+      if (chunk < dims)
+        {
+          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+        }
+      else
+        {
+          assert(H5Pset_chunk(dcpl, 1, &dims ) >= 0);
+        }
       dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T,
                         fspace, lcpl, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
