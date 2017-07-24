@@ -156,7 +156,6 @@ int append_adj_map
   int ierr = 0; 
   num_edges = 0;
 
-  assert(src_idx_ptr.size() == dst_idx.size()+1);
   if (dst_idx.size() > 0)
     {
       for (size_t d = 0; d < dst_idx.size(); d++)
@@ -446,6 +445,7 @@ int main(int argc, char** argv)
       
       hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
+      printf("start = %u end = %u\n", start, end);
       for (size_t i=start; i<end; i++)
         {
           string txt_input_file_name = txt_input_file_names[i];

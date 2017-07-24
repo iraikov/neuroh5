@@ -99,7 +99,7 @@ namespace neuroh5
         {
           io_size = io_size_arg;
         }
-      assert(input_edge_map.size() > 0);
+      DEBUG("Task ",rank,": ","write_graph: io_size = ",io_size,"\n");
       DEBUG("Task ",rank,": ","write_graph: prior to reading population ranges\n");
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,

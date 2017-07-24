@@ -37,7 +37,7 @@ namespace neuroh5
       assert(dst_start < dst_end);
         
 
-      assert(prj_edge_map.size() > 0);
+      //assert(prj_edge_map.size() > 0);
       
       // get the I/O communicator
       MPI_Comm comm;
@@ -55,7 +55,7 @@ namespace neuroh5
       assert(H5Pclose(fapl) >= 0);
 
       uint64_t num_dest = prj_edge_map.size();
-      uint64_t num_blocks = 1;
+      uint64_t num_blocks = num_dest > 0 ? 1 : 0;
       if (rank == size-1)
         {
           num_blocks++;
@@ -94,6 +94,7 @@ namespace neuroh5
           dst_ptr.push_back(dst_ptr[pos++] + v.size());
           copy(v.begin(), v.end(), back_inserter(src_idx));
         }
+      printf("dst_ptr.back = %u\n", dst_ptr.back());
       assert(num_edges == src_idx.size());
 
 
@@ -161,7 +162,7 @@ namespace neuroh5
       hid_t dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
                               lcpl, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
-      if (rank == size-1)
+      if ((rank == size-1) && (num_blocks > 0))
         {
           dims = num_blocks-1;
         }
@@ -177,11 +178,17 @@ namespace neuroh5
         {
           start += recvbuf_num_blocks[p];
         }
-
         
       hsize_t block = dims;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
       assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
                       &dst_blk_idx[0]) >= 0);
 
@@ -234,8 +241,15 @@ namespace neuroh5
         }
 
       block = dims;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
       assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &dst_blk_ptr[0]) >= 0);
 
@@ -266,15 +280,12 @@ namespace neuroh5
           dst_ptr[idst] += s;
         }
 
-      if (rank == size-1) // only the last rank writes an additional element
+      if (rank < size-1) // only the last rank writes an additional element
         {
-          dst_ptr.back() += recvbuf_num_edge[rank];
-        }
-      else
-        {
+          //dst_ptr.back() += recvbuf_num_edge[rank];
           dst_ptr.resize(num_dest);
         }
-
+        
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_PTR);
       dims = total_num_dests;
       ++dims; // one extra element
@@ -298,8 +309,15 @@ namespace neuroh5
       assert(H5Sselect_all(mspace) >= 0);
       start = (hsize_t)dst_blk_ptr[0];
       block = dims;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
 
       assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &dst_ptr[0]) >= 0);
@@ -342,8 +360,15 @@ namespace neuroh5
       assert(H5Sselect_all(mspace) >= 0);
       start = (hsize_t)dst_ptr[0];
       block = dims;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
 
       assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &src_idx[0]) >= 0);
