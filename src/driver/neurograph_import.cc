@@ -256,18 +256,21 @@ int main(int argc, char** argv)
             opt_iosize = true;
             ss << string(optarg);
             ss >> io_size;
+            optflag_iosize=0;
           }
           if (optflag_dst_offset == 1) {
             stringstream ss;
             opt_dst_offset = true;
             ss << string(optarg);
             ss >> dst_offset;
+            optflag_dst_offset=0;
           }
           if (optflag_src_offset == 1) {
-            stringstream ss;
+            stringstream ss; 
             opt_src_offset = true;
             ss << string(optarg);
             ss >> src_offset;
+            optflag_src_offset=0;
           }
           if (optflag_input_format == 1) {
             string input_format = string(optarg);
@@ -279,6 +282,7 @@ int main(int argc, char** argv)
               {
                 opt_txt = true;
               }
+            optflag_input_format=0;
           }
           break;
         case 'f':
@@ -445,7 +449,6 @@ int main(int argc, char** argv)
       
       hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
-      printf("start = %u end = %u\n", start, end);
       for (size_t i=start; i<end; i++)
         {
           string txt_input_file_name = txt_input_file_names[i];

@@ -35,9 +35,6 @@ namespace neuroh5
       // do a sanity check on the input
       assert(src_start < src_end);
       assert(dst_start < dst_end);
-        
-
-      //assert(prj_edge_map.size() > 0);
       
       // get the I/O communicator
       MPI_Comm comm;
@@ -94,9 +91,8 @@ namespace neuroh5
           dst_ptr.push_back(dst_ptr[pos++] + v.size());
           copy(v.begin(), v.end(), back_inserter(src_idx));
         }
-      printf("dst_ptr.back = %u\n", dst_ptr.back());
       assert(num_edges == src_idx.size());
-
+      
 
       // exchange allocation data
 
@@ -134,19 +130,22 @@ namespace neuroh5
         {
           total_num_blocks = total_num_blocks + recvbuf_num_blocks[p];
         }
+      assert(total_num_blocks > 0);
 
       uint64_t total_num_dests=0;
       for (size_t p=0; p<size; p++)
         {
           total_num_dests = total_num_dests + recvbuf_num_dest[p];
         }
+      assert(total_num_dests > 0);
 
       uint64_t total_num_edges=0;
       for (size_t p=0; p<size; p++)
         {
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
-        
+      assert(total_num_edges > 0);
+      
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_IDX);
       hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
       hid_t fspace = H5Screate_simple(1, &dims, &dims);
@@ -211,7 +210,7 @@ namespace neuroh5
         }
       if (rank == size-1) // last rank writes the total destination count
         {
-          dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank]);
+          dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank] + 1);
         }
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR);

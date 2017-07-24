@@ -181,13 +181,6 @@ namespace neuroh5
       assert(H5Sclose(mspace) >= 0);
       assert(H5Sclose(fspace) >= 0);
 
-      /* Dataset creation property list to enable chunking */
-      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-      assert(dcpl >= 0);
-      hsize_t chunk = cdim;
-      assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-      //assert(H5Pset_deflate(dcpl, 6) >= 0);
-
       /*
         vector<NODE_IDX_T> v_dst_start(1, dst_start);         
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
@@ -418,7 +411,6 @@ namespace neuroh5
         
         
       // clean-up
-      assert(H5Pclose(dcpl) >= 0);
       assert(H5Pclose(lcpl) >= 0);
     }
   }

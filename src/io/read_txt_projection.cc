@@ -100,7 +100,6 @@ namespace neuroh5
           src_idx_ptr.push_back(src_idx_ptr[i] + src.size());
           i++;
         }
-      
       for (size_t a=0; a<num_attrs[0]; a++)
         {
           attrs.insert(float_attrs[a]);

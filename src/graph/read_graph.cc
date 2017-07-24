@@ -99,8 +99,7 @@ namespace neuroh5
                   total_prj_num_edges, block_base, edge_base, dst_blk_ptr,
                   dst_idx, dst_ptr, src_idx) >= 0);
 
-          DEBUG("reader: projection ", i, " has a total of ",
-                total_prj_num_edges, " edges");
+          DEBUG("reader: projection ", i, " has a total of ", total_prj_num_edges, " edges");
           DEBUG("reader: validating projection ", i, "(", src_pop_name, " -> ", dst_pop_name, ")");
 
           // validate the edges
@@ -120,7 +119,7 @@ namespace neuroh5
                       edge_attr_info, edge_attr_values) >= 0);
             }
 
-          DEBUG("reader: ", i, "(", src_pop_name, " -> ", dst_pop_name, ") attributes read");
+          DEBUG("reader: ", i, " (", src_pop_name, " -> ", dst_pop_name, ") attributes read");
 
           // append to the vectors representing a projection (sources,
           // destinations, edge attributes)
@@ -131,6 +130,7 @@ namespace neuroh5
           // ensure that all edges in the projection have been read and
           // appended to edge_list
           assert(local_prj_num_edges == src_idx.size());
+          DEBUG("reader: projection ", i, " local number of edges is ", local_prj_num_edges);
 
           total_num_edges = total_num_edges + total_prj_num_edges;
           local_num_edges = local_num_edges + local_prj_num_edges;
