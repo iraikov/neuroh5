@@ -85,11 +85,11 @@ namespace neuroh5
 
       // determine number of blocks in projection
       uint64_t num_blocks = hdf5::dataset_num_elements
-        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR)) - 1;
+        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR)) - 1;
 
       // determine number of edges in projection
       nedges = hdf5::dataset_num_elements
-        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX));
+        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX));
 
       /* Create property list for collective dataset operations. */
       hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
@@ -127,7 +127,7 @@ namespace neuroh5
           ierr = hdf5::read<DST_BLK_PTR_T>
             (
              file,
-             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_PTR),
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR),
              start,
              block,
              DST_BLK_PTR_H5_NATIVE_T,
@@ -166,7 +166,7 @@ namespace neuroh5
           ierr = hdf5::read<NODE_IDX_T>
             (
              file,
-             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_BLK_IDX),
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX),
              start,
              block,
              NODE_IDX_H5_NATIVE_T,
@@ -206,7 +206,7 @@ namespace neuroh5
           ierr = hdf5::read<DST_PTR_T>
             (
              file,
-             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::DST_PTR),
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR),
              start,
              block,
              DST_PTR_H5_NATIVE_T,
@@ -248,7 +248,7 @@ namespace neuroh5
               ierr = hdf5::read<NODE_IDX_T>
                 (
                  file,
-                 hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::SRC_IDX),
+                 hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
                  start,
                  block,
                  NODE_IDX_H5_NATIVE_T,

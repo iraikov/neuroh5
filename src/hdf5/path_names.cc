@@ -51,19 +51,21 @@ namespace neuroh5
     (
      const string& src_pop_name,
      const string& dst_pop_name,
+     const string& name_space,
      const string& attr_name
      )
     {
-      return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name + "/" + attr_name;
+      return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name + "/" + name_space + "/" + attr_name;
     }
     
     string edge_attribute_prefix
     (
      const string& src_pop_name,
-     const string& dst_pop_name
+     const string& dst_pop_name,
+     const string& name_space
      )
     {
-      return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name;
+      return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name + "/" + name_space;
     }
     
     string node_attribute_prefix

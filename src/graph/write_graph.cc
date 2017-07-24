@@ -43,12 +43,20 @@ namespace neuroh5
      map< NODE_IDX_T, rank_t > &node_rank_map
      )
     {
+      size_t num_partitions;
       hsize_t remainder=0, offset=0, buckets=0;
-    
-      for (size_t i=0; i<num_ranks; i++)
+      if (num_ranks > 0)
+        {
+          num_partitions = num_ranks;
+        }
+      else
+        {
+          num_partitions = 1;
+        }
+      for (size_t i=0; i<num_partitions; i++)
         {
           remainder  = num_nodes - offset;
-          buckets    = num_ranks - i;
+          buckets    = num_partitions - i;
           for (size_t j = 0; j < remainder / buckets; j++)
             {
               node_rank_map.insert(make_pair(offset+j, i));
@@ -93,17 +101,17 @@ namespace neuroh5
 
       if (size < io_size_arg)
         {
-          io_size = size;
+          io_size = size > 0 ? size : 1;
         }
       else
         {
-          io_size = io_size_arg;
+          io_size = io_size_arg > 0 ? io_size_arg : 1;
         }
       DEBUG("Task ",rank,": ","write_graph: io_size = ",io_size,"\n");
       DEBUG("Task ",rank,": ","write_graph: prior to reading population ranges\n");
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
-                                              pop_ranges, pop_vector, total_num_nodes) >= 0);
+                                          pop_ranges, pop_vector, total_num_nodes) >= 0);
       DEBUG("Task ",rank,": ","write_graph: prior to reading population labels\n");
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
       DEBUG("Task ",rank,": ","write_graph: read population labels\n");
@@ -127,7 +135,6 @@ namespace neuroh5
       dst_end   = dst_start + pop_vector[dst_pop_idx].count;
       src_start = pop_vector[src_pop_idx].start;
       src_end   = src_start + pop_vector[src_pop_idx].count;
-      total_num_nodes = dst_end > src_end ? dst_end : src_end;
       
       DEBUG("Task ",rank,": ","write_graph: dst_start = ", dst_start, "\n");
       DEBUG("Task ",rank,": ","write_graph: dst_end = ", dst_end, "\n");

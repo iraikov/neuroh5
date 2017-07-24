@@ -11,6 +11,7 @@ namespace neuroh5
     const std::string POPULATIONS = "Populations";
     const std::string PROJECTIONS = "Projections";
     const std::string NODES       = "Nodes";
+    const std::string EDGES       = "Edges";
     const std::string H5_TYPES    = "H5Types";
     const std::string POP_LABELS  = "Population labels";
     const std::string POP_COMBS   = "Valid population projections";
@@ -89,13 +90,15 @@ namespace neuroh5
      //const std::string& name_space,
      const std::string& src_pop_name,
      const std::string& dst_pop_name,
+     const std::string& name_space,
      const std::string& attr_name
      );
 
     std::string edge_attribute_prefix
     (
      const std::string& src_pop_name,
-     const std::string& dst_pop_name
+     const std::string& dst_pop_name,
+     const std::string& name_space
      );
 
     std::string node_attribute_path

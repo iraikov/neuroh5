@@ -38,6 +38,7 @@ namespace neuroh5
      const std::string&                           file_name,
      const std::string&                           src_pop_name,
      const std::string&                           dst_pop_name,
+     const string&                                name_space,
      std::vector< std::pair<std::string,hid_t> >& out_attributes
      );
 
@@ -87,6 +88,7 @@ namespace neuroh5
      const std::string&    file_name,
      const std::string&    src_pop_name,
      const std::string&    dst_pop_name,
+     const std::string&    name_space,
      const std::string&    attr_name,
      const DST_PTR_T       edge_base,
      const DST_PTR_T       edge_count,
@@ -100,6 +102,7 @@ namespace neuroh5
      const std::string&                                 file_name,
      const std::string&                                 src_pop_name,
      const std::string&                                 dst_pop_name,
+     const std::string&                                 name_space,
      const DST_PTR_T                                    edge_base,
      const DST_PTR_T                                    edge_count,
      const std::vector< std::pair<std::string,hid_t> >& edge_attr_info,

@@ -170,13 +170,16 @@ namespace neuroh5
       string path = hdf5::node_attribute_prefix(name_space);
 
       hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-      assert(grp >= 0);
+      if (grp >= 0)
+        {
     
-      hsize_t idx = 0;
-      ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                        &node_attribute_cb, (void*) &out_attributes);
-    
-      assert(H5Gclose(grp) >= 0);
+          hsize_t idx = 0;
+          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &node_attribute_cb, (void*) &out_attributes);
+          
+          assert(H5Gclose(grp) >= 0);
+        }
+      
       ierr = H5Fclose(in_file);
     
       return ierr;

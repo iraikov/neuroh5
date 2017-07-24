@@ -126,10 +126,11 @@ namespace neuroh5
           if (opt_attrs)
             {
               edge_count = src_idx.size();
-              assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, edge_attr_info) >= 0);
+              assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, "Attributes",
+                                                edge_attr_info) >= 0);
               assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
               assert(graph::read_all_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                     edge_base, edge_count,
+                                                     "Attributes", edge_base, edge_count,
                                                      edge_attr_info, edge_attr_values) >= 0);
             }
 

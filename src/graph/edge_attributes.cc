@@ -54,6 +54,7 @@ namespace neuroh5
      const string&                 file_name,
      const string&                 src_pop_name,
      const string&                 dst_pop_name,
+     const string&                 name_space,
      vector< pair<string,hid_t> >& out_attributes
      )
     {
@@ -64,17 +65,19 @@ namespace neuroh5
       assert(in_file >= 0);
       out_attributes.clear();
 
-      string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name);
+      string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
 
       // TODO: Be more gentle if the group is not found!
       hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-      assert(grp >= 0);
+      if (grp >= 0)
+        {
 
-      hsize_t idx = 0;
-      ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                        &edge_attribute_cb, (void*) &out_attributes);
-
-      assert(H5Gclose(grp) >= 0);
+          hsize_t idx = 0;
+          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &edge_attribute_cb, (void*) &out_attributes);
+          
+          assert(H5Gclose(grp) >= 0);
+        }
       ierr = H5Fclose(in_file);
 
       return ierr;
@@ -110,7 +113,6 @@ namespace neuroh5
                 }
               else
                 {
-                  printf("num_attributes: attr %s: attr_size = %u\n", attributes[i].first.c_str(), attr_size);
                   throw runtime_error("Unsupported integer attribute size");
                 };
               break;
@@ -145,6 +147,7 @@ namespace neuroh5
      const string&         file_name,
      const string&         src_pop_name,
      const string&         dst_pop_name,
+     const string&         name_space,
      const string&         attr_name,
      const DST_PTR_T       edge_base,
      const DST_PTR_T       edge_count,
@@ -177,7 +180,7 @@ namespace neuroh5
           ierr = H5Sselect_all(mspace);
           assert(ierr >= 0);
 
-          hid_t dset = H5Dopen2 (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_name).c_str(),
+          hid_t dset = H5Dopen2 (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, name_space, attr_name).c_str(),
                                  H5P_DEFAULT);
           assert(dset >= 0);
 
@@ -263,6 +266,7 @@ namespace neuroh5
      const string&                       file_name,
      const string&                       src_pop_name,
      const string&                       dst_pop_name,
+     const string&                       name_space,
      const DST_PTR_T                     edge_base,
      const DST_PTR_T                     edge_count,
      const vector< pair<string,hid_t> >& edge_attr_info,
@@ -277,7 +281,7 @@ namespace neuroh5
           string attr_name   = edge_attr_info[j].first;
           hid_t  attr_h5type = edge_attr_info[j].second;
           assert ((ierr = read_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
-                                               attr_name, edge_base, edge_count,
+                                               name_space, attr_name, edge_base, edge_count,
                                                attr_h5type, edge_attr_values))
                   >= 0);
         }
