@@ -37,6 +37,8 @@ namespace neuroh5
       assert(dst_start < dst_end);
         
 
+      assert(prj_edge_map.size() > 0);
+      
       // get the I/O communicator
       MPI_Comm comm;
       MPI_Info info;
@@ -182,6 +184,7 @@ namespace neuroh5
                                  &one, &block) >= 0);
       assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
                       &dst_blk_idx[0]) >= 0);
+
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
       assert(H5Sclose(fspace) >= 0);

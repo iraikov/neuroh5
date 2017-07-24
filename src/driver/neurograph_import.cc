@@ -142,6 +142,66 @@ int append_syn_adj_map
 }
 
 
+int append_adj_map
+(
+ const vector<NODE_IDX_T>&   src_range,
+ const int src_offset, const int dst_offset,
+ const vector<NODE_IDX_T>&  dst_idx,
+ const vector<DST_PTR_T>&   src_idx_ptr,
+ const vector<NODE_IDX_T>&  src_idx,
+ size_t&                    num_edges,
+ edge_map_t&                edge_map
+ )
+{
+  int ierr = 0; 
+  num_edges = 0;
+
+  assert(src_idx_ptr.size() == dst_idx.size()+1);
+  if (dst_idx.size() > 0)
+    {
+      for (size_t d = 0; d < dst_idx.size(); d++)
+        {
+          NODE_IDX_T dst = dst_idx[d] + dst_offset;
+
+          size_t low_src_ptr = src_idx_ptr[d],
+            high_src_ptr = src_idx_ptr[d+1];
+
+          vector<NODE_IDX_T> adj_vector;
+          data::AttrVal edge_attr_values;
+
+          for (size_t i = low_src_ptr; i < high_src_ptr; ++i)
+            {
+              NODE_IDX_T src = src_idx[i];
+              if (src <= src_range[1] && src >= src_range[0])
+                {
+                  NODE_IDX_T src1 = src + src_offset;
+                  adj_vector.push_back(src1);
+                  num_edges++;
+                }
+            }
+          
+          if (edge_map.find(dst) == edge_map.end())
+            {
+              edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values)));
+            }
+          else
+            {
+              edge_tuple_t et = edge_map[dst];
+              vector<NODE_IDX_T> &v = get<0>(et);
+              data::AttrVal &a = get<1>(et);
+              v.insert(v.end(),adj_vector.begin(),adj_vector.end());
+              a.append(edge_attr_values);
+              edge_map[dst] = make_tuple(v,a);
+            }
+
+        }
+    }
+
+
+  return ierr;
+}
+
+
 
 /*****************************************************************************
  * Main driver
@@ -319,10 +379,37 @@ int main(int argc, char** argv)
 
   if (opt_hdf5_syn)
     {
-      
       assert(cell::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
-                                              pop_vector, n_nodes) >= 0);
+                                          pop_vector, n_nodes) >= 0);
       assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
+    }
+  else
+    {
+      assert(cell::read_population_ranges(all_comm, output_file_name, pop_ranges,
+                                          pop_vector, n_nodes) >= 0);
+      assert(cell::read_population_labels(all_comm, output_file_name, pop_labels) >= 0);
+    }
+
+  for (size_t i=0; i< pop_labels.size(); i++)
+    {
+      if (src_pop_name == get<1>(pop_labels[i]))
+        {
+          src_pop_idx = get<0>(pop_labels[i]);
+          src_pop_set = true;
+        }
+      if (dst_pop_name == get<1>(pop_labels[i]))
+        {
+          dst_pop_idx = get<0>(pop_labels[i]);
+          dst_pop_set = true;
+        }
+    }
+  assert(dst_pop_set && src_pop_set);
+  
+  src_range[0] = pop_vector[src_pop_idx].start;
+  src_range[1] = src_range[0] + pop_vector[src_pop_idx].count;
+  
+  if (opt_hdf5_syn)
+    {
       
       status = io::read_syn_projection (all_comm,
                                         hdf5_input_file_name,
@@ -333,26 +420,6 @@ int main(int argc, char** argv)
                                         syn_idx_ptr,
                                         syn_idx);
 
-      for (size_t i=0; i< pop_labels.size(); i++)
-        {
-          if (src_pop_name == get<1>(pop_labels[i]))
-            {
-              src_pop_idx = get<0>(pop_labels[i]);
-              src_pop_set = true;
-            }
-          if (dst_pop_name == get<1>(pop_labels[i]))
-            {
-              dst_pop_idx = get<0>(pop_labels[i]);
-              dst_pop_set = true;
-            }
-        }
-      assert(dst_pop_set && src_pop_set);
-
-      src_range[0] = pop_vector[src_pop_idx].start;
-      src_range[1] = src_range[0] + pop_vector[src_pop_idx].count;
-
-      if (rank == 0)
-        printf("src range start = %u src range end = %u\n", src_range[0], src_range[1]);
     }
 
   if (opt_txt)
@@ -370,7 +437,6 @@ int main(int argc, char** argv)
             }
         }
   
-  vector<NODE_IDX_T>  dst, src;
   data::AttrVal edge_attrs;
   if (opt_txt)
     {
@@ -385,7 +451,7 @@ int main(int argc, char** argv)
           string txt_input_file_name = txt_input_file_names[i];
           
           status = io::read_txt_projection (txt_input_file_name, num_attrs,
-                                            dst, src, edge_attrs);
+                                            dst_idx, src_idx_ptr, src_idx, edge_attrs);
         }
     }
 
@@ -397,14 +463,25 @@ int main(int argc, char** argv)
   edge_attr_map.uint32_values.resize(1);
   edge_attr_map.uint32_names.insert(make_pair("syn_id", 0));
   */
-  
-  status = append_syn_adj_map (src_range, src_offset, dst_offset,
-                               dst_idx, src_idx_ptr, src_idx,
-                               syn_idx_ptr, syn_idx,
-                               num_edges, edge_map);
-
   vector<vector<string>> edge_attr_names(data::AttrVal::num_attr_types);
-  edge_attr_names[data::AttrVal::attr_index_uint32].push_back("syn_id");
+
+
+  if (syn_idx.size() > 0)
+    {
+      status = append_syn_adj_map (src_range, src_offset, dst_offset,
+                                   dst_idx, src_idx_ptr, src_idx,
+                                   syn_idx_ptr, syn_idx,
+                                   num_edges, edge_map);
+      edge_attr_names[data::AttrVal::attr_index_uint32].push_back("syn_id");
+    }
+  else
+    {
+      status = append_adj_map (src_range, src_offset, dst_offset,
+                               dst_idx, src_idx_ptr, src_idx,
+                               num_edges, edge_map);
+    }
+
+
   status = graph::write_graph (all_comm, io_size, output_file_name,
                                src_pop_name, dst_pop_name,
                                edge_attr_names, edge_map);

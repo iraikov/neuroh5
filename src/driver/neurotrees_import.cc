@@ -76,7 +76,7 @@ int main(int argc, char** argv)
   int status;
   std::string pop_name;
   std::string output_file_name;
-  std::string filelist_name, idfilelist_name, idlist_name;
+  std::string filelist_name, idfilelist_name, singleton_filename;
   std::vector<std::string> input_file_names;
   std::vector<CELL_IDX_T> gid_list;
   int tree_id_offset=0, node_id_offset=0, layer_offset=0; int swc_type=0;
@@ -98,14 +98,14 @@ int main(int argc, char** argv)
   bool opt_swctype = false;
   bool opt_filelist = false;
   bool opt_idfilelist = false;
-  bool opt_idlist = false;
+  bool opt_singleton = false;
   // parse arguments
   static struct option long_options[] = {
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hd:i:o:t:l:n:sy:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "hd:o:r:t:l:n:sy:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
@@ -119,9 +119,9 @@ int main(int argc, char** argv)
           opt_idfilelist = true;
           idfilelist_name = string(optarg);
           break;
-        case 'i':
-          opt_idlist = true;
-          idlist_name = string(optarg);
+        case 'r':
+          opt_singleton = true;
+          singleton_filename = string(optarg);
           break;
         case 'l':
           opt_filelist = true;
@@ -160,29 +160,9 @@ int main(int argc, char** argv)
     {
       pop_name = std::string(argv[optind]);
       output_file_name = std::string(argv[optind+1]);
-      if (opt_idlist)
+      if (opt_singleton)
         {
-          ifstream infile(idlist_name);
-          string line;
-          string filename;
-
-          if (getline(infile, line))
-            {
-              stringstream ss;
-              ss << line;
-              ss >> filename;
-            }
-
-          input_file_names.push_back (filename);
-          
-          while (getline(infile, line))
-            {
-              stringstream ss;
-              CELL_IDX_T gid; 
-              ss << line;
-              ss >> gid;
-              gid_list.push_back(gid);
-            }
+          input_file_names.push_back (singleton_filename);
         }
       else if (opt_idfilelist)
         {
@@ -244,37 +224,58 @@ int main(int argc, char** argv)
   size_t filecount=0;
   hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
-  if (opt_swctype) 
-    {
-      // if swc type is given, then we are reading an swc file with layer encoding
-      for (size_t i=start; i<end; i++)
+  if (opt_singleton)
+    { // reading a single swc file with multiple ids
+      if (opt_swctype) 
         {
-          std::string input_file_name = input_file_names[i];
-          CELL_IDX_T gid = gid_list[i];
-          status = io::read_layer_swc (input_file_name, gid, node_id_offset, layer_offset,
+          // if swc type is given, then we are reading an swc file with layer encoding
+          std::string input_file_name = input_file_names[0];
+          CELL_IDX_T gid0 = gid_list[0];
+          status = io::read_layer_swc (input_file_name, gid0, node_id_offset, layer_offset,
                                        swc_type, opt_split_layers, tree_list);
-          filecount++;
-          if (filecount % 1000 == 0)
-            {
-              printf("Task %d: %lu trees read\n", rank,  filecount);
-            }
+        }
+      else
+        {
+          // if swc type is not given, then we are reading a regular swc file
+          std::string input_file_name = input_file_names[0];
+          CELL_IDX_T gid0 = gid_list[0];
+          status = io::read_swc (input_file_name, gid0, node_id_offset, tree_list);
         }
     }
   else
     {
-      // if swc type is not given, then we are reading a regular swc file
-      for (size_t i=start; i<end; i++)
+      if (opt_swctype) 
         {
-          std::string input_file_name = input_file_names[i];
-          CELL_IDX_T gid = gid_list[i];
-          status = io::read_swc (input_file_name, gid, node_id_offset, tree_list);
-          filecount++;
-          if (filecount % 1000 == 0)
+          // if swc type is given, then we are reading an swc file with layer encoding
+          for (size_t i=start; i<end; i++)
             {
-              printf("Task %d: %lu trees read\n", rank,  filecount);
+              std::string input_file_name = input_file_names[i];
+              CELL_IDX_T gid = gid_list[i];
+              status = io::read_layer_swc (input_file_name, gid, node_id_offset, layer_offset,
+                                           swc_type, opt_split_layers, tree_list);
+              filecount++;
+              if (filecount % 1000 == 0)
+                {
+                  printf("Task %d: %lu trees read\n", rank,  filecount);
+                }
             }
         }
-      
+      else
+        {
+          // if swc type is not given, then we are reading a regular swc file
+          for (size_t i=start; i<end; i++)
+            {
+              std::string input_file_name = input_file_names[i];
+              CELL_IDX_T gid = gid_list[i];
+              status = io::read_swc (input_file_name, gid, node_id_offset, tree_list);
+              filecount++;
+              if (filecount % 1000 == 0)
+                {
+                  printf("Task %d: %lu trees read\n", rank,  filecount);
+                }
+            }
+          
+        }
     }
   
   printf("Task %d has read a total of %lu trees\n", rank,  tree_list.size());

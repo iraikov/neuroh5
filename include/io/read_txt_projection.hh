@@ -17,10 +17,11 @@ namespace neuroh5
 {
   namespace io
   {
-    int read_txt_projection (const std::string&          file_name,
-                             const std::vector <size_t>& num_attrs,
-                             std::vector<NODE_IDX_T>&    dst,
-                             std::vector<NODE_IDX_T>&    src,
-                             data::AttrVal&      attrs);
+    int read_txt_projection (const string&          file_name,
+                             const vector <size_t>& num_attrs,
+                             vector<NODE_IDX_T>&    dst_idx,
+                             vector<DST_PTR_T>&     src_idx_ptr,
+                             vector<NODE_IDX_T>&    src_idx,
+                             neuroh5::data::AttrVal& attrs);
   }
 }

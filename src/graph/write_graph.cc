@@ -61,7 +61,7 @@ namespace neuroh5
     int write_graph
     (
      MPI_Comm         all_comm,
-     const int        io_size,
+     const int        io_size_arg,
      const string&    file_name,
      const string&    src_pop_name,
      const string&    dst_pop_name,
@@ -69,6 +69,7 @@ namespace neuroh5
      const edge_map_t&  input_edge_map
      )
     {
+      size_t io_size;
       uint64_t num_edges = 0;
       vector <uint32_t> edge_attr_num(edge_attr_names.size());
       for (size_t i=0; i<edge_attr_names.size(); i++)
@@ -90,6 +91,15 @@ namespace neuroh5
       assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
+      if (size < io_size_arg)
+        {
+          io_size = size;
+        }
+      else
+        {
+          io_size = io_size_arg;
+        }
+      assert(input_edge_map.size() > 0);
       DEBUG("Task ",rank,": ","write_graph: prior to reading population ranges\n");
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
@@ -117,7 +127,7 @@ namespace neuroh5
       dst_end   = dst_start + pop_vector[dst_pop_idx].count;
       src_start = pop_vector[src_pop_idx].start;
       src_end   = src_start + pop_vector[src_pop_idx].count;
-      total_num_nodes = dst_end - dst_start;
+      total_num_nodes = dst_end > src_end ? dst_end : src_end;
       
       DEBUG("Task ",rank,": ","write_graph: dst_start = ", dst_start, "\n");
       DEBUG("Task ",rank,": ","write_graph: dst_end = ", dst_end, "\n");
@@ -237,11 +247,12 @@ namespace neuroh5
 
       // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
-             
+
       mpi::pack_rank_edge_map (all_comm, header_type, size_type,
                                rank_edge_map, num_packed_edges,
                                sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
+      DEBUG("Task ",rank,": ","write_graph: num_packed_edges = ", num_packed_edges, "\n");
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
@@ -278,6 +289,7 @@ namespace neuroh5
                                      recvbuf, recvcounts, rdispls, edge_attr_num,
                                      prj_edge_map, num_unpacked_edges);
         }
+      DEBUG("Task ",rank,": ","write_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
 
 
       if (rank < io_size)
