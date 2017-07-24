@@ -141,10 +141,6 @@ int main(int argc, char** argv)
     }
   dstfile.close();
 
-  printf("src_selection.size() = %lu\n", src_selection.size());
-  printf("dst_selection.size() = %lu\n", dst_selection.size());
-
-
   assert (!((src_selection.size() == 0) && (dst_selection.size() == 0)));
   // read the population info
   set< pair<pop_t, pop_t> > pop_pairs;

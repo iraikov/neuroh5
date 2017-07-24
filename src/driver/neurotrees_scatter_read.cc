@@ -276,10 +276,12 @@ int main(int argc, char** argv)
         case 0:
           if (optflag_verbose == 1) {
             debug_enabled = true;
+            optflag_verbose = 0;
           }
           if (optflag_rankfile == 1) {
             opt_rankfile = true;
             rank_file_name = std::string(strdup(optarg));
+            optflag_rankfile = 0;
           }
           if (optflag_namespace == 1) {
             opt_namespace = true;
@@ -294,12 +296,13 @@ int main(int argc, char** argv)
                 startpos = endpos + delimiter.length();
                 endpos = arg.find(delimiter, startpos);
               }
-
+            optflag_namespace = 0;
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
             ss << string(optarg);
             ss >> io_size;
+            optflag_iosize = 0;
           }
           break;
         case 'a':

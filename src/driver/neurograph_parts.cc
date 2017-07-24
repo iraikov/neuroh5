@@ -105,15 +105,18 @@ int main(int argc, char** argv)
             opt_nparts = true;
             ss << string(optarg);
             ss >> nparts;
+            optflag_nparts = 0;
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
             ss << string(optarg);
             ss >> iosize;
+            optflag_iosize = 0;
           }
           if (optflag_output == 1) {
             opt_output = true;
             output = string(optarg);
+            optflag_output = 0;
           }
           break;
         case 'o':

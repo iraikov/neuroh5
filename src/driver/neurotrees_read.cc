@@ -171,6 +171,7 @@ int main(int argc, char** argv)
         case 0:
           if (optflag_verbose == 1) {
             debug_enabled = true;
+            optflag_verbose = 0;
           }
           break;
         case 'h':

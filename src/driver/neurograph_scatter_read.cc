@@ -116,22 +116,27 @@ int main(int argc, char** argv)
         case 0:
           if (optflag_binary == 1) {
             opt_binary = true;
+            optflag_binary = 0;
           }
           if (optflag_rankfile == 1) {
             opt_rankfile = true;
             rank_file_name = std::string(strdup(optarg));
+            optflag_rankfile = 0;
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
             ss << string(optarg);
             ss >> io_size;
+            optflag_iosize = 0;
           }
           if (optflag_verbose == 1) {
             debug_enabled = true;
+            optflag_verbose = 0;
           }
           if (optflag_output == 1) {
             opt_output = true;
             output_file_name = std::string(strdup(optarg));
+            optflag_output = 0;
           }
           if (optflag_edgemap == 1) {
             opt_edgemap = true;
@@ -143,6 +148,7 @@ int main(int argc, char** argv)
               {
                 edge_map_type = graph::EdgeMapSrc;
               }
+            optflag_edgemap = 0;
           }
           break;
         case 'a':

@@ -160,9 +160,11 @@ int main(int argc, char** argv)
           if (optflag_rankfile == 1) {
             opt_rankfile = true;
             rank_file_name = std::string(strdup(optarg));
+            optflag_rankfile = 0;
           }
           if (optflag_reindex == 1) {
             opt_reindex = true;
+            optflag_reindex = 0;
           }
           if (optflag_namespace == 1) {
             opt_namespace = true;
@@ -177,30 +179,35 @@ int main(int argc, char** argv)
                 startpos = endpos + delimiter.length();
                 endpos = arg.find(delimiter, startpos);
               }
-
+            optflag_namespace = 0;
           }
           if (optflag_iosize == 1) {
             opt_iosize = true;
             ss << string(optarg);
             ss >> io_size;
+            optflag_iosize = 0;
           }
           if (optflag_chunksize == 1) {
             opt_chunksize = true;
             ss << string(optarg);
             ss >> chunksize;
+            optflag_chunksize = 0;
           }
           if (optflag_value_chunksize == 1) {
             opt_value_chunksize = true;
             ss << string(optarg);
             ss >> value_chunksize;
+            optflag_value_chunksize = 0;
           }
           if (optflag_cachesize == 1) {
             opt_cachesize = true;
             ss << string(optarg);
             ss >> cachesize;
+            optflag_cachesize = 0;
           }
           if (optflag_verbose == 1) {
             debug_enabled = true;
+            optflag_verbose = 0;
           }
           break;
         case 'a':
