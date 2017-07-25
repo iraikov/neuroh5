@@ -20,7 +20,7 @@ def prj_stream(nhg):
             for (src,dst) in zip(sources,destinations):
                 yield (GraphEvent(GraphEvent.EDGE_ADDITION, src, dst, 1.0))
 
-g = Graph(1121760, False, True)
+g = Graph(1127650, False, True)
 gu = GraphUpdater(g)
 gu.update(prj_stream(nhg))
         

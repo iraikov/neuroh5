@@ -58,7 +58,7 @@ namespace neuroh5
                       riter = pop_ranges.upper_bound(dst);
                       if (riter == pop_ranges.end())
                         {
-                          if (dst < pop_ranges.rbegin()->first +
+                          if (dst <= pop_ranges.rbegin()->first +
                               pop_ranges.rbegin()->second.first)
                             {
                               pp.second = pop_ranges.rbegin()->second.second;
@@ -87,7 +87,7 @@ namespace neuroh5
                               citer = pop_ranges.upper_bound(src);
                               if (citer == pop_ranges.end())
                                 {
-                                  if (src < pop_ranges.rbegin()->first +
+                                  if (src <= pop_ranges.rbegin()->first +
                                       pop_ranges.rbegin()->second.first)
                                     {
                                       pp.first = pop_ranges.rbegin()->second.second;
