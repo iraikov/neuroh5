@@ -9,8 +9,10 @@
 
 #include "debug.hh"
 
+#define MPICH_SKIP_MPICXX 1
 #include <Python.h>
 #include <bytesobject.h>
+#include <mpi4py/mpi4py.h>
 #include <numpy/numpyconfig.h>
 #include <numpy/arrayobject.h>
 
@@ -697,16 +699,22 @@ extern "C"
     vector<prj_tuple_t> prj_vector;
     vector< pair<string,string> > prj_names;
     PyObject *py_prj_dict = PyDict_New();
-    unsigned long commptr;
     char *input_file_name;
+    PyObject *py_comm = NULL;
+    MPI_Comm *comm_ptr  = NULL;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
 
-    if (!PyArg_ParseTuple(args, "ks", &commptr, &input_file_name))
+    if (!PyArg_ParseTuple(args, "Os", &py_comm, &input_file_name))
       return NULL;
 
-    assert(graph::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+    assert(py_comm != NULL);
+    comm_ptr = PyMPIComm_Get(py_comm);
+    assert(comm_ptr != NULL);
+    assert(*comm_ptr != MPI_COMM_NULL);
 
-    graph::read_graph(*((MPI_Comm *)(commptr)), std::string(input_file_name), true,
+    assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
+
+    graph::read_graph(*comm_ptr, std::string(input_file_name), true,
                       prj_names, prj_vector,
                       total_num_nodes, local_num_edges, total_num_edges);
     
@@ -845,11 +853,13 @@ extern "C"
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     vector<pair<string,string> > prj_names;
     PyObject *py_prj_dict = PyDict_New();
-    unsigned long commptr; unsigned long io_size; int size;
+    unsigned long io_size; int size;
+    PyObject *py_comm = NULL;
+    MPI_Comm *comm_ptr  = NULL;
     char *input_file_name;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
     
-    static const char *kwlist[] = {"commptr",
+    static const char *kwlist[] = {"comm",
                                    "file_name",
                                    "io_size",
                                    "node_rank_map",
@@ -857,23 +867,28 @@ extern "C"
                                    "map_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ksk|OiOi", (char **)kwlist,
-                                     &commptr, &input_file_name, &io_size,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Osk|OiOi", (char **)kwlist,
+                                     &py_comm, &input_file_name, &io_size,
                                      &py_node_rank_map, &opt_attrs, 
                                      &opt_edge_map_type))
       return NULL;
 
+    assert(py_comm != NULL);
+    comm_ptr = PyMPIComm_Get(py_comm);
+    assert(comm_ptr != NULL);
+    assert(*comm_ptr != MPI_COMM_NULL);
+    
     if (opt_edge_map_type == 1)
       {
         edge_map_type = graph::EdgeMapSrc;
       }
     
-    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
+    assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
 
-    assert(graph::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+    assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
-    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+    assert(cell::read_population_ranges(*comm_ptr, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
     // Create C++ map for node_rank_map:
     if (py_node_rank_map != NULL)
@@ -889,7 +904,7 @@ extern "C"
           }
       }
 
-    graph::scatter_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
+    graph::scatter_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
                          io_size, opt_attrs>0, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
                          total_num_nodes, local_num_edges, total_num_edges);
 
@@ -1071,34 +1086,41 @@ extern "C"
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     vector< pair<string,string> > prj_names;
     PyObject *py_prj_dict = PyDict_New();
-    unsigned long commptr; int size;
+    int size;
     char *input_file_name;
+    PyObject *py_comm = NULL;
+    MPI_Comm *comm_ptr  = NULL;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
     
-    static const char *kwlist[] = {"commptr",
+    static const char *kwlist[] = {"comm",
                                    "file_name",
                                    "attributes",
                                    "map_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ks|ii", (char **)kwlist,
-                                     &commptr, &input_file_name, 
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|ii", (char **)kwlist,
+                                     &py_comm, &input_file_name, 
                                      &opt_attrs, &opt_edge_map_type))
       return NULL;
+
+    assert(py_comm != NULL);
+    comm_ptr = PyMPIComm_Get(py_comm);
+    assert(comm_ptr != NULL);
+    assert(*comm_ptr != MPI_COMM_NULL);
 
     if (opt_edge_map_type == 1)
       {
         edge_map_type = graph::EdgeMapSrc;
       }
     
-    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
+    assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
 
-    assert(graph::read_projection_names(*((MPI_Comm *)(commptr)), input_file_name, prj_names) >= 0);
+    assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
-    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)), input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+    assert(cell::read_population_ranges(*comm_ptr, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
-    graph::bcast_graph(*((MPI_Comm *)(commptr)), edge_map_type, std::string(input_file_name),
+    graph::bcast_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
                        opt_attrs>0, prj_names, prj_vector, edge_attr_name_vector, 
                        total_num_nodes, local_num_edges, total_num_edges);
 
@@ -1450,23 +1472,30 @@ extern "C"
   {
     int status; 
     vector<string> pop_names;
-    unsigned long commptr;
+    PyObject *py_comm;
+    MPI_Comm *comm_ptr  = NULL;
+    
     char *input_file_name;
 
-    if (!PyArg_ParseTuple(args, "ks", &commptr, &input_file_name))
+    if (!PyArg_ParseTuple(args, "Os", &py_comm, &input_file_name))
       return NULL;
 
-    int rank, size;
-    assert(MPI_Comm_size(*((MPI_Comm *)(commptr)), &size) >= 0);
-    assert(MPI_Comm_rank(*((MPI_Comm *)(commptr)), &rank) >= 0);
+    assert(py_comm != NULL);
+    comm_ptr = PyMPIComm_Get(py_comm);
+    assert(comm_ptr != NULL);
+    assert(*comm_ptr != MPI_COMM_NULL);
 
-    status = cell::read_population_names(*((MPI_Comm *)(commptr)), input_file_name, pop_names);
+    int rank, size;
+    assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
+    assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
+
+    status = cell::read_population_names(*comm_ptr, input_file_name, pop_names);
     assert (status >= 0);
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(*((MPI_Comm *)(commptr)),
+    assert(cell::read_population_ranges(*comm_ptr,
                                         string(input_file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
@@ -3152,6 +3181,7 @@ PyMODINIT_FUNC
 initio(void)
 #endif
 {
+  assert(import_mpi4py() >= 0);
   import_array();
   
 #if PY_MAJOR_VERSION >= 3

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os, sys
+import mpi4py
 import numpy as np
 from distutils.core import setup, Extension
 
@@ -9,7 +10,8 @@ if sys.platform == 'darwin':
     HDF5_LIB    = os.environ.get("HDF5_LIB", "hdf5")
     MPI_INCDIR  = os.environ.get("MPI_INCDIR", "/usr/local/Cellar/mpich/3.2_2/include")
     MPI_LIB     = os.environ.get("MPI_LIB", "mpich")
-    NUMPY_INCDIR=np.get_include()
+    NUMPY_INCDIR= np.get_include()
+    MPI4PY_INCDIR=mpi4py.get_include()
     extra_compile_args = ["-std=c++11",
                           "-stdlib=libc++",	
                           "-mmacosx-version-min=10.9",
@@ -17,6 +19,7 @@ if sys.platform == 'darwin':
                           "-I"+HDF5_INCDIR,
                           "-I"+MPI_INCDIR,
                           "-I"+NUMPY_INCDIR,
+                          "-I"+MPI4PY_INCDIR,
                           "-I.",
                           "-g"]
     extra_link_args=["-L"+HDF5_LIBDIR, "-L"+MPI_LIBDIR]
@@ -29,44 +32,22 @@ else:
     MPI_LIBDIR  = os.environ.get("MPI_LIBDIR", "/usr/lib")
     MPI_LIB     = os.environ.get("MPI_LIB", "mpich")
     NUMPY_INCDIR= os.environ.get("NUMPY_INCDIR", np.get_include())
+    MPI4PY_INCDIR=os.environ.get("MPI4PY_INCDIR", mpi4py.get_include())
     extra_compile_args = ["-std=c++11",
-                          "-UNDEBUG",
-                          "-I"+HDF5_INCDIR,
-                          "-I"+MPI_INCDIR,
-                          "-I"+MPI_LIBDIR,
-                          "-I"+NUMPY_INCDIR,
-                          "-I.",
-                          "-g"]
+                        "-UNDEBUG",
+                        "-I"+HDF5_INCDIR,
+                        "-I"+MPI_INCDIR,
+                        "-I"+MPI_LIBDIR,
+                        "-I"+NUMPY_INCDIR,
+                        "-I"+MPI4PY_INCDIR,
+                        "-Iinclude", "-Iinclude/cell", "-Iinclude/graph", "-Iinclude/ngraph",
+                        "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5",
+                        "-g"]
     extra_link_args = ["-L"+HDF5_LIBDIR, "-L"+MPI_LIBDIR]
     if MPI_LIB != "":
         libraries = [HDF5_LIB, MPI_LIB]
     else:
         libraries = [HDF5_LIB]
-
-
-HDF5_INCDIR = os.environ.get("HDF5_INCDIR", "/usr/include/hdf5/mpich")
-HDF5_LIBDIR = os.environ.get("HDF5_LIBDIR", "/usr/lib")
-HDF5_LIB    = os.environ.get("HDF5_LIB", "hdf5_mpich")
-MPI_INCDIR  = os.environ.get("MPI_INCDIR", "/usr/include/mpich")
-MPI_LIBDIR  = os.environ.get("MPI_LIBDIR", "/usr/lib")
-MPI_LIB     = os.environ.get("MPI_LIB", "mpich")
-NUMPY_INCDIR= os.environ.get("NUMPY_INCDIR", np.get_include())
-extra_compile_args = ["-std=c++11",
-                      "-UNDEBUG",
-                      "-I"+HDF5_INCDIR,
-                      "-I"+MPI_INCDIR,
-                      "-I"+MPI_LIBDIR,
-                      "-I"+NUMPY_INCDIR,
-                      "-Iinclude", "-Iinclude/cell", "-Iinclude/graph", "-Iinclude/ngraph",
-                      "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5",
-                      "-g"]
-extra_link_args = ["-L"+HDF5_LIBDIR, "-L"+MPI_LIBDIR]
-if MPI_LIB != "":
-    libraries = [HDF5_LIB, MPI_LIB]
-else:
-    libraries = [HDF5_LIB]
-
-NUMPY_INCDIR= os.environ.get("NUMPY_INCDIR", np.get_include())
 
 setup(
     name='NeuroH5',
@@ -79,7 +60,7 @@ setup(
     url = "http://github.com/gheber/neurographdf5",
     include_package_data=True,
     install_requires=[
-        'click', 'h5py', 'numpy'
+        'click', 'h5py', 'numpy', 'mpi4py'
     ],
     entry_points='''
         [console_scripts]
