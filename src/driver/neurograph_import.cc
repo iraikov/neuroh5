@@ -103,7 +103,7 @@ int append_syn_adj_map
           vector<NODE_IDX_T> adj_vector;
           data::AttrVal edge_attr_values;
           vector<NODE_IDX_T> syn_id_vector;
-          
+
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
             {
               assert(ii < high_syn_ptr);
@@ -467,7 +467,6 @@ int main(int argc, char** argv)
   edge_attr_map.uint32_names.insert(make_pair("syn_id", 0));
   */
   vector<vector<string>> edge_attr_names(data::AttrVal::num_attr_types);
-
 
   if (syn_idx.size() > 0)
     {

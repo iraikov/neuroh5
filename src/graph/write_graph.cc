@@ -136,8 +136,8 @@ namespace neuroh5
       src_start = pop_vector[src_pop_idx].start;
       src_end   = src_start + pop_vector[src_pop_idx].count;
       
-      DEBUG("Task ",rank,": ","write_graph: dst_start = ", dst_start, "\n");
-      DEBUG("Task ",rank,": ","write_graph: dst_end = ", dst_end, "\n");
+      DEBUG("Task ",rank,": ","write_graph: dst_start = ", dst_start, " dst_end = ", dst_end, "\n");
+      DEBUG("Task ",rank,": ","write_graph: src_start = ", src_start, " src_end = ", src_end, "\n");
       DEBUG("Task ",rank,": ","write_graph: total_num_nodes = ", total_num_nodes, "\n");
 
       // Create an I/O communicator
@@ -159,6 +159,7 @@ namespace neuroh5
       map< NODE_IDX_T, rank_t > node_rank_map;
       compute_node_rank_map(io_size, total_num_nodes, node_rank_map);
 
+
       // construct a map where each set of edges are arranged by destination I/O rank
       auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       rank_edge_map_t rank_edge_map;
@@ -178,7 +179,7 @@ namespace neuroh5
                 {
                   printf("src = %u src_start = %lu src_end = %lu\n", src, src_start, src_end);
                 }
-              assert(src_start <= src && src < src_end);
+              assert(src_start <= src && src <= src_end);
               adj_vector.push_back(src - src_start);
               num_edges++;
             }
