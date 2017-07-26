@@ -25,5 +25,3 @@ gu = GraphUpdater(g)
 gu.update(prj_stream(nhg))
         
 overview(g)
-
-

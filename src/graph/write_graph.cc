@@ -175,7 +175,7 @@ namespace neuroh5
           vector<NODE_IDX_T> adj_vector;
           for (auto & src: v)
             {
-              if (!(src_start <= src && src < src_end))
+              if (!(src_start <= src && src <= src_end))
                 {
                   printf("src = %u src_start = %lu src_end = %lu\n", src, src_start, src_end);
                 }

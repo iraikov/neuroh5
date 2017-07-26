@@ -24,7 +24,8 @@ namespace neuroh5
      const uint64_t&           num_edges,
      const edge_map_t&         prj_edge_map,
      const std::vector<std::vector<std::string>>& edge_attr_names,
-     hsize_t            cdim = 4096 
+     hsize_t            cdim = 4096,
+     hsize_t            block_size = 1000000
      );
 
 

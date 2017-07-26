@@ -29,7 +29,8 @@ namespace neuroh5
      const uint64_t&           num_edges,
      const edge_map_t&         prj_edge_map,
      const vector<vector<string>>& edge_attr_names,
-     hsize_t                   cdim
+     hsize_t                   cdim,
+     hsize_t                   block_size
      )
     {
       // do a sanity check on the input
@@ -63,22 +64,24 @@ namespace neuroh5
       vector<uint64_t> dst_ptr(1, 0);
       vector<NODE_IDX_T> dst_blk_idx, src_idx;
       NODE_IDX_T last_idx = 0;
-      size_t pos = 0; 
+      size_t pos = 0;
+      hsize_t num_block_edges = 0;
       for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
         {
           NODE_IDX_T dst = iter->first;
           edge_tuple_t et = iter->second;
           vector<NODE_IDX_T> v = get<0>(et);
           data::AttrVal a = get<1>(et);
-
+          
           if (!dst_blk_idx.empty())
             {
               // creates new block if non-contiguous dst indices
-              if ((dst-1) > last_idx)
+              if (((dst-1) > last_idx) || (num_block_edges > block_size))
                 {
                   dst_blk_idx.push_back(dst - dst_start);
                   dst_blk_ptr.push_back(dst_ptr.size()-1);
                   num_blocks++;
+                  num_block_edges = 0;
                 }
               last_idx = dst;
             }
@@ -90,6 +93,7 @@ namespace neuroh5
 
           dst_ptr.push_back(dst_ptr[pos++] + v.size());
           copy(v.begin(), v.end(), back_inserter(src_idx));
+          num_block_edges += v.size();
         }
       assert(num_edges == src_idx.size());
       
