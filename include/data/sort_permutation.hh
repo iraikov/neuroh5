@@ -15,6 +15,7 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <numeric>
 
 namespace neuroh5
 {
