@@ -185,7 +185,6 @@ namespace neuroh5
 
       int sendbuf_size = sendbuf.size();
       assert(sendpos < sendbuf_size);
-      assert(adj_vector.size() > 0);
                 
 #ifdef USE_EDGE_DELIM      
       assert(MPI_Pack(&edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
