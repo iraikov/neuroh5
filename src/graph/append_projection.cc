@@ -26,14 +26,11 @@ namespace neuroh5
      const NODE_IDX_T&         src_end,
      const NODE_IDX_T&         dst_start,
      const NODE_IDX_T&         dst_end,
-     const hsize_t             dst_blk_start,
-     const hsize_t             dst_ptr_start,
-     const hsize_t             src_idx_start,
      const uint64_t&           num_edges,
      const edge_map_t&         prj_edge_map,
      const vector<vector<string>>& edge_attr_names,
-     const hsize_t             block_size,
-     hsize_t                   cdim
+     const hsize_t             cdim,
+     const hsize_t             block_size
      )
     {
       // do a sanity check on the input
@@ -56,7 +53,7 @@ namespace neuroh5
       assert(H5Pclose(fapl) >= 0);
 
       uint64_t num_dest = prj_edge_map.size();
-      uint64_t num_blocks = 1;
+      uint64_t num_blocks = num_dest > 0 ? 1 : 0;
       if (rank == size-1)
         {
           num_blocks++;
@@ -67,7 +64,8 @@ namespace neuroh5
       vector<uint64_t> dst_ptr(1, 0);
       vector<NODE_IDX_T> dst_blk_idx, src_idx;
       NODE_IDX_T last_idx;
-      size_t pos = 0; 
+      size_t pos = 0;
+      hsize_t num_block_edges = 0;
       for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
         {
           NODE_IDX_T dst  = iter->first;
@@ -78,11 +76,12 @@ namespace neuroh5
           if (!dst_blk_idx.empty())
             {
               // creates new block if non-contiguous dst indices
-              if ((dst-1) > last_idx)
+              if (((dst-1) > last_idx) || (num_block_edges > block_size))
                 {
                   dst_blk_idx.push_back(dst - dst_start);
                   dst_blk_ptr.push_back(dst_ptr.size()-1);
                   num_blocks++;
+                  num_block_edges = 0;
                 }
               last_idx = dst;
             }
@@ -94,6 +93,7 @@ namespace neuroh5
 
           dst_ptr.push_back(dst_ptr[pos++] + v.size());
           copy(v.begin(), v.end(), back_inserter(src_idx));
+          num_block_edges += v.size();
         }
       assert(num_edges == src_idx.size());
 
@@ -142,11 +142,13 @@ namespace neuroh5
         
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
       hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
-      hid_t fspace = H5Screate_simple(1, &dims, &dims);
-      assert(fspace >= 0);
       hid_t dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
       assert(dset >= 0);
 
+      hid_t fspace = H5Dget_space(dset);
+      hsize_t dst_blk_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      assert(H5Sclose(fspace) >= 0);
+      
       if (rank == size-1)
         {
           dims = num_blocks-1;
@@ -173,6 +175,8 @@ namespace neuroh5
         }
         
       hsize_t block = dims;
+      fspace = H5Screate_simple(1, &newsize, &newsize);
+      assert(fspace >= 0);
       assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                  &one, &block) >= 0);
       assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
@@ -273,6 +277,10 @@ namespace neuroh5
       assert(fspace >= 0);
       dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
 
+      fspace = H5Dget_space(dset);
+      hsize_t dst_ptr_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      assert(H5Sclose(fspace) >= 0);
+      
       assert(dset >= 0);
       dims = (hsize_t) dst_ptr.size();
 
@@ -315,6 +323,10 @@ namespace neuroh5
       assert(fspace >= 0);
       dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
       assert(dset >= 0);
+
+      fspace = H5Dget_space(dset);
+      hsize_t src_idx_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      assert(H5Sclose(fspace) >= 0);
 
       dims = (hsize_t) src_idx.size();
 

@@ -21,14 +21,12 @@ namespace neuroh5
      const NODE_IDX_T&         src_end,
      const NODE_IDX_T&         dst_start,
      const NODE_IDX_T&         dst_end,
-     const hsize_t             dst_blk_start,
-     const hsize_t             dst_ptr_start,
-     const hsize_t             src_idx_start,
      const uint64_t&           num_edges,
      const edge_map_t&         prj_edge_map,
      const std::vector<std::vector<std::string>>& edge_attr_names,
-     const hsize_t             block_size,
-     hsize_t            cdim = 4096 
+     const hsize_t            cdim = 4096,
+     const hsize_t            block_size = 1000000
+
      );
 
 

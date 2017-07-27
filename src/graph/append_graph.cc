@@ -1,9 +1,9 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file write_graph.cc
+///  @file append_graph.cc
 ///
-///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
-///  format.
+///  Top-level functions for appending edge information to graphs in
+///  DBS (Destination Block Sparse) format.
 ///
 ///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
@@ -14,8 +14,8 @@
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
 #include "cell_populations.hh"
-#include "write_graph.hh"
-#include "write_projection.hh"
+#include "append_graph.hh"
+#include "append_projection.hh"
 #include "path_names.hh"
 #include "sort_permutation.hh"
 #include "pack_edge.hh"
@@ -66,7 +66,7 @@ namespace neuroh5
     }
 
     
-    int write_graph
+    int append_graph
     (
      MPI_Comm         all_comm,
      const int        io_size_arg,
@@ -107,14 +107,14 @@ namespace neuroh5
         {
           io_size = io_size_arg > 0 ? io_size_arg : 1;
         }
-      DEBUG("Task ",rank,": ","write_graph: io_size = ",io_size,"\n");
-      DEBUG("Task ",rank,": ","write_graph: prior to reading population ranges\n");
+      DEBUG("Task ",rank,": ","append_graph: io_size = ",io_size,"\n");
+      DEBUG("Task ",rank,": ","append_graph: prior to reading population ranges\n");
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
                                           pop_ranges, pop_vector, total_num_nodes) >= 0);
-      DEBUG("Task ",rank,": ","write_graph: prior to reading population labels\n");
+      DEBUG("Task ",rank,": ","append_graph: prior to reading population labels\n");
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
-      DEBUG("Task ",rank,": ","write_graph: read population labels\n");
+      DEBUG("Task ",rank,": ","append_graph: read population labels\n");
       
       for (size_t i=0; i< pop_labels.size(); i++)
         {
@@ -136,9 +136,9 @@ namespace neuroh5
       src_start = pop_vector[src_pop_idx].start;
       src_end   = src_start + pop_vector[src_pop_idx].count;
       
-      DEBUG("Task ",rank,": ","write_graph: dst_start = ", dst_start, " dst_end = ", dst_end, "\n");
-      DEBUG("Task ",rank,": ","write_graph: src_start = ", src_start, " src_end = ", src_end, "\n");
-      DEBUG("Task ",rank,": ","write_graph: total_num_nodes = ", total_num_nodes, "\n");
+      DEBUG("Task ",rank,": ","append_graph: dst_start = ", dst_start, " dst_end = ", dst_end, "\n");
+      DEBUG("Task ",rank,": ","append_graph: src_start = ", src_start, " src_end = ", src_end, "\n");
+      DEBUG("Task ",rank,": ","append_graph: total_num_nodes = ", total_num_nodes, "\n");
 
       // Create an I/O communicator
       MPI_Comm  io_comm;
@@ -167,7 +167,7 @@ namespace neuroh5
         {
           NODE_IDX_T dst = element.first;
           // all source/destination node IDs must be in range
-          assert(dst_start <= dst && dst <= dst_end);
+          assert(dst_start <= dst && dst < dst_end);
           edge_tuple_t et        = element.second;
           vector<NODE_IDX_T> v   = get<0>(et);
           AttrVal a        = get<1>(et);
@@ -204,18 +204,6 @@ namespace neuroh5
             {
               apply_permutation_in_place(a.uint32_values[i], p);
             }
-          for (size_t i=0; i<a.int8_values.size(); i++)
-            {
-              apply_permutation_in_place(a.int8_values[i], p);
-            }
-          for (size_t i=0; i<a.int16_values.size(); i++)
-            {
-              apply_permutation_in_place(a.int16_values[i], p);
-            }
-          for (size_t i=0; i<a.int32_values.size(); i++)
-            {
-              apply_permutation_in_place(a.int32_values[i], p);
-            }
 
           auto it = node_rank_map.find(dst);
           assert(it != node_rank_map.end());
@@ -229,9 +217,6 @@ namespace neuroh5
           edge_attr_vec.uint8_values.resize(a.uint8_values.size());
           edge_attr_vec.uint16_values.resize(a.uint16_values.size());
           edge_attr_vec.uint32_values.resize(a.uint32_values.size());
-          edge_attr_vec.int8_values.resize(a.int8_values.size());
-          edge_attr_vec.int16_values.resize(a.int16_values.size());
-          edge_attr_vec.int32_values.resize(a.int32_values.size());
           edge_attr_vec.append(a);
         }
 
@@ -275,7 +260,7 @@ namespace neuroh5
                                rank_edge_map, num_packed_edges,
                                sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
-      DEBUG("Task ",rank,": ","write_graph: num_packed_edges = ", num_packed_edges, "\n");
+      DEBUG("Task ",rank,": ","append_graph: num_packed_edges = ", num_packed_edges, "\n");
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
@@ -312,7 +297,7 @@ namespace neuroh5
                                      recvbuf, recvcounts, rdispls, edge_attr_num,
                                      prj_edge_map, num_unpacked_edges);
         }
-      DEBUG("Task ",rank,": ","write_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
+      DEBUG("Task ",rank,": ","append_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
 
 
       if (rank < io_size)
@@ -324,9 +309,9 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           assert(file >= 0);
           
-          write_projection (file, src_pop_name, dst_pop_name,
-                            src_start, src_end, dst_start, dst_end,
-                            num_unpacked_edges, prj_edge_map, edge_attr_names);
+          append_projection (file, src_pop_name, dst_pop_name,
+                             src_start, src_end, dst_start, dst_end,
+                             num_unpacked_edges, prj_edge_map, edge_attr_names);
           
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);
