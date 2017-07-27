@@ -120,20 +120,22 @@ int append_syn_adj_map
 
           edge_attr_values.insert(syn_id_vector);
 
-          if (edge_map.find(dst) == edge_map.end())
+          if (num_edges > 0)
             {
-              edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values)));
+              if (edge_map.find(dst) == edge_map.end())
+                {
+                  edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values)));
+                }
+              else
+                {
+                  edge_tuple_t et = edge_map[dst];
+                  vector<NODE_IDX_T> &v = get<0>(et);
+                  data::AttrVal &a = get<1>(et);
+                  v.insert(v.end(),adj_vector.begin(),adj_vector.end());
+                  a.append(edge_attr_values);
+                  edge_map[dst] = make_tuple(v,a);
+                }
             }
-          else
-            {
-              edge_tuple_t et = edge_map[dst];
-              vector<NODE_IDX_T> &v = get<0>(et);
-              data::AttrVal &a = get<1>(et);
-              v.insert(v.end(),adj_vector.begin(),adj_vector.end());
-              a.append(edge_attr_values);
-              edge_map[dst] = make_tuple(v,a);
-            }
-
         }
     }
 
@@ -178,19 +180,22 @@ int append_adj_map
                   num_edges++;
                 }
             }
-          
-          if (edge_map.find(dst) == edge_map.end())
+
+          if (num_edges > 0)
             {
-              edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values)));
-            }
-          else
-            {
-              edge_tuple_t et = edge_map[dst];
-              vector<NODE_IDX_T> &v = get<0>(et);
-              data::AttrVal &a = get<1>(et);
-              v.insert(v.end(),adj_vector.begin(),adj_vector.end());
-              a.append(edge_attr_values);
-              edge_map[dst] = make_tuple(v,a);
+              if (edge_map.find(dst) == edge_map.end())
+                {
+                  edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values)));
+                }
+              else
+                {
+                  edge_tuple_t et = edge_map[dst];
+                  vector<NODE_IDX_T> &v = get<0>(et);
+                  data::AttrVal &a = get<1>(et);
+                  v.insert(v.end(),adj_vector.begin(),adj_vector.end());
+                  a.append(edge_attr_values);
+                  edge_map[dst] = make_tuple(v,a);
+                }
             }
 
         }

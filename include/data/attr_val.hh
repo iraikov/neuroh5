@@ -116,10 +116,10 @@ namespace neuroh5
       {
         assert(float_values.size()  == a.float_values.size());
         assert(uint8_values.size()  == a.uint8_values.size());
-        assert(int8_values.size()   == a.int8_values.size());
         assert(uint16_values.size() == a.uint16_values.size());
-        assert(int16_values.size()  == a.int16_values.size());
         assert(uint32_values.size() == a.uint32_values.size());
+        assert(int8_values.size()   == a.int8_values.size());
+        assert(int16_values.size()  == a.int16_values.size());
         assert(int32_values.size()  == a.int32_values.size());
         for (size_t i=0; i<float_values.size(); i++)
           {

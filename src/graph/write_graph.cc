@@ -79,7 +79,7 @@ namespace neuroh5
     {
       size_t io_size;
       uint64_t num_edges = 0;
-      vector <uint32_t> edge_attr_num(edge_attr_names.size());
+      vector <uint32_t> edge_attr_num(edge_attr_names.size(),0);
       for (size_t i=0; i<edge_attr_names.size(); i++)
         {
           edge_attr_num[i] = edge_attr_names[i].size();

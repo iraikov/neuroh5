@@ -217,6 +217,12 @@ namespace neuroh5
                                           sendbuf_size, sendpos, sendbuf);
           pack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges, edge_attr_values, 
                                           sendbuf_size, sendpos, sendbuf);
+          pack_edge_attr_values<int8_t>(comm, MPI_INT8_T, num_edges, edge_attr_values, 
+                                        sendbuf_size, sendpos, sendbuf);
+          pack_edge_attr_values<int16_t>(comm, MPI_INT16_T, num_edges, edge_attr_values, 
+                                         sendbuf_size, sendpos, sendbuf);
+          pack_edge_attr_values<int32_t>(comm, MPI_INT32_T, num_edges, edge_attr_values, 
+                                         sendbuf_size, sendpos, sendbuf);
         }
                 
 #ifdef USE_EDGE_DELIM      
@@ -462,6 +468,18 @@ namespace neuroh5
                                             edge_attr_values, recvpos);
           assert(recvpos <= recvbuf_size);
           unpack_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, numitems, edge_attr_num[data::AttrVal::attr_index_uint32],
+                                            recvbuf, recvbuf_size, 
+                                            edge_attr_values, recvpos);
+          assert(recvpos <= recvbuf_size);
+          unpack_edge_attr_values<int8_t>(comm, MPI_INT8_T, numitems, edge_attr_num[data::AttrVal::attr_index_int8],
+                                           recvbuf, recvbuf_size, 
+                                           edge_attr_values, recvpos);
+          assert(recvpos <= recvbuf_size);
+          unpack_edge_attr_values<int16_t>(comm, MPI_INT16_T, numitems, edge_attr_num[data::AttrVal::attr_index_int16],
+                                            recvbuf, recvbuf_size, 
+                                            edge_attr_values, recvpos);
+          assert(recvpos <= recvbuf_size);
+          unpack_edge_attr_values<int32_t>(comm, MPI_INT32_T, numitems, edge_attr_num[data::AttrVal::attr_index_int32],
                                             recvbuf, recvbuf_size, 
                                             edge_attr_values, recvpos);
 
