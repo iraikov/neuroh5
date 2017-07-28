@@ -7,7 +7,7 @@
 #include <type_traits>
 
 template <typename T>
-hid_t infer_mpi_datatype(const T& x)
+MPI_Datatype infer_mpi_datatype(const T& x)
 {
   MPI_Datatype result;
 
