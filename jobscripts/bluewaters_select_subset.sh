@@ -2,10 +2,10 @@
 ### set the number of nodes and the number of PEs per node
 #PBS -l nodes=64:ppn=16:xe
 ### which queue/account to use
-#PBS -q high
+#PBS -q debug
 #PBS -A bafv
 ### set the wallclock time
-#PBS -l walltime=1:00:00
+#PBS -l walltime=0:30:00
 ### set the job name
 #PBS -N select_neurotrees
 ### set the job stdout and stderr
@@ -23,11 +23,11 @@ set -x
 
 cd $PBS_O_WORKDIR
 
-aprun -n 1024 ./build/neurotrees_select -p GC -i 256 --reindex \
+aprun -n 1024 ./build/neurotrees_select -p GC -i 256 \
       --cachesize=$((4 * 1024 * 1024)) \
-      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_extended_20170711.h5 \
-      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_reindex_20170615.dat \
-      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_20170711.h5 
+      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_20170711.h5 \
+      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_selection_20170714.dat \
+      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_subset_100_20170714.h5 
 
 
 
