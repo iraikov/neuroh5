@@ -312,6 +312,7 @@ namespace neuroh5
                                      recvbuf, recvcounts, rdispls, edge_attr_num,
                                      prj_edge_map, num_unpacked_edges);
         }
+      MPI_Barrier(all_comm);
       DEBUG("Task ",rank,": ","write_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
 
 
