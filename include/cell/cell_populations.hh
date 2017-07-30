@@ -36,6 +36,12 @@ namespace neuroh5
      std::set< std::pair<pop_t,pop_t> >&  pop_pairs
      );
 
+    extern herr_t read_population_combos_serial
+    (
+     const std::string&                                 file_name,
+     std::set< std::pair<pop_t,pop_t> >&  pop_pairs
+     );
+
     /// @brief Reads the id ranges of each population
     ///
     /// @param comm          MPI communicator
@@ -62,9 +68,23 @@ namespace neuroh5
      size_t&                          total_num_nodes
      );
 
+    extern herr_t read_population_ranges_serial
+    (
+     const std::string&               file_name,
+     pop_range_map_t&          pop_ranges,
+     std::vector<pop_range_t>& pop_vector,
+     size_t&                          total_num_nodes
+     );
+
     extern herr_t read_population_labels
     (
      MPI_Comm                         comm,
+     const std::string&               file_name,
+     std::vector< std::pair<pop_t, std::string> > & pop_labels
+     );
+
+    extern herr_t read_population_labels_serial
+    (
      const std::string&               file_name,
      std::vector< std::pair<pop_t, std::string> > & pop_labels
      );

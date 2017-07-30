@@ -269,5 +269,158 @@ namespace neuroh5
       DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
       return ierr;
     }
+
+    
+    herr_t read_projection_serial
+    (
+     const std::string&         file_name,
+     const std::string&         src_pop_name,
+     const std::string&         dst_pop_name,
+     const NODE_IDX_T&          dst_start,
+     const NODE_IDX_T&          src_start,
+     uint64_t&                  nedges,
+     DST_BLK_PTR_T&             block_base,
+     DST_PTR_T&                 edge_base,
+     vector<DST_BLK_PTR_T>&     dst_blk_ptr,
+     vector<NODE_IDX_T>&        dst_idx,
+     vector<DST_PTR_T>&         dst_ptr,
+     vector<NODE_IDX_T>&        src_idx
+     )
+    {
+      herr_t ierr = 0;
+
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      assert(fapl >= 0);
+
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+      assert(file >= 0);
+
+      // determine number of blocks in projection
+      uint64_t num_blocks = hdf5::dataset_num_elements
+        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR)) - 1;
+
+      // determine number of edges in projection
+      nedges = hdf5::dataset_num_elements
+        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX));
+
+
+      vector< pair<hsize_t,hsize_t> > bins;
+
+      hsize_t block = num_blocks+1;
+
+      DST_BLK_PTR_T block_rebase = 0;
+
+      // read destination block pointers
+
+      if (block > 0)
+        {
+          // allocate buffer and memory dataspace
+          dst_blk_ptr.resize(block);
+
+          ierr = hdf5::read_serial<DST_BLK_PTR_T>
+            (
+             file,
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR),
+             block,
+             DST_BLK_PTR_H5_NATIVE_T,
+             dst_blk_ptr,
+             H5P_DEFAULT
+             );
+          assert(ierr >= 0);
+
+          // rebase the block_ptr array to local offsets
+          // REBASE is going to be the start offset for the hyperslab
+
+          block_rebase = dst_blk_ptr[0];
+
+          for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
+            {
+              dst_blk_ptr[i] -= block_rebase;
+            }
+        }
+
+      // read destination block indices
+
+      if (block > 0)
+        {
+          block = block-1;
+
+          dst_idx.resize(block);
+          assert(dst_idx.size() > 0);
+
+          ierr = hdf5::read_serial<NODE_IDX_T>
+            (
+             file,
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX),
+             block,
+             NODE_IDX_H5_NATIVE_T,
+             dst_idx,
+             H5P_DEFAULT
+             );
+          assert(ierr >= 0);
+        }
+
+      DST_PTR_T dst_rebase = 0;
+
+      // read destination pointers
+
+      if (block > 0)
+        {
+
+          block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
+
+          dst_ptr.resize(block);
+          assert(dst_ptr.size() > 0);
+
+          ierr = hdf5::read_serial<DST_PTR_T>
+            (
+             file,
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR),
+             block,
+             DST_PTR_H5_NATIVE_T,
+             dst_ptr,
+             H5P_DEFAULT
+             );
+          assert(ierr >= 0);
+
+          dst_rebase = dst_ptr[0];
+          edge_base = dst_rebase;
+          for (size_t i = 0; i < dst_ptr.size(); ++i)
+            {
+              dst_ptr[i] -= dst_rebase;
+            }
+        }
+
+      if (block > 0)
+        {
+          hsize_t block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
+
+          if (block > 0)
+            {
+              // allocate buffer and memory dataspace
+              src_idx.resize(block);
+              assert(src_idx.size() > 0);
+
+              ierr = hdf5::read_serial<NODE_IDX_T>
+                (
+                 file,
+                 hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
+                 block,
+                 NODE_IDX_H5_NATIVE_T,
+                 src_idx,
+                 H5P_DEFAULT
+                 );
+              assert(ierr >= 0);
+            }
+
+        }
+
+      assert(H5Fclose(file) >= 0);
+      assert(H5Pclose(fapl) >= 0);
+      assert(ierr == 0);
+
+      return ierr;
+    }
+
   }
 }

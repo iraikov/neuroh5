@@ -82,5 +82,39 @@ namespace neuroh5
 
         return ierr;
       }
+
+
+      herr_t group_contents_serial
+      (
+       const hid_t&         file,
+       const std::string&   path,
+       vector<string>&      obj_names
+       )
+      {
+        herr_t ierr = 0;
+
+        hsize_t num_objs;
+        hid_t grp = -1;
+
+        grp = H5Gopen(file, path.c_str(), H5P_DEFAULT);
+        assert(grp >= 0);
+        assert(H5Gget_num_objs(grp, &num_objs)>=0);
+        hsize_t idx = 0;
+        vector<string> op_data;
+        assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                          &iterate_cb, (void*)&op_data ) >= 0);
+        
+        assert(op_data.size() == num_objs);
+        
+        for (size_t i = 0; i < op_data.size(); ++i)
+          {
+            assert(op_data[i].size() > 0);
+            obj_names.push_back(op_data[i]);
+          }
+        
+        assert(H5Gclose(grp) >= 0);
+
+        return ierr;
+      }
     }
 }
