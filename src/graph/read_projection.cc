@@ -303,16 +303,16 @@ namespace neuroh5
 
       if (block > 0)
         {
-          block = block-1;
+          hsize_t dst_idx_block = block-1;
+          dst_idx.resize(dst_idx_block);
 
-          dst_idx.resize(block);
           assert(dst_idx.size() > 0);
 
           ierr = hdf5::read_serial<NODE_IDX_T>
             (
              file,
              hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX),
-             block,
+             dst_idx_block,
              NODE_IDX_H5_NATIVE_T,
              dst_idx,
              H5P_DEFAULT
@@ -326,17 +326,15 @@ namespace neuroh5
 
       if (block > 0)
         {
-
-          block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-
-          dst_ptr.resize(block);
+          hsize_t dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
+          dst_ptr.resize(dst_ptr_block);
           assert(dst_ptr.size() > 0);
 
           ierr = hdf5::read_serial<DST_PTR_T>
             (
              file,
              hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR),
-             block,
+             dst_ptr_block,
              DST_PTR_H5_NATIVE_T,
              dst_ptr,
              H5P_DEFAULT
@@ -353,19 +351,19 @@ namespace neuroh5
 
       if (block > 0)
         {
-          hsize_t block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
+          hsize_t src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
 
-          if (block > 0)
+          if (src_idx_block > 0)
             {
               // allocate buffer and memory dataspace
-              src_idx.resize(block);
+              src_idx.resize(src_idx_block);
               assert(src_idx.size() > 0);
 
               ierr = hdf5::read_serial<NODE_IDX_T>
                 (
                  file,
                  hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
-                 block,
+                 src_idx_block,
                  NODE_IDX_H5_NATIVE_T,
                  src_idx,
                  H5P_DEFAULT
