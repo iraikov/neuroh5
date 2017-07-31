@@ -187,14 +187,7 @@ namespace neuroh5
           DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.back() = ",
                 dst_blk_ptr.back(), "\n");
 
-          if (rank < size-1)
-            {
-              block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front() + 1);
-            }
-          else
-            {
-              block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-            }
+          block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
 
           hsize_t start = (hsize_t)block_rebase;
           dst_ptr.resize(block);
