@@ -27,13 +27,10 @@ namespace neuroh5
                           vector<uint8_t>& recvbuf)
     {
 
-      int srank, ssize; size_t rank, size;
+      int ssize; size_t size;
       assert(MPI_Comm_size(comm, &ssize) >= 0);
-      assert(MPI_Comm_rank(comm, &srank) >= 0);
 
-      assert(srank >= 0);
       assert(ssize > 0);
-      rank = srank;
       size = ssize;
 
       

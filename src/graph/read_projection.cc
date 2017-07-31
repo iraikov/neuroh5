@@ -12,6 +12,7 @@
 #include "dataset_num_elements.hh"
 #include "read_template.hh"
 #include "path_names.hh"
+#include "rank_range.hh"
 #include "debug.hh"
 #include "read_projection.hh"
 
@@ -29,24 +30,6 @@ namespace neuroh5
 {
   namespace graph
   {
-    // Calculate the starting and end block for each rank
-    void compute_bins
-    (
-     const size_t&                    num_blocks,
-     const size_t&                    size,
-     vector< pair<hsize_t,hsize_t> >& bins
-     )
-    {
-      hsize_t remainder=0, offset=0, buckets=0;
-
-      for (size_t i=0; i<size; i++)
-        {
-          remainder = num_blocks - offset;
-          buckets   = (size - i);
-          bins[i]   = make_pair(offset, remainder / buckets);
-          offset    += bins[i].second;
-        }
-    }
 
     /**************************************************************************
      * Read the basic DBS graph structure
@@ -101,8 +84,7 @@ namespace neuroh5
       vector< pair<hsize_t,hsize_t> > bins;
 
       // determine which blocks of block_ptr are read by which rank
-      bins.resize(size);
-      compute_bins(num_blocks, size, bins);
+      mpi::rank_ranges(num_blocks, size, bins);
 
       // determine start and stop block for the current rank
       hsize_t start = bins[rank].first;
@@ -146,19 +128,14 @@ namespace neuroh5
             {
               dst_blk_ptr[i] -= block_rebase;
             }
-            }
+        }
       else
         {
           block_rebase = 0;
         }
 
       // read destination block indices
-      hsize_t dst_idx_block = block;
-      if (rank == size-1)
-        {
-          dst_idx_block -= 1;
-        }
-
+      hsize_t dst_idx_block = block-1;
       dst_idx.resize(dst_idx_block);
 
       DEBUG("Task ",rank,": ", "dst_idx: block = ", dst_idx_block, "\n");
@@ -217,17 +194,16 @@ namespace neuroh5
 
       // read source indices
 
-      DEBUG("Task ",rank,": ", "src_idx: dst_ptr.front() = ",
-            dst_ptr.front(), "\n");
-      DEBUG("Task ",rank,": ", "src_idx: dst_ptr.back() = ",
-            dst_ptr.back(), "\n");
-      
-      hsize_t src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
-      hsize_t src_idx_start = (hsize_t)dst_rebase;
-      
+      hsize_t src_idx_block=0, src_idx_start=(hsize_t)dst_rebase;
+
+      if (dst_ptr.size() > 0)
+        {
+          src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
+        }
+
       DEBUG("Task ",rank,": ", "src_idx: block = ", src_idx_block, "\n");
       DEBUG("Task ",rank,": ", "src_idx: start = ", src_idx_start, "\n");
-      
+
       // allocate buffer and memory dataspace
       src_idx.resize(src_idx_block);
       
