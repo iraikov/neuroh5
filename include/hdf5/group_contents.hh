@@ -36,7 +36,14 @@ namespace neuroh5
      const std::string&         path,
      std::vector <std::string>& obj_names
      );
-  }
+
+    extern herr_t group_contents_serial
+    (
+     const hid_t&               file,
+     const std::string&         path,
+     std::vector <std::string>& obj_names
+     );
+}
 }
 
 #endif

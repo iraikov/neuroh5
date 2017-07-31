@@ -89,11 +89,8 @@ namespace neuroh5
           uint32_t dst_pop_idx=0, src_pop_idx=0;
           bool src_pop_set = false, dst_pop_set = false;
       
-          printf("src_pop_name = %s\n", src_pop_name.c_str());
-          printf("dst_pop_name = %s\n", dst_pop_name.c_str());
           for (size_t i=0; i< pop_labels.size(); i++)
             {
-              printf("pop_labels[%d] = %s\n", i, get<1>(pop_labels[i]).c_str());
               if (src_pop_name == get<1>(pop_labels[i]))
                 {
                   src_pop_idx = get<0>(pop_labels[i]);
@@ -111,13 +108,13 @@ namespace neuroh5
           src_start = pop_vector[src_pop_idx].start;
 
 
-          DEBUG("scatter: reading projection ", src_pop_name, " -> ", dst_pop_name);
+          DEBUG("Task ",rank," scatter: reading projection ", src_pop_name, " -> ", dst_pop_name);
           assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
                                         dst_start, src_start, total_prj_num_edges,
                                         block_base, edge_base, dst_blk_ptr, dst_idx,
                                         dst_ptr, src_idx) >= 0);
           
-          DEBUG("scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
+          DEBUG("Task ",rank," scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
           // validate the edges
           assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                     pop_ranges, pop_pairs) == true);
@@ -157,9 +154,9 @@ namespace neuroh5
         } // rank < io_size
     
       // 0. Broadcast the number and names of attributes of each type to all ranks
-      edge_attr_num.resize(4);
+      edge_attr_num.resize(data::AttrVal::num_attr_types);
+      edge_attr_names.resize(data::AttrVal::num_attr_types);
       assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
-      edge_attr_names.resize(4);
       for (size_t aidx=0; aidx<edge_attr_names.size(); aidx++)
         {
           if (edge_attr_num[aidx] > 0)
@@ -179,6 +176,7 @@ namespace neuroh5
       uint64_t num_unpacked_edges=0;
       if (recvbuf.size() > 0)
         {
+          
           mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
                                      recvbuf, recvcounts, rdispls, edge_attr_num,
                                      prj_edge_map, num_unpacked_edges);

@@ -78,7 +78,7 @@ namespace neuroh5
               if (((dst-1) > last_idx) || (num_block_edges > block_size))
                 {
                   dst_blk_idx.push_back(dst - dst_start);
-                  dst_blk_ptr.push_back(dst_ptr.size()-1);
+                  dst_blk_ptr.push_back(dst_ptr.size());
                   num_blocks++;
                   num_block_edges = 0;
                 }

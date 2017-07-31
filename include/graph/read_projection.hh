@@ -75,6 +75,22 @@ namespace neuroh5
      std::vector<NODE_IDX_T>&        src_idx,
      bool collective = true
      );
+
+    extern herr_t read_projection_serial
+    (
+     const std::string&              file_name,
+     const std::string&              src_pop_name,
+     const std::string&              dst_pop_name,
+     const NODE_IDX_T&               dst_start,
+     const NODE_IDX_T&               src_start,
+     uint64_t&                       nedges,
+     DST_BLK_PTR_T&                  block_base,
+     DST_PTR_T&                      edge_base,
+     std::vector<DST_BLK_PTR_T>&     dst_blk_ptr,
+     std::vector<NODE_IDX_T>&        dst_idx,
+     std::vector<DST_PTR_T>&         dst_ptr,
+     std::vector<NODE_IDX_T>&        src_idx
+     );
   }
 }
 

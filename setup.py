@@ -36,14 +36,16 @@ else:
     extra_compile_args = ["-std=c++11",
                         "-UNDEBUG",
                         "-I"+HDF5_INCDIR,
-                        "-I"+MPI_INCDIR,
-                        "-I"+MPI_LIBDIR,
                         "-I"+NUMPY_INCDIR,
                         "-I"+MPI4PY_INCDIR,
                         "-Iinclude", "-Iinclude/cell", "-Iinclude/graph", "-Iinclude/ngraph",
                         "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5",
                         "-g"]
-    extra_link_args = ["-L"+HDF5_LIBDIR, "-L"+MPI_LIBDIR]
+    extra_link_args = ["-L"+HDF5_LIBDIR]
+    if MPI_LIBDIR != "":
+        extra_link_args = extra_link_args + ["-L"+MPI_LIBDIR]
+    if MPI_INCDIR != "":
+        extra_compile_args = extra_compile_args + ["-I"+MPI_INCDIR]
     if MPI_LIB != "":
         libraries = [HDF5_LIB, MPI_LIB]
     else:

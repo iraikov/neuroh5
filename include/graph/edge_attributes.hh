@@ -109,6 +109,31 @@ namespace neuroh5
      data::NamedAttrVal&                              edge_attr_values
      );
 
+    herr_t read_edge_attributes_serial
+    (
+     const std::string&    file_name,
+     const std::string&    src_pop_name,
+     const std::string&    dst_pop_name,
+     const std::string&    name_space,
+     const std::string&    attr_name,
+     const DST_PTR_T       edge_base,
+     const DST_PTR_T       edge_count,
+     const hid_t           attr_h5type,
+     data::NamedAttrVal&   attr_values
+     );
+
+    extern int read_all_edge_attributes_serial
+    (
+     const std::string&                                 file_name,
+     const std::string&                                 src_pop_name,
+     const std::string&                                 dst_pop_name,
+     const std::string&                                 name_space,
+     const DST_PTR_T                                    edge_base,
+     const DST_PTR_T                                    edge_count,
+     const std::vector< std::pair<std::string,hid_t> >& edge_attr_info,
+     data::NamedAttrVal&                              edge_attr_values
+     );
+
     
     template <typename T>
     herr_t write_edge_attribute

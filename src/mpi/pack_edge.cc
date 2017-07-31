@@ -159,6 +159,12 @@ namespace neuroh5
                                                edge_attr_values, sendsize);
           pack_size_edge_attr_values<uint32_t>(comm, MPI_UINT32_T, num_edges,
                                                edge_attr_values, sendsize);
+          pack_size_edge_attr_values<int8_t>(comm, MPI_INT8_T, num_edges,
+                                              edge_attr_values, sendsize);
+          pack_size_edge_attr_values<int16_t>(comm, MPI_INT16_T, num_edges,
+                                              edge_attr_values, sendsize);
+          pack_size_edge_attr_values<int32_t>(comm, MPI_INT32_T, num_edges,
+                                              edge_attr_values, sendsize);
 
         }
 

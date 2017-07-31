@@ -22,8 +22,8 @@ namespace neuroh5
       for (size_t i=0; i<size; i++)
         {
           remainder = num_elems - offset;
-          buckets   = (size - i);
-          ranges[i] = make_pair(offset, remainder / buckets);
+          buckets   = size - i;
+          ranges[i] = make_pair(offset, remainder / buckets + (remainder % buckets != 0));
           offset    += ranges[i].second;
         }
     }
