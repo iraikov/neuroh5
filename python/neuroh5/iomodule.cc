@@ -1945,12 +1945,10 @@ extern "C"
 
     vector<neurotree_t> tree_list;
 
-    printf("prior to calling read_tree_selection\n");
     status = cell::read_tree_selection (string(file_name),
                                         string(pop_name), pop_vector[pop_idx].start,
                                         tree_list, selection);
     assert (status >= 0);
-    printf("after calling read_tree_selection\n");
     map <string, NamedAttrMap> attr_maps;
     
     for (string attr_name_space : attr_name_spaces)

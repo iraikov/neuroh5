@@ -119,95 +119,93 @@ namespace neuroh5
 
       // read destination block pointers
 
+      // allocate buffer and memory dataspace
+      dst_blk_ptr.resize(block);
+      
+      ierr = hdf5::read<DST_BLK_PTR_T>
+        (
+         file,
+         hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR),
+         start,
+         block,
+         DST_BLK_PTR_H5_NATIVE_T,
+         dst_blk_ptr,
+         rapl
+         );
+      assert(ierr >= 0);
+      
+      // rebase the block_ptr array to local offsets
+      // REBASE is going to be the start offset for the hyperslab
+      
       if (block > 0)
         {
-          // allocate buffer and memory dataspace
-          dst_blk_ptr.resize(block);
-
-          ierr = hdf5::read<DST_BLK_PTR_T>
-            (
-             file,
-             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR),
-             start,
-             block,
-             DST_BLK_PTR_H5_NATIVE_T,
-             dst_blk_ptr,
-             rapl
-             );
-          assert(ierr >= 0);
-
-          // rebase the block_ptr array to local offsets
-          // REBASE is going to be the start offset for the hyperslab
-
           block_rebase = dst_blk_ptr[0];
           DEBUG("Task ",rank,": ","block_rebase = ", block_rebase, "\n");
-
+          
           for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
             {
               dst_blk_ptr[i] -= block_rebase;
             }
+            }
+      else
+        {
+          block_rebase = 0;
         }
 
       // read destination block indices
-
-      if (block > 0)
+      hsize_t dst_idx_block = block;
+      if (rank == size-1)
         {
-          if (rank == size-1)
-            {
-              block = block-1;
-            }
-
-          dst_idx.resize(block);
-          assert(dst_idx.size() > 0);
-
-          DEBUG("Task ",rank,": ", "dst_idx: block = ", block, "\n");
-          DEBUG("Task ",rank,": ", "dst_idx: start = ", start, "\n");
-
-          ierr = hdf5::read<NODE_IDX_T>
-            (
-             file,
-             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX),
-             start,
-             block,
-             NODE_IDX_H5_NATIVE_T,
-             dst_idx,
-             rapl
-             );
-          assert(ierr >= 0);
+          dst_idx_block -= 1;
         }
+
+      dst_idx.resize(dst_idx_block);
+
+      DEBUG("Task ",rank,": ", "dst_idx: block = ", dst_idx_block, "\n");
+      DEBUG("Task ",rank,": ", "dst_idx: start = ", start, "\n");
+
+      ierr = hdf5::read<NODE_IDX_T>
+        (
+         file,
+         hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX),
+         start,
+         dst_idx_block,
+         NODE_IDX_H5_NATIVE_T,
+         dst_idx,
+         rapl
+         );
+      assert(ierr >= 0);
 
       DST_PTR_T dst_rebase = 0;
 
       // read destination pointers
 
-      if (block > 0)
+      DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.front() = ",
+            dst_blk_ptr.front(), "\n");
+      DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.back() = ",
+            dst_blk_ptr.back(), "\n");
+
+      hsize_t dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
+      hsize_t dst_ptr_start = (hsize_t)block_rebase;
+      dst_ptr.resize(dst_ptr_block);
+
+      DEBUG("Task ",rank,": ", "dst_ptr: start = ", dst_ptr_start, "\n");
+      DEBUG("Task ",rank,": ", "dst_ptr: block = ", dst_ptr_block, "\n");
+
+      ierr = hdf5::read<DST_PTR_T>
+        (
+         file,
+         hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR),
+         dst_ptr_start,
+         dst_ptr_block,
+         DST_PTR_H5_NATIVE_T,
+         dst_ptr,
+         rapl
+         );
+      assert(ierr >= 0);
+      
+      if (dst_ptr_block > 0)
         {
-          DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.front() = ",
-                dst_blk_ptr.front(), "\n");
-          DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.back() = ",
-                dst_blk_ptr.back(), "\n");
-
-          block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-
-          hsize_t start = (hsize_t)block_rebase;
-          dst_ptr.resize(block);
-          assert(dst_ptr.size() > 0);
-
-          DEBUG("Task ",rank,": ", "dst_ptr: start = ", start, "\n");
-          DEBUG("Task ",rank,": ", "dst_ptr: block = ", block, "\n");
-
-          ierr = hdf5::read<DST_PTR_T>
-            (
-             file,
-             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR),
-             start,
-             block,
-             DST_PTR_H5_NATIVE_T,
-             dst_ptr,
-             rapl
-             );
-          assert(ierr >= 0);
-
           dst_rebase = dst_ptr[0];
           edge_base = dst_rebase;
           DEBUG("Task ",rank,": ", "dst_ptr: dst_rebase = ", dst_rebase, "\n");
@@ -219,40 +217,33 @@ namespace neuroh5
 
       // read source indices
 
-      if (block > 0)
-        {
-          DEBUG("Task ",rank,": ", "src_idx: dst_ptr.front() = ",
-                dst_ptr.front(), "\n");
-          DEBUG("Task ",rank,": ", "src_idx: dst_ptr.back() = ",
-                dst_ptr.back(), "\n");
+      DEBUG("Task ",rank,": ", "src_idx: dst_ptr.front() = ",
+            dst_ptr.front(), "\n");
+      DEBUG("Task ",rank,": ", "src_idx: dst_ptr.back() = ",
+            dst_ptr.back(), "\n");
+      
+      hsize_t src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
+      hsize_t src_idx_start = (hsize_t)dst_rebase;
+      
+      DEBUG("Task ",rank,": ", "src_idx: block = ", src_idx_block, "\n");
+      DEBUG("Task ",rank,": ", "src_idx: start = ", src_idx_start, "\n");
+      
+      // allocate buffer and memory dataspace
+      src_idx.resize(src_idx_block);
+      
+      ierr = hdf5::read<NODE_IDX_T>
+        (
+         file,
+         hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
+         src_idx_start,
+         src_idx_block,
+         NODE_IDX_H5_NATIVE_T,
+         src_idx,
+         rapl
+         );
+      assert(ierr >= 0);
 
-          hsize_t block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
-          hsize_t start = (hsize_t)dst_rebase;
-
-          DEBUG("Task ",rank,": ", "src_idx: block = ", block, "\n");
-          DEBUG("Task ",rank,": ", "src_idx: start = ", start, "\n");
-
-          if (block > 0)
-            {
-              // allocate buffer and memory dataspace
-              src_idx.resize(block);
-              assert(src_idx.size() > 0);
-
-              ierr = hdf5::read<NODE_IDX_T>
-                (
-                 file,
-                 hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
-                 start,
-                 block,
-                 NODE_IDX_H5_NATIVE_T,
-                 src_idx,
-                 rapl
-                 );
-              assert(ierr >= 0);
-            }
-
-          DEBUG("Task ",rank,": ", "src_idx: done\n");
-        }
+      DEBUG("Task ",rank,": ", "src_idx: done\n");
 
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);

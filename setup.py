@@ -43,9 +43,9 @@ else:
                         "-g"]
     extra_link_args = ["-L"+HDF5_LIBDIR]
     if MPI_LIBDIR != "":
-        extra_link_args = extra_link_args + [(" -L"+MPI_LIBDIR)]
+        extra_link_args = extra_link_args + ["-L"+MPI_LIBDIR]
     if MPI_INCDIR != "":
-        extra_compile_args = extra_compile_args + [(" -I"+MPI_INCDIR)]
+        extra_compile_args = extra_compile_args + ["-I"+MPI_INCDIR]
     if MPI_LIB != "":
         libraries = [HDF5_LIB, MPI_LIB]
     else:
