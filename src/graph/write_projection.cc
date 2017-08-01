@@ -54,10 +54,6 @@ namespace neuroh5
 
       uint64_t num_dest = prj_edge_map.size();
       uint64_t num_blocks = num_dest > 0 ? 1 : 0;
-      if (rank == size-1)
-        {
-          num_blocks++;
-        }
         
       // create relative destination pointers and source index
       vector<uint64_t> dst_blk_ptr(1, 0); // only the last rank writes two elements
@@ -150,7 +146,7 @@ namespace neuroh5
       assert(total_num_edges > 0);
       
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
-      hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
+      hsize_t dims = (hsize_t)total_num_blocks, one = 1;
       hid_t fspace = H5Screate_simple(1, &dims, &dims);
       assert(fspace >= 0);
       if (chunk < dims)
@@ -166,7 +162,7 @@ namespace neuroh5
       assert(dset >= 0);
       if ((rank == size-1) && (num_blocks > 0))
         {
-          dims = num_blocks-1;
+          dims = num_blocks+1;
         }
       else
         {
@@ -213,6 +209,9 @@ namespace neuroh5
         }
       if (rank == size-1) // last rank writes the total destination count
         {
+          printf("rank %u: %s -> %s dst_blk_ptr.size() = %u dst_blk_ptr[0] = %u recvbuf_num_dest[%u] = %u\n",
+                 rank, src_pop_name.c_str(), dst_pop_name.c_str(),
+                 dst_blk_ptr.size(), dst_blk_ptr[0], rank, recvbuf_num_dest[rank]);
           dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank] + 1);
         }
 
