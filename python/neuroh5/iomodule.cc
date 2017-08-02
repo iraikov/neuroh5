@@ -373,8 +373,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       vector<NODE_IDX_T> section_nodes;
       size_t num_section_nodes = sections[sections_ptr];
       npy_intp nodes_dims[1], nodes_ind = 0;
-      nodes_dims[0] = num_section_nodes;
-      py_section_key = PyLong_FromLong((long)section_idx);
+      nodes_dims[0]    = num_section_nodes;
+      py_section_key   = PyLong_FromLong((long)section_idx);
       py_section_nodes = (PyObject *)PyArray_SimpleNew(1, nodes_dims, NPY_UINT32);
       NODE_IDX_T *section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
       sections_ptr++;
@@ -1965,7 +1965,7 @@ extern "C"
       {
         const CELL_IDX_T idx = get<0>(tree_list[i]);
         const neurotree_t &tree = tree_list[i];
-          
+
         PyObject *py_treeval = py_build_tree_value(idx, tree, attr_maps);
 
         PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);

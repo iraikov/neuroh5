@@ -174,10 +174,6 @@ namespace neuroh5
 
           status = read<NODE_IDX_T> (loc, index_path, 0, dset_size,
                                      NODE_IDX_H5_NATIVE_T, index, H5P_DEFAULT);
-          for (size_t i=0; i<index.size(); i++)
-            {
-              index[i] += pop_start;
-            }
 
           // read pointer and determine ranges
           status = H5Lexists (loc, ptr_path.c_str(), H5P_DEFAULT);
@@ -195,7 +191,7 @@ namespace neuroh5
                 {
                   std::vector<T> value;
 
-                  auto it = std::find(index.begin(), index.end(), selection[s]);
+                  auto it = std::find(index.begin(), index.end(), selection[s]-pop_start);
                   assert(it != index.end());
 
                   ptrdiff_t pos = it - index.begin();
