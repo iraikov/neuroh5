@@ -184,7 +184,7 @@ namespace neuroh5
           if (status)
             {
               ptr.resize(dset_size+1);
-              status = read<ATTR_PTR_T> (loc, ptr_path, 0, dset_size,
+              status = read<ATTR_PTR_T> (loc, ptr_path, 0, dset_size+1,
                                          ATTR_PTR_H5_NATIVE_T, ptr, H5P_DEFAULT);
               assert (status >= 0);
             }
@@ -195,14 +195,14 @@ namespace neuroh5
                 {
                   std::vector<T> value;
 
-                  auto it = std::find(index.begin(), index.end(), selection[s]-pop_start);
+                  auto it = std::find(index.begin(), index.end(), selection[s]);
                   assert(it != index.end());
 
                   ptrdiff_t pos = it - index.begin();
 
                   hsize_t value_start=ptr[pos];
                   hsize_t value_block=ptr[pos+1]-value_start;
-                  
+
                   // read values
                   hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
                   assert(dset >= 0);
