@@ -162,6 +162,7 @@ int main(int argc, char** argv)
       output_file_name = std::string(argv[optind+1]);
       if (opt_singleton)
         {
+          gid_list.push_back(0);
           input_file_names.push_back (singleton_filename);
         }
       else if (opt_idfilelist)
@@ -224,6 +225,8 @@ int main(int argc, char** argv)
   size_t filecount=0;
   hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
+  assert(gid_list.size() > 0);
+  
   if (opt_singleton)
     { // reading a single swc file with multiple ids
       if (opt_swctype) 

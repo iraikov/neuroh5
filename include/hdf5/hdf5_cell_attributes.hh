@@ -174,17 +174,13 @@ namespace neuroh5
 
           status = read<NODE_IDX_T> (loc, index_path, 0, dset_size,
                                      NODE_IDX_H5_NATIVE_T, index, H5P_DEFAULT);
-          for (size_t i=0; i<index.size(); i++)
-            {
-              index[i] += pop_start;
-            }
 
           // read pointer and determine ranges
           status = H5Lexists (loc, ptr_path.c_str(), H5P_DEFAULT);
           if (status)
             {
               ptr.resize(dset_size+1);
-              status = read<ATTR_PTR_T> (loc, ptr_path, 0, dset_size,
+              status = read<ATTR_PTR_T> (loc, ptr_path, 0, dset_size+1,
                                          ATTR_PTR_H5_NATIVE_T, ptr, H5P_DEFAULT);
               assert (status >= 0);
             }
@@ -202,7 +198,7 @@ namespace neuroh5
 
                   hsize_t value_start=ptr[pos];
                   hsize_t value_block=ptr[pos+1]-value_start;
-                  
+
                   // read values
                   hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
                   assert(dset >= 0);
