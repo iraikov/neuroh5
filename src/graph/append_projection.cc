@@ -60,7 +60,7 @@ namespace neuroh5
         }
         
       // create relative destination pointers and source index
-      vector<uint64_t> dst_blk_ptr(1, 0); // only the last rank writes two elements
+      vector<uint64_t> dst_blk_ptr(1, 0); 
       vector<uint64_t> dst_ptr(1, 0);
       vector<NODE_IDX_T> dst_blk_idx, src_idx;
       NODE_IDX_T last_idx;
@@ -79,7 +79,7 @@ namespace neuroh5
               if (((dst-1) > last_idx) || (num_block_edges > block_size))
                 {
                   dst_blk_idx.push_back(dst - dst_start);
-                  dst_blk_ptr.push_back(dst_ptr.size()-1);
+                  dst_blk_ptr.push_back(dst_ptr.size());
                   num_blocks++;
                   num_block_edges = 0;
                 }
@@ -118,6 +118,20 @@ namespace neuroh5
                            &recvbuf_num_edge[0], 1, MPI_UINT64_T, comm)
              == MPI_SUCCESS);
 
+      // determine last rank that has data
+      size_t last_rank = size-1;
+      if (size > 1)
+        {
+          for (size_t p=1; p<size; p++)
+            {
+              if (recvbuf_num_blocks[p] == 0)
+                {
+                  last_rank = p-1;
+                  break;
+                }
+            }
+        }
+
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
@@ -141,31 +155,25 @@ namespace neuroh5
         }
         
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
-      hsize_t dims = (hsize_t)total_num_blocks-1, one = 1;
+      hsize_t dst_blk_idx_dims    = total_num_blocks, one=1;
+
       hid_t dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
       assert(dset >= 0);
 
       hid_t fspace = H5Dget_space(dset);
-      hsize_t dst_blk_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
-      assert(H5Sclose(fspace) >= 0);
-      
-      if (rank == size-1)
-        {
-          dims = num_blocks-1;
-        }
-      else
-        {
-          dims = num_blocks;
-        }
+      assert(fspace >= 0);
 
-      hsize_t newsize = dst_blk_start + dims;
-      if (newsize > 0)
+      hsize_t dst_blk_start       = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      hsize_t dst_blk_idx_newsize = dst_blk_start + dst_blk_idx_dims;
+      if (dst_blk_idx_newsize > 0)
         {
-          herr_t ierr = H5Dset_extent (dset, &newsize);
+          herr_t ierr = H5Dset_extent (dset, &dst_blk_idx_newsize);
           assert(ierr >= 0);
         }
-      
-      hid_t mspace = H5Screate_simple(1, &dims, &dims);
+      assert(H5Sclose(fspace) >= 0);
+
+      hsize_t block = num_blocks;
+      hid_t mspace  = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
       hsize_t start = dst_blk_start;
@@ -174,8 +182,7 @@ namespace neuroh5
           start += recvbuf_num_blocks[p];
         }
         
-      hsize_t block = dims;
-      fspace = H5Screate_simple(1, &newsize, &newsize);
+      fspace = H5Dget_space(dset);
       assert(fspace >= 0);
       assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                  &one, &block) >= 0);
@@ -198,26 +205,34 @@ namespace neuroh5
         {
           dst_blk_ptr[i] += dst_blk_ptr[0];
         }
-      if (rank == size-1) // last rank writes the total destination count
+      if (rank == last_rank) // last rank writes the total destination count
         {
-          dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank]);
+          dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank] + 1);
         }
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
-      dims = (hsize_t)total_num_blocks;
-      fspace = H5Screate_simple(1, &dims, &dims);
-      assert(fspace >= 0);
+      hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
+
       dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
       assert(dset >= 0);
-      dims = num_blocks;
 
-      if (dims > 0)
+      hsize_t dst_blk_ptr_newsize = dst_blk_start + dst_blk_ptr_dims;
+      if (dst_blk_ptr_newsize > 0)
         {
-          herr_t ierr = H5Dset_extent (dset, &dims);
+          herr_t ierr = H5Dset_extent (dset, &dst_blk_ptr_newsize);
           assert(ierr >= 0);
         }
 
-      mspace = H5Screate_simple(1, &dims, &dims);
+      if (rank == last_rank)
+        {
+          block = num_blocks+1;
+        }
+      else
+        {
+          block = num_blocks;
+        }
+
+      mspace  = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
 
@@ -227,9 +242,17 @@ namespace neuroh5
           start += recvbuf_num_blocks[p];
         }
 
-      block = dims;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
       assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &dst_blk_ptr[0]) >= 0);
 
@@ -260,43 +283,46 @@ namespace neuroh5
           dst_ptr[idst] += s;
         }
 
-      if (rank == size-1) // only the last rank writes an additional element
-        {
-          dst_ptr.back() += recvbuf_num_edge[rank];
-        }
-      else
+      if (rank == last_rank) // only the last rank writes an additional element
         {
           dst_ptr.resize(num_dest);
         }
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);
-      dims = total_num_dests;
-      ++dims; // one extra element
+      hsize_t dst_ptr_dims = total_num_dests+1;
 
-      fspace = H5Screate_simple(1, &dims, &dims);
-      assert(fspace >= 0);
       dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
+      assert(dset >= 0);
 
       fspace = H5Dget_space(dset);
-      hsize_t dst_ptr_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      assert(fspace >= 0);
+      hsize_t dst_ptr_start = (hsize_t) H5Sget_simple_extent_npoints(fspace)-1;
       assert(H5Sclose(fspace) >= 0);
-      
-      assert(dset >= 0);
-      dims = (hsize_t) dst_ptr.size();
 
-      if (newsize > 0)
+      hsize_t dst_ptr_newsize = dst_ptr_start + dst_ptr_dims;
+      if (dst_ptr_newsize > 0)
         {
-          herr_t ierr = H5Dset_extent (dset, &newsize);
+          herr_t ierr = H5Dset_extent (dset, &dst_ptr_newsize);
           assert(ierr >= 0);
         }
 
-      mspace = H5Screate_simple(1, &dims, &dims);
+      block = (hsize_t) dst_ptr.size();
+      mspace = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
+      
       start = (hsize_t)dst_blk_ptr[0] + dst_ptr_start;
-      block = dims;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
 
       assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &dst_ptr[0]) >= 0);
@@ -317,10 +343,8 @@ namespace neuroh5
       // # source indexes = number of edges
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX);
-      dims = total_num_edges;
+      hsize_t src_idx_dims = total_num_edges;
 
-      fspace = H5Screate_simple(1, &dims, &dims);
-      assert(fspace >= 0);
       dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
       assert(dset >= 0);
 
@@ -328,22 +352,30 @@ namespace neuroh5
       hsize_t src_idx_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
       assert(H5Sclose(fspace) >= 0);
 
-      dims = (hsize_t) src_idx.size();
-
-      if (newsize > 0)
+      hsize_t src_idx_newsize = src_idx_start + src_idx_dims;
+      if (src_idx_newsize > 0)
         {
-          herr_t ierr = H5Dset_extent (dset, &newsize);
+          herr_t ierr = H5Dset_extent (dset, &src_idx_newsize);
           assert(ierr >= 0);
         }
-      
-      mspace = H5Screate_simple(1, &dims, &dims);
+
+      block = (hsize_t) src_idx.size();
+      mspace = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
+      
       start = (hsize_t)dst_ptr[0] + src_idx_start;
-      block = dims;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
-
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
       assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &src_idx[0]) >= 0);
 
@@ -355,14 +387,13 @@ namespace neuroh5
         write(file, path, NODE_IDX_H5_FILE_T, src_idx);
       */
         
-        
       data::NamedAttrVal edge_attr_values;
       edge_attr_values.float_values.resize(edge_attr_names[data::AttrVal::attr_index_float].size());
-      edge_attr_values.int8_values.resize(edge_attr_names[data::AttrVal::attr_index_int8].size());
       edge_attr_values.uint8_values.resize(edge_attr_names[data::AttrVal::attr_index_uint8].size());
       edge_attr_values.uint16_values.resize(edge_attr_names[data::AttrVal::attr_index_uint16].size());
-      edge_attr_values.int16_values.resize(edge_attr_names[data::AttrVal::attr_index_int16].size());
       edge_attr_values.uint32_values.resize(edge_attr_names[data::AttrVal::attr_index_uint32].size());
+      edge_attr_values.int8_values.resize(edge_attr_names[data::AttrVal::attr_index_int8].size());
+      edge_attr_values.int16_values.resize(edge_attr_names[data::AttrVal::attr_index_int16].size());
       edge_attr_values.int32_values.resize(edge_attr_names[data::AttrVal::attr_index_int32].size());
         
       for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
@@ -386,13 +417,6 @@ namespace neuroh5
           graph::write_edge_attribute<uint8_t>(file, path, edge_attr_values.uint8_values[i]);
         }
         
-      for (size_t i=0; i<edge_attr_values.int8_values.size(); i++)
-        {
-          const string& attr_name = edge_attr_names[data::AttrVal::attr_index_int8][i];
-          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
-          graph::write_edge_attribute<int8_t>(file, path, edge_attr_values.int8_values[i]);
-        }
-        
       for (size_t i=0; i<edge_attr_values.uint16_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint16][i];
@@ -400,18 +424,25 @@ namespace neuroh5
           graph::write_edge_attribute<uint16_t>(file, path, edge_attr_values.uint16_values[i]);
         }
         
-      for (size_t i=0; i<edge_attr_values.int16_values.size(); i++)
-        {
-          const string& attr_name = edge_attr_names[data::AttrVal::attr_index_int16][i];
-          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
-          graph::write_edge_attribute<int16_t>(file, path, edge_attr_values.int16_values[i]);
-        }
-        
       for (size_t i=0; i<edge_attr_values.uint32_values.size(); i++)
         {
           const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint32][i];
           string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
           graph::write_edge_attribute<uint32_t>(file, path, edge_attr_values.uint32_values[i]);
+        }
+
+      for (size_t i=0; i<edge_attr_values.int8_values.size(); i++)
+        {
+          const string& attr_name = edge_attr_names[data::AttrVal::attr_index_int8][i];
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
+          graph::write_edge_attribute<int8_t>(file, path, edge_attr_values.int8_values[i]);
+        }
+        
+      for (size_t i=0; i<edge_attr_values.int16_values.size(); i++)
+        {
+          const string& attr_name = edge_attr_names[data::AttrVal::attr_index_int16][i];
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
+          graph::write_edge_attribute<int16_t>(file, path, edge_attr_values.int16_values[i]);
         }
         
       for (size_t i=0; i<edge_attr_values.int32_values.size(); i++)
