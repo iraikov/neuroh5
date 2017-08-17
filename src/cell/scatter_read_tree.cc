@@ -150,7 +150,7 @@ namespace neuroh5
                                   offset, numitems);
 
             
-            data::append_rank_tree_map(attr_values, node_rank_map, pop_start, rank_tree_map);
+            data::append_rank_tree_map(attr_values, node_rank_map, rank_tree_map);
           }
 
           assert(mpi::pack_rank_tree_map (all_comm, rank_tree_map, sendcounts, sdispls, sendpos, sendbuf) >= 0);

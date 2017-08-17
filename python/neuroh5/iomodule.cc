@@ -1190,7 +1190,7 @@ extern "C"
   }
 
   
-  static PyObject *py_scatter_graph (PyObject *self, PyObject *args, PyObject *kwds)
+  static PyObject *py_scatter_read_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; int opt_attrs=1; int opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
@@ -2098,7 +2098,7 @@ extern "C"
   
   static PyObject *py_read_tree_selection (PyObject *self, PyObject *args)
   {
-    int status; size_t start=0, end=0;
+    int status; 
     PyObject *py_cell_dict = PyDict_New();
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
@@ -2952,7 +2952,38 @@ extern "C"
   
   enum seq_pos {seq_next, seq_last, seq_done};
   
-  /* NeurotreeGenState - neurotree generator instance.
+  /* NeuroH5GraphGenState - neurograph generator instance.
+   *
+   * file_name: input file name
+   * name_space: attribute namespace
+   * node_rank_map: used to assign edges to MPI ranks
+   * seq_index: index of the next edge in the sequence to yield
+   * start_index: starting index of the next batch of edges to read from file
+   * cache_size: how many edge blocks to read from file at at time
+   *
+   */
+  typedef struct {
+    Py_ssize_t seq_index, cache_index, cache_size, io_size, comm_size, count;
+    seq_pos pos;
+    string pop_name;
+    size_t pop_idx;
+    string file_name;
+    MPI_Comm *comm_ptr;
+    vector<pop_range_t> pop_vector;
+    map<CELL_IDX_T, neurotree_t> tree_map;
+    vector<string> attr_name_spaces;
+    map <string, NamedAttrMap> attr_maps;
+    map <string, vector< vector <string> > > attr_names;
+    map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
+    map<CELL_IDX_T, rank_t> node_rank_map; 
+  } NeuroH5GraphGenState;
+
+  typedef struct {
+    PyObject_HEAD
+    NeuroH5GraphGenState *state;
+  } PyNeuroH5GraphGenState;
+  
+  /* NeuroH5TreeGenState - tree generator instance.
    *
    * file_name: input file name
    * pop_name: population name
@@ -2977,15 +3008,15 @@ extern "C"
     map <string, vector< vector <string> > > attr_names;
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
     map<CELL_IDX_T, rank_t> node_rank_map; 
-  } NeurotreeGenState;
+  } NeuroH5TreeGenState;
 
   typedef struct {
     PyObject_HEAD
-    NeurotreeGenState *state;
-  } PyNeurotreeGenState;
+    NeuroH5TreeGenState *state;
+  } PyNeuroH5TreeGenState;
 
   
-  /* NeurotreeAttrGenState - neurotree attribute generator instance.
+  /* NeuroH5CellAttrGenState - cell attribute generator instance.
    *
    * file_name: input file name
    * pop_name: population name
@@ -3010,25 +3041,24 @@ extern "C"
     vector< vector <string> > attr_names;
     set<CELL_IDX_T>::const_iterator it_idx;
     map <CELL_IDX_T, rank_t> node_rank_map;
-  } NeurotreeAttrGenState;
+  } NeuroH5CellAttrGenState;
   
   typedef struct {
     PyObject_HEAD
-    NeurotreeAttrGenState *state;
-  } PyNeurotreeAttrGenState;
-
+    NeuroH5CellAttrGenState *state;
+  } PyNeuroH5CellAttrGenState;
   
 
   
   static PyObject *
-  neurotree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+  neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
     int status, opt_attrs=0; 
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned int io_size, cache_size=100;
     char *file_name, *pop_name;
-    PyObject* py_attr_name_spaces;
+    PyObject* py_attr_name_spaces = NULL;
     vector<string> attr_name_spaces;
 
     static const char *kwlist[] = {"comm",
@@ -3040,7 +3070,7 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "PssI|iOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OssI|iOi", (char **)kwlist,
                                      &py_comm, &file_name, &pop_name, &io_size,
                                      &opt_attrs, &py_attr_name_spaces,
                                      &cache_size))
@@ -3114,9 +3144,9 @@ extern "C"
       }
 
     /* Create a new generator state and initialize it */
-    PyNeurotreeGenState *py_ntrg = (PyNeurotreeGenState *)type->tp_alloc(type, 0);
+    PyNeuroH5TreeGenState *py_ntrg = (PyNeuroH5TreeGenState *)type->tp_alloc(type, 0);
     if (!py_ntrg) return NULL;
-    py_ntrg->state = new NeurotreeGenState();
+    py_ntrg->state = new NeuroH5TreeGenState();
 
     map<CELL_IDX_T, rank_t> node_rank_map;
     // Create C++ map for node_rank_map:
@@ -3168,7 +3198,7 @@ extern "C"
 
 
   static PyObject *
-  neurotree_attr_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+  neuroh5_cell_attr_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
     int status;
     PyObject *py_comm = NULL;
@@ -3253,10 +3283,10 @@ extern "C"
     /* Create a new generator state and initialize its state - pointing to the last
      * index in the sequence.
     */
-    PyNeurotreeAttrGenState *py_ntrg = (PyNeurotreeAttrGenState *)type->tp_alloc(type, 0);
+    PyNeuroH5CellAttrGenState *py_ntrg = (PyNeuroH5CellAttrGenState *)type->tp_alloc(type, 0);
     if (!py_ntrg) return NULL;
 
-    py_ntrg->state = new NeurotreeAttrGenState();
+    py_ntrg->state = new NeuroH5CellAttrGenState();
 
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
@@ -3306,21 +3336,21 @@ extern "C"
   }
 
   static void
-  neurotree_gen_dealloc(PyNeurotreeGenState *py_ntrg)
+  neuroh5_tree_gen_dealloc(PyNeuroH5TreeGenState *py_ntrg)
   {
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
 
   static void
-  neurotree_attr_gen_dealloc(PyNeurotreeAttrGenState *py_ntrg)
+  neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
 
   static PyObject *
-  neurotree_gen_next(PyNeurotreeGenState *py_ntrg)
+  neuroh5_tree_gen_next(PyNeuroH5TreeGenState *py_ntrg)
   {
     int size, rank;
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
@@ -3397,10 +3427,11 @@ extern "C"
       }
 
     return NULL;
-}
+  }
 
+  
   static PyObject *
-  neurotree_attr_gen_next(PyNeurotreeAttrGenState *py_ntrg)
+  neuroh5_cell_attr_gen_next(PyNeuroH5CellAttrGenState *py_ntrg)
   {
     int size, rank;
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
@@ -3476,16 +3507,16 @@ extern "C"
       }
     
     return NULL;
-}
+  }
 
 
-  // Neurotree read iterator
-  PyTypeObject PyNeurotreeGen_Type = {
+  // NeuroH5 read iterator
+  PyTypeObject PyNeuroH5TreeGen_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "NeurotreeGen",                 /* tp_name */
-    sizeof(PyNeurotreeGenState),      /* tp_basicsize */
+    "NeuroH5TreeGen",                 /* tp_name */
+    sizeof(PyNeuroH5TreeGenState),      /* tp_basicsize */
     0,                              /* tp_itemsize */
-    (destructor)neurotree_gen_dealloc, /* tp_dealloc */
+    (destructor)neuroh5_tree_gen_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
     0,                              /* tp_getattr */
     0,                              /* tp_setattr */
@@ -3507,7 +3538,7 @@ extern "C"
     0,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     PyObject_SelfIter,              /* tp_iter */
-    (iternextfunc)neurotree_gen_next, /* tp_iternext */
+    (iternextfunc)neuroh5_tree_gen_next, /* tp_iternext */
     0,                              /* tp_methods */
     0,                              /* tp_members */
     0,                              /* tp_getset */
@@ -3518,17 +3549,17 @@ extern "C"
     0,                              /* tp_dictoffset */
     0,                              /* tp_init */
     PyType_GenericAlloc,            /* tp_alloc */
-    neurotree_gen_new,                     /* tp_new */
+    neuroh5_tree_gen_new,           /* tp_new */
   };
 
   
-  // Neurotree attribute read iterator
-  PyTypeObject PyNeurotreeAttrGen_Type = {
+  // NeuroH5 attribute read iterator
+  PyTypeObject PyNeuroH5CellAttrGen_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "NeurotreeAttrGen",                 /* tp_name */
-    sizeof(PyNeurotreeGenState),      /* tp_basicsize */
+    "NeuroH5CellAttrGen",                 /* tp_name */
+    sizeof(PyNeuroH5TreeGenState),      /* tp_basicsize */
     0,                              /* tp_itemsize */
-    (destructor)neurotree_attr_gen_dealloc, /* tp_dealloc */
+    (destructor)neuroh5_cell_attr_gen_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
     0,                              /* tp_getattr */
     0,                              /* tp_setattr */
@@ -3550,7 +3581,7 @@ extern "C"
     0,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     PyObject_SelfIter,              /* tp_iter */
-    (iternextfunc)neurotree_attr_gen_next, /* tp_iternext */
+    (iternextfunc)neuroh5_cell_attr_gen_next, /* tp_iternext */
     0,                              /* tp_methods */
     0,                              /* tp_members */
     0,                              /* tp_getset */
@@ -3561,7 +3592,7 @@ extern "C"
     0,                              /* tp_dictoffset */
     0,                              /* tp_init */
     PyType_GenericAlloc,            /* tp_alloc */
-    neurotree_attr_gen_new,                     /* tp_new */
+    neuroh5_cell_attr_gen_new,      /* tp_new */
   };
 
   
@@ -3588,7 +3619,7 @@ extern "C"
       "Appends additional attributes for the given range of cells." },
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
       "Reads graph connectivity in Destination Block Sparse format." },
-    { "scatter_graph", (PyCFunction)py_scatter_graph, METH_VARARGS | METH_KEYWORDS,
+    { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and scatters graph connectivity in Destination Block Sparse format." },
     { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
@@ -3631,9 +3662,9 @@ initio(void)
   PyObject *module = Py_InitModule3("io", module_methods, "NeuroH5 I/O module");
 #endif
   
-  if (PyType_Ready(&PyNeurotreeGen_Type) < 0)
+  if (PyType_Ready(&PyNeuroH5TreeGen_Type) < 0)
     {
-      printf("NeurotreeGen type cannot be added\n");
+      printf("NeuroH5TreeGen type cannot be added\n");
 #if PY_MAJOR_VERSION >= 3
       return NULL;
 #else      
@@ -3641,12 +3672,12 @@ initio(void)
 #endif
     }
 
-  Py_INCREF((PyObject *)&PyNeurotreeGen_Type);
-  PyModule_AddObject(module, "NeurotreeGen", (PyObject *)&PyNeurotreeGen_Type);
+  Py_INCREF((PyObject *)&PyNeuroH5TreeGen_Type);
+  PyModule_AddObject(module, "NeuroH5TreeGen", (PyObject *)&PyNeuroH5TreeGen_Type);
 
-  if (PyType_Ready(&PyNeurotreeAttrGen_Type) < 0)
+  if (PyType_Ready(&PyNeuroH5CellAttrGen_Type) < 0)
     {
-      printf("NeurotreeAttrGen type cannot be added\n");
+      printf("NeuroH5CellAttrGen type cannot be added\n");
 #if PY_MAJOR_VERSION >= 3
       return NULL;
 #else      
@@ -3654,8 +3685,8 @@ initio(void)
 #endif
     }
 
-  Py_INCREF((PyObject *)&PyNeurotreeAttrGen_Type);
-  PyModule_AddObject(module, "NeurotreeAttrGen", (PyObject *)&PyNeurotreeAttrGen_Type);
+  Py_INCREF((PyObject *)&PyNeuroH5CellAttrGen_Type);
+  PyModule_AddObject(module, "NeuroH5CellAttrGen", (PyObject *)&PyNeuroH5CellAttrGen_Type);
 
   
 #if PY_MAJOR_VERSION >= 3
