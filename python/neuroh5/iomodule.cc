@@ -154,10 +154,29 @@ void py_merge_values (PyObject *py_list,
 
 
 template<class T>
-void py_append_value (PyObject *pyval,
-                      size_t attr_pos,
-                      vector< vector<ATTR_PTR_T> >& attr_ptr,
-                      vector< vector<T> >& all_attr_values)
+void py_array_to_vector (PyObject *pyval,
+                         vector<T>& value_vector)
+{
+  npy_intp *dims, ind = 0;
+  assert(PyArray_Check(pyval));
+  PyArrayObject* pyarr = (PyArrayObject*)PyArray_FROM_OTF(pyval, NPY_NOTYPE, NPY_ARRAY_IN_ARRAY);
+  T *pyarr_ptr = (T *)PyArray_GetPtr(pyarr, &ind);
+  dims = PyArray_DIMS(pyarr);
+  assert(dims != NULL);
+  size_t value_size = dims[0];
+  value_vector.resize(value_size);
+  for (size_t j=0; j<value_size; j++)
+    {
+      value_vector[j] = pyarr_ptr[j];
+    }
+  Py_DECREF(pyarr);
+}
+
+template<class T>
+void py_append_value_with_ptr (PyObject *pyval,
+                               size_t attr_pos,
+                               vector< vector<ATTR_PTR_T> >& attr_ptr,
+                               vector< vector<T> >& all_attr_values)
 {
   npy_intp *dims, ind = 0;
   assert(PyArray_Check(pyval));
@@ -206,10 +225,10 @@ void create_value_maps (PyObject *idx_values,
                         vector<string>& attr_names,
                         vector<int>& attr_types,
                         vector<map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
-                        vector<map<CELL_IDX_T, vector<int32_t>>>& all_attr_values_int32,
                         vector<map<CELL_IDX_T, vector<uint16_t>>>& all_attr_values_uint16,
-                        vector<map<CELL_IDX_T, vector<int16_t>>>& all_attr_values_int16,
                         vector<map<CELL_IDX_T, vector<uint8_t>>>& all_attr_values_uint8,
+                        vector<map<CELL_IDX_T, vector<int32_t>>>& all_attr_values_int32,
+                        vector<map<CELL_IDX_T, vector<int16_t>>>& all_attr_values_int16,
                         vector<map<CELL_IDX_T, vector<int8_t>>>& all_attr_values_int8,
                         vector<map<CELL_IDX_T, vector<float>>>& all_attr_values_float)
 {
@@ -334,6 +353,198 @@ void create_value_maps (PyObject *idx_values,
         }
     }
 }
+
+
+
+void create_edge_map (PyObject *edge_values,
+                      vector<vector<string>>& attr_names,
+                      edge_map_t& edge_map)
+{
+  PyObject *idx_key, *idx_value;
+  Py_ssize_t idx_pos = 0;
+  int npy_type=0;
+  attr_names.resize(AttrMap::num_attr_types);
+  
+  while (PyDict_Next(edge_values, &idx_pos, &idx_key, &idx_value))
+    {
+      assert(idx_key != Py_None);
+      assert(idx_value != Py_None);
+
+      NODE_IDX_T node_idx = PyLong_AsLong(idx_key);
+
+      vector<size_t> attr_type_idx(AttrMap::num_attr_types);
+      PyObject *py_attr_key, *py_attr_values;
+      Py_ssize_t attr_pos = 0;
+      size_t attr_idx = 0;
+
+      vector<NODE_IDX_T>  source_values;
+      vector<uint32_t>  attr_values_uint32;
+      vector<uint16_t>  attr_values_uint16;
+      vector<uint8_t>   attr_values_uint8;
+      vector<int32_t>   attr_values_int32;
+      vector<int16_t>   attr_values_int16;
+      vector<int8_t>    attr_values_int8;
+      vector<float>     attr_values_float;
+      
+      data::AttrVal edge_attr_values;
+      
+      while (PyDict_Next(idx_value, &attr_pos, &py_attr_key, &py_attr_values))
+        {
+          assert(py_attr_key != Py_None);
+          assert(py_attr_values != Py_None);
+          string attr_name = string(PyBytes_AsString(py_attr_key));
+
+          npy_type = PyArray_TYPE((PyArrayObject *)py_attr_values);
+
+          if (attr_name.compare("source") != 0)
+            {
+              switch (npy_type)
+                {
+                case NPY_UINT32:
+                  {
+                    py_array_to_vector<NODE_IDX_T> (py_attr_values, source_values);
+                    break;
+                  }
+                default:
+                  throw runtime_error("Unsupported source vertex type");
+                  break;
+                }
+            }
+          else
+            {
+              switch (npy_type)
+                {
+                case NPY_UINT32:
+                  {
+                    if (attr_names[AttrMap::attr_index_uint32].size() < (size_t)attr_type_idx[AttrMap::attr_index_uint32]+1)
+                      {
+                        attr_names[AttrMap::attr_index_uint32].push_back(attr_name);
+                      }
+                    else
+                      {
+                        size_t idx = attr_type_idx[AttrMap::attr_index_uint32];
+                        assert(attr_names[AttrMap::attr_index_uint32][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                      }
+
+                    py_array_to_vector<uint32_t>(py_attr_values, attr_values_uint32);
+                    edge_attr_values.insert(attr_values_uint32);
+                    attr_type_idx[AttrMap::attr_index_uint32]++;
+                    break;
+                  }
+                case NPY_UINT16:
+                  {
+                    if (attr_names[AttrMap::attr_index_uint16].size() < (size_t)attr_type_idx[AttrMap::attr_index_uint16]+1)
+                      {
+                        attr_names[AttrMap::attr_index_uint16].push_back(attr_name);
+                      }
+                    else
+                      {
+                        size_t idx = attr_type_idx[AttrMap::attr_index_uint16];
+                        assert(attr_names[AttrMap::attr_index_uint16][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                      }
+
+                    py_array_to_vector<uint16_t>(py_attr_values, attr_values_uint16);
+                    edge_attr_values.insert(attr_values_uint16);
+                    attr_type_idx[AttrMap::attr_index_uint16]++;
+                    break;
+                  }
+                case NPY_UINT8:
+                  {
+                    if (attr_names[AttrMap::attr_index_uint8].size() < (size_t)attr_type_idx[AttrMap::attr_index_uint8]+1)
+                      {
+                        attr_names[AttrMap::attr_index_uint8].push_back(attr_name);
+                      }
+                    else
+                      {
+                        size_t idx = attr_type_idx[AttrMap::attr_index_uint8];
+                        assert(attr_names[AttrMap::attr_index_uint8][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                      }
+                    
+                    py_array_to_vector<uint8_t>(py_attr_values, attr_values_uint8);
+                    edge_attr_values.insert(attr_values_uint8);
+                    attr_type_idx[AttrMap::attr_index_uint8]++;
+                    break;
+                  }
+                case NPY_INT32:
+                  {
+                    if (attr_names[AttrMap::attr_index_int32].size() < (size_t)attr_type_idx[AttrMap::attr_index_int32]+1)
+                      {
+                        attr_names[AttrMap::attr_index_int32].push_back(attr_name);
+                      }
+                    else
+                      {
+                        size_t idx = attr_type_idx[AttrMap::attr_index_int32];
+                        assert(attr_names[AttrMap::attr_index_int32][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                      }
+                    
+                    py_array_to_vector<int32_t>(py_attr_values, attr_values_int32);
+                    edge_attr_values.insert(attr_values_int32);
+                    attr_type_idx[AttrMap::attr_index_int32]++;
+                    break;
+                  }
+                case NPY_INT16:
+                  {
+                    if (attr_names[AttrMap::attr_index_int16].size() < (size_t)attr_type_idx[AttrMap::attr_index_int16]+1)
+                      {
+                        attr_names[AttrMap::attr_index_int16].push_back(attr_name);
+                      }
+                    else
+                      {
+                        size_t idx = attr_type_idx[AttrMap::attr_index_int16];
+                        assert(attr_names[AttrMap::attr_index_int16][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                      }
+
+                    py_array_to_vector<int16_t>(py_attr_values, attr_values_int16);
+                    edge_attr_values.insert(attr_values_int16);
+                    attr_type_idx[AttrMap::attr_index_int16]++;
+                    break;
+                  }
+                case NPY_INT8:
+                  {
+                    if (attr_names[AttrMap::attr_index_int8].size() < (size_t)attr_type_idx[AttrMap::attr_index_int8]+1)
+                      {
+                        attr_names[AttrMap::attr_index_int8].push_back(attr_name);
+                      }
+                    else
+                      {
+                        size_t idx = attr_type_idx[AttrMap::attr_index_int8];
+                        assert(attr_names[AttrMap::attr_index_int8][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                      }
+
+                    py_array_to_vector<int8_t>(py_attr_values, attr_values_int8);
+                    edge_attr_values.insert(attr_values_int8);
+                    attr_type_idx[AttrMap::attr_index_int8]++;
+                    break;
+                  }
+                case NPY_FLOAT:
+                  {
+                    if (attr_names[AttrMap::attr_index_float].size() < (size_t)attr_type_idx[AttrMap::attr_index_float]+1)
+                      {
+                        attr_names[AttrMap::attr_index_float].push_back(attr_name);
+                      }
+                    else
+                      {
+                        size_t idx = attr_type_idx[AttrMap::attr_index_float];
+                        assert(attr_names[AttrMap::attr_index_float][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                      }
+
+                    py_array_to_vector<float>(py_attr_values, attr_values_float);
+                    edge_attr_values.insert(attr_values_float);
+                    attr_type_idx[AttrMap::attr_index_float]++;
+                    break;
+                  }
+                default:
+                  throw runtime_error("Unsupported attribute type");
+                  break;
+                }
+              attr_idx = attr_idx+1;
+            }
+
+        }
+      edge_map[node_idx] = make_tuple(source_values, edge_attr_values);
+    }
+}
+
 
 
 PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
@@ -1006,7 +1217,7 @@ extern "C"
                                    "map_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Osk|OiOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|kOiOi", (char **)kwlist,
                                      &py_comm, &input_file_name, &io_size,
                                      &py_node_rank_map, &opt_attrs, 
                                      &opt_edge_map_type))
@@ -1024,6 +1235,11 @@ extern "C"
     
     assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
 
+    if (io_size == 0)
+      {
+        io_size = size;
+      }
+    
     assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
@@ -1529,54 +1745,58 @@ extern "C"
     
     return Py_None;
   }
+  */
 
 
   static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    PyObject *idx_values;
-    unsigned long commptr;
-    char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg, *prj_name_arg;
+    PyObject *edge_values = NULL;
+    PyObject *py_comm  = NULL;
+    MPI_Comm *comm_ptr = NULL;
+    char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg;
+    unsigned long io_size = 0;
     
-    static const char *kwlist[] = {"commptr",
+    static const char *kwlist[] = {"comm",
                                    "file_name",
                                    "src_pop_name",
                                    "dst_pop_name",
-                                   "prj_name",
                                    "edges",
+                                   "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "kssO|s", (char **)kwlist,
-                                     &commptr, &file_name_arg,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OsssO|k", (char **)kwlist,
+                                     &py_comm, &file_name_arg,
                                      &src_pop_name_arg, &dst_pop_name_arg,
-                                     &prj_name_arg, 
-                                     &edge_values_arg,
-                                     &attributes_arg))
+                                     &edge_values, &io_size))
         return NULL;
 
-    string file_name = string(file_name_arg);
-    string pop_name = string(pop_name_arg);
-    string attr_namespace = string(name_space_arg);
-    
-    int npy_type=0;
-    
-    vector<string> attr_names;
-    vector<int> attr_types;
-        
-    vector< map<TREE_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-    vector< map<TREE_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-    vector< map<TREE_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-    vector< map<TREE_IDX_T, vector<float> >>  all_attr_values_float;
-    
+    assert(py_comm != NULL);
+    comm_ptr = PyMPIComm_Get(py_comm);
+    assert(comm_ptr != NULL);
+    assert(*comm_ptr != MPI_COMM_NULL);
 
-    create_value_maps(idx_values,
-                      attr_names,
-                      attr_types,
-                      all_attr_values_uint32,
-                      all_attr_values_uint16,
-                      all_attr_values_uint8,
-                      all_attr_values_float);
+    int rank, size;
+    assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
+    assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
+
+    if (io_size == 0)
+      {
+        io_size = size;
+      }
+    
+    string file_name = string(file_name_arg);
+    string src_pop_name = string(src_pop_name_arg);
+    string dst_pop_name = string(dst_pop_name_arg);
+    
+    vector<vector<string>> edge_attr_names (AttrMap::num_attr_types);
+    edge_map_t edge_map;
+    
+    create_edge_map(edge_values, edge_attr_names, edge_map);
+
+    assert(graph::write_graph(*comm_ptr, io_size, file_name, src_pop_name, dst_pop_name,
+                              edge_attr_names, edge_map) >= 0);
+
   }
-  */
   
   
   static PyObject *py_population_names (PyObject *self, PyObject *args)
@@ -1762,7 +1982,7 @@ extern "C"
     PyObject *py_cell_dict = PyDict_New();
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned int io_size;
+    unsigned long io_size = 0;
     char *file_name, *pop_name;
     PyObject *py_node_rank_map=NULL;
     PyObject *py_attr_name_spaces=NULL;
@@ -1776,7 +1996,7 @@ extern "C"
                                    "namespaces",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssI|OO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss|kOO", (char **)kwlist,
                                      &py_comm, &file_name, &pop_name, &io_size,
                                      &py_node_rank_map, &py_attr_name_spaces))
       return NULL;
@@ -1789,6 +2009,11 @@ extern "C"
     int rank, size;
     assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
     assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
+
+    if (io_size == 0)
+      {
+        io_size = size;
+      }
     
     vector <string> attr_name_spaces;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -2363,12 +2588,13 @@ extern "C"
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
-                      all_attr_values_int32,
                       all_attr_values_uint16,
-                      all_attr_values_int16,
                       all_attr_values_uint8,
+                      all_attr_values_int32,
+                      all_attr_values_int16,
                       all_attr_values_int8,
                       all_attr_values_float);
+    
     const data::optional_hid dflt_data_type;
     size_t attr_idx=0;
     vector<size_t> attr_type_idx(AttrMap::num_attr_types);
@@ -2491,7 +2717,6 @@ extern "C"
         io_size = size;
       }
     assert(io_size <= size);
-
     
     string file_name      = string(file_name_arg);
     string pop_name       = string(pop_name_arg);
@@ -2514,10 +2739,10 @@ extern "C"
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
-                      all_attr_values_int32,
                       all_attr_values_uint16,
-                      all_attr_values_int16,
                       all_attr_values_uint8,
+                      all_attr_values_int32,
+                      all_attr_values_int16,
                       all_attr_values_int8,
                       all_attr_values_float);
 
@@ -2700,10 +2925,10 @@ extern "C"
                       attr_names,
                       attr_types,
                       all_attr_values_uint32,
-                      all_attr_values_int32,
                       all_attr_values_uint16,
-                      all_attr_values_int16,
                       all_attr_values_uint8,
+                      all_attr_values_int32,
+                      all_attr_values_int16,
                       all_attr_values_int8,
                       all_attr_values_float);
 
@@ -2948,7 +3173,7 @@ extern "C"
     int status;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned int io_size=1, cache_size=100;
+    unsigned long io_size=1, cache_size=100;
     const string default_name_space = "Attributes";
     char *file_name, *pop_name, *attr_name_space = (char *)default_name_space.c_str();
 
@@ -2960,7 +3185,7 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oss|isi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oss|ksi", (char **)kwlist,
                                      &py_comm, &file_name, &pop_name, 
                                      &io_size, &attr_name_space, &cache_size))
       return NULL;
