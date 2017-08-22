@@ -273,7 +273,7 @@ namespace neuroh5
           ycoords.push_back(y);
           zcoords.push_back(z);
           radiuses.push_back(radius);
-          layers.push_back(0);
+          layers.push_back(-1);
         
           i++;
         }

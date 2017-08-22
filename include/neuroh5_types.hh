@@ -102,7 +102,7 @@ namespace neuroh5
   typedef float      COORD_T;
   typedef float      REALVAL_T;
   typedef int8_t     SWC_TYPE_T;
-  typedef uint16_t   LAYER_IDX_T;
+  typedef int8_t     LAYER_IDX_T;
   typedef uint16_t   SECTION_IDX_T;
   typedef uint32_t   NODE_IDX_T;
   typedef int32_t    PARENT_NODE_IDX_T;
@@ -116,7 +116,7 @@ namespace neuroh5
   #define MPI_COORD_T       MPI_FLOAT 
   #define MPI_REALVAL_T     MPI_FLOAT 
   #define MPI_SWC_TYPE_T    MPI_INT8_T 
-  #define MPI_LAYER_IDX_T   MPI_UINT16_T 
+  #define MPI_LAYER_IDX_T   MPI_INT8_T 
   #define MPI_SECTION_IDX_T MPI_UINT16_T 
   #define MPI_NODE_IDX_T    MPI_UINT32_T 
   #define MPI_PARENT_NODE_IDX_T MPI_INT32_T 
@@ -236,10 +236,10 @@ namespace neuroh5
 #define REAL_H5_FILE_T   H5T_IEEE_F32LE
 
 // In-memory HDF5 datatype of layers
-#define LAYER_IDX_H5_NATIVE_T H5T_NATIVE_UINT16
+#define LAYER_IDX_H5_NATIVE_T H5T_NATIVE_INT8
 
 // In-file HDF5 datatype of layers
-#define LAYER_IDX_H5_FILE_T   H5T_STD_U16LE
+#define LAYER_IDX_H5_FILE_T   H5T_STD_I8LE
 
 // In-memory HDF5 datatype of sections
 #define SECTION_IDX_H5_NATIVE_T H5T_NATIVE_UINT16

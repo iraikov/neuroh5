@@ -632,7 +632,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   float *zcoords_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_zcoords, &ind);
   PyObject *py_radiuses = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
   float *radiuses_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_radiuses, &ind);
-  PyObject *py_layers = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+  PyObject *py_layers = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
   LAYER_IDX_T *layers_ptr = (LAYER_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_layers, &ind);
   PyObject *py_parents = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
   PARENT_NODE_IDX_T *parents_ptr = (PARENT_NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_parents, &ind);
@@ -1205,7 +1205,7 @@ extern "C"
     PyObject *py_prj_dict = PyDict_New();
     unsigned long io_size; int size;
     PyObject *py_comm = NULL;
-    MPI_Comm *comm_ptr  = NULL;
+    MPI_Comm *comm_ptr = NULL;
     char *input_file_name;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
     
@@ -1217,10 +1217,9 @@ extern "C"
                                    "map_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|kOiOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|kOii", (char **)kwlist,
                                      &py_comm, &input_file_name, &io_size,
-                                     &py_node_rank_map, &opt_attrs, 
-                                     &opt_edge_map_type))
+                                     &py_node_rank_map, &opt_attrs, &opt_edge_map_type))
       return NULL;
 
     assert(py_comm != NULL);
@@ -1246,7 +1245,7 @@ extern "C"
     assert(cell::read_population_ranges(*comm_ptr, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
     // Create C++ map for node_rank_map:
-    if (py_node_rank_map != NULL)
+    if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
       {
         create_node_rank_map(py_node_rank_map, node_rank_map);
       }
@@ -2037,7 +2036,7 @@ extern "C"
       }
     
     // Create C++ map for node_rank_map:
-    if (py_node_rank_map != NULL)
+    if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
       {
         create_node_rank_map(py_node_rank_map, node_rank_map);
       }
