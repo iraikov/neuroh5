@@ -1297,8 +1297,8 @@ extern "C"
           {
             for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
               {
-                NODE_IDX_T key_node   = it->first;
-                edge_tuple_t& et = it->second;
+                NODE_IDX_T key_node = it->first;
+                edge_tuple_t& et    = it->second;
                 
                 std::vector <PyObject*> py_float_edge_attrs;
                 std::vector <PyObject*> py_uint8_edge_attrs;
@@ -1339,7 +1339,7 @@ extern "C"
                       {
                         PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
                         uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-                        py_uint16_edge_attrs.push_back(arr);
+                         py_uint16_edge_attrs.push_back(arr);
                         py_uint16_edge_attrs_ptr.push_back(ptr);
                       }
                     for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
@@ -1368,6 +1368,12 @@ extern "C"
                           {
                             py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
                           }
+                      }
+                  } else
+                  {
+                    for (size_t j = 0; j < adj_vector.size(); j++)
+                      {
+                        adj_ptr[j] = adj_vector[j];
                       }
                   }
                 
@@ -1835,7 +1841,7 @@ extern "C"
   static PyObject *py_population_ranges (PyObject *self, PyObject *args)
   {
     int status; 
-    vector<string> pop_names;
+    vector< pair<pop_t, string> > pop_labels;
     PyObject *py_comm;
     MPI_Comm *comm_ptr  = NULL;
     
@@ -1853,7 +1859,7 @@ extern "C"
     assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
     assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
 
-    status = cell::read_population_names(*comm_ptr, input_file_name, pop_names);
+    status = cell::read_population_labels(*comm_ptr, input_file_name, pop_labels);
     assert (status >= 0);
 
     size_t n_nodes;
@@ -1871,13 +1877,20 @@ extern "C"
         PyTuple_SetItem(py_range_tuple, 0, PyLong_FromLong((long)range.first));
         PyTuple_SetItem(py_range_tuple, 1, PyLong_FromLong((long)range.second.first));
 
-        if (range.second.second < pop_names.size())
+        if (range.second.second < pop_labels.size())
           {
-            PyDict_SetItemString(py_population_ranges_dict, pop_names[range.second.second].c_str(), py_range_tuple);
+            PyDict_SetItemString(py_population_ranges_dict,
+                                 get<1>(pop_labels[range.second.second]).c_str(),
+                                 py_range_tuple);
           }
       }
+
+    PyObject *py_result_tuple = PyTuple_New(2);
+
+    PyTuple_SetItem(py_result_tuple, 0, py_population_ranges_dict);
+    PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
     
-    return py_population_ranges_dict;
+    return py_result_tuple;
   }
 
   
