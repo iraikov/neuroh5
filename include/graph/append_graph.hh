@@ -8,8 +8,8 @@
 ///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
-#ifndef WRITE_GRAPH_HH
-#define WRITE_GRAPH_HH
+#ifndef APPEND_GRAPH_HH
+#define APPEND_GRAPH_HH
 
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
