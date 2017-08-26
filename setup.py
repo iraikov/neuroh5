@@ -103,6 +103,7 @@ setup(
                       'src/graph/bcast_graph.cc',
                       'src/graph/write_graph.cc',
                       'src/graph/append_graph.cc',
+                      'src/graph/append_projection.cc',
                       'src/mpi/alltoallv_packed.cc',
                       'src/mpi/pack_edge.cc',
                       'src/mpi/rank_range.cc',
