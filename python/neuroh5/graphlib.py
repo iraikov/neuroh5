@@ -22,17 +22,16 @@ def flatten(iterables):
 
 def query_alltoall (comm, f, query_rank_node_dict):
     sendbuf=[]
-    ## send out the vertices whose degrees we wish to query
-    if len(query_rank_node_dict) > 0:
-        for rank in xrange(0,comm.Get_size()):
+
+    for rank in xrange(0,comm.Get_size()):
+        if query_rank_node_dict.has_key(rank):
             sendbuf.append(query_rank_node_dict[rank])
-    else:
-        for rank in xrange(0,comm.Get_size()):
+        else:
             sendbuf.append(None)
 
-    query_nodes = flatten(comm.alltoall(sendobj=sendbuf))
+    query_input = flatten(comm.alltoall(sendobj=sendbuf))
     
-    query_local_result = functools.reduce(f, query_nodes, {})
+    query_local_result = functools.reduce(f, query_input, {})
 
     sendbuf = []
     for rank in xrange(0,comm.Get_size()):
@@ -174,10 +173,11 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
         
     neighbor_index=0
     while True:
+
         ## For i-th neighbor, query the owning rank for its neighbors
         ith_neighbors=[]
         ith_neighbors_dict={}
-        
+
         for (v,ns) in neighbors_dict.iteritems():
             if ns.has_key('src'):
                 len_src = np.size(ns['src'])
@@ -207,35 +207,31 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
             else:
                 rank_ngbs_dict[rank] = [(v, neighbors_dict[v])]
             return rank_ngbs_dict
-                
-        if len(ith_neighbors) > 0:
-            rank_neighbor_dict = {}
-            for n in ith_neighbors:
-                rank = node_ranks[n]
-                if rank_neighbor_dict.has_key(rank):
-                    rank_neighbor_dict[rank].append(n)
-                else:
-                    rank_neighbor_dict[rank] = [n]
-                        
-            query_neighbors = flatten(query_alltoall(comm, f, rank_neighbor_dict))
 
-            for item in query_neighbors:
-                if item is not None:
-                    (v,ngbs) = item
-                    c = ith_neighbors_dict[v]
-                    if cc_dict.has_key(c):
-                        if neighbors_dict[c].has_key('dst'):
-                            dst_set = set(neighbors_dict[c]['dst'])
-                        else:
-                            dst_set = set([])
-                        if neighbors_dict[c].has_key('src'):
-                            src_set = set(neighbors_dict[c]['src'])
-                        else:
-                            src_set = set([])
-                        s = set(ngbs).intersection(dst_set).intersection(src_set)
-                        cc_dict[c] += len(s)
-                    else:
-                        cc_dict[c] = len(set(ngbs))
+        rank_neighbor_dict = {}
+        for n in ith_neighbors:
+            rank = node_ranks[n]
+            if rank_neighbor_dict.has_key(rank):
+                rank_neighbor_dict[rank].append(n)
+            else:
+                rank_neighbor_dict[rank] = [n]
+                        
+        query_neighbors = flatten(query_alltoall(comm, f, rank_neighbor_dict))
+
+        for (c, ngbs) in query_neighbors:
+            if cc_dict.has_key(c):
+                if neighbors_dict[c].has_key('dst'):
+                    dst_set = set(neighbors_dict[c]['dst'])
+                else:
+                    dst_set = set([])
+                if neighbors_dict[c].has_key('src'):
+                    src_set = set(neighbors_dict[c]['src'])
+                else:
+                    src_set = set([])
+                s = set(ngbs).intersection(dst_set).intersection(src_set)
+                cc_dict[c] += len(s)
+            else:
+                cc_dict[c] = len(set(ngbs))
                
         neighbor_index += 1
 
