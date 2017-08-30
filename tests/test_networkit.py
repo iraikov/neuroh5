@@ -1,16 +1,14 @@
 import itertools
-from mpi4py import MPI
-from neuroh5.io import read_graph, population_ranges
+import matplotlib
+matplotlib.use('Agg')
+from neuroh5.io import read_graph, read_graph_serial, population_ranges
 from networkit import *
-from _NetworKit import GraphEvent, GraphUpdater
-
-comm = MPI.COMM_WORLD
-print ("rank = ", comm.Get_rank())
-print ("size = ", comm.Get_size())
 
 input_file = "data/dentate_test.h5"
+input_file = "/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_GC_20170728.h5"
 
-nhg = read_graph(comm, input_file)
+print("maximum number of threads is %d\n" % engineering.getMaxNumberOfThreads())
+sys.stdout.flush()
 
 def prj_stream(nhg):
     for (presyn, prjs) in nhg.items():
@@ -18,10 +16,20 @@ def prj_stream(nhg):
             sources = edges[0]
             destinations = edges[1]
             for (src,dst) in zip(sources,destinations):
-                yield (GraphEvent(GraphEvent.EDGE_ADDITION, src, dst, 1.0))
+                yield (src, dst)
+
+setNumberOfThreads(16)
+
+nhg = read_graph_serial(input_file)
 
 g = Graph(1127650, False, True)
-gu = GraphUpdater(g)
-gu.update(prj_stream(nhg))
-        
+count=0
+for (i,j) in prj_stream(nhg):
+    g.addEdge(i,j)
+    count += 1
+
 overview(g)
+sys.stdout.flush()
+
+pf = profiling.Profile.create(g, preset="minimal")
+pf.output("HTML",".")

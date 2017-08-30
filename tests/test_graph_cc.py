@@ -11,9 +11,11 @@ print "size = ", comm.Get_size()
 
 comm_size = comm.Get_size()
 
-(node_ranks, n_nodes) = make_node_rank_map (comm, "data/dentate_test.h5", 1)
+input_file='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_GC_20170728.h5'
 
-nb_dict = read_neighbors (comm, "data/dentate_test.h5", 1, node_ranks)
+(node_ranks, n_nodes) = make_node_rank_map (comm, input_file, 1)
+
+nb_dict = read_neighbors (comm, input_file, 1, node_ranks)
 
 nb_degree_dict = neighbor_degrees (comm, nb_dict, node_ranks)
 

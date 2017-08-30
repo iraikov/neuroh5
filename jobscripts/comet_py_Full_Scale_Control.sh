@@ -9,6 +9,7 @@
 #SBATCH --mail-user=ivan.g.raikov@gmail.com
 #SBATCH --mail-type=END
 #
+module load intel/2015.2.164
 module load hdf5
 module load python
 module load mpi4py
