@@ -154,7 +154,7 @@ namespace neuroh5
         } // rank < io_size
     
       // 0. Broadcast the number and names of attributes of each type to all ranks
-      edge_attr_num.resize(data::AttrVal::num_attr_types);
+      edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
       edge_attr_names.resize(data::AttrVal::num_attr_types);
       assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
       for (size_t aidx=0; aidx<edge_attr_names.size(); aidx++)

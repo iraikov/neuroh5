@@ -102,7 +102,7 @@ namespace neuroh5
       // read destination block pointers
 
       // allocate buffer and memory dataspace
-      dst_blk_ptr.resize(block);
+      dst_blk_ptr.resize(block, 0);
       
       ierr = hdf5::read<DST_BLK_PTR_T>
         (
@@ -136,7 +136,7 @@ namespace neuroh5
 
       // read destination block indices
       hsize_t dst_idx_block = block-1;
-      dst_idx.resize(dst_idx_block);
+      dst_idx.resize(dst_idx_block, 0);
 
       DEBUG("Task ",rank,": ", "dst_idx: block = ", dst_idx_block, "\n");
       DEBUG("Task ",rank,": ", "dst_idx: start = ", start, "\n");
@@ -205,7 +205,7 @@ namespace neuroh5
       DEBUG("Task ",rank,": ", "src_idx: start = ", src_idx_start, "\n");
 
       // allocate buffer and memory dataspace
-      src_idx.resize(src_idx_block);
+      src_idx.resize(src_idx_block, 0);
       
       ierr = hdf5::read<NODE_IDX_T>
         (
@@ -275,7 +275,7 @@ namespace neuroh5
       if (block > 0)
         {
           // allocate buffer and memory dataspace
-          dst_blk_ptr.resize(block);
+          dst_blk_ptr.resize(block, 0);
 
           ierr = hdf5::read_serial<DST_BLK_PTR_T>
             (
@@ -304,7 +304,7 @@ namespace neuroh5
       if (block > 0)
         {
           hsize_t dst_idx_block = block-1;
-          dst_idx.resize(dst_idx_block);
+          dst_idx.resize(dst_idx_block, 0);
 
           assert(dst_idx.size() > 0);
 
@@ -327,7 +327,7 @@ namespace neuroh5
       if (block > 0)
         {
           hsize_t dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-          dst_ptr.resize(dst_ptr_block);
+          dst_ptr.resize(dst_ptr_block, 0);
           assert(dst_ptr.size() > 0);
 
           ierr = hdf5::read_serial<DST_PTR_T>
@@ -356,7 +356,7 @@ namespace neuroh5
           if (src_idx_block > 0)
             {
               // allocate buffer and memory dataspace
-              src_idx.resize(src_idx_block);
+              src_idx.resize(src_idx_block, 0);
               assert(src_idx.size() > 0);
 
               ierr = hdf5::read_serial<NODE_IDX_T>
