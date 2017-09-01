@@ -39,6 +39,10 @@ namespace neuroh5
      size_t&              total_num_edges
      )
     {
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) >= 0);
+      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      
       // read the population info
       vector<pop_range_t> pop_vector;
       vector< pair<pop_t, string> > pop_labels;
@@ -90,7 +94,9 @@ namespace neuroh5
           dst_start = pop_vector[dst_pop_idx].start;
           src_start = pop_vector[src_pop_idx].start;
 
-          DEBUG(" dst_start = ", dst_start,
+          DEBUG(" src_pop_name = ", src_pop_name,
+                " dst_pop_name = ", dst_pop_name,
+                " dst_start = ", dst_start,
                 " src_start = ", src_start,
                 "\n");
 
@@ -123,17 +129,29 @@ namespace neuroh5
 
           // append to the vectors representing a projection (sources,
           // destinations, edge attributes)
-          assert(append_prj_list(dst_start, src_start, dst_blk_ptr, dst_idx,
+          assert(append_prj_list(src_start, dst_start, dst_blk_ptr, dst_idx,
                                  dst_ptr, src_idx, edge_attr_values,
                                  local_prj_num_edges, prj_list) >= 0);
 
           // ensure that all edges in the projection have been read and
           // appended to edge_list
           assert(local_prj_num_edges == src_idx.size());
-          DEBUG("reader: projection ", i, " local number of edges is ", local_prj_num_edges);
 
           total_num_edges = total_num_edges + total_prj_num_edges;
           local_num_edges = local_num_edges + local_prj_num_edges;
+        }
+
+      size_t sum_local_num_edges = 0;
+      MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
+                 MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (rank == 0)
+        {
+          if (sum_local_num_edges != total_num_edges)
+            {
+              printf("sum_local_num_edges = %u total_num_edges = %u\n",
+                     sum_local_num_edges, total_num_edges);
+            }
+          assert(sum_local_num_edges == total_num_edges);
         }
 
       return 0;
@@ -257,8 +275,8 @@ namespace neuroh5
 
     int append_prj_list
     (
-     const NODE_IDX_T&                   dst_start,
      const NODE_IDX_T&                   src_start,
+     const NODE_IDX_T&                   dst_start,
      const vector<DST_BLK_PTR_T>&        dst_blk_ptr,
      const vector<NODE_IDX_T>&           dst_idx,
      const vector<DST_PTR_T>&            dst_ptr,
@@ -281,6 +299,12 @@ namespace neuroh5
         (edge_attr_values.size_attr_vec<uint16_t>());
       edge_attr_vec.resize<uint32_t>
         (edge_attr_values.size_attr_vec<uint32_t>());
+      edge_attr_vec.resize<int8_t>
+        (edge_attr_values.size_attr_vec<int8_t>());
+      edge_attr_vec.resize<int16_t>
+        (edge_attr_values.size_attr_vec<int16_t>());
+      edge_attr_vec.resize<int32_t>
+        (edge_attr_values.size_attr_vec<int32_t>());
 
       if (dst_blk_ptr.size() > 0)
         {
@@ -290,16 +314,19 @@ namespace neuroh5
               size_t low_dst_ptr = dst_blk_ptr[b],
                 high_dst_ptr = dst_blk_ptr[b+1];
 
+
               NODE_IDX_T dst_base = dst_idx[b];
               for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
                 {
                   if (i < dst_ptr_size-1)
                     {
                       NODE_IDX_T dst = dst_base + ii + dst_start;
+                      printf("dst_base = %u ii = %u dst_start = %u dst = %u\n", dst_base, ii, dst_start, dst);
                       size_t low = dst_ptr[i], high = dst_ptr[i+1];
                       for (size_t j = low; j < high; ++j)
                         {
                           NODE_IDX_T src = src_idx[j] + src_start;
+                          printf("src_idx[%u] = %u src_start = %u\n", j, src_idx[j], src_start);
                           src_vec.push_back(src);
                           dst_vec.push_back(dst);
                           for (size_t k = 0;
@@ -325,6 +352,24 @@ namespace neuroh5
                             {
                               edge_attr_vec.push_back<uint32_t>
                                 (k, edge_attr_values.at<uint32_t>(k,j));
+                            }
+                          for (size_t k = 0;
+                               k < edge_attr_vec.size_attr_vec<int8_t>(); k++)
+                            {
+                              edge_attr_vec.push_back<int8_t>
+                                (k, edge_attr_values.at<int8_t>(k,j));
+                            }
+                          for (size_t k = 0;
+                               k < edge_attr_vec.size_attr_vec<int16_t>(); k++)
+                            {
+                              edge_attr_vec.push_back<int16_t>
+                                (k, edge_attr_values.at<int16_t>(k,j));
+                            }
+                          for (size_t k = 0;
+                               k < edge_attr_vec.size_attr_vec<int32_t>(); k++)
+                            {
+                              edge_attr_vec.push_back<int32_t>
+                                (k, edge_attr_values.at<int32_t>(k,j));
                             }
                           num_edges++;
                         }
@@ -391,6 +436,12 @@ namespace neuroh5
                                   (edge_attr_values.size_attr_vec<uint16_t>());
                                 edge_attr_vec.resize<uint32_t>
                                   (edge_attr_values.size_attr_vec<uint32_t>());
+                                edge_attr_vec.resize<int8_t>
+                                  (edge_attr_values.size_attr_vec<int8_t>());
+                                edge_attr_vec.resize<int16_t>
+                                  (edge_attr_values.size_attr_vec<int16_t>());
+                                edge_attr_vec.resize<int32_t>
+                                  (edge_attr_values.size_attr_vec<int32_t>());
                                 
                                 for (size_t j = low; j < high; ++j)
                                   {
@@ -419,6 +470,24 @@ namespace neuroh5
                                       {
                                         edge_attr_vec.push_back<uint32_t>
                                           (k, edge_attr_values.at<uint32_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int8_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int8_t>
+                                          (k, edge_attr_values.at<int8_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int16_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int16_t>
+                                          (k, edge_attr_values.at<int16_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int32_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int32_t>
+                                          (k, edge_attr_values.at<int32_t>(k,j));
                                       }
                                     
                                     num_edges++;
@@ -470,6 +539,24 @@ namespace neuroh5
                                       {
                                         edge_attr_vec.push_back<uint32_t>
                                           (k, edge_attr_values.at<uint32_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int8_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int8_t>
+                                          (k, edge_attr_values.at<int8_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int16_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int16_t>
+                                          (k, edge_attr_values.at<int16_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int32_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int32_t>
+                                          (k, edge_attr_values.at<int32_t>(k,j));
                                       }
                                     
                                     num_edges++;
@@ -553,6 +640,12 @@ namespace neuroh5
                                   (edge_attr_values.size_attr_vec<uint16_t>());
                                 edge_attr_vec.resize<uint32_t>
                                   (edge_attr_values.size_attr_vec<uint32_t>());
+                                edge_attr_vec.resize<int8_t>
+                                  (edge_attr_values.size_attr_vec<int8_t>());
+                                edge_attr_vec.resize<int16_t>
+                                  (edge_attr_values.size_attr_vec<int16_t>());
+                                edge_attr_vec.resize<int32_t>
+                                  (edge_attr_values.size_attr_vec<int32_t>());
                                 
                                 for (size_t j = low; j < high; ++j)
                                   {
@@ -582,6 +675,24 @@ namespace neuroh5
                                         edge_attr_vec.push_back<uint32_t>
                                           (k, edge_attr_values.at<uint32_t>(k,j));
                                       }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int8_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int8_t>
+                                          (k, edge_attr_values.at<int8_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int16_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int16_t>
+                                          (k, edge_attr_values.at<int16_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int32_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int32_t>
+                                          (k, edge_attr_values.at<int32_t>(k,j));
+                                      }
                                     
                                     num_edges++;
                                   }
@@ -610,6 +721,12 @@ namespace neuroh5
                                       (edge_attr_values.size_attr_vec<uint16_t>());
                                     edge_attr_vec.resize<uint32_t>
                                       (edge_attr_values.size_attr_vec<uint32_t>());
+                                    edge_attr_vec.resize<int8_t>
+                                      (edge_attr_values.size_attr_vec<int8_t>());
+                                    edge_attr_vec.resize<int16_t>
+                                      (edge_attr_values.size_attr_vec<int16_t>());
+                                    edge_attr_vec.resize<int32_t>
+                                      (edge_attr_values.size_attr_vec<int32_t>());
 
                                     my_dsts.push_back(dst);
                                     for (size_t k = 0;
@@ -635,6 +752,24 @@ namespace neuroh5
                                       {
                                         edge_attr_vec.push_back<uint32_t>
                                           (k, edge_attr_values.at<uint32_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int8_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int8_t>
+                                          (k, edge_attr_values.at<int8_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int16_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int16_t>
+                                          (k, edge_attr_values.at<int16_t>(k,j));
+                                      }
+                                    for (size_t k = 0;
+                                         k < edge_attr_vec.size_attr_vec<int32_t>(); k++)
+                                      {
+                                        edge_attr_vec.push_back<int32_t>
+                                          (k, edge_attr_values.at<int32_t>(k,j));
                                       }
                                     
                                     num_edges++;

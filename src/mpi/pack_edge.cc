@@ -321,7 +321,7 @@ namespace neuroh5
 #ifdef USE_EDGE_DELIM      
       int packsize=0;
       assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
-      sendbuf.resize(sendbuf.size() + packsize);
+      sendbuf.resize(sendbuf.size() + packsize, 0);
       assert(MPI_Pack(&rank_edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                       &sendpos, comm) == MPI_SUCCESS);
 
@@ -388,7 +388,7 @@ namespace neuroh5
             {
               assert(recvpos < recvbuf_size);
               vector<T> vec;
-              vec.resize(num_edges);
+              vec.resize(num_edges, 0);
               ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos,
                                 &vec[0], num_edges, mpi_type, comm);
               assert(ierr == MPI_SUCCESS);
@@ -622,33 +622,33 @@ namespace neuroh5
 #ifdef USE_EDGE_DELIM      
           int packsize=0;
           assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
-          sendbuf.resize(sendbuf.size() + packsize);
+          sendbuf.resize(sendbuf.size() + packsize, 0);
           assert(MPI_Pack(&rank_edge_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
                           &sendpos, comm) == MPI_SUCCESS);
 
 #endif
-      if (it1 != prj_rank_edge_map.end())
-        {
-          pack_edge_map1 (comm, header_type, size_type, 
-                          it1->second, num_packed_edges, sendpos, sendbuf);
-          prj_rank_edge_map.erase(key_rank);
-          
-        } else
-        {
-          const edge_map_t empty_edge_map;
-          pack_edge_map1 (comm, header_type, size_type, 
-                          empty_edge_map, num_packed_edges, sendpos, sendbuf);
-        }
+          if (it1 != prj_rank_edge_map.end())
+            {
+              pack_edge_map1 (comm, header_type, size_type, 
+                              it1->second, num_packed_edges, sendpos, sendbuf);
+              prj_rank_edge_map.erase(key_rank);
+              
+            } else
+            {
+              const edge_map_t empty_edge_map;
+              pack_edge_map1 (comm, header_type, size_type, 
+                              empty_edge_map, num_packed_edges, sendpos, sendbuf);
+            }
           
 #ifdef USE_EDGE_DELIM      
-      assert(MPI_Pack(&rank_edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
-                      &sendpos, comm) == MPI_SUCCESS);
+          assert(MPI_Pack(&rank_edge_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                          &sendpos, comm) == MPI_SUCCESS);
 
 #endif
-      sendbuf.resize(sendbuf.size()+MPI_BSEND_OVERHEAD);
-      sendpos += MPI_BSEND_OVERHEAD;
-      assert(sendpos <= (int)sendbuf.size());
-      sendcounts[key_rank] = sendpos - sdispls[key_rank];
+          sendbuf.resize(sendbuf.size()+MPI_BSEND_OVERHEAD,0);
+          sendpos += MPI_BSEND_OVERHEAD;
+          assert(sendpos <= (int)sendbuf.size());
+          sendcounts[key_rank] = sendpos - sdispls[key_rank];
         }
       
     }
@@ -680,6 +680,7 @@ namespace neuroh5
           if (recvcounts[ridx] > 0)
             {
               int recvpos = rdispls[ridx];
+              int startpos = recvpos;
               assert(recvpos < recvbuf_size);
 #ifdef USE_EDGE_DELIM
               int delim=0;
@@ -697,7 +698,6 @@ namespace neuroh5
                 }
               assert(delim == rank_edge_start_delim);
 #endif
-          
               Size sizeval;
               size_t num_recv_items=0; 
               
@@ -750,7 +750,6 @@ namespace neuroh5
                 }
               assert(delim == rank_edge_end_delim);
 #endif
-
             }
         }
     }

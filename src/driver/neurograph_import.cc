@@ -164,6 +164,7 @@ int append_adj_map
         {
           NODE_IDX_T dst = dst_idx[d] + dst_offset;
 
+          printf("append_adj_map: dst = %u\n", dst);
           size_t low_src_ptr = src_idx_ptr[d],
             high_src_ptr = src_idx_ptr[d+1];
 
@@ -178,6 +179,7 @@ int append_adj_map
                   NODE_IDX_T src1 = src + src_offset;
                   adj_vector.push_back(src1);
                   num_edges++;
+                  printf("append_adj_map: src1 = %u\n", src1);
                 }
             }
 

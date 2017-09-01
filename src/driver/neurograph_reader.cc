@@ -192,14 +192,6 @@ int main(int argc, char** argv)
   printf("Task %d has read a total of %lu edges\n", rank,  local_num_edges);
   printf("Task %d: total number of edges is %lu\n", rank,  total_num_edges);
 
-  size_t sum_local_num_edges = 0;
-  MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
-             MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
-  if (rank == 0)
-    {
-      assert(sum_local_num_edges == total_num_edges);
-    }
-
   if (!opt_summary)
     {
       if (prj_list.size() > 0)

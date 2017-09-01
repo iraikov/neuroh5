@@ -37,8 +37,8 @@ namespace neuroh5
     /***************************************************************************
      * Send MPI packed data with Alltoallv 
      **************************************************************************/
-      recvcounts.resize(size);
-      rdispls.resize(size);
+      recvcounts.resize(size,0);
+      rdispls.resize(size,0);
       
       // 1. Each ALL_COMM rank sends a data size to every other rank and
       //    creates sendcounts and sdispls arrays
@@ -57,7 +57,7 @@ namespace neuroh5
         }
       
       //assert(recvbuf_size > 0);
-      recvbuf.resize(recvbuf_size);
+      recvbuf.resize(recvbuf_size,0);
     
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,

@@ -59,32 +59,37 @@ namespace neuroh5
       vector<uint64_t> dst_blk_ptr(1, 0); 
       vector<uint64_t> dst_ptr(1, 0);
       vector<NODE_IDX_T> dst_blk_idx, src_idx;
-      NODE_IDX_T last_idx = 0;
+      NODE_IDX_T first_idx = 0, last_idx = 0;
       size_t pos = 0;
       hsize_t num_block_edges = 0;
+      if (!prj_edge_map.empty())
+        {
+          first_idx = (prj_edge_map.begin())->first;
+          last_idx  = first_idx;
+        }
+      dst_blk_idx.push_back(first_idx - dst_start);
       for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
         {
           NODE_IDX_T dst = iter->first;
           edge_tuple_t et = iter->second;
           vector<NODE_IDX_T> &v = get<0>(et);
-          
-          if (!dst_blk_idx.empty())
+
+          printf("rank %u: write_projection: dst = %u last_idx = %u\n", rank, dst, last_idx);
+          for (size_t i_v=0; i_v<v.size(); i_v++)
             {
-              // creates new block if non-contiguous dst indices
-              if (((dst-1) > last_idx) || (num_block_edges > block_size))
-                {
-                  dst_blk_idx.push_back(dst - dst_start);
-                  dst_blk_ptr.push_back(dst_ptr.size());
-                  num_blocks++;
-                  num_block_edges = 0;
-                }
-              last_idx = dst;
+              printf("rank %u: write_projection: v[%u] = %u\n", rank, i_v, v[i_v]);
             }
-          else
+          
+          // creates new block if non-contiguous dst indices
+          if (((dst-1) > last_idx) || (num_block_edges > block_size))
             {
               dst_blk_idx.push_back(dst - dst_start);
-              last_idx = dst;
+              dst_blk_ptr.push_back(dst_ptr.size());
+              printf("rank %u: write_projection: dst_ptr size = %u last_idx = %u\n", rank, dst_ptr.size(), last_idx);
+              num_blocks++;
+              num_block_edges = 0;
             }
+          last_idx = dst;
 
           dst_ptr.push_back(dst_ptr[pos++] + v.size());
           copy(v.begin(), v.end(), back_inserter(src_idx));
@@ -285,14 +290,15 @@ namespace neuroh5
           dst_ptr[idst] += s;
         }
 
-      if (rank < last_rank) // only the last rank writes an additional element
+
+      if (rank != last_rank) // only the last rank writes an additional element
         {
-          //dst_ptr.back() += recvbuf_num_edge[rank];
           dst_ptr.resize(num_dest);
         }
-        
+
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);
       hsize_t dst_ptr_dims = total_num_dests+1;
+
       fspace = H5Screate_simple(1, &dst_ptr_dims, &dst_ptr_dims);
       assert(fspace >= 0);
       if (chunk < dst_ptr_dims)

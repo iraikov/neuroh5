@@ -75,6 +75,7 @@ namespace neuroh5
                           pp.second = riter->second.second-1;
                         }
                       size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                      assert((low <= src_idx.size()) && (high <= src_idx.size()));
                       if ((high-low) == 0)
                         {
                           result = true;

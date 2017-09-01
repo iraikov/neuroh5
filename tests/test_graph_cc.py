@@ -15,7 +15,7 @@ input_file='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control
 
 (node_ranks, n_nodes) = make_node_rank_map (comm, input_file, 1)
 
-nb_dict = read_neighbors (comm, input_file, 1, node_ranks)
+nb_dict = read_neighbors (comm, input_file, 256, node_ranks)
 
 nb_degree_dict = neighbor_degrees (comm, nb_dict, node_ranks)
 

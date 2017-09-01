@@ -172,10 +172,12 @@ namespace neuroh5
           edge_tuple_t et        = element.second;
           vector<NODE_IDX_T> v   = get<0>(et);
           AttrVal a        = get<1>(et);
+          printf("write_graph: dst = %u\n", dst);
 
           vector<NODE_IDX_T> adj_vector;
           for (auto & src: v)
             {
+              printf("write_graph: src = %u\n", src);
               if (!(src_start <= src && src <= src_end))
                 {
                   printf("src = %u src_start = %lu src_end = %lu\n", src, src_start, src_end);
