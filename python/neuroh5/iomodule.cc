@@ -1306,11 +1306,17 @@ extern "C"
                 std::vector <PyObject*> py_uint8_edge_attrs;
                 std::vector <PyObject*> py_uint16_edge_attrs;
                 std::vector <PyObject*> py_uint32_edge_attrs;
+                std::vector <PyObject*> py_int8_edge_attrs;
+                std::vector <PyObject*> py_int16_edge_attrs;
+                std::vector <PyObject*> py_int32_edge_attrs;
                 
                 std::vector <float*> py_float_edge_attrs_ptr;
                 std::vector <uint8_t*> py_uint8_edge_attrs_ptr;
                 std::vector <uint16_t*> py_uint16_edge_attrs_ptr;
                 std::vector <uint32_t*> py_uint32_edge_attrs_ptr;
+                std::vector <int8_t*> py_int8_edge_attrs_ptr;
+                std::vector <int16_t*> py_int16_edge_attrs_ptr;
+                std::vector <int32_t*> py_int32_edge_attrs_ptr;
                 
                 vector<NODE_IDX_T> adj_vector = get<0>(et);
                 const AttrVal&   edge_attr_values = get<1>(et);
@@ -1351,6 +1357,29 @@ extern "C"
                         py_uint32_edge_attrs.push_back(arr);
                         py_uint32_edge_attrs_ptr.push_back(ptr);
                       }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<int8_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
+                        int8_t *ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_int8_edge_attrs.push_back(arr);
+                        py_int8_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<int16_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
+                        int16_t *ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_int16_edge_attrs.push_back(arr);
+                        py_int16_edge_attrs_ptr.push_back(ptr);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<int32_t>(); j++)
+                      {
+                        PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
+                        int32_t *ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
+                        py_int32_edge_attrs.push_back(arr);
+                        py_int32_edge_attrs_ptr.push_back(ptr);
+                      }
+
+
                     for (size_t j = 0; j < adj_vector.size(); j++)
                       {
                         adj_ptr[j] = adj_vector[j];
@@ -1369,6 +1398,18 @@ extern "C"
                         for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
                           {
                             py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<int8_t>(); k++)
+                          {
+                            py_int8_edge_attrs_ptr[k][j] = edge_attr_values.at<int8_t>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<int16_t>(); k++)
+                          {
+                            py_int16_edge_attrs_ptr[k][j] = edge_attr_values.at<int16_t>(k,j); 
+                          }
+                        for (size_t k = 0; k < edge_attr_values.size_attr_vec<int32_t>(); k++)
+                          {
+                            py_int32_edge_attrs_ptr[k][j] = edge_attr_values.at<int32_t>(k,j); 
                           }
                       }
                   } else
@@ -1397,6 +1438,21 @@ extern "C"
                     for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
                       {
                         status = PyList_Append(py_edgeval, py_uint16_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_uint32_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<int8_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_int8_edge_attrs[j]);
+                        assert(status == 0);
+                      }
+                    for (size_t j = 0; j < edge_attr_values.size_attr_vec<int16_t>(); j++)
+                      {
+                        status = PyList_Append(py_edgeval, py_int16_edge_attrs[j]);
                         assert(status == 0);
                       }
                     for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
@@ -2906,9 +2962,11 @@ extern "C"
   
   enum seq_pos {seq_next, seq_last, seq_done};
   
-  /* NeuroH5GraphGenState - neurograph generator instance.
+  /* NeuroH5ProjectionGenState - neurograph generator instance.
    *
    * file_name: input file name
+   * src_pop: source population name
+   * dst_pop: destination population name
    * name_space: attribute namespace
    * node_rank_map: used to assign edges to MPI ranks
    * seq_index: index of the next edge in the sequence to yield
@@ -2917,25 +2975,28 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t seq_index, cache_index, cache_size, io_size, comm_size, count;
-    seq_pos pos;
-    string pop_name;
-    size_t pop_idx;
+    Py_ssize_t edge_index, edge_count, block_index, block_count, io_size, comm_size, count;
+
     string file_name;
     MPI_Comm *comm_ptr;
+    
+    graph::EdgeMapType edge_map_type;
+    map<NODE_IDX_T, rank_t> node_rank_map;
     vector<pop_range_t> pop_vector;
-    map<CELL_IDX_T, neurotree_t> tree_map;
-    vector<string> attr_name_spaces;
-    map <string, NamedAttrMap> attr_maps;
-    map <string, vector< vector <string> > > attr_names;
-    map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
-    map<CELL_IDX_T, rank_t> node_rank_map; 
-  } NeuroH5GraphGenState;
+    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    set< pair<pop_t, pop_t> > pop_pairs;
+    vector<pair<string,string> > prj_names;
+    vector < edge_map_t > prj_vector;
+    vector < vector <vector<string>> > edge_attr_name_vector;
+
+    size_t total_num_nodes, total_num_edges, local_num_edges;
+
+  } NeuroH5ProjectionGenState;
 
   typedef struct {
     PyObject_HEAD
-    NeuroH5GraphGenState *state;
-  } PyNeuroH5GraphGenState;
+    NeuroH5ProjectionGenState *state;
+  } PyNeuroH5ProjectionGenState;
   
   /* NeuroH5TreeGenState - tree generator instance.
    *
@@ -3003,6 +3064,103 @@ extern "C"
   } PyNeuroH5CellAttrGenState;
   
 
+
+  static PyObject *
+  neuroh5_prj_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+  {
+    int status, opt_attrs=0, opt_edge_map_type=0;
+    graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
+    PyObject *py_comm = NULL;
+    MPI_Comm *comm_ptr  = NULL;
+    unsigned int io_size, cache_size=100;
+    char *file_name, *src_pop_name, *dst_pop_name;
+    PyObject* py_attr_name_spaces = NULL;
+    vector<string> attr_name_spaces;
+    vector<pop_range_t> pop_vector;
+    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    set< pair<pop_t, pop_t> > pop_pairs;
+    vector<pair<string,string> > prj_names;
+    size_t total_num_nodes;
+    
+    static const char *kwlist[] = {"comm",
+                                   "file_name",
+                                   "src_pop_name",
+                                   "dst_pop_name",
+                                   "io_size",
+                                   "opt_edge_map_type",
+                                   "attributes",
+                                   "namespaces",
+                                   "cache_size",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Osssi|iiOi", (char **)kwlist,
+                                     &py_comm, &file_name, &src_pop_name, &dst_pop_name, &io_size,
+                                     &opt_edge_map_type, &opt_attrs, &py_attr_name_spaces,
+                                     &cache_size))
+      return NULL;
+    
+    assert(py_comm != NULL);
+    comm_ptr = PyMPIComm_Get(py_comm);
+    assert(comm_ptr != NULL);
+    assert(*comm_ptr != MPI_COMM_NULL);
+    
+    if (opt_edge_map_type == 1)
+      {
+        edge_map_type = graph::EdgeMapSrc;
+      }
+    
+    int size, rank;
+    assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
+    assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
+
+    if (io_size == 0)
+      {
+        io_size = size;
+      }
+    
+    assert(graph::read_projection_names(*comm_ptr, string(file_name), prj_names) >= 0);
+
+    // Read population info to determine total_num_nodes
+    assert(cell::read_population_ranges(*comm_ptr, string(file_name),
+                                        pop_ranges, pop_vector, total_num_nodes) >= 0);
+    assert(cell::read_population_combos(*comm_ptr, string(file_name), pop_pairs) >= 0);
+
+    hsize_t num_blocks = graph::projection_num_blocks(*comm_ptr, string(file_name),
+                                                      src_pop_name, dst_pop_name);
+    
+
+    /* Create a new generator state and initialize it */
+    PyNeuroH5ProjectionGenState *py_ngg = (PyNeuroH5ProjectionGenState *)type->tp_alloc(type, 0);
+    if (!py_ngg) return NULL;
+    py_ngg->state = new NeuroH5ProjectionGenState();
+
+    map<CELL_IDX_T, rank_t> node_rank_map;
+    // Create C++ map for node_rank_map:
+    // round-robin block to rank assignment from file
+    rank_t r=0; size_t count=0;
+    for (size_t i = 0; i < num_blocks; i++)
+      {
+        if ((unsigned int)rank == r) count++;
+        py_ngg->state->node_rank_map.insert(make_pair(i, r++));
+        if ((unsigned int)size <= r) r=0;
+      }
+
+    py_ngg->state->edge_index    = 0;
+    py_ngg->state->edge_count    = 0;
+    py_ngg->state->block_index   = 0;
+    py_ngg->state->block_count   = count;
+    py_ngg->state->comm_ptr      = comm_ptr;
+    py_ngg->state->file_name     = string(file_name);
+    py_ngg->state->src_pop_name  = string(src_pop_name);
+    py_ngg->state->dst_pop_name  = string(dst_pop_name);
+    py_ngg->state->total_num_nodes = total_num_nodes;
+    py_ngg->state->pop_vector    = pop_vector;
+    py_ngg->state->pop_ranges    = pop_ranges;
+    py_ngg->state->pop_pairs     = pop_pairs;
+    
+    return (PyObject *)py_ngg;
+    
+  }
   
   static PyObject *
   neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -3463,6 +3621,88 @@ extern "C"
     return NULL;
   }
 
+  static PyObject *
+  neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
+  {
+    int size, rank;
+    assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
+
+    if (py_ngg->state->block_index < py_ngg->state->block_count)
+      {
+        /* edge_index = block_count-1 means that the generator is exhausted. */
+        if (py_ntrg->state->edge_index < py_ntrg->state->edge_count)
+          {
+          }
+        else
+          {
+            // If the end of the current cache block has been reached,
+            // read the next block
+            py_ntrg->state->prj_vector.clear();
+
+
+            int status;
+            status = graph::scatter_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
+                                          io_size, opt_attrs>0, prj_names, node_rank_map,
+                                          prj_vector, edge_attr_name_vector, 
+                                          total_num_nodes, local_num_edges, total_num_edges);
+            
+            status = scatter_projection(all_comm, io_comm, io_size, edge_map_type, header_type,
+                                        size_type, file_name,
+                                        prj_names[i].first, prj_names[i].second,
+                                        opt_attrs, node_rank_map, pop_vector, pop_ranges, pop_pairs,
+                                        prj_vector, edge_attr_names_vector);
+            assert (status >= 0);
+            py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
+            py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
+            py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
+          }
+
+        PyObject *result = NULL;
+
+        if (py_ntrg->state->it_idx != py_ntrg->state->attr_map.index_set.cend())
+          {
+            const CELL_IDX_T key = *(py_ntrg->state->it_idx);
+            PyObject *elem = py_build_attr_value(key, py_ntrg->state->attr_map,
+                                                 py_ntrg->state->attr_name_space,
+                                                 py_ntrg->state->attr_names);
+            assert(elem != NULL);
+            py_ntrg->state->it_idx++;
+            py_ntrg->state->seq_index++;
+            result = Py_BuildValue("lO", key, elem);
+          }
+        else
+          {
+            switch (py_ntrg->state->pos)
+              {
+              case seq_next:
+                {
+                  py_ntrg->state->pos = seq_last;
+                  result = PyTuple_Pack(2, Py_None, Py_None);
+                  break;
+                }
+              case seq_last:
+                {
+                  py_ntrg->state->pos = seq_done;
+                  result = NULL;
+                  break;
+                }
+              case seq_done:
+                {
+                  result = NULL;
+                  break;
+                }
+              }
+          }
+        
+        /* Exceptions from PySequence_GetItem are propagated to the caller
+         * (elem will be NULL so we also return NULL).
+        */
+        return result;
+      }
+    
+    return NULL;
+  }
 
   // NeuroH5 read iterator
   PyTypeObject PyNeuroH5TreeGen_Type = {

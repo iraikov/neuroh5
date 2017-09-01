@@ -54,7 +54,9 @@ namespace neuroh5
                             const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
                             const set< pair<pop_t, pop_t> >& pop_pairs,
                             vector < edge_map_t >& prj_vector,
-                            vector<vector<vector<string>>>& edge_attr_names_vector)
+                            vector<vector<vector<string>>>& edge_attr_names_vector,
+                            size_t offset,
+                            size_t numitems)
     {
 
       int rank, size;
@@ -112,7 +114,7 @@ namespace neuroh5
           assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
                                         dst_start, src_start, total_prj_num_edges,
                                         block_base, edge_base, dst_blk_ptr, dst_idx,
-                                        dst_ptr, src_idx) >= 0);
+                                        dst_ptr, src_idx, offset, numitems) >= 0);
           
           DEBUG("Task ",rank," scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
           // validate the edges

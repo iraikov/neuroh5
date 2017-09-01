@@ -23,6 +23,15 @@ namespace neuroh5
 {
   namespace graph
   {
+
+    hsize_t projection_num_blocks
+    (
+     MPI_Comm                   comm,
+     const std::string&         file_name,
+     const std::string&         src_pop_name,
+     const std::string&         dst_pop_name
+     );
+
     /// @brief Reads the projections
     ///
     /// @param comm          MPI communicator
@@ -73,6 +82,8 @@ namespace neuroh5
      std::vector<NODE_IDX_T>&        dst_idx,
      std::vector<DST_PTR_T>&         dst_ptr,
      std::vector<NODE_IDX_T>&        src_idx,
+     size_t                          offset = 0,
+     size_t                          numitems = 0,
      bool collective = true
      );
 
@@ -89,7 +100,9 @@ namespace neuroh5
      std::vector<DST_BLK_PTR_T>&     dst_blk_ptr,
      std::vector<NODE_IDX_T>&        dst_idx,
      std::vector<DST_PTR_T>&         dst_ptr,
-     std::vector<NODE_IDX_T>&        src_idx
+     std::vector<NODE_IDX_T>&        src_idx,
+     size_t                          offset = 0,
+     size_t                          numitems = 0
      );
   }
 }

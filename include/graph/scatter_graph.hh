@@ -66,6 +66,20 @@ namespace neuroh5
      size_t                            &local_num_edges,
      size_t                            &total_num_edges
      );
+
+    int scatter_projection (MPI_Comm all_comm, MPI_Comm io_comm, const int io_size,
+                            EdgeMapType edge_map_type, MPI_Datatype header_type, MPI_Datatype size_type, 
+                            const string& file_name, const string& src_pop_name, const string& dst_pop_name, 
+                            const bool opt_attrs,
+                            const map<NODE_IDX_T, rank_t>&  node_rank_map,
+                            const vector<pop_range_t>& pop_vector,
+                            const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
+                            const set< pair<pop_t, pop_t> >& pop_pairs,
+                            vector < edge_map_t >& prj_vector,
+                            vector<vector<vector<string>>>& edge_attr_names_vector,
+                            size_t offset = 0,
+                            size_t numitems = 0
+                            );
   }
 }
 
