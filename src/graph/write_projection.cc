@@ -285,10 +285,9 @@ namespace neuroh5
           dst_ptr[idst] += s;
         }
 
-      if (rank < last_rank) // only the last rank writes an additional element
+      if (rank == last_rank) // only the last rank writes an additional element
         {
-          //dst_ptr.back() += recvbuf_num_edge[rank];
-          dst_ptr.resize(num_dest);
+          dst_ptr.push_back(dst_ptr[0] + recvbuf_num_edge[rank] + 1);
         }
         
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);

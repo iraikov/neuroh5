@@ -90,7 +90,9 @@ namespace neuroh5
           dst_start = pop_vector[dst_pop_idx].start;
           src_start = pop_vector[src_pop_idx].start;
 
-          DEBUG(" dst_start = ", dst_start,
+          DEBUG(" src_pop_name = ", src_pop_name,
+                " dst_pop_name = ", dst_pop_name,
+                " dst_start = ", dst_start,
                 " src_start = ", src_start,
                 "\n");
 

@@ -197,6 +197,7 @@ int main(int argc, char** argv)
              MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
   if (rank == 0)
     {
+      printf("Task %d: sum of local edges is %lu\n", rank,  sum_local_num_edges);
       assert(sum_local_num_edges == total_num_edges);
     }
 

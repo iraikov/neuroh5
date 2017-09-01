@@ -87,11 +87,17 @@ namespace neuroh5
       mpi::rank_ranges(num_blocks, size, bins);
 
       // determine start and stop block for the current rank
-      hsize_t start = bins[rank].first;
-      hsize_t stop  = bins[rank].first + bins[rank].second + 1;
+      hsize_t start, stop;
+
+      start = bins[rank].first;
+      stop  = bins[rank].first + bins[rank].second;
       block_base = start;
 
-      hsize_t block = stop - start;
+      hsize_t block;
+      if (stop > start)
+        block = stop - start + 1;
+      else
+        block = 0;
 
       DEBUG("Task ",rank,": ","num_blocks = ", num_blocks, "\n");
       DEBUG("Task ",rank,": ","start = ", start, " stop = ", stop, "\n");
@@ -115,6 +121,16 @@ namespace neuroh5
          rapl
          );
       assert(ierr >= 0);
+
+      DEBUG("Task ",rank,": ", "dst_blk_ptr.size() = ",
+            dst_blk_ptr.size(), "\n");
+      if (dst_blk_ptr.size() > 0)
+        {
+          DEBUG("Task ",rank,": ", "dst_blk_ptr.front() = ",
+                dst_blk_ptr.front(), "\n");
+          DEBUG("Task ",rank,": ", "dst_blk_ptr.back() = ",
+                dst_blk_ptr.back(), "\n");
+        }
       
       // rebase the block_ptr array to local offsets
       // REBASE is going to be the start offset for the hyperslab
@@ -135,7 +151,12 @@ namespace neuroh5
         }
 
       // read destination block indices
-      hsize_t dst_idx_block = block-1;
+      hsize_t dst_idx_block;
+
+      if (dst_blk_ptr.size() > 0)
+        dst_idx_block = block-1;
+      else
+        dst_idx_block = 0;
       dst_idx.resize(dst_idx_block, 0);
 
       DEBUG("Task ",rank,": ", "dst_idx: block = ", dst_idx_block, "\n");
@@ -152,19 +173,20 @@ namespace neuroh5
          rapl
          );
       assert(ierr >= 0);
+      
+      DEBUG("Task ",rank,": ", "dst_idx.size() = ",
+            dst_idx.size(), "\n");
 
       DST_PTR_T dst_rebase = 0;
 
       // read destination pointers
-
-      DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.front() = ",
-            dst_blk_ptr.front(), "\n");
-      DEBUG("Task ",rank,": ", "dst_ptr: dst_blk_ptr.back() = ",
-            dst_blk_ptr.back(), "\n");
-
-      hsize_t dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-      hsize_t dst_ptr_start = (hsize_t)block_rebase;
-      dst_ptr.resize(dst_ptr_block);
+      hsize_t dst_ptr_block, dst_ptr_start;
+      dst_ptr_start = (hsize_t)block_rebase;
+      if (dst_blk_ptr.size() > 0)
+        dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
+      else
+        dst_ptr_block = 0;
+      dst_ptr.resize(dst_ptr_block, 0);
 
       DEBUG("Task ",rank,": ", "dst_ptr: start = ", dst_ptr_start, "\n");
       DEBUG("Task ",rank,": ", "dst_ptr: block = ", dst_ptr_block, "\n");
@@ -180,7 +202,15 @@ namespace neuroh5
          rapl
          );
       assert(ierr >= 0);
-      
+
+      if (dst_ptr.size() > 0)
+        {
+          DEBUG("Task ",rank,": ", "dst_ptr.front() = ",
+                dst_ptr.front(), "\n");
+          DEBUG("Task ",rank,": ", "dst_ptr.back() = ",
+                dst_ptr.back(), "\n");
+        }
+
       if (dst_ptr_block > 0)
         {
           dst_rebase = dst_ptr[0];
@@ -198,7 +228,7 @@ namespace neuroh5
 
       if (dst_ptr.size() > 0)
         {
-          src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
+          src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front() + 1);
         }
 
       DEBUG("Task ",rank,": ", "src_idx: block = ", src_idx_block, "\n");

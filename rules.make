@@ -28,23 +28,23 @@ endef
 
 .PHONY: all checkdirs clean
 
-all: checkdirs $(DRIVER_OBJ) build/reader build/scatter build/balance_indegree build/vertex_metrics build/neurograph_import build/neurotrees_select build/neurotrees_import build/neurotrees_read build/neurotrees_scatter_read
+all: checkdirs $(DRIVER_OBJ) build/neurograph_reader build/neurograph_scatter build/balance_indegree build/neurograph_vertex_metrics build/neurograph_import build/neurotrees_select build/neurotrees_import build/neurotrees_read build/neurotrees_scatter_read
 
 ifdef PARMETIS
 build/neurograph_parts: build/driver/neurograph_parts.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.mpi.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -L$(PARMETIS_LIBDIR) -l$(HDF5_LIB)  -lparmetis -lmetis $(LINK_MPI)
 endif
 
-build/reader: build/driver/neurograph_reader.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a
+build/neurograph_reader: build/driver/neurograph_reader.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
-build/scatter: build/driver/neurograph_scatter_read.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a
+build/neurograph_scatter: build/driver/neurograph_scatter_read.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/balance_indegree: build/driver/balance_indegree.o build/libneuroh5.graph.a build/libneuroh5.cell.a build/libneuroh5.io.a build/libneuroh5.hdf5.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
-build/vertex_metrics: build/driver/vertex_metrics.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.data.a
+build/neurograph_vertex_metrics: build/driver/vertex_metrics.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.data.a
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/neurograph_import: build/driver/neurograph_import.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.mpi.a 
