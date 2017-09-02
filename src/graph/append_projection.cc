@@ -60,21 +60,23 @@ namespace neuroh5
         }
         
       // create relative destination pointers and source index
-      vector<uint64_t> dst_blk_ptr(1, 0); 
-      vector<uint64_t> dst_ptr(1, 0);
+      vector<uint64_t> dst_blk_ptr; 
+      vector<uint64_t> dst_ptr;
       vector<NODE_IDX_T> dst_blk_idx, src_idx;
-      NODE_IDX_T last_idx;
-      size_t pos = 0;
-      hsize_t num_block_edges = 0;
-      for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
+      NODE_IDX_T first_idx = 0, last_idx = 0;
+      hsize_t num_block_edges = 0, num_prj_edges = 0;
+      if (!prj_edge_map.empty())
         {
-          NODE_IDX_T dst  = iter->first;
-          edge_tuple_t et = iter->second;
-          vector<NODE_IDX_T> v = get<0>(et);
-          data::AttrVal a = get<1>(et);
-
-          if (!dst_blk_idx.empty())
+          first_idx = (prj_edge_map.begin())->first;
+          last_idx  = first_idx;
+          dst_blk_idx.push_back(first_idx - dst_start);
+          dst_blk_ptr.push_back(0);
+          for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
             {
+              NODE_IDX_T dst = iter->first;
+              edge_tuple_t et = iter->second;
+              vector<NODE_IDX_T> &v = get<0>(et);
+              
               // creates new block if non-contiguous dst indices
               if (((dst-1) > last_idx) || (num_block_edges > block_size))
                 {
@@ -84,17 +86,14 @@ namespace neuroh5
                   num_block_edges = 0;
                 }
               last_idx = dst;
+              
+              copy(v.begin(), v.end(), back_inserter(src_idx));
+              dst_ptr.push_back(num_prj_edges);
+              num_prj_edges += v.size();
+              num_block_edges += v.size();
             }
-          else
-            {
-              dst_blk_idx.push_back(dst - dst_start);
-              last_idx = dst;
-            }
-
-          dst_ptr.push_back(dst_ptr[pos++] + v.size());
-          copy(v.begin(), v.end(), back_inserter(src_idx));
-          num_block_edges += v.size();
         }
+      dst_ptr.push_back(num_prj_edges);
       assert(num_edges == src_idx.size());
 
 
