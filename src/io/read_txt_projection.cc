@@ -55,8 +55,6 @@ namespace neuroh5
           assert (iss >> dst);
           assert (iss >> src);
 
-          printf("read_txt_projection: src = %u dst = %u\n", src, dst);
-          
           dst_src_map[dst].push_back(src);
           
           // floating point attrs
