@@ -3064,7 +3064,7 @@ extern "C"
   } PyNeuroH5CellAttrGenState;
   
 
-
+#ifdef PRJ_GEN
   static PyObject *
   neuroh5_prj_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
@@ -3161,6 +3161,7 @@ extern "C"
     return (PyObject *)py_ngg;
     
   }
+#endif
   
   static PyObject *
   neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -3621,6 +3622,7 @@ extern "C"
     return NULL;
   }
 
+#ifdef PRJ_GEN
   static PyObject *
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
@@ -3703,7 +3705,8 @@ extern "C"
     
     return NULL;
   }
-
+#endif
+  
   // NeuroH5 read iterator
   PyTypeObject PyNeuroH5TreeGen_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
