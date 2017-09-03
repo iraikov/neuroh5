@@ -321,12 +321,10 @@ namespace neuroh5
                   if (i < dst_ptr_size-1)
                     {
                       NODE_IDX_T dst = dst_base + ii + dst_start;
-                      printf("dst_base = %u ii = %u dst_start = %u dst = %u\n", dst_base, ii, dst_start, dst);
                       size_t low = dst_ptr[i], high = dst_ptr[i+1];
                       for (size_t j = low; j < high; ++j)
                         {
                           NODE_IDX_T src = src_idx[j] + src_start;
-                          printf("src_idx[%u] = %u src_start = %u\n", j, src_idx[j], src_start);
                           src_vec.push_back(src);
                           dst_vec.push_back(dst);
                           for (size_t k = 0;

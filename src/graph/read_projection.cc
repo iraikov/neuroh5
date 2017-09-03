@@ -221,17 +221,18 @@ namespace neuroh5
 
           // read destination pointers
           hsize_t dst_ptr_block, dst_ptr_start;
-          dst_ptr_start = (hsize_t)block_rebase;
           if (dst_blk_ptr.size() > 0)
             {
+              dst_ptr_start = (hsize_t)block_rebase;
               dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-              if (rank < size-1)
+              if ((num_blocks > 1) && (rank < size-1))
                 {
                   dst_ptr_block ++;
                 }
             }
           else
             {
+              dst_ptr_start = 0;
               dst_ptr_block = 0;
             }
           dst_ptr.resize(dst_ptr_block, 0);
@@ -259,6 +260,7 @@ namespace neuroh5
 
           DST_PTR_T dst_rebase = 0;
           
+          hsize_t src_idx_block=0, src_idx_start=0;
           if (dst_ptr_block > 0)
             {
               dst_rebase = dst_ptr[0];
@@ -270,42 +272,39 @@ namespace neuroh5
                 }
               
               // read source indices
-              hsize_t src_idx_block=0, src_idx_start=dst_rebase;
-              
-              if (dst_ptr.size() > 0)
-                {
-                  src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
-                }
+              src_idx_start = dst_rebase;
+              src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
 
               DEBUG("Task ",rank,": ", "src_idx: start = ", src_idx_start, " block = ", src_idx_block, "\n");
 
               // allocate buffer and memory dataspace
               src_idx.resize(src_idx_block, 0);
-      
-              ierr = hdf5::read<NODE_IDX_T>
-                (
-                 file,
-                 hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
-                 src_idx_start,
-                 src_idx_block,
-                 NODE_IDX_H5_NATIVE_T,
-                 src_idx,
-                 rapl
-                 );
-              assert(ierr >= 0);
-              
-              DEBUG("Task ",rank,": ", "src_idx: done\n");
-              
-              assert(H5Fclose(file) >= 0);
-              assert(H5Pclose(fapl) >= 0);
-              ierr = H5Pclose(rapl);
-              assert(ierr == 0);
-              
-              DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
             }
+
+          ierr = hdf5::read<NODE_IDX_T>
+            (
+             file,
+             hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
+             src_idx_start,
+             src_idx_block,
+             NODE_IDX_H5_NATIVE_T,
+             src_idx,
+             rapl
+             );
+          assert(ierr >= 0);
+              
+          DEBUG("Task ",rank,": ", "src_idx: done\n");
+          
+          assert(H5Fclose(file) >= 0);
+          assert(H5Pclose(fapl) >= 0);
+          ierr = H5Pclose(rapl);
+          assert(ierr == 0);
+          
+          DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
         }
       return ierr;
     }
+
     
     herr_t read_projection_serial
     (
