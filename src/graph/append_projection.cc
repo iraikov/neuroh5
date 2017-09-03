@@ -196,17 +196,20 @@ namespace neuroh5
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
       */
 
-      for (size_t p = 0; p < rank; ++p)
+      if (block > 0)
         {
-          dst_blk_ptr[0] += recvbuf_num_dest[p];
-        }
-      for (size_t i = 1; i < dst_blk_ptr.size(); i++)
-        {
-          dst_blk_ptr[i] += dst_blk_ptr[0];
-        }
-      if (rank == last_rank) // last rank writes the total destination count
-        {
-          dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank] + 1);
+          for (size_t p = 0; p < rank; ++p)
+            {
+              dst_blk_ptr[0] += recvbuf_num_dest[p];
+            }
+          for (size_t i = 1; i < dst_blk_ptr.size(); i++)
+            {
+              dst_blk_ptr[i] += dst_blk_ptr[0];
+            }
+          if (rank == last_rank) // last rank writes the total destination count
+            {
+              dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank] + 1);
+            }
         }
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
