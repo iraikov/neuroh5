@@ -311,9 +311,9 @@ namespace neuroh5
       mspace = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
-      start = (hsize_t)dst_blk_ptr[0];
       if (block > 0)
         {
+          start = (hsize_t)dst_blk_ptr[0];
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
@@ -361,9 +361,9 @@ namespace neuroh5
       mspace = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
-      start = (hsize_t)dst_ptr[0];
       if (block > 0)
         {
+          start = (hsize_t)dst_ptr[0];
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }

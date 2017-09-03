@@ -309,11 +309,11 @@ namespace neuroh5
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
       
-      start = (hsize_t)dst_blk_ptr[0] + dst_ptr_start;
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
       if (block > 0)
         {
+          start = (hsize_t)dst_blk_ptr[0] + dst_ptr_start;
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
@@ -362,11 +362,11 @@ namespace neuroh5
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
       
-      start = (hsize_t)dst_ptr[0] + src_idx_start;
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
       if (block > 0)
         {
+          start = (hsize_t)dst_ptr[0] + src_idx_start;
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
