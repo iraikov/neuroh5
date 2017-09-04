@@ -263,7 +263,12 @@ namespace neuroh5
       assert(MPI_Comm_size(all_comm, &size) >= 0);
       assert(MPI_Comm_rank(all_comm, &rank) >= 0);
           
-
+       assert(cell::read_population_ranges
+              (all_comm, file_name, pop_ranges, pop_vector, total_num_nodes)
+              >= 0);
+       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
+       assert(cell::read_population_combos(all_comm, file_name, pop_pairs)  >= 0);
+          
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_names.size(); i++)
         {
@@ -272,17 +277,17 @@ namespace neuroh5
           string dst_pop_name = prj_names[i].second;
           
           vector< pair<string,hid_t> >  edge_attr_info;
-          vector<uint32_t> edge_attr_num;
           vector< vector<string> > edge_attr_names;
+          vector<uint32_t> edge_attr_num;
+
+          edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
+          edge_attr_names.resize(data::AttrVal::num_attr_types);
 
           if (opt_attrs)
             {
               assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, "Attributes",
                                                 edge_attr_info) >= 0);
               assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
-
-              edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
-              edge_attr_names.resize(data::AttrVal::num_attr_types);
               
               assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
             }

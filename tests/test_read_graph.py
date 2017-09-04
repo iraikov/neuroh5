@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from neuroh5.io import read_graph
+from neuroh5.io import read_graph, scatter_graph
 
 comm = MPI.COMM_WORLD
 print "rank = ", comm.Get_rank()

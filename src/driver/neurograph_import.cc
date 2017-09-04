@@ -323,14 +323,21 @@ int main(int argc, char** argv)
                 size_t nval;
                 stringstream ss;
                 pos1 = arg.find(delimiter, pos);
-                ss << arg.substr(pos, pos1);
-                ss >> nval;
-                num_attrs[ntype] = nval;
-                if (pos != string::npos)
+                if (pos1 != string::npos)
                   {
+                    ss << arg.substr(pos, pos1);
+                    ss >> nval;
+                    num_attrs[ntype] = nval;
                     pos = pos1 + delimiter.length();
+                    ntype ++;
                   }
-                ntype += 1;
+                else
+                  {
+                    ss << arg;
+                    ss >> nval;
+                    num_attrs[ntype] = nval;
+                    pos = pos1;
+                  }
               } while (pos != string::npos);
           }
           break;
