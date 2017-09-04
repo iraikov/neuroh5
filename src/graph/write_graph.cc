@@ -160,7 +160,6 @@ namespace neuroh5
       map< NODE_IDX_T, rank_t > node_rank_map;
       compute_node_rank_map(io_size, total_num_nodes, node_rank_map);
 
-
       // construct a map where each set of edges are arranged by destination I/O rank
       auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       rank_edge_map_t rank_edge_map;
@@ -184,37 +183,43 @@ namespace neuroh5
               adj_vector.push_back(src - src_start);
               num_edges++;
             }
-
           vector<size_t> p = sort_permutation(adj_vector, compare_nodes);
 
           apply_permutation_in_place(adj_vector, p);
 
-          for (size_t i=0; i<a.float_values.size(); i++)
+          for (size_t i=0; i<a.size_attr_vec<float>(); i++)
             {
+              assert(a.float_values[i].size() == adj_vector.size());
               apply_permutation_in_place(a.float_values[i], p);
             }
-          for (size_t i=0; i<a.uint8_values.size(); i++)
+          for (size_t i=0; i<a.size_attr_vec<uint8_t>(); i++)
             {
+              assert(a.uint8_values[i].size() == adj_vector.size());
               apply_permutation_in_place(a.uint8_values[i], p);
             }
-          for (size_t i=0; i<a.uint16_values.size(); i++)
+          for (size_t i=0; i<a.size_attr_vec<uint16_t>(); i++)
             {
+              assert(a.uint16_values[i].size() == adj_vector.size());
               apply_permutation_in_place(a.uint16_values[i], p);
             }
-          for (size_t i=0; i<a.uint32_values.size(); i++)
+          for (size_t i=0; i<a.size_attr_vec<uint32_t>(); i++)
             {
+              assert(a.uint32_values[i].size() == adj_vector.size());
               apply_permutation_in_place(a.uint32_values[i], p);
             }
-          for (size_t i=0; i<a.int8_values.size(); i++)
+          for (size_t i=0; i<a.size_attr_vec<int8_t>(); i++)
             {
+              assert(a.int8_values[i].size() == adj_vector.size());
               apply_permutation_in_place(a.int8_values[i], p);
             }
-          for (size_t i=0; i<a.int16_values.size(); i++)
+          for (size_t i=0; i<a.size_attr_vec<int16_t>(); i++)
             {
+              assert(a.int16_values[i].size() == adj_vector.size());
               apply_permutation_in_place(a.int16_values[i], p);
             }
-          for (size_t i=0; i<a.int32_values.size(); i++)
+          for (size_t i=0; i<a.size_attr_vec<int32_t>(); i++)
             {
+              assert(a.int32_values[i].size() == adj_vector.size());
               apply_permutation_in_place(a.int32_values[i], p);
             }
 
@@ -225,15 +230,17 @@ namespace neuroh5
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
           AttrVal &edge_attr_vec = get<1>(et1);
+
+          edge_attr_vec.float_values.resize(a.size_attr_vec<float>());
+          edge_attr_vec.uint8_values.resize(a.size_attr_vec<uint8_t>());
+          edge_attr_vec.uint16_values.resize(a.size_attr_vec<uint16_t>());
+          edge_attr_vec.uint32_values.resize(a.size_attr_vec<uint32_t>());
+          edge_attr_vec.int8_values.resize(a.size_attr_vec<int8_t>());
+          edge_attr_vec.int16_values.resize(a.size_attr_vec<int16_t>());
+          edge_attr_vec.int32_values.resize(a.size_attr_vec<int32_t>());
           
-          edge_attr_vec.float_values.resize(a.float_values.size());
-          edge_attr_vec.uint8_values.resize(a.uint8_values.size());
-          edge_attr_vec.uint16_values.resize(a.uint16_values.size());
-          edge_attr_vec.uint32_values.resize(a.uint32_values.size());
-          edge_attr_vec.int8_values.resize(a.int8_values.size());
-          edge_attr_vec.int16_values.resize(a.int16_values.size());
-          edge_attr_vec.int32_values.resize(a.int32_values.size());
           edge_attr_vec.append(a);
+
         }
 
 

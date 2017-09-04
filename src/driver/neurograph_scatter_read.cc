@@ -48,7 +48,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s  <FILE> <IOSIZE> [<RANKFILE>]\n\n", argv[0]);
+  printf("Usage: %s  [<OPTIONS>] <FILE> [<RANKFILE>]\n\n", argv[0]);
   printf("Options:\n");
   printf("\t-s:\n");
   printf("\t\tPrint only edge summary\n");
