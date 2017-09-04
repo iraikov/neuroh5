@@ -2988,7 +2988,7 @@ extern "C"
     vector<pair<string,string> > prj_names;
     vector < edge_map_t > prj_vector;
     vector < vector <vector<string>> > edge_attr_name_vector;
-
+    string src_pop_name, dst_pop_name;
     size_t total_num_nodes, total_num_edges, local_num_edges;
 
   } NeuroH5ProjectionGenState;
@@ -3064,7 +3064,6 @@ extern "C"
   } PyNeuroH5CellAttrGenState;
   
 
-#ifdef PRJ_GEN
   static PyObject *
   neuroh5_prj_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
@@ -3161,7 +3160,6 @@ extern "C"
     return (PyObject *)py_ngg;
     
   }
-#endif
   
   static PyObject *
   neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -3622,7 +3620,6 @@ extern "C"
     return NULL;
   }
 
-#ifdef PRJ_GEN
   static PyObject *
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
@@ -3632,7 +3629,7 @@ extern "C"
 
     if (py_ngg->state->block_index < py_ngg->state->block_count)
       {
-        /* edge_index = block_count-1 means that the generator is exhausted. */
+        /* edge_index = edge_count-1 means that the block is exhausted. */
         if (py_ntrg->state->edge_index < py_ntrg->state->edge_count)
           {
           }
@@ -3644,16 +3641,12 @@ extern "C"
 
 
             int status;
-            status = graph::scatter_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
-                                          io_size, opt_attrs>0, prj_names, node_rank_map,
-                                          prj_vector, edge_attr_name_vector, 
-                                          total_num_nodes, local_num_edges, total_num_edges);
             
-            status = scatter_projection(all_comm, io_comm, io_size, edge_map_type, header_type,
-                                        size_type, file_name,
-                                        prj_names[i].first, prj_names[i].second,
-                                        opt_attrs, node_rank_map, pop_vector, pop_ranges, pop_pairs,
-                                        prj_vector, edge_attr_names_vector);
+            status = graph::scatter_projection(all_comm, io_comm, io_size, edge_map_type, header_type,
+                                               size_type, file_name,
+                                               prj_names[i].first, prj_names[i].second,
+                                               opt_attrs, node_rank_map, pop_vector, pop_ranges, pop_pairs,
+                                               prj_vector, edge_attr_names_vector);
             assert (status >= 0);
             py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
             py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
@@ -3705,7 +3698,6 @@ extern "C"
     
     return NULL;
   }
-#endif
   
   // NeuroH5 read iterator
   PyTypeObject PyNeuroH5TreeGen_Type = {
