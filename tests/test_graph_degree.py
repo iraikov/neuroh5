@@ -38,6 +38,10 @@ for (k,d) in nb_dict.iteritems():
     min_out_degree = min(min_out_degree, out_degree)
     max_in_degree  = max(max_in_degree, in_degree)
     max_out_degree = max(max_out_degree, out_degree)
+    print 'rank %d: neighbor_degrees: node %d has max in-degree %d' % (max_in_degree_node_id, max_in_degree)
+    print 'rank %d: neighbor_degrees: node %d has min in-degree %d' % (min_in_degree_node_id, min_in_degree)
+    print 'rank %d: neighbor_degrees: node %d has max out-degree %d' % (max_out_degree_node_id, max_out_degree)
+    print 'rank %d: neighbor_degrees: node %d has min out-degree %d' % (min_out_degree_node_id, min_out_degree)
     print '    in: %d out: %d' % (in_degree, out_degree)
 
 print 'in degree: min=%d max=%d' % (min_in_degree, max_in_degree)

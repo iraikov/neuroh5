@@ -104,27 +104,47 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
     max_in_degree=0
     min_out_degree=sys.maxint
     max_out_degree=0
+    max_in_degree_node_id=0
+    max_out_degree_node_id=0
+    max_total_degree_node_id=0
 
     for (v,ns) in neighbors_dict.iteritems():
-        in_degree = len(ns['src'])
+        in_degree  = len(ns['src'])
         out_degree = len(ns['dst'])
-        min_total_degree = min(min_total_degree, in_degree+out_degree)
-        max_total_degree = max(max_total_degree, in_degree+out_degree)
+        total_degree = in_degree+out_degree
+        if max_total_degree < total_degree:
+            max_total_degree_node_id = v
+        if min_total_degree > total_degree:
+            min_total_degree_node_id = v
+        if max_in_degree < in_degree:
+            max_in_degree_node_id = v
+        if min_in_degree > in_degree:
+            min_in_degree_node_id = v
+        if max_out_degree < out_degree:
+            max_out_degree_node_id = v
+        if min_out_degree > in_degree:
+            min_out_degree_node_id = v
+        min_total_degree = min(min_total_degree, total_degree)
+        max_total_degree = max(max_total_degree, total_degree)
         min_in_degree  = min(min_in_degree, in_degree)
         max_in_degree  = max(max_in_degree, in_degree)
         min_out_degree = min(min_out_degree, out_degree)
         max_out_degree = max(max_out_degree, out_degree)
         degree_dict[v] = {'total': in_degree+out_degree, 'in': in_degree, 'out': out_degree}
 
-    global_min_total_degree = comm.allreduce(sendobj=min_total_degree, op=MPI.MIN)
-    global_max_total_degree = comm.allreduce(sendobj=max_total_degree, op=MPI.MAX)
-    global_min_in_degree    = comm.allreduce(sendobj=min_in_degree, op=MPI.MIN)
-    global_max_in_degree    = comm.allreduce(sendobj=max_in_degree, op=MPI.MAX)
-    global_min_out_degree   = comm.allreduce(sendobj=min_out_degree, op=MPI.MIN)
-    global_max_out_degree   = comm.allreduce(sendobj=max_out_degree, op=MPI.MAX)
+    (global_min_total_degree, global_min_total_degree_node_id) = comm.allreduce(sendobj=(min_total_degree,min_total_degree_node_id), op=MPI.MINLOC)
+    (global_max_total_degree, global_max_total_degree_node_id) = comm.allreduce(sendobj=(max_total_degree,max_total_degree_node_id), op=MPI.MAXLOC)
+    (global_min_in_degree, global_min_in_degree_node_id)       = comm.allreduce(sendobj=(min_in_degree,min_in_degree_node_id), op=MPI.MINLOC)
+    (global_max_in_degree, global_max_in_degree_node_id)       = comm.allreduce(sendobj=(max_in_degree,max_in_degree_node_id), op=MPI.MAXLOC)
+    (global_min_out_degree, global_min_out_degree_node_id)     = comm.allreduce(sendobj=(min_out_degree,min_out_degree_node_id), op=MPI.MINLOC)
+    (global_max_out_degree, global_max_out_degree_node_id)     = comm.allreduce(sendobj=(max_out_degree,max_out_degree_node_id), op=MPI.MAXLOC)
     if rank == 0:
-        print 'neighbor_degrees: max degrees: total=%d in=%d out=%d' % (global_max_total_degree, global_max_in_degree, global_max_out_degree)
-        print 'neighbor_degrees: min degrees: total=%d in=%d out=%d' % (global_min_total_degree, global_min_in_degree, global_min_out_degree)
+        print 'neighbor_degrees: max degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_max_total_degree, global_max_total_degree_node_id,
+                                                                                       global_max_in_degree, global_max_in_degree_node_id,
+                                                                                       global_max_out_degree, global_max_out_degree_node_id)
+        print 'neighbor_degrees: min degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_min_total_degree, global_min_total_degree_node_id,
+                                                                                       global_min_in_degree, global_min_in_degree_node_id,
+                                                                                       global_min_out_degree, global_min_out_degree_node_id)
 
     neighbor_index=0
     while True:
