@@ -50,8 +50,6 @@ void print_usage_full(char** argv)
 {
   printf("Usage: %s  [<OPTIONS>] <FILE> [<RANKFILE>]\n\n", argv[0]);
   printf("Options:\n");
-  printf("\t-s:\n");
-  printf("\t\tPrint only edge summary\n");
 }
 
 

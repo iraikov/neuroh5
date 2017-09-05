@@ -20,6 +20,8 @@
 #include <map>
 #include <vector>
 
+#include "cereal/archives/portable_binary.hpp"
+
 #undef NDEBUG
 #include <cassert>
 

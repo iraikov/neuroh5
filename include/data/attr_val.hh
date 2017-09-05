@@ -14,6 +14,14 @@
 #include <vector>
 #include <cassert>
 
+// type support
+#include "cereal/types/tuple.hpp"
+#include "cereal/types/map.hpp"
+#include "cereal/types/vector.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/complex.hpp"
+
+
 namespace neuroh5
 {
   namespace data
@@ -37,6 +45,19 @@ namespace neuroh5
       std::vector < std::vector <int16_t> >  int16_values;
       std::vector < std::vector <uint32_t> > uint32_values;
       std::vector < std::vector <int32_t> >  int32_values;
+    
+      // This method lets cereal know which data members to serialize
+      template<class Archive>
+      void serialize(Archive & archive)
+      {
+        archive( float_values,
+                 uint8_values,
+                 int8_values,
+                 uint16_values,
+                 int16_values,
+                 uint32_values,
+                 int32_values ); // serialize things by passing them to the archive
+      }
 
       template<class T>
       const size_t size_attr_vec () const;

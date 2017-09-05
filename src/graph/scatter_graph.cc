@@ -17,8 +17,8 @@
 #include "validate_edge_list.hh"
 #include "scatter_graph.hh"
 #include "bcast_string_vector.hh"
-#include "alltoallv_packed.hh"
-#include "pack_edge.hh"
+#include "alltoallv_template.hh"
+#include "serialize_edge.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -182,8 +182,8 @@ namespace neuroh5
           size_t num_packed_edges = 0;
           DEBUG("scatter: packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
           
-          mpi::pack_rank_edge_map (all_comm, header_type, size_type, prj_rank_edge_map, 
-                                   num_packed_edges, sendcounts, sendbuf, sdispls);
+          data::serialize_rank_edge_map (size, rank, prj_rank_edge_map, 
+                                         num_packed_edges, sendcounts, sendbuf, sdispls);
 
           // ensure the correct number of edges is being packed
           assert(num_packed_edges == num_edges);
@@ -191,10 +191,10 @@ namespace neuroh5
         } // rank < io_size
 
       MPI_Comm_free(&io_comm);
-    
+
       vector<uint8_t> recvbuf;
       vector<int> recvcounts, rdispls;
-      assert(mpi::alltoallv_packed(all_comm, sendcounts, sdispls, sendbuf,
+      assert(mpi::alltoallv_vector(all_comm, MPI_UINT8_T, sendcounts, sdispls, sendbuf,
                                    recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
       sendcounts.clear();
@@ -204,9 +204,8 @@ namespace neuroh5
       if (recvbuf.size() > 0)
         {
           
-          mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
-                                     recvbuf, recvcounts, rdispls, edge_attr_num,
-                                     prj_edge_map, num_unpacked_edges);
+          data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
+                                           prj_edge_map, num_unpacked_edges);
         }
       
       DEBUG("scatter: rank ", rank, " finished unpacking edges for projection ", src_pop_name, " -> ", dst_pop_name);
