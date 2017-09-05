@@ -93,8 +93,17 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
 
 def neighbor_degrees (comm, neighbors_dict, node_ranks):
 
+    rank = comm.Get_rank()
+
     degree_dict = {}
-    
+
+    min_total_degree=sys.maxint
+    max_total_degree=0
+    min_in_degree=sys.maxint
+    max_in_degree=0
+    min_out_degree=sys.maxint
+    max_out_degree=0
+
     for (v,ns) in neighbors_dict.iteritems():
         if ns.has_key('src'):
             in_degree = np.size(ns['src'])
@@ -104,12 +113,31 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
             out_degree = np.size(ns['dst'])
         else:
             out_degree = 0
+        min_total_degree = min(min_total_degree, in_degree+out_degree)
+        max_total_degree = max(max_total_degree, in_degree+out_degree)
+        min_in_degree  = min(min_in_degree, in_degree)
+        max_in_degree  = max(max_in_degree, in_degree)
+        min_out_degree = min(min_out_degree, out_degree)
+        max_out_degree = max(max_out_degree, out_degree)
         degree_dict[v] = {'total': in_degree+out_degree, 'in': in_degree, 'out': out_degree}
+
+    global_min_total_degree = comm.allreduce(sendobj=min_total_degree, op=MPI.MIN)
+    global_max_total_degree = comm.allreduce(sendobj=max_total_degree, op=MPI.MAX)
+    global_min_in_degree    = comm.allreduce(sendobj=min_in_degree, op=MPI.MIN)
+    global_max_in_degree    = comm.allreduce(sendobj=max_in_degree, op=MPI.MAX)
+    global_min_out_degree   = comm.allreduce(sendobj=min_out_degree, op=MPI.MIN)
+    global_max_out_degree   = comm.allreduce(sendobj=max_out_degree, op=MPI.MAX)
+    if rank == 0:
+        print 'neighbor_degrees: max degrees: total=%d in=%d out=%d' % (global_max_total_degree, global_max_in_degree, global_max_out_degree)
+        print 'neighbor_degrees: min degrees: total=%d in=%d out=%d' % (global_min_total_degree, global_min_in_degree, global_min_out_degree)
 
     neighbor_index=0
     while True:
         ## For i-th neighbor, query the owning rank for its degree
         ith_neighbors=[]
+
+        if rank == 0:
+            print 'neighbor_degrees: rank %d: neighbor_index = %d' % (rank, neighbor_index)
         
         for (v,ns) in neighbors_dict.iteritems():
             if ns.has_key('src'):
@@ -124,7 +152,7 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
             if neighbor_index < len_src:
                n = ns['src'][neighbor_index]
                ith_neighbors.append(n)
-            elif neighbor_index < (len_dst - len_src):
+            elif neighbor_index < (len_dst + len_src):
                n = ns['dst'][neighbor_index - len_src]
                ith_neighbors.append(n)
 
@@ -139,6 +167,9 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
         if sum_len_ith_neighbors == 0:
            break
         
+        if rank == 0:
+            print 'neighbor_degrees: rank %d: len of neighbors with index %d = %d' % (rank, neighbor_index, sum_len_ith_neighbors)
+
         def f (rank_degree_dict, v):
             rank = node_ranks[v]
             if rank_degree_dict.has_key(rank):
@@ -161,6 +192,7 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
         
 
 def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ranks):
+    rank = comm.Get_rank()
 
     cc_dict = {}
     k_dict = {}
@@ -173,6 +205,8 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
         
     neighbor_index=0
     while True:
+        if rank == 0:
+            print 'clustering_coefficient: rank %d: neighbor_index = %d' % (rank, neighbor_index)
 
         ## For i-th neighbor, query the owning rank for its neighbors
         ith_neighbors=[]
@@ -197,6 +231,8 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
                 
         ## Stop if all ranks have exhausted their lists of neighbors
         sum_len_ith_neighbors = comm.allreduce(sendobj=len(ith_neighbors), op=MPI.SUM)
+        if rank == 0:
+            print 'clustering_coefficient: rank %d: sum ith neighbors = %d' % (rank, sum_len_ith_neighbors)
         if sum_len_ith_neighbors == 0:
            break
 
