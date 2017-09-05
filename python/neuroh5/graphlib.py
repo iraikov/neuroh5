@@ -5,6 +5,7 @@ import os.path
 import click
 import itertools, functools
 from collections import defaultdict
+from array import array
 import numpy as np
 from mpi4py import MPI 
 from neuroh5.io import read_population_ranges, scatter_read_graph, bcast_graph, read_graph
@@ -59,8 +60,11 @@ def make_node_rank_map (comm, filepath, iosize):
 
 
 def read_neighbors (comm, filepath, iosize, node_ranks):
+
+    def neighbors_default():
+        return {'src': array('L'), 'dst': array('L')}
     
-    neighbors_dict = {}
+    neighbors_dict = defaultdict(neighbors_default)
 
     graph = scatter_read_graph (comm, filepath, io_size=iosize, map_type=0, attributes=False,
                                 node_rank_map=node_ranks)
@@ -71,7 +75,7 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
             prj = graph[post][pre]
             for n in prj.keys():
                 edges = prj[n]
-                neighbors_dict[n] = {'src': edges[0]}
+                neighbors_dict[n]['src'].extend(edges[0])
                 
     ## obtain outgoing edges
     graph = scatter_read_graph (comm, filepath, io_size=iosize, map_type=1, attributes=False,
@@ -83,10 +87,7 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
             prj = graph[pre][post]
             for n in prj.keys():
                 edges = prj[n]
-                if neighbors_dict.has_key(n):
-                    neighbors_dict[n]['dst'] = edges[0]
-                else:
-                    neighbors_dict[n] = {'dst': edges[0]}
+                neighbors_dict[n]['dst'].extend(edges[0])
             
     return neighbors_dict
 
@@ -105,14 +106,8 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
     max_out_degree=0
 
     for (v,ns) in neighbors_dict.iteritems():
-        if ns.has_key('src'):
-            in_degree = np.size(ns['src'])
-        else:
-            in_degree = 0
-        if ns.has_key('dst'):
-            out_degree = np.size(ns['dst'])
-        else:
-            out_degree = 0
+        in_degree = len(ns['src'])
+        out_degree = len(ns['dst'])
         min_total_degree = min(min_total_degree, in_degree+out_degree)
         max_total_degree = max(max_total_degree, in_degree+out_degree)
         min_in_degree  = min(min_in_degree, in_degree)
@@ -141,11 +136,11 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
         
         for (v,ns) in neighbors_dict.iteritems():
             if ns.has_key('src'):
-                len_src = np.size(ns['src'])
+                len_src = len(ns['src'])
             else:
                 len_src = 0
             if ns.has_key('dst'):
-                len_dst = np.size(ns['dst'])
+                len_dst = len(ns['dst'])
             else:
                 len_dst = 0
                 
@@ -214,11 +209,11 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
 
         for (v,ns) in neighbors_dict.iteritems():
             if ns.has_key('src'):
-                len_src = np.size(ns['src'])
+                len_src = len(ns['src'])
             else:
                 len_src = 0
             if ns.has_key('dst'):
-                len_dst = np.size(ns['dst'])
+                len_dst = len(ns['dst'])
             else:
                 len_dst = 0
                 

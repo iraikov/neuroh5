@@ -12,6 +12,7 @@ print "size = ", comm.Get_size()
 comm_size = comm.Get_size()
 
 input_file='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_GC_20170728.h5'
+input_file='data/dentate_test.h5'
 
 (node_ranks, n_nodes) = make_node_rank_map (comm, input_file, 1)
 

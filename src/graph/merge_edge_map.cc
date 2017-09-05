@@ -35,7 +35,9 @@ namespace neuroh5
                   edge_tuple_t& et = it->second;
                 
                   const vector<NODE_IDX_T>& src_vector = get<0>(et);
-                
+
+                  printf("merge_edge_map: prj %u: dst = %u\n", i, dst);
+                  
                   if (edge_map.find(dst) == edge_map.end())
                     {
                       edge_map.insert(make_pair(dst,src_vector));

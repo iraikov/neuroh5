@@ -23,7 +23,7 @@ namespace neuroh5
     int vertex_degree (MPI_Comm comm,
                        const size_t total_num_nodes,
                        const std::map<NODE_IDX_T, std::vector<NODE_IDX_T> > &edge_map,
-                       std::vector< uint32_t > &degree_map);
+                       std::map< NODE_IDX_T, uint32_t > &degree_map);
   }
 }
 

@@ -28,17 +28,20 @@ namespace neuroh5
     int vertex_degree (MPI_Comm comm,
                        const size_t global_num_nodes,
                        const map<NODE_IDX_T, vector<NODE_IDX_T> > &edge_map,
-                       vector< uint32_t > &degree_vector)
+                       map< NODE_IDX_T, uint32_t > &degree_map)
     {
-      int status=0; uint32_t local_num_nodes;
+      int status=0; uint32_t local_num_nodes=0;
       vector <uint32_t> local_degree_vector;
+      vector <NODE_IDX_T> local_node_id_vector;
+      vector <uint32_t> degree_vector;
+      vector <NODE_IDX_T> node_id_vector;
       local_num_nodes = edge_map.size();
       
       for (auto it = edge_map.begin(); it != edge_map.end(); ++it)
         {
+          local_node_id_vector.push_back(it->first);
           const vector<NODE_IDX_T>& adj_vector = it->second;
           uint32_t degree = adj_vector.size();
-
           local_degree_vector.push_back(degree);
         }
       
@@ -65,11 +68,21 @@ namespace neuroh5
         }
 
       degree_vector.resize(global_num_nodes);
+      node_id_vector.resize(global_num_nodes);
       assert(MPI_Allgatherv(&local_degree_vector[0], 
                            local_num_nodes, MPI_UINT32_T,
                            &degree_vector[0], &recvcounts[0], &rdispls[0], MPI_UINT32_T,
                            comm) >= 0);
+      assert(MPI_Allgatherv(&local_node_id_vector[0], 
+                           local_num_nodes, MPI_NODE_IDX_T,
+                           &node_id_vector[0], &recvcounts[0], &rdispls[0], MPI_NODE_IDX_T,
+                           comm) >= 0);
 
+      for (size_t i = 0; i < node_id_vector.size(); i++)
+        {
+          degree_map.insert(make_pair(node_id_vector[i], degree_vector[i]));
+        }
+      
       return status;
     }
   }

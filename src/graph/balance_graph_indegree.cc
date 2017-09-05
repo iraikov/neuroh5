@@ -159,22 +159,22 @@ namespace neuroh5
       prj_vector.clear();
 
       uint64_t sum_indegree=0, nz_indegree=0;
-      std::vector<uint32_t> vertex_indegrees;
-      vertex_degree (comm, total_num_nodes, edge_map, vertex_indegrees);
+      std::map<NODE_IDX_T, uint32_t> vertex_indegree_map;
+      vertex_degree (comm, total_num_nodes, edge_map, vertex_indegree_map);
       edge_map.clear();
 
-      for(size_t v=0; v<total_num_nodes; v++)
+      for (auto it = vertex_indegree_map.begin(); it != vertex_indegree_map.end(); it++)
         {
-          uint32_t degree = vertex_indegrees[v];
+          uint32_t degree = it->second;
           sum_indegree = sum_indegree + degree;
           if (degree > 0) nz_indegree++;
         }
       std::vector<double> vertex_norm_indegrees;
       vertex_norm_indegrees.resize(total_num_nodes);
-      for(size_t v=0; v<total_num_nodes; v++)
+      for (auto it = vertex_indegree_map.begin(); it != vertex_indegree_map.end(); it++)
         {
-          double norm_indegree = (double)vertex_indegrees[v] / (double)sum_indegree;
-          vertex_norm_indegrees[v] = norm_indegree;
+          double norm_indegree = (double)it->second / (double)sum_indegree;
+          vertex_norm_indegrees[it->first] = norm_indegree;
         }
       
       double mean_norm_indegree = 1.0 / (double)nz_indegree;
@@ -203,7 +203,7 @@ namespace neuroh5
                  (vidx < total_num_nodes))
             {
               NODE_IDX_T n = node_idx_vector[vidx];
-              if (vertex_indegrees[n] > 0)
+              if (vertex_indegree_map[n] > 0)
                 {
                   parts_map.insert(make_pair(n, p));
                   part_norm_indegree = part_norm_indegree + vertex_norm_indegrees[n];
