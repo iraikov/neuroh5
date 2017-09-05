@@ -114,7 +114,7 @@ namespace neuroh5
       rank_edge_map_t prj_rank_edge_map;
       edge_map_t prj_edge_map;
       size_t num_edges = 0, total_prj_num_edges = 0;
-      vector< vector<string> > edge_attr_names;
+      vector< vector<string> > edge_attr_names(data::AttrVal::num_attr_types);
       
       DEBUG("projection ", src_pop_name, " -> ", dst_pop_name, "\n");
 
@@ -209,7 +209,7 @@ namespace neuroh5
                                      prj_edge_map, num_unpacked_edges);
         }
       
-      DEBUG("scatter: finished unpacking edges for projection ", src_pop_name, " -> ", dst_pop_name);
+      DEBUG("scatter: rank ", rank, " finished unpacking edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
       prj_vector.push_back(prj_edge_map);
 
@@ -224,6 +224,7 @@ namespace neuroh5
             }
           
           edge_attr_names_vector.push_back(edge_attr_names);
+          DEBUG("scatter: finished broadcasting attribute names for projection ", src_pop_name, " -> ", dst_pop_name);
         }
       
       assert(MPI_Barrier(all_comm) == MPI_SUCCESS);

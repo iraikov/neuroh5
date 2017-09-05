@@ -148,11 +148,12 @@ int append_adj_map
 (
  const vector<NODE_IDX_T>&   src_range,
  const int src_offset, const int dst_offset,
- const vector<NODE_IDX_T>&  dst_idx,
- const vector<DST_PTR_T>&   src_idx_ptr,
- const vector<NODE_IDX_T>&  src_idx,
- size_t&                    num_edges,
- edge_map_t&                edge_map
+ const vector<NODE_IDX_T>&   dst_idx,
+ const vector<DST_PTR_T>&    src_idx_ptr,
+ const vector<NODE_IDX_T>&   src_idx,
+ const data::AttrVal&        edge_attrs,
+ size_t&                     num_edges,
+ edge_map_t&                 edge_map
  )
 {
   int ierr = 0; 
@@ -170,6 +171,14 @@ int append_adj_map
           vector<NODE_IDX_T> adj_vector;
           data::AttrVal edge_attr_values;
 
+          edge_attr_values.resize<float>(edge_attrs.size_attr_vec<float> ());
+          edge_attr_values.resize<uint8_t>(edge_attrs.size_attr_vec<uint8_t> ());
+          edge_attr_values.resize<uint16_t>(edge_attrs.size_attr_vec<uint16_t> ());
+          edge_attr_values.resize<uint32_t>(edge_attrs.size_attr_vec<uint32_t> ());
+          edge_attr_values.resize<int8_t>(edge_attrs.size_attr_vec<int8_t> ());
+          edge_attr_values.resize<int16_t>(edge_attrs.size_attr_vec<int16_t> ());
+          edge_attr_values.resize<int32_t>(edge_attrs.size_attr_vec<int32_t> ());
+          
           for (size_t i = low_src_ptr; i < high_src_ptr; ++i)
             {
               NODE_IDX_T src = src_idx[i];
@@ -177,6 +186,41 @@ int append_adj_map
                 {
                   NODE_IDX_T src1 = src + src_offset;
                   adj_vector.push_back(src1);
+                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<float> (); ai++)
+                    {
+                      float v = edge_attrs.at<float>(ai, i);
+                      edge_attr_values.push_back(ai, v);
+                    }
+                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint8_t> (); ai++)
+                    {
+                      uint8_t v = edge_attrs.at<uint8_t>(ai, i);
+                      edge_attr_values.push_back(ai, v);
+                    }
+                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint16_t> (); ai++)
+                    {
+                      uint16_t v = edge_attrs.at<uint16_t>(ai, i);
+                      edge_attr_values.push_back(ai, v);
+                    }
+                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint32_t> (); ai++)
+                    {
+                      uint32_t v = edge_attrs.at<uint32_t>(ai, i);
+                      edge_attr_values.push_back(ai, v);
+                    }
+                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<int8_t> (); ai++)
+                    {
+                      int8_t v = edge_attrs.at<int8_t>(ai, i);
+                      edge_attr_values.push_back(ai, v);
+                    }
+                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<int16_t> (); ai++)
+                    {
+                      int16_t v = edge_attrs.at<int16_t>(ai, i);
+                      edge_attr_values.push_back(ai, v);
+                    }
+                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<int32_t> (); ai++)
+                    {
+                      int32_t v = edge_attrs.at<int32_t>(ai, i);
+                      edge_attr_values.push_back(ai, v);
+                    }
                   num_edges++;
                 }
             }
@@ -220,6 +264,7 @@ int main(int argc, char** argv)
   vector <string> txt_input_file_names;
   string hdf5_input_file_name, hdf5_input_dsetpath;
   vector <size_t> num_attrs(data::AttrMap::num_attr_types);
+  vector< vector<string> > edge_attr_names(data::AttrVal::num_attr_types);
   MPI_Comm all_comm;
   
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -231,37 +276,73 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
   int dst_offset=0, src_offset=0;
-  int optflag_iosize = 0;
+  int optflag_attr_names   = 0;
+  int optflag_io_size      = 0;
   int optflag_input_format = 0;
-  int optflag_dst_offset = 0;
-  int optflag_src_offset = 0;
-  bool opt_iosize = false;
-  bool opt_txt = false;
-  bool opt_hdf5_syn = false;
+  int optflag_dst_offset   = 0;
+  int optflag_src_offset   = 0;
+  bool opt_attr_names = false;
+  bool opt_io_size    = false;
+  bool opt_txt        = false;
+  bool opt_hdf5_syn   = false;
   bool opt_dst_offset = false,
-    opt_src_offset = false;
+    opt_src_offset    = false;
 
   // parse arguments
   static struct option long_options[] = {
     {"dst-offset",    required_argument, &optflag_dst_offset,  1 },
     {"src-offset",    required_argument, &optflag_src_offset,  1 },
     {"format",        required_argument, &optflag_input_format,  1 },
-    {"iosize",        required_argument, &optflag_iosize,  1 },
+    {"io-size",       required_argument, &optflag_io_size,  1 },
+    {"attr-names",    required_argument, &optflag_attr_names,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hf:i:d:a:s:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "a:d:f:hi:s:", long_options, &option_index)) != -1)
     {
-      stringstream ss;
       switch (c)
         {
         case 0:
-          if (optflag_iosize == 1) {
-            opt_iosize = true;
+          if (optflag_attr_names == 1) {
+            stringstream ss;
+            opt_attr_names = true;
+            string arg = string(optarg);
+            string index_delimiter = ":";
+            string name_delimiter = ",";
+            size_t pos = arg.find(index_delimiter), pos1=0, attr_index=0;
+            string attr_index_str = arg.substr(0, pos); 
+            string attr_names_str = arg.substr(pos + index_delimiter.length());
+            ss << attr_index_str;
+            ss >> attr_index;
+            pos = 0;
+            do 
+              {
+                string attr_name;
+                stringstream ss1;
+                pos1 = attr_names_str.find(name_delimiter, pos);
+                if (pos1 != string::npos)
+                  {
+                    ss1 << attr_names_str.substr(pos, pos1);
+                    pos = pos1 + name_delimiter.length();
+                  }
+                else
+                  {
+                    ss1 << attr_names_str.substr(pos);
+                    pos = pos1;
+                  }
+                ss1 >> attr_name;
+                edge_attr_names[attr_index].push_back(attr_name);
+              }
+            while (pos != string::npos);
+            optflag_attr_names=0;
+          }
+          if (optflag_io_size == 1) {
+            stringstream ss;
+            opt_io_size = true;
             ss << string(optarg);
             ss >> io_size;
-            optflag_iosize=0;
+            optflag_io_size=0;
           }
           if (optflag_dst_offset == 1) {
             stringstream ss;
@@ -348,7 +429,8 @@ int main(int argc, char** argv)
           break;
         case 's':
           {
-            opt_iosize = true;
+            stringstream ss;
+            opt_io_size = true;
             ss << string(optarg);
             ss >> io_size;
           }
@@ -466,7 +548,8 @@ int main(int argc, char** argv)
           string txt_input_file_name = txt_input_file_names[i];
           
           status = io::read_txt_projection (txt_input_file_name, num_attrs,
-                                            dst_idx, src_idx_ptr, src_idx, edge_attrs);
+                                            dst_idx, src_idx_ptr, src_idx,
+                                            edge_attrs);
         }
     }
 
@@ -478,7 +561,6 @@ int main(int argc, char** argv)
   edge_attr_map.uint32_values.resize(1);
   edge_attr_map.uint32_names.insert(make_pair("syn_id", 0));
   */
-  vector<vector<string>> edge_attr_names(data::AttrVal::num_attr_types);
 
   if (syn_idx.size() > 0)
     {
@@ -492,7 +574,7 @@ int main(int argc, char** argv)
     {
       status = append_adj_map (src_range, src_offset, dst_offset,
                                dst_idx, src_idx_ptr, src_idx,
-                               num_edges, edge_map);
+                               edge_attrs, num_edges, edge_map);
     }
 
 

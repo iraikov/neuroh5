@@ -54,14 +54,14 @@ namespace neuroh5
     {
       int packsize=0;
 
-#ifdef USE_EDGE_DELIM      
-      assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
-      sendsize += packsize;
-#endif
-
       size_t num_attrs = edge_attr_values.size_attr_vec<T>();
       if (num_attrs > 0)
         {
+          
+#ifdef USE_EDGE_DELIM      
+          assert(MPI_Pack_size(2, MPI_INT, comm, &packsize) == MPI_SUCCESS);
+          sendsize += packsize;
+#endif
           for (size_t k = 0; k < num_attrs; k++)
             {
               uint32_t numitems = edge_attr_values.size_attr<T>(k);
@@ -91,8 +91,8 @@ namespace neuroh5
           assert(sendpos < sendbuf_size);
 
 #ifdef USE_EDGE_DELIM      
-      assert(MPI_Pack(&edge_attr_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
-                      &sendpos, comm) == MPI_SUCCESS);
+          assert(MPI_Pack(&edge_attr_start_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                          &sendpos, comm) == MPI_SUCCESS);
 
 #endif
 
@@ -111,12 +111,12 @@ namespace neuroh5
           assert(sendpos <= sendbuf_size);
 
 #ifdef USE_EDGE_DELIM      
-      assert(MPI_Pack(&edge_attr_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
-                      &sendpos, comm) == MPI_SUCCESS);
-
+          assert(MPI_Pack(&edge_attr_end_delim, 1, MPI_INT, &sendbuf[0], sendbuf.size(),
+                          &sendpos, comm) == MPI_SUCCESS);
+          
 #endif
-
         }
+
     }
 
     int pack_size_edge
@@ -367,15 +367,15 @@ namespace neuroh5
       if (edge_attr_num > 0)
         {
 #ifdef USE_EDGE_DELIM
-      int delim=0;
-      ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
-      assert(ierr == MPI_SUCCESS);
-      if (delim != edge_attr_start_delim)
-        {
-          printf("rank %d: unpack_edge_attr: recvpos = %d recvbuf_size = %u delim = %d\n", 
-                 rank, recvpos, recvbuf_size, delim);
-        }
-      assert(delim == edge_attr_start_delim);
+          int delim=0;
+          ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
+          assert(ierr == MPI_SUCCESS);
+          if (delim != edge_attr_start_delim)
+            {
+              printf("rank %d: unpack_edge_attr: recvpos = %d recvbuf_size = %u delim = %d\n", 
+                     rank, recvpos, recvbuf_size, delim);
+            }
+          assert(delim == edge_attr_start_delim);
 #endif
 
           if (!(recvpos < recvbuf_size))
@@ -395,21 +395,18 @@ namespace neuroh5
               edge_attr_values.insert(vec);
             }
 
-
 #ifdef USE_EDGE_DELIM
-      delim=0;
-      ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
-      assert(ierr == MPI_SUCCESS);
-      if (delim != edge_attr_end_delim)
-        {
-          printf("rank %d: unpack_edge_attr: recvpos = %d recvbuf_size = %u delim = %d\n", 
-                 rank,  recvpos, recvbuf_size, delim);
-        }
-      assert(delim == edge_attr_end_delim);
+          delim=0;
+          ierr = MPI_Unpack(&recvbuf[0], recvbuf_size, &recvpos, &delim, 1, MPI_INT, comm);
+          assert(ierr == MPI_SUCCESS);
+          if (delim != edge_attr_end_delim)
+            {
+              printf("rank %d: unpack_edge_attr: recvpos = %d recvbuf_size = %u delim = %d\n", 
+                     rank,  recvpos, recvbuf_size, delim);
+            }
+          assert(delim == edge_attr_end_delim);
 #endif
-          
         }
-
     }
 
     int unpack_edge
