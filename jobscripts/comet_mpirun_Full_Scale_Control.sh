@@ -14,8 +14,10 @@ set -x
 
 module load hdf5
 
-ibrun ./build/scatter -a -i 128 \
- -o /oasis/scratch/comet/iraikov/temp_project/dentate_Full_Scale_Control \
- /oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5
+#export input_file=/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5
+export input_file=/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_GC_20170902.h5
+
+ibrun ./build/neurograph_scatter -i 128 -a \
+ -o /oasis/scratch/comet/iraikov/temp_project/dentate_Full_Scale_Control $input_file
 
 

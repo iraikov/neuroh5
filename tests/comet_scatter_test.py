@@ -3,8 +3,8 @@ from neuroh5.io import scatter_read_graph
 
 comm = MPI.COMM_WORLD
 
-input_file='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_GC_20170728.h5'
+input_file='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_GC_20170902.h5'
 
-g = scatter_read_graph(comm, input_file, io_size=256)
+g = scatter_read_graph(comm, input_file, io_size=128)
 
 print g.keys()
