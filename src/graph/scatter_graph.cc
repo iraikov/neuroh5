@@ -188,13 +188,16 @@ namespace neuroh5
 
       if (opt_attrs)
         {
-          vector<char> sendbuf;
+          vector<char> sendbuf; uint32_t sendbuf_size=0;
           if (rank == 0)
             {
               data::serialize_data(edge_attr_names, sendbuf);
+              sendbuf_size = sendbuf.size();
             }
           
-          assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, all_comm) >= 0);
+          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+          sendbuf.resize(sendbuf_size);
+          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
           
           if (rank != 0)
             {
@@ -265,8 +268,8 @@ namespace neuroh5
               assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, "Attributes",
                                                 edge_attr_info) >= 0);
               assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
-              
-              assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+
+              assert(MPI_Bcast(&edge_attr_num[0], data::AttrVal::num_attr_types, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
             }
 
           scatter_projection(all_comm, io_size, edge_map_type,

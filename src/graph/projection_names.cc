@@ -92,13 +92,16 @@ namespace neuroh5
 
         // Broadcast projection names
         {
-          vector<char> sendbuf;
+          vector<char> sendbuf; uint32_t sendbuf_size=0;
           if (rank == 0)
             {
               data::serialize_data(prj_src_pop_names, sendbuf);
+              sendbuf_size = sendbuf.size();
             }
-          
-          assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+
+          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) >= 0);
+          sendbuf.resize(sendbuf_size);
+          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) >= 0);
           
           if (rank != 0)
             {
@@ -106,13 +109,17 @@ namespace neuroh5
             }
         }
         {
-          vector<char> sendbuf;
+          vector<char> sendbuf; uint32_t sendbuf_size=0;
           if (rank == 0)
             {
               data::serialize_data(prj_dst_pop_names, sendbuf);
+              sendbuf_size = sendbuf.size();
             }
           
-          assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+
+          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) >= 0);
+          sendbuf.resize(sendbuf_size);
+          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) >= 0);
           
           if (rank != 0)
             {

@@ -155,13 +155,16 @@ namespace neuroh5
       edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
       assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
       {
-        vector<char> names_sendbuf;
+        vector<char> names_sendbuf; uint32_t names_sendbuf_size=0;
         if (rank == 0)
           {
             data::serialize_data(edge_attr_names, names_sendbuf);
+            names_sendbuf_size = sendbuf.size();
           }
-        
-        assert(MPI_Bcast(&names_sendbuf[0], names_sendbuf.size(), MPI_CHAR, 0, all_comm) >= 0);
+
+        assert(MPI_Bcast(&names_sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+        names_sendbuf.resize(names_sendbuf_size);
+        assert(MPI_Bcast(&names_sendbuf[0], names_sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
         
         if (rank != 0)
           {
@@ -172,7 +175,6 @@ namespace neuroh5
       uint32_t sendbuf_size = sendbuf.size();
       assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
       sendbuf.resize(sendbuf_size);
-
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_PACKED, 0, all_comm) == MPI_SUCCESS);
           
       size_t num_unpacked_edges = 0; 

@@ -665,13 +665,16 @@ namespace neuroh5
     
       // 5. Broadcast the names of each attributes of each type to all ranks
       {
-        vector<char> sendbuf;
+        vector<char> sendbuf; uint32_t sendbuf_size=0;
         if (rank == 0)
           {
             data::serialize_data(attr_names, sendbuf);
+            sendbuf_size = sendbuf.size();
           }
-        
-        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, all_comm) >= 0);
+
+        assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+        sendbuf.resize(sendbuf_size);
+        assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
         
         if (rank != 0)
           {
