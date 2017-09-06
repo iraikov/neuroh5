@@ -75,7 +75,7 @@ setup(
                   extra_compile_args = extra_compile_args,
                   extra_link_args = extra_link_args,
                   libraries = libraries,
-                  define_macros = [('NPY_NO_DEPRECATED_API','NPY_1_7_API_VERSION'), ('USE_EDGE_DELIM',1)],
+                  define_macros = [('NPY_NO_DEPRECATED_API','NPY_1_7_API_VERSION')],
                   sources = [
                       'src/data/append_rank_tree_map.cc',
                       'src/data/attr_map.cc',

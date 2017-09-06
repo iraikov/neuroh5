@@ -63,7 +63,7 @@ namespace neuroh5
       assert(MPI_Comm_size(all_comm, &size) >= 0);
       assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
-      vector<uint8_t> sendbuf; 
+      vector<char> sendbuf; 
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       edge_map_t prj_edge_map;
       vector<uint32_t> edge_attr_num;

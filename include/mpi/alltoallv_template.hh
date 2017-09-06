@@ -26,7 +26,7 @@ namespace neuroh5
                           const vector<T>& sendbuf,
                           vector<int>& recvcounts,
                           vector<int>& rdispls,
-                          vector<uint8_t>& recvbuf)
+                          vector<T>& recvbuf)
     {
 
       int ssize; size_t size;

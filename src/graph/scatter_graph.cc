@@ -108,7 +108,7 @@ namespace neuroh5
       assert(MPI_Type_create_resized(header_struct_type, 0, sizeof(header), &header_type) == MPI_SUCCESS);
       assert(MPI_Type_commit(&header_type) == MPI_SUCCESS);
       
-      vector<uint8_t> sendbuf; 
+      vector<char> sendbuf; 
       vector<int> sendcounts(size,0), sdispls(size,0);
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
@@ -191,17 +191,14 @@ namespace neuroh5
         } // rank < io_size
 
       MPI_Comm_free(&io_comm);
-      printf("rank %u: sendbuf.size() = %u\n", rank, sendbuf.size());
 
-      vector<uint8_t> recvbuf;
+      vector<char> recvbuf;
       vector<int> recvcounts, rdispls;
-      assert(mpi::alltoallv_vector(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                   recvcounts, rdispls, recvbuf) >= 0);
+      assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                         recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
-
-      printf("rank %u: recvbuf.size() = %u\n", rank, recvbuf.size());
 
       uint64_t num_unpacked_edges=0;
       if (recvbuf.size() > 0)

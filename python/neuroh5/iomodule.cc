@@ -2975,18 +2975,22 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t edge_index, edge_count, block_index, block_count, io_size, comm_size, count;
+    Py_ssize_t edge_index, edge_count, block_index, block_count, block_cache_size, io_size, comm_size, count;
 
     string file_name;
     MPI_Comm *comm_ptr;
-    
+
+    int opt_attrs;
     graph::EdgeMapType edge_map_type;
     map<NODE_IDX_T, rank_t> node_rank_map;
     vector<pop_range_t> pop_vector;
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     set< pair<pop_t, pop_t> > pop_pairs;
+    vector<pair <pop_t, string> > pop_labels;
     vector<pair<string,string> > prj_names;
     vector < edge_map_t > prj_vector;
+    vector< pair<string,hid_t> >  edge_attr_info;
+    vector<uint32_t> edge_attr_num;
     vector < vector <vector<string>> > edge_attr_name_vector;
     string src_pop_name, dst_pop_name;
     size_t total_num_nodes, total_num_edges, local_num_edges;
@@ -3063,7 +3067,7 @@ extern "C"
     NeuroH5CellAttrGenState *state;
   } PyNeuroH5CellAttrGenState;
   
-
+#ifdef PRJ_GEN
   static PyObject *
   neuroh5_prj_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
@@ -3078,8 +3082,13 @@ extern "C"
     vector<pop_range_t> pop_vector;
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     set< pair<pop_t, pop_t> > pop_pairs;
+    vector<pair <pop_t, string> > pop_labels;
     vector<pair<string,string> > prj_names;
+    vector< pair<string,hid_t> >  edge_attr_info;
+    vector<uint32_t> edge_attr_num;
     size_t total_num_nodes;
+
+    edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
@@ -3122,10 +3131,22 @@ extern "C"
     // Read population info to determine total_num_nodes
     assert(cell::read_population_ranges(*comm_ptr, string(file_name),
                                         pop_ranges, pop_vector, total_num_nodes) >= 0);
+    assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
     assert(cell::read_population_combos(*comm_ptr, string(file_name), pop_pairs) >= 0);
 
+    if (opt_attrs>0)
+      {
+
+        assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, "Attributes",
+                                          edge_attr_info) >= 0);
+        assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
+        
+        assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+      }
+    
     hsize_t num_blocks = graph::projection_num_blocks(*comm_ptr, string(file_name),
                                                       src_pop_name, dst_pop_name);
+
     
 
     /* Create a new generator state and initialize it */
@@ -3144,6 +3165,7 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
 
+    py_ngg->state->opt_attrs     = opt_attrs;
     py_ngg->state->edge_index    = 0;
     py_ngg->state->edge_count    = 0;
     py_ngg->state->block_index   = 0;
@@ -3156,10 +3178,14 @@ extern "C"
     py_ngg->state->pop_vector    = pop_vector;
     py_ngg->state->pop_ranges    = pop_ranges;
     py_ngg->state->pop_pairs     = pop_pairs;
+    py_ngg->state->pop_labels    = pop_labels;
+    py_ngg->state->edge_attr_info = edge_attr_info;
+    py_ngg->state->edge_attr_num  = edge_attr_num;
     
     return (PyObject *)py_ngg;
     
   }
+#endif
   
   static PyObject *
   neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -3619,6 +3645,7 @@ extern "C"
     
     return NULL;
   }
+  
 #ifdef PRJ_GEN
   static PyObject *
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
@@ -3630,25 +3657,30 @@ extern "C"
     if (py_ngg->state->block_index < py_ngg->state->block_count)
       {
         /* edge_index = edge_count-1 means that the block is exhausted. */
-        if (py_ntrg->state->edge_index < py_ntrg->state->edge_count)
+        if (py_ngg->state->edge_index < py_ngg->state->edge_count)
           {
           }
         else
           {
             // If the end of the current cache block has been reached,
             // read the next block
-            py_ntrg->state->prj_vector.clear();
+            py_ngg->state->prj_vector.clear();
 
 
             int status;
             
-            status = graph::scatter_projection(all_comm, io_comm, io_size, edge_map_type, header_type,
-                                               size_type, file_name,
-                                               prj_names[i].first, prj_names[i].second,
-                                               opt_attrs, node_rank_map, pop_vector, pop_ranges, pop_pairs,
-                                               prj_vector, edge_attr_names_vector);
+            status = graph::scatter_projection(all_comm, io_size, py_ngg->state->edge_map_type, 
+                                               file_name, prj_names[i].first, prj_names[i].second,
+                                               py_ngg->opt_attrs, py_ngg->state->node_rank_map,
+                                               py_ngg->state->pop_vector, py_ngg->state->pop_ranges,
+                                               py_ngg->state->pop_labels, py_ngg->state->pop_pairs,
+                                               py_ngg->state->edge_attr_info, py_ngg->state->edge_attr_num,
+                                               py_ngg->state->prj_vector, py_ngg->state->edge_attr_names_vector,
+                                               py_ngg->state->block_index, py_ngg->state->block_cache_size);
+
+            
             assert (status >= 0);
-            py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
+            //py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
             py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
             py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
           }
@@ -3698,7 +3730,8 @@ extern "C"
     
     return NULL;
   }
-#endif  
+#endif
+  
   // NeuroH5 read iterator
   PyTypeObject PyNeuroH5TreeGen_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)

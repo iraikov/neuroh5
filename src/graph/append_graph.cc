@@ -266,7 +266,7 @@ namespace neuroh5
       assert(MPI_Type_commit(&header_type) == MPI_SUCCESS);
 
       // send buffer and structures for MPI Alltoall operation
-      vector<uint8_t> sendbuf;
+      vector<char> sendbuf;
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
       // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
@@ -293,7 +293,7 @@ namespace neuroh5
           recvbuf_size += recvcounts[p];
         }
 
-      vector<uint8_t> recvbuf;
+      vector<char> recvbuf;
       recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv

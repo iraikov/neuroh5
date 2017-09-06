@@ -21,7 +21,7 @@ namespace neuroh5
   {
     void serialize_edge_map (const edge_map_t& edge_map, 
                              size_t &num_packed_edges,
-                             vector<uint8_t> &sendbuf);
+                             vector<char> &sendbuf);
     
     
     void serialize_rank_edge_map (const size_t num_ranks,
@@ -29,11 +29,11 @@ namespace neuroh5
                                   const rank_edge_map_t& prj_rank_edge_map, 
                                   size_t &num_packed_edges,
                                   vector<int>& sendcounts,
-                                  vector<uint8_t> &sendbuf,
+                                  vector<char> &sendbuf,
                                   vector<int> &sdispls);
 
     void deserialize_rank_edge_map (const size_t num_ranks,
-                                    const vector<uint8_t> &recvbuf,
+                                    const vector<char> &recvbuf,
                                     const vector<int>& recvcounts,
                                     const vector<int>& rdispls,
                                     const vector<uint32_t> &edge_attr_num,
@@ -41,7 +41,7 @@ namespace neuroh5
                                     uint64_t& num_unpacked_edges
                                     );
     
-    void deserialize_edge_map (const vector<uint8_t> &recvbuf,
+    void deserialize_edge_map (const vector<char> &recvbuf,
                                const vector<uint32_t> &edge_attr_num,
                                edge_map_t& prj_edge_map,
                                uint64_t& num_unpacked_edges

@@ -23,7 +23,7 @@ vpath %.cc $(SRC_DIR):$(DRIVER_SRC_DIR)
 
 define make-goal
 $1/%.o: %.cc
-	$(CC) -std=c++11 -Wall -Wno-unused-but-set-variable -DUSE_EDGE_DELIM $(INCLUDES) -g -c $$< -o $$@
+	$(CC) -std=c++11 -Wall -Wno-unused-but-set-variable $(INCLUDES) -g -c $$< -o $$@
 endef
 
 .PHONY: all checkdirs clean

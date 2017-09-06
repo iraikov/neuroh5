@@ -5,7 +5,7 @@ comm = MPI.COMM_WORLD
 #print "rank = ", comm.Get_rank()
 #print "size = ", comm.Get_size()
 
-(g, a) = scatter_read_graph(comm, "data/dentate_test.h5", 2)
+(g, a) = scatter_read_graph(comm, "data/dentate_test1.h5", 2)
 print (g)
 
 #xprint a

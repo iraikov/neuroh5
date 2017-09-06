@@ -33,9 +33,10 @@ int main (int argc, char **argv)
   adj_vector.push_back(0);
   adj_vector.push_back(1);
   adj_vector.push_back(2);
-  
+  vector<uint8_t> sendbuf;
+
   edge_map.insert(make_pair(99, make_pair(adj_vector, attr_val)));
-  std::basic_istream<uint8_t> ss;
+  std::stringstream ss;
           
   {
     cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive
@@ -43,9 +44,11 @@ int main (int argc, char **argv)
     
   } // archive goes out of scope, ensuring all contents are flushed
 
+  copy(istream_iterator<char>(ss), istream_iterator<char>(), back_inserter(sendbuf));
   
   {
-    cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
+    stringstream ss_out(sendbuf);
+    cereal::PortableBinaryInputArchive iarchive(ss_out); // Create an input archive
 
     iarchive(edge_map_out); // Read the data from the archive
   }
