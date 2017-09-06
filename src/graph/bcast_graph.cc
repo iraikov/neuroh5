@@ -15,8 +15,9 @@
 #include "cell_populations.hh"
 #include "validate_edge_list.hh"
 #include "scatter_graph.hh"
-#include "bcast_string_vector.hh"
+#include "bcast_template.hh"
 #include "serialize_edge.hh"
+#include "serialize_data.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -32,8 +33,6 @@
 
 using namespace std;
 using namespace neuroh5;
-
-#define MAX_ATTR_NAME 1024
 
 namespace neuroh5
 {
@@ -153,16 +152,22 @@ namespace neuroh5
         } // rank == 0
     
       // 0. Broadcast the number of attributes of each type to all ranks
-      edge_attr_num.resize(4);
+      edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
       assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
-      edge_attr_names.resize(4);
-      for (size_t aidx=0; aidx<edge_attr_names.size(); aidx++)
-        {
-          if (edge_attr_num[aidx] > 0)
-            {
-              assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME, edge_attr_names[aidx]) == MPI_SUCCESS);
-            }
-        }
+      {
+        vector<char> names_sendbuf;
+        if (rank == 0)
+          {
+            data::serialize_data(edge_attr_names, names_sendbuf);
+          }
+        
+        assert(MPI_Bcast(&names_sendbuf[0], names_sendbuf.size(), MPI_CHAR, 0, all_comm) >= 0);
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(names_sendbuf, edge_attr_names);
+          }
+      }
       
       uint32_t sendbuf_size = sendbuf.size();
       assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);

@@ -15,7 +15,8 @@
 #include "debug.hh"
 #include "path_names.hh"
 #include "group_contents.hh"
-#include "bcast_string_vector.hh"
+#include "bcast_template.hh"
+#include "serialize_data.hh"
 
 
 #undef NDEBUG
@@ -57,7 +58,7 @@ namespace neuroh5
 
         assert(MPI_Comm_size(comm, &size) >= 0);
         assert(MPI_Comm_rank(comm, &rank) >= 0);
-
+        
         vector<string> prj_src_pop_names, prj_dst_pop_names;
         
         // MPI rank 0 reads and broadcasts the number of ranges
@@ -90,8 +91,35 @@ namespace neuroh5
           }
 
         // Broadcast projection names
-        ierr = mpi::bcast_string_vector(comm, 0, MAX_PRJ_NAME, prj_src_pop_names);
-        ierr = mpi::bcast_string_vector(comm, 0, MAX_PRJ_NAME, prj_dst_pop_names);
+        {
+          vector<char> sendbuf;
+          if (rank == 0)
+            {
+              data::serialize_data(prj_src_pop_names, sendbuf);
+            }
+          
+          assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+          
+          if (rank != 0)
+            {
+              data::deserialize_data(sendbuf, prj_src_pop_names);
+            }
+        }
+        {
+          vector<char> sendbuf;
+          if (rank == 0)
+            {
+              data::serialize_data(prj_dst_pop_names, sendbuf);
+            }
+          
+          assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+          
+          if (rank != 0)
+            {
+              data::deserialize_data(sendbuf, prj_dst_pop_names);
+            }
+        }
+
 
         for (size_t i=0; i<prj_dst_pop_names.size(); i++)
           {

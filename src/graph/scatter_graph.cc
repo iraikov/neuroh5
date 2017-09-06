@@ -16,9 +16,10 @@
 #include "cell_populations.hh"
 #include "validate_edge_list.hh"
 #include "scatter_graph.hh"
-#include "bcast_string_vector.hh"
+#include "bcast_template.hh"
 #include "alltoallv_template.hh"
 #include "serialize_edge.hh"
+#include "serialize_data.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -33,8 +34,6 @@
 #include <cassert>
 
 using namespace std;
-
-#define MAX_ATTR_NAME 1024
 
 namespace neuroh5
 {
@@ -114,7 +113,7 @@ namespace neuroh5
       rank_edge_map_t prj_rank_edge_map;
       edge_map_t prj_edge_map;
       size_t num_edges = 0, total_prj_num_edges = 0;
-      vector< vector<string> > edge_attr_names(data::AttrVal::num_attr_types);
+      vector< vector<string> > edge_attr_names;
       
       DEBUG("projection ", src_pop_name, " -> ", dst_pop_name, "\n");
 
@@ -213,15 +212,20 @@ namespace neuroh5
 
       if (opt_attrs)
         {
-          for (size_t aidx=0; aidx<edge_attr_names.size(); aidx++)
+          vector<char> sendbuf;
+          if (rank == 0)
             {
-              if (edge_attr_num[aidx] > 0)
-                {
-                  assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME, edge_attr_names[aidx]) == MPI_SUCCESS);
-                }
+              data::serialize_data(edge_attr_names, sendbuf);
             }
           
+          assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, all_comm) >= 0);
+          
+          if (rank != 0)
+            {
+              data::deserialize_data(sendbuf, edge_attr_names);
+            }
           edge_attr_names_vector.push_back(edge_attr_names);
+          
           DEBUG("scatter: finished broadcasting attribute names for projection ", src_pop_name, " -> ", dst_pop_name);
         }
       

@@ -107,7 +107,6 @@ setup(
                       'src/graph/append_projection.cc',
                       'src/mpi/alltoallv_packed.cc',
                       'src/mpi/rank_range.cc',
-                      'src/mpi/bcast_string_vector.cc',
                       'src/mpi/pack_tree.cc',
                       'src/hdf5/dataset_num_elements.cc',
                       'src/hdf5/read_link_names.cc',

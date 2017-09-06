@@ -16,7 +16,7 @@
 #include <set>
 
 #include "neuroh5_types.hh"
-#include "bcast_string_vector.hh"
+#include "serialize_data.hh"
 #include "path_names.hh"
 
 #undef NDEBUG
@@ -93,9 +93,21 @@ namespace neuroh5
           assert(H5Fclose(file) >= 0);
         }
 
-      ierr = mpi::bcast_string_vector (comm, 0,
-                                       MAX_POP_NAME_LEN,
-                                       pop_names);
+      {
+        vector<char> sendbuf;
+        if (rank == 0)
+          {
+            data::serialize_data(pop_names, sendbuf);
+          }
+        
+        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(sendbuf, pop_names);
+          }
+      }
+
       return ierr;
     }
 
@@ -420,8 +432,20 @@ namespace neuroh5
             
         }
 
-
-      ierr = mpi::bcast_string_vector(comm, 0, MAX_POP_NAME_LEN, pop_name_vector);
+      {
+        vector<char> sendbuf;
+        if (rank == 0)
+          {
+            data::serialize_data(pop_name_vector, sendbuf);
+          }
+        
+        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(sendbuf, pop_name_vector);
+          }
+      }
 
       for (uint16_t i=0; i<pop_name_vector.size(); i++)
         {

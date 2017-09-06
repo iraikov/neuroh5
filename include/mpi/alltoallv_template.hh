@@ -1,3 +1,11 @@
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+//==============================================================================
+///  @file bcast_string_vector.cc
+///
+///  Function for sending data via MPI Alltoallv.
+///
+///  Copyright (C) 2017 Project Neurograph.
+//==============================================================================
 
 #include <mpi.h>
 

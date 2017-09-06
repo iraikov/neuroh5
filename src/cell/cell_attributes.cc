@@ -9,7 +9,6 @@
 
 #include "neuroh5_types.hh"
 #include "pack_tree.hh"
-#include "bcast_string_vector.hh"
 #include "path_names.hh"
 #include "read_template.hh"
 #include "write_template.hh"
@@ -18,6 +17,7 @@
 #include "create_group.hh"
 #include "attr_map.hh"
 #include "infer_datatype.hh"
+#include "serialize_data.hh"
 
 #include <hdf5.h>
 #include <mpi.h>
@@ -726,7 +726,6 @@ namespace neuroh5
       vector< size_t > num_attrs;
       num_attrs.resize(data::AttrMap::num_attr_types);
       vector< vector<string> > attr_names;
-      attr_names.resize(data::AttrMap::num_attr_types);
 
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
@@ -846,13 +845,21 @@ namespace neuroh5
         }
     
       // 5. Broadcast the names of each attributes of each type to all ranks
-      assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_float]) >= 0);
-      assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_uint8]) >= 0);
-      assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_int8]) >= 0);
-      assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_uint16]) >= 0);
-      assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_int16]) >= 0);
-      assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_uint32]) >= 0);
-      assert(mpi::bcast_string_vector(all_comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_int32]) >= 0);
+      {
+        vector<char> sendbuf;
+        if (rank == 0)
+          {
+            data::serialize_data(attr_names, sendbuf);
+          }
+        
+        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, all_comm) >= 0);
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(sendbuf, attr_names);
+          }
+      }
+      
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
         {
           attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i],i);
@@ -1178,13 +1185,22 @@ namespace neuroh5
         }
     
       // Broadcast the names of each attributes of each type to all ranks
-      assert(mpi::bcast_string_vector(comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_float]) >= 0);
-      assert(mpi::bcast_string_vector(comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_uint8]) >= 0);
-      assert(mpi::bcast_string_vector(comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_int8]) >= 0);
-      assert(mpi::bcast_string_vector(comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_uint16]) >= 0);
-      assert(mpi::bcast_string_vector(comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_int16]) >= 0);
-      assert(mpi::bcast_string_vector(comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_uint32]) >= 0);
-      assert(mpi::bcast_string_vector(comm, 0, MAX_ATTR_NAME_LEN, attr_names[data::AttrMap::attr_index_int32]) >= 0);
+      {
+        vector<char> sendbuf;
+        if (rank == 0)
+          {
+            data::serialize_data(attr_names, sendbuf);
+          }
+        
+        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(sendbuf, attr_names);
+          }
+      }
+          
+      
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
         {
           attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i],i);

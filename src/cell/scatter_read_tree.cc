@@ -22,7 +22,6 @@
 #include "alltoallv_packed.hh"
 #include "pack_tree.hh"
 #include "dataset_num_elements.hh"
-#include "bcast_string_vector.hh"
 #include "enum_type.hh"
 #include "path_names.hh"
 #include "read_template.hh"
