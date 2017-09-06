@@ -80,131 +80,107 @@ namespace neuroh5
         }
       MPI_Barrier(all_comm);
 
-      // Create an MPI datatype to describe the sizes of edge structures
-      Size sizeval;
-      MPI_Datatype size_type, size_struct_type;
-      MPI_Datatype size_fld_types[1] = { MPI_UINT32_T };
-      int size_blocklen[1] = { 1 };
-      MPI_Aint size_disp[1];
-      
-      size_disp[0] = reinterpret_cast<const unsigned char*>(&sizeval.size) - 
-        reinterpret_cast<const unsigned char*>(&sizeval);
-      assert(MPI_Type_create_struct(1, size_blocklen, size_disp, size_fld_types, &size_struct_type) == MPI_SUCCESS);
-      assert(MPI_Type_create_resized(size_struct_type, 0, sizeof(sizeval), &size_type) == MPI_SUCCESS);
-      assert(MPI_Type_commit(&size_type) == MPI_SUCCESS);
-      
-      EdgeHeader header;
-      MPI_Datatype header_type, header_struct_type;
-      MPI_Datatype header_fld_types[2] = { NODE_IDX_MPI_T, MPI_UINT32_T };
-      int header_blocklen[2] = { 1, 1 };
-      MPI_Aint header_disp[2];
-      
-      header_disp[0] = reinterpret_cast<const unsigned char*>(&header.key) - 
-        reinterpret_cast<const unsigned char*>(&header);
-      header_disp[1] = reinterpret_cast<const unsigned char*>(&header.size) - 
-        reinterpret_cast<const unsigned char*>(&header);
-      assert(MPI_Type_create_struct(2, header_blocklen, header_disp, header_fld_types, &header_struct_type) == MPI_SUCCESS);
-      assert(MPI_Type_create_resized(header_struct_type, 0, sizeof(header), &header_type) == MPI_SUCCESS);
-      assert(MPI_Type_commit(&header_type) == MPI_SUCCESS);
-      
-      vector<char> sendbuf; 
-      vector<int> sendcounts(size,0), sdispls(size,0);
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
       edge_map_t prj_edge_map;
       size_t num_edges = 0, total_prj_num_edges = 0;
-      vector< vector<string> > edge_attr_names;
-      
-      DEBUG("projection ", src_pop_name, " -> ", dst_pop_name, "\n");
-
-      if (rank < (int)io_size)
-        {
-          DST_BLK_PTR_T block_base;
-          DST_PTR_T edge_base, edge_count;
-          NODE_IDX_T dst_start, src_start;
-          vector<DST_BLK_PTR_T> dst_blk_ptr;
-          vector<NODE_IDX_T> dst_idx;
-          vector<DST_PTR_T> dst_ptr;
-          vector<NODE_IDX_T> src_idx;
-          data::NamedAttrVal edge_attr_values;
-          
-          uint32_t dst_pop_idx=0, src_pop_idx=0;
-          bool src_pop_set = false, dst_pop_set = false;
-      
-          for (size_t i=0; i< pop_labels.size(); i++)
-            {
-              if (src_pop_name == get<1>(pop_labels[i]))
-                {
-                  src_pop_idx = get<0>(pop_labels[i]);
-                  src_pop_set = true;
-                }
-              if (dst_pop_name == get<1>(pop_labels[i]))
-                {
-                  dst_pop_idx = get<0>(pop_labels[i]);
-                  dst_pop_set = true;
-                }
-            }
-          assert(dst_pop_set && src_pop_set);
-
-          dst_start = pop_vector[dst_pop_idx].start;
-          src_start = pop_vector[src_pop_idx].start;
-
-          DEBUG("Task ",rank," scatter: reading projection ", src_pop_name, " -> ", dst_pop_name);
-          assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
-                                        dst_start, src_start, total_prj_num_edges,
-                                        block_base, edge_base, dst_blk_ptr, dst_idx,
-                                        dst_ptr, src_idx, offset, numitems) >= 0);
-          
-          DEBUG("Task ",rank," scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
-          // validate the edges
-          assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                    pop_ranges, pop_pairs) == true);
-          
-          
-          if (opt_attrs)
-            {
-              edge_count = src_idx.size();
-              assert(graph::read_all_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                     "Attributes", edge_base, edge_count,
-                                                     edge_attr_info, edge_attr_values) >= 0);
-            }
-
-          // append to the edge map
-          assert(append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                      edge_attr_values, node_rank_map, num_edges, prj_rank_edge_map,
-                                      edge_map_type) >= 0);
-          edge_attr_values.attr_names(edge_attr_names);
-          
-          // ensure that all edges in the projection have been read and appended to edge_list
-          assert(num_edges == src_idx.size());
-          
-          size_t num_packed_edges = 0;
-          DEBUG("scatter: packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
-          
-          data::serialize_rank_edge_map (size, rank, prj_rank_edge_map, 
-                                         num_packed_edges, sendcounts, sendbuf, sdispls);
-
-          // ensure the correct number of edges is being packed
-          assert(num_packed_edges == num_edges);
-          DEBUG("scatter: finished packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
-        } // rank < io_size
-
-      MPI_Comm_free(&io_comm);
-
-      vector<char> recvbuf;
-      vector<int> recvcounts, rdispls;
-      assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                         recvcounts, rdispls, recvbuf) >= 0);
-      sendbuf.clear();
-      sendcounts.clear();
-      sdispls.clear();
-
       uint64_t num_unpacked_edges=0;
-      if (recvbuf.size() > 0)
+      vector< vector<string> > edge_attr_names;
+
+      {
+        vector<char> recvbuf;
+        vector<int> recvcounts, rdispls;
+
         {
-          data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
-                                           prj_edge_map, num_unpacked_edges);
+          vector<char> sendbuf; 
+          vector<int> sendcounts(size,0), sdispls(size,0);
+
+          DEBUG("projection ", src_pop_name, " -> ", dst_pop_name, "\n");
+
+          if (rank < (int)io_size)
+            {
+              DST_BLK_PTR_T block_base;
+              DST_PTR_T edge_base, edge_count;
+              NODE_IDX_T dst_start, src_start;
+              vector<DST_BLK_PTR_T> dst_blk_ptr;
+              vector<NODE_IDX_T> dst_idx;
+              vector<DST_PTR_T> dst_ptr;
+              vector<NODE_IDX_T> src_idx;
+              data::NamedAttrVal edge_attr_values;
+            
+              uint32_t dst_pop_idx=0, src_pop_idx=0;
+              bool src_pop_set = false, dst_pop_set = false;
+            
+              for (size_t i=0; i< pop_labels.size(); i++)
+                {
+                  if (src_pop_name == get<1>(pop_labels[i]))
+                    {
+                      src_pop_idx = get<0>(pop_labels[i]);
+                      src_pop_set = true;
+                    }
+                  if (dst_pop_name == get<1>(pop_labels[i]))
+                    {
+                      dst_pop_idx = get<0>(pop_labels[i]);
+                      dst_pop_set = true;
+                    }
+                }
+              assert(dst_pop_set && src_pop_set);
+
+              dst_start = pop_vector[dst_pop_idx].start;
+              src_start = pop_vector[src_pop_idx].start;
+
+              DEBUG("Task ",rank," scatter: reading projection ", src_pop_name, " -> ", dst_pop_name);
+              assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
+                                            dst_start, src_start, total_prj_num_edges,
+                                            block_base, edge_base, dst_blk_ptr, dst_idx,
+                                            dst_ptr, src_idx, offset, numitems) >= 0);
+          
+              DEBUG("Task ",rank," scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
+              // validate the edges
+              assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                        pop_ranges, pop_pairs) == true);
+          
+          
+              if (opt_attrs)
+                {
+                  edge_count = src_idx.size();
+                  assert(graph::read_all_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
+                                                         "Attributes", edge_base, edge_count,
+                                                         edge_attr_info, edge_attr_values) >= 0);
+                }
+
+              // append to the edge map
+              assert(append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                          edge_attr_values, node_rank_map, num_edges, prj_rank_edge_map,
+                                          edge_map_type) >= 0);
+              edge_attr_values.attr_names(edge_attr_names);
+          
+              // ensure that all edges in the projection have been read and appended to edge_list
+              assert(num_edges == src_idx.size());
+          
+              size_t num_packed_edges = 0;
+              DEBUG("scatter: packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
+          
+              data::serialize_rank_edge_map (size, rank, prj_rank_edge_map, 
+                                             num_packed_edges, sendcounts, sendbuf, sdispls);
+
+              // ensure the correct number of edges is being packed
+              assert(num_packed_edges == num_edges);
+              DEBUG("scatter: finished packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
+            } // rank < io_size
+
+          MPI_Comm_free(&io_comm);
+
+          assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                             recvcounts, rdispls, recvbuf) >= 0);
         }
+
+        if (recvbuf.size() > 0)
+          {
+            data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
+                                             prj_edge_map, num_unpacked_edges);
+          }
+      }
       
       DEBUG("scatter: rank ", rank, " unpacked ", num_unpacked_edges, " edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
@@ -231,8 +207,6 @@ namespace neuroh5
       
       assert(MPI_Barrier(all_comm) == MPI_SUCCESS);
 
-      MPI_Type_free(&header_type);
-      MPI_Type_free(&size_type);
 
       return 0;
     }
