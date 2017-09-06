@@ -58,7 +58,6 @@ namespace neuroh5
           recvbuf_size += recvcounts[p];
         }
 
-      printf("alltoallv: recvbuf_size = %u\n", recvbuf_size);
       //assert(recvbuf_size > 0);
       recvbuf.resize(recvbuf_size, 0);
     

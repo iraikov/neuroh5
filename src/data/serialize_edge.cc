@@ -61,28 +61,33 @@ namespace neuroh5
       size_t sendpos = 0;
       for (const int& key_rank : rank_sequence)
         {
+          std::stringstream ss; 
           sdispls[key_rank] = sendpos;
           
-          auto it1 = prj_rank_edge_map.find(key_rank); 
-          std::stringstream ss;
-          const edge_map_t& edge_map = it1->second;
-
-          {
-            cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive
-            oarchive(edge_map); // Write the data to the archive
-          } // archive goes out of scope, ensuring all contents are flushed
-
-          for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
+          auto it1 = prj_rank_edge_map.find(key_rank);
+          if (it1 != prj_rank_edge_map.end())
             {
-              NODE_IDX_T key_node = it->first;
-              const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
-
-              num_packed_edges += adj_vector.size();
+              const edge_map_t edge_map = it1->second;
+              
+              {
+                
+                cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive
+                oarchive(edge_map); // Write the data to the archive
+                
+              } // archive goes out of scope, ensuring all contents are flushed
+              string sstr = ss.str();
+              copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
+              
+              for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
+                {
+                  NODE_IDX_T key_node = it->first;
+                  const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
+                  
+                  num_packed_edges += adj_vector.size();
+                }
+              
+              sendpos = sendbuf.size();
             }
-          string sstr = ss.str();
-          copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
-
-          sendpos = sendbuf.size();
           sendcounts[key_rank] = sendpos - sdispls[key_rank];
 
         }
