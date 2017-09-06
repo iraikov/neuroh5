@@ -57,9 +57,10 @@ namespace neuroh5
           rdispls[p] = rdispls[p-1] + recvcounts[p-1];
           recvbuf_size += recvcounts[p];
         }
-      
+
+      printf("alltoallv: recvbuf_size = %u\n", recvbuf_size);
       //assert(recvbuf_size > 0);
-      recvbuf.resize(recvbuf_size,0);
+      recvbuf.resize(recvbuf_size, 0);
     
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,

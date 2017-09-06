@@ -18,7 +18,7 @@
 #include "write_projection.hh"
 #include "path_names.hh"
 #include "sort_permutation.hh"
-#include "pack_edge.hh"
+#include "serialize_edge.hh"
 
 #include <vector>
 #include <map>
@@ -279,9 +279,8 @@ namespace neuroh5
       // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
 
-      mpi::pack_rank_edge_map (all_comm, header_type, size_type,
-                               rank_edge_map, num_packed_edges,
-                               sendcounts, sendbuf, sdispls);
+      data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
+                                     sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
       DEBUG("Task ",rank,": ","write_graph: num_packed_edges = ", num_packed_edges, "\n");
       
@@ -316,9 +315,8 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       if (recvbuf_size > 0)
         {
-          mpi::unpack_rank_edge_map (all_comm, header_type, size_type, io_size,
-                                     recvbuf, recvcounts, rdispls, edge_attr_num,
-                                     prj_edge_map, num_unpacked_edges);
+          data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
+                                           prj_edge_map, num_unpacked_edges);
         }
       MPI_Barrier(all_comm);
       DEBUG("Task ",rank,": ","write_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");

@@ -104,9 +104,13 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
     max_in_degree=0
     min_out_degree=sys.maxint
     max_out_degree=0
+    
     max_in_degree_node_id=0
+    min_in_degree_node_id=0
     max_out_degree_node_id=0
+    min_out_degree_node_id=0
     max_total_degree_node_id=0
+    min_total_degree_node_id=0
 
     for (v,ns) in neighbors_dict.iteritems():
         in_degree  = len(ns['src'])

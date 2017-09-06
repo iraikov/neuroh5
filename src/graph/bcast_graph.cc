@@ -16,7 +16,7 @@
 #include "validate_edge_list.hh"
 #include "scatter_graph.hh"
 #include "bcast_string_vector.hh"
-#include "pack_edge.hh"
+#include "serialize_edge.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -144,8 +144,7 @@ namespace neuroh5
           
           size_t num_packed_edges = 0; 
           DEBUG("bcast: packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
-          int sendpos = 0;
-          mpi::pack_edge_map (all_comm, header_type, size_type, prj_edge_map, num_packed_edges, sendpos, sendbuf);
+          data::serialize_edge_map (prj_edge_map, num_packed_edges, sendbuf);
 
           // ensure the correct number of edges is being packed
           assert(num_packed_edges == num_edges);
@@ -171,9 +170,10 @@ namespace neuroh5
 
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_PACKED, 0, all_comm) == MPI_SUCCESS);
           
+      size_t num_unpacked_edges = 0; 
       if (rank > 0)
         {
-          mpi::unpack_edge_map (all_comm, header_type, size_type, sendbuf, edge_attr_num, prj_edge_map);
+          data::deserialize_edge_map (sendbuf, edge_attr_num, prj_edge_map, num_unpacked_edges);
       
           DEBUG("bcast: finished unpacking edges for projection ", src_pop_name, " -> ", dst_pop_name);
         }

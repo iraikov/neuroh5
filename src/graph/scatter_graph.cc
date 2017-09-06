@@ -191,24 +191,26 @@ namespace neuroh5
         } // rank < io_size
 
       MPI_Comm_free(&io_comm);
+      printf("rank %u: sendbuf.size() = %u\n", rank, sendbuf.size());
 
       vector<uint8_t> recvbuf;
       vector<int> recvcounts, rdispls;
-      assert(mpi::alltoallv_vector(all_comm, MPI_UINT8_T, sendcounts, sdispls, sendbuf,
+      assert(mpi::alltoallv_vector(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                    recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
 
+      printf("rank %u: recvbuf.size() = %u\n", rank, recvbuf.size());
+
       uint64_t num_unpacked_edges=0;
       if (recvbuf.size() > 0)
         {
-          
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
                                            prj_edge_map, num_unpacked_edges);
         }
       
-      DEBUG("scatter: rank ", rank, " finished unpacking edges for projection ", src_pop_name, " -> ", dst_pop_name);
+      DEBUG("scatter: rank ", rank, " unpacked ", num_unpacked_edges, " edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
       prj_vector.push_back(prj_edge_map);
 

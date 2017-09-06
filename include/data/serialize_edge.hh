@@ -19,6 +19,10 @@ namespace neuroh5
 {
   namespace data
   {
+    void serialize_edge_map (const edge_map_t& edge_map, 
+                             size_t &num_packed_edges,
+                             vector<uint8_t> &sendbuf);
+    
     
     void serialize_rank_edge_map (const size_t num_ranks,
                                   const size_t start_rank,
@@ -36,5 +40,12 @@ namespace neuroh5
                                     edge_map_t& prj_edge_map,
                                     uint64_t& num_unpacked_edges
                                     );
+    
+    void deserialize_edge_map (const vector<uint8_t> &recvbuf,
+                               const vector<uint32_t> &edge_attr_num,
+                               edge_map_t& prj_edge_map,
+                               uint64_t& num_unpacked_edges
+                               );
+
   }
 }

@@ -35,7 +35,7 @@ int main (int argc, char **argv)
   adj_vector.push_back(2);
   
   edge_map.insert(make_pair(99, make_pair(adj_vector, attr_val)));
-  std::stringstream ss;
+  std::basic_istream<uint8_t> ss;
           
   {
     cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive

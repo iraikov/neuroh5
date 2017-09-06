@@ -15,12 +15,12 @@
 #include <cassert>
 
 // type support
+#include "cereal/types/vector.hpp"
 #include "cereal/types/tuple.hpp"
 #include "cereal/types/map.hpp"
-#include "cereal/types/vector.hpp"
 #include "cereal/types/string.hpp"
 #include "cereal/types/complex.hpp"
-
+#include <cereal/types/memory.hpp>
 
 namespace neuroh5
 {
@@ -45,18 +45,20 @@ namespace neuroh5
       std::vector < std::vector <int16_t> >  int16_values;
       std::vector < std::vector <uint32_t> > uint32_values;
       std::vector < std::vector <int32_t> >  int32_values;
-    
+
+      AttrVal() {};
+      
       // This method lets cereal know which data members to serialize
       template<class Archive>
       void serialize(Archive & archive)
       {
-        archive( float_values,
-                 uint8_values,
-                 int8_values,
-                 uint16_values,
-                 int16_values,
-                 uint32_values,
-                 int32_values ); // serialize things by passing them to the archive
+        archive(float_values,
+                uint8_values,
+                int8_values,
+                uint16_values,
+                int16_values,
+                uint32_values,
+                int32_values); // serialize things by passing them to the archive
       }
 
       template<class T>
@@ -200,6 +202,25 @@ namespace neuroh5
       std::map<std::string, size_t> int16_names;
       std::map<std::string, size_t> uint32_names;
       std::map<std::string, size_t> int32_names;
+
+      template<class Archive>
+      void serialize(Archive & archive)
+      {
+        archive( float_names,
+                 uint8_names,
+                 int8_names,
+                 uint16_names,
+                 int16_names,
+                 uint32_names,
+                 int32_names,
+                 float_values,
+                 uint8_values,
+                 int8_values,
+                 uint16_values,
+                 int16_values,
+                 uint32_values,
+                 int32_values ); // serialize things by passing them to the archive
+      }
 
       size_t insert (std::string name, const std::vector<float> &value)
       {
