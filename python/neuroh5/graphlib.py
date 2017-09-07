@@ -92,7 +92,7 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
     return neighbors_dict
 
 
-def neighbor_degrees (comm, neighbors_dict, node_ranks):
+def neighbor_degrees (comm, neighbors_dict, node_ranks, verbose=False):
 
     rank = comm.Get_rank()
 
@@ -142,7 +142,7 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
     (global_max_in_degree, global_max_in_degree_node_id)       = comm.allreduce(sendobj=(max_in_degree,max_in_degree_node_id), op=MPI.MAXLOC)
     (global_min_out_degree, global_min_out_degree_node_id)     = comm.allreduce(sendobj=(min_out_degree,min_out_degree_node_id), op=MPI.MINLOC)
     (global_max_out_degree, global_max_out_degree_node_id)     = comm.allreduce(sendobj=(max_out_degree,max_out_degree_node_id), op=MPI.MAXLOC)
-    if rank == 0:
+    if rank == 0 and verbose:
         print 'neighbor_degrees: max degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_max_total_degree, global_max_total_degree_node_id,
                                                                                        global_max_in_degree, global_max_in_degree_node_id,
                                                                                        global_max_out_degree, global_max_out_degree_node_id)
@@ -155,7 +155,7 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
         ## For i-th neighbor, query the owning rank for its degree
         ith_neighbors=[]
 
-        if rank == 0:
+        if rank == 0 and verbose:
             print 'neighbor_degrees: rank %d: neighbor_index = %d' % (rank, neighbor_index)
         
         for (v,ns) in neighbors_dict.iteritems():
@@ -186,7 +186,7 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
         if sum_len_ith_neighbors == 0:
            break
         
-        if rank == 0:
+        if rank == 0 and verbose:
             print 'neighbor_degrees: rank %d: len of neighbors with index %d = %d' % (rank, neighbor_index, sum_len_ith_neighbors)
 
         def f (rank_degree_dict, v):
@@ -210,7 +210,7 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks):
     return degree_dict
         
 
-def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ranks):
+def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ranks, verbose=False):
     rank = comm.Get_rank()
 
     cc_dict = {}
@@ -224,7 +224,7 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
         
     neighbor_index=0
     while True:
-        if rank == 0:
+        if rank == 0 and verbose:
             print 'clustering_coefficient: rank %d: neighbor_index = %d' % (rank, neighbor_index)
 
         ## For i-th neighbor, query the owning rank for its neighbors
@@ -250,7 +250,7 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
                 
         ## Stop if all ranks have exhausted their lists of neighbors
         sum_len_ith_neighbors = comm.allreduce(sendobj=len(ith_neighbors), op=MPI.SUM)
-        if rank == 0:
+        if rank == 0 and verbose:
             print 'clustering_coefficient: rank %d: sum ith neighbors = %d' % (rank, sum_len_ith_neighbors)
         if sum_len_ith_neighbors == 0:
            break
