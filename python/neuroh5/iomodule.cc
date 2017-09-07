@@ -56,6 +56,7 @@
 #include "write_graph.hh"
 #include "append_graph.hh"
 #include "projection_names.hh"
+#include "edge_attributes.hh"
 
 using namespace std;
 using namespace neuroh5;
@@ -898,6 +899,106 @@ PyObject* py_build_attr_value(const CELL_IDX_T key,
                        attr_name_space.c_str(),
                        py_attrval);
 
+  return py_result;
+}
+
+
+template <class T>
+void build_edge_attr_vec (AttrVal& attr_val, vector < vector<T> > edge_attr_values)
+{
+  for (size_t attr_index=0; attr_index<attr_val.size_attr_vec<T>(); attr_index++)
+    {
+      vector<T> vec_value;
+      vec_value.push_back(attr_val.at<T>(attr_index, pos));
+      edge_attr_values.push_back(vec_value);
+    }
+}
+      
+      
+template <class T>
+void py_build_edge_attr_value (PyObject *py_attrval, vector < vector<T> > edge_attr_values,
+                               PyArray_Descr* numpy_type, size_t attr_index)
+{
+  for (size_t i=0; i<edge_attrs_values.size(); i++)
+    {
+      const vector<T> &attr_value = edge_attr_values[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, numpy_type);
+      float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+      
+      PyDict_SetItemString(py_attrval,
+                           (attr_names[attr_index][i]).c_str(),
+                           py_value);
+    }
+}
+
+
+PyObject* py_build_edge_value(const NODE_IDX_T key,
+                              const NODE_IDX_T adj, 
+                              const NODE_IDX_T pos, 
+                              AttrVal& attr_val,
+                              const string& attr_name_space,
+                              const vector <vector<string> >& attr_names,
+                              const int opt_attrs)
+{
+  PyObject *py_attrval = Py_None;
+  PyObject *py_attrmap = Py_None;
+  npy_intp dims[1];
+  npy_intp ind = 0;
+  
+  vector < vector <float> >    float_attrs;
+  vector < vector <uint8_t> >  uint8_attrs;
+  vector < vector <int8_t> >   int8_attrs;
+  vector < vector <uint16_t> > uint16_attrs;
+  vector < vector <int16_t> >  int16_attrs;
+  vector < vector <uint32_t> > uint32_attrs;
+  vector < vector <int32_t> >  int32_attrs;
+
+  if (opt_attrs>0)
+    {
+  
+      build_edge_attr_values<float>(attr_val, float_attrs);
+      build_edge_attr_values<uint8_t>(attr_val, uint8_attrs);
+      build_edge_attr_values<uint16_t>(attr_val, uint16_attrs);
+      build_edge_attr_values<uint32_t>(attr_val, uint32_attrs);
+      build_edge_attr_values<int8_t>(attr_val, int8_attrs);
+      build_edge_attr_values<int16_t>(attr_val, int16_attrs);
+      build_edge_attr_values<int32_t>(attr_val, int32_attrs);
+
+      py_attrval = PyDict_New();
+      py_attrmap = PyDict_New();
+
+      py_build_edge_attr_value (py_attrval, float_attrs,
+                                NPY_FLOAT, AttrMap::attr_index_float);
+      py_build_edge_attr_value (py_attrval, uint8_attrs,
+                                NPY_UINT8, AttrMap::attr_index_uint8);
+      py_build_edge_attr_value (py_attrval, uint16_attrs,
+                                NPY_UINT16, AttrMap::attr_index_uint16);
+      py_build_edge_attr_value (py_attrval, uint32_attrs,
+                                NPY_UINT32, AttrMap::attr_index_uint32);
+      py_build_edge_attr_value (py_attrval, int8_attrs,
+                                NPY_INT8, AttrMap::attr_index_int8);
+      py_build_edge_attr_value (py_attrval, int16_attrs,
+                                NPY_INT16, AttrMap::attr_index_int16);
+      py_build_edge_attr_value (py_attrval, int32_attrs,
+                                NPY_INT32, AttrMap::attr_index_int32);
+  
+      PyDict_SetItemString(py_attrmap,
+                           attr_name_space.c_str(),
+                           py_attrval);
+
+    }
+  
+  PyObject *py_result = PyTuple_New(3);
+
+  PyTuple_SetItem(py_result, 0, key);
+  PyTuple_SetItem(py_result, 1, adj);
+  PyTuple_SetItem(py_result, 2, py_attrmap);
+  
   return py_result;
 }
 
@@ -2975,7 +3076,7 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t edge_index, edge_count, block_index, block_count, block_cache_size, io_size, comm_size, count;
+    Py_ssize_t block_index, block_count, block_cache_size, io_size, comm_size;
 
     string file_name;
     MPI_Comm *comm_ptr;
@@ -2988,10 +3089,13 @@ extern "C"
     set< pair<pop_t, pop_t> > pop_pairs;
     vector<pair <pop_t, string> > pop_labels;
     vector<pair<string,string> > prj_names;
-    vector < edge_map_t > prj_vector;
+    edge_map_t edge_map;
+    edge_map_iter_t edge_map_iter;
+    vector<NODE_IDX_T>::const_iterator edge_iter;
     vector< pair<string,hid_t> >  edge_attr_info;
     vector<uint32_t> edge_attr_num;
-    vector < vector <vector<string>> > edge_attr_name_vector;
+    vector < vector<string> >  edge_attr_names;
+    string  edge_attr_name_space;
     string src_pop_name, dst_pop_name;
     size_t total_num_nodes, total_num_edges, local_num_edges;
 
@@ -3066,8 +3170,8 @@ extern "C"
     PyObject_HEAD
     NeuroH5CellAttrGenState *state;
   } PyNeuroH5CellAttrGenState;
+
   
-#ifdef PRJ_GEN
   static PyObject *
   neuroh5_prj_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
@@ -3131,7 +3235,7 @@ extern "C"
     // Read population info to determine total_num_nodes
     assert(cell::read_population_ranges(*comm_ptr, string(file_name),
                                         pop_ranges, pop_vector, total_num_nodes) >= 0);
-    assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
+    assert(cell::read_population_labels(*comm_ptr, file_name, pop_labels) >= 0);
     assert(cell::read_population_combos(*comm_ptr, string(file_name), pop_pairs) >= 0);
 
     if (opt_attrs>0)
@@ -3141,7 +3245,7 @@ extern "C"
                                           edge_attr_info) >= 0);
         assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
         
-        assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+        assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, *comm_ptr) == MPI_SUCCESS);
       }
     
     hsize_t num_blocks = graph::projection_num_blocks(*comm_ptr, string(file_name),
@@ -3166,8 +3270,6 @@ extern "C"
       }
 
     py_ngg->state->opt_attrs     = opt_attrs;
-    py_ngg->state->edge_index    = 0;
-    py_ngg->state->edge_count    = 0;
     py_ngg->state->block_index   = 0;
     py_ngg->state->block_count   = count;
     py_ngg->state->comm_ptr      = comm_ptr;
@@ -3181,11 +3283,11 @@ extern "C"
     py_ngg->state->pop_labels    = pop_labels;
     py_ngg->state->edge_attr_info = edge_attr_info;
     py_ngg->state->edge_attr_num  = edge_attr_num;
+    py_ngg->state->edge_attr_name_space  = "Attributes";
     
     return (PyObject *)py_ngg;
     
   }
-#endif
   
   static PyObject *
   neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -3646,27 +3748,48 @@ extern "C"
     return NULL;
   }
   
-#ifdef PRJ_GEN
+
   static PyObject *
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
+    PyObject *result;
     int size, rank;
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
     if (py_ngg->state->block_index < py_ngg->state->block_count)
       {
-        /* edge_index = edge_count-1 means that the block is exhausted. */
-        if (py_ngg->state->edge_index < py_ngg->state->edge_count)
+        if (py_ngg->state->edge_map_iter != py_ngg->state->edge_map.cend())
           {
+            vector<NODE_IDX_T>& adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
+            if (py_ngg->state->edge_iter != adj_vector.cend())
+              {
+                py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
+              }
+            else
+              {
+                py_ngg->state->edge_map_iter = next(py_ngg->state->edge_map_iter);
+                adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
+                py_ngg->state->edge_iter = adj_vector.cbegin();
+                
+              }
+
+            const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
+            result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
+                                         get<1>(py_ngg->state->edge_map_iter->second),
+                                         distance(py_ngg->state->edge_iter, adj_vector.cbegin()),
+                                         py_ngg->state->edge_attr_name_space,
+                                         py_ngg->state->edge_attr_names,
+                                         py_ngg->opt_attrs);
           }
         else
           {
             // If the end of the current cache block has been reached,
             // read the next block
-            py_ngg->state->prj_vector.clear();
+            py_ngg->state->edge_map.clear();
 
-
+            vector < vector < vector<string> > > edge_attr_name_vector;
+            vector <edge_map_t> prj_vector;
             int status;
             
             status = graph::scatter_projection(all_comm, io_size, py_ngg->state->edge_map_type, 
@@ -3675,62 +3798,28 @@ extern "C"
                                                py_ngg->state->pop_vector, py_ngg->state->pop_ranges,
                                                py_ngg->state->pop_labels, py_ngg->state->pop_pairs,
                                                py_ngg->state->edge_attr_info, py_ngg->state->edge_attr_num,
-                                               py_ngg->state->prj_vector, py_ngg->state->edge_attr_names_vector,
+                                               prj_vector, edge_attr_names_vector,
                                                py_ngg->state->block_index, py_ngg->state->block_cache_size);
-
-            
             assert (status >= 0);
-            //py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
-            py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
-            py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
-          }
 
-        PyObject *result = NULL;
-
-        if (py_ntrg->state->it_idx != py_ntrg->state->attr_map.index_set.cend())
-          {
-            const CELL_IDX_T key = *(py_ntrg->state->it_idx);
-            PyObject *elem = py_build_attr_value(key, py_ntrg->state->attr_map,
-                                                 py_ntrg->state->attr_name_space,
-                                                 py_ntrg->state->attr_names);
-            assert(elem != NULL);
-            py_ntrg->state->it_idx++;
-            py_ntrg->state->seq_index++;
-            result = Py_BuildValue("lO", key, elem);
-          }
-        else
-          {
-            switch (py_ntrg->state->pos)
-              {
-              case seq_next:
-                {
-                  py_ntrg->state->pos = seq_last;
-                  result = PyTuple_Pack(2, Py_None, Py_None);
-                  break;
-                }
-              case seq_last:
-                {
-                  py_ntrg->state->pos = seq_done;
-                  result = NULL;
-                  break;
-                }
-              case seq_done:
-                {
-                  result = NULL;
-                  break;
-                }
-              }
+            py_ngg->state->edge_attr_names = edge_attr_name_vector[0];
+            py_ngg->state->edge_map = prj_vector[0];
+            py_ngg->state->edge_map_iter = py_ngg->state->edge_map.cbegin();
+            py_ngg->state->edge_iter = get<0>(py_ngg->state->edge_map_iter->second).cbegin();
+            
+            py_ngg->state->block_index += py_ngg->state->block_cache_size;;
           }
         
-        /* Exceptions from PySequence_GetItem are propagated to the caller
-         * (elem will be NULL so we also return NULL).
-        */
         return result;
       }
+
+    /* Exceptions from PySequence_GetItem are propagated to the caller
+     * (elem will be NULL so we also return NULL).
+     */
     
     return NULL;
   }
-#endif
+
   
   // NeuroH5 read iterator
   PyTypeObject PyNeuroH5TreeGen_Type = {
