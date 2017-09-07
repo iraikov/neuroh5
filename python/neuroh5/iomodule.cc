@@ -904,7 +904,8 @@ PyObject* py_build_attr_value(const CELL_IDX_T key,
 
 
 template <class T>
-void build_edge_attr_vec (AttrVal& attr_val, vector < vector<T> > edge_attr_values)
+void build_edge_attr_vec (const AttrVal& attr_val, const size_t pos,
+                          vector < vector<T> >& edge_attr_values)
 {
   for (size_t attr_index=0; attr_index<attr_val.size_attr_vec<T>(); attr_index++)
     {
@@ -916,15 +917,19 @@ void build_edge_attr_vec (AttrVal& attr_val, vector < vector<T> > edge_attr_valu
       
       
 template <class T>
-void py_build_edge_attr_value (PyObject *py_attrval, vector < vector<T> > edge_attr_values,
-                               PyArray_Descr* numpy_type, size_t attr_index)
+void py_build_edge_attr_value (const vector < vector<T> >& edge_attr_values,
+                               const NPY_TYPES numpy_type,
+                               const size_t attr_index,
+                               const vector <vector<string> >& attr_names,
+                               PyObject *py_attrval)
 {
-  for (size_t i=0; i<edge_attrs_values.size(); i++)
+  for (size_t i=0; i<edge_attr_values.size(); i++)
     {
+      npy_intp dims[1]; npy_intp ind = 0;
       const vector<T> &attr_value = edge_attr_values[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, numpy_type);
-      float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      T *py_value_ptr = (T *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
       for (size_t j = 0; j < attr_value.size(); j++)
         {
           py_value_ptr[j]   = attr_value[j];
@@ -936,19 +941,16 @@ void py_build_edge_attr_value (PyObject *py_attrval, vector < vector<T> > edge_a
     }
 }
 
-
 PyObject* py_build_edge_value(const NODE_IDX_T key,
                               const NODE_IDX_T adj, 
-                              const NODE_IDX_T pos, 
-                              AttrVal& attr_val,
+                              const size_t pos, 
+                              const AttrVal& attr_val,
                               const string& attr_name_space,
                               const vector <vector<string> >& attr_names,
                               const int opt_attrs)
 {
   PyObject *py_attrval = Py_None;
   PyObject *py_attrmap = Py_None;
-  npy_intp dims[1];
-  npy_intp ind = 0;
   
   vector < vector <float> >    float_attrs;
   vector < vector <uint8_t> >  uint8_attrs;
@@ -961,31 +963,31 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
   if (opt_attrs>0)
     {
   
-      build_edge_attr_values<float>(attr_val, float_attrs);
-      build_edge_attr_values<uint8_t>(attr_val, uint8_attrs);
-      build_edge_attr_values<uint16_t>(attr_val, uint16_attrs);
-      build_edge_attr_values<uint32_t>(attr_val, uint32_attrs);
-      build_edge_attr_values<int8_t>(attr_val, int8_attrs);
-      build_edge_attr_values<int16_t>(attr_val, int16_attrs);
-      build_edge_attr_values<int32_t>(attr_val, int32_attrs);
+      build_edge_attr_vec<float>(attr_val, pos, float_attrs);
+      build_edge_attr_vec<uint8_t>(attr_val, pos, uint8_attrs);
+      build_edge_attr_vec<uint16_t>(attr_val, pos, uint16_attrs);
+      build_edge_attr_vec<uint32_t>(attr_val, pos, uint32_attrs);
+      build_edge_attr_vec<int8_t>(attr_val, pos, int8_attrs);
+      build_edge_attr_vec<int16_t>(attr_val, pos, int16_attrs);
+      build_edge_attr_vec<int32_t>(attr_val, pos, int32_attrs);
 
       py_attrval = PyDict_New();
       py_attrmap = PyDict_New();
 
-      py_build_edge_attr_value (py_attrval, float_attrs,
-                                NPY_FLOAT, AttrMap::attr_index_float);
-      py_build_edge_attr_value (py_attrval, uint8_attrs,
-                                NPY_UINT8, AttrMap::attr_index_uint8);
-      py_build_edge_attr_value (py_attrval, uint16_attrs,
-                                NPY_UINT16, AttrMap::attr_index_uint16);
-      py_build_edge_attr_value (py_attrval, uint32_attrs,
-                                NPY_UINT32, AttrMap::attr_index_uint32);
-      py_build_edge_attr_value (py_attrval, int8_attrs,
-                                NPY_INT8, AttrMap::attr_index_int8);
-      py_build_edge_attr_value (py_attrval, int16_attrs,
-                                NPY_INT16, AttrMap::attr_index_int16);
-      py_build_edge_attr_value (py_attrval, int32_attrs,
-                                NPY_INT32, AttrMap::attr_index_int32);
+      py_build_edge_attr_value (float_attrs, NPY_FLOAT, AttrMap::attr_index_float,
+                                attr_names, py_attrval);
+      py_build_edge_attr_value (uint8_attrs, NPY_UINT8, AttrMap::attr_index_uint8,
+                                attr_names, py_attrval);
+      py_build_edge_attr_value (uint16_attrs, NPY_UINT16, AttrMap::attr_index_uint16,
+                                attr_names, py_attrval);
+      py_build_edge_attr_value (uint32_attrs, NPY_UINT32, AttrMap::attr_index_uint32,
+                                attr_names, py_attrval);
+      py_build_edge_attr_value (int8_attrs,   NPY_INT8, AttrMap::attr_index_int8,
+                                attr_names, py_attrval);
+      py_build_edge_attr_value (int16_attrs,  NPY_INT16, AttrMap::attr_index_int16,
+                                attr_names, py_attrval);
+      py_build_edge_attr_value (int32_attrs,  NPY_INT32, AttrMap::attr_index_int32,
+                                attr_names, py_attrval);
   
       PyDict_SetItemString(py_attrmap,
                            attr_name_space.c_str(),
@@ -995,8 +997,11 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
   
   PyObject *py_result = PyTuple_New(3);
 
-  PyTuple_SetItem(py_result, 0, key);
-  PyTuple_SetItem(py_result, 1, adj);
+  PyObject *py_key = PyLong_FromLong(key);
+  PyObject *py_adj = PyLong_FromLong(adj);
+  
+  PyTuple_SetItem(py_result, 0, py_key);
+  PyTuple_SetItem(py_result, 1, py_adj);
   PyTuple_SetItem(py_result, 2, py_attrmap);
   
   return py_result;
@@ -3281,6 +3286,7 @@ extern "C"
     py_ngg->state->pop_ranges    = pop_ranges;
     py_ngg->state->pop_pairs     = pop_pairs;
     py_ngg->state->pop_labels    = pop_labels;
+    py_ngg->state->edge_map_type = edge_map_type;
     py_ngg->state->edge_attr_info = edge_attr_info;
     py_ngg->state->edge_attr_num  = edge_attr_num;
     py_ngg->state->edge_attr_name_space  = "Attributes";
@@ -3588,6 +3594,13 @@ extern "C"
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
 
+  static void
+  neuroh5_prj_gen_dealloc(PyNeuroH5ProjectionGenState *py_ngg)
+  {
+    delete py_ngg->state;
+    Py_TYPE(py_ngg)->tp_free(py_ngg);
+  }
+
   static PyObject *
   neuroh5_tree_gen_next(PyNeuroH5TreeGenState *py_ntrg)
   {
@@ -3752,35 +3765,41 @@ extern "C"
   static PyObject *
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
-    PyObject *result;
+    PyObject *result = NULL; 
     int size, rank;
-    assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
+    assert(MPI_Comm_size(*py_ngg->state->comm_ptr, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(*py_ngg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
     if (py_ngg->state->block_index < py_ngg->state->block_count)
       {
         if (py_ngg->state->edge_map_iter != py_ngg->state->edge_map.cend())
           {
-            vector<NODE_IDX_T>& adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
+            const vector<NODE_IDX_T>& adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
             if (py_ngg->state->edge_iter != adj_vector.cend())
               {
                 py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
+                const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
+                result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
+                                             distance(py_ngg->state->edge_iter, adj_vector.cbegin()),
+                                             get<1>(py_ngg->state->edge_map_iter->second),
+                                             py_ngg->state->edge_attr_name_space,
+                                             py_ngg->state->edge_attr_names,
+                                             py_ngg->state->opt_attrs);
               }
             else
               {
                 py_ngg->state->edge_map_iter = next(py_ngg->state->edge_map_iter);
-                adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
-                py_ngg->state->edge_iter = adj_vector.cbegin();
-                
+                const vector<NODE_IDX_T>& adj_vector1 = get<0>(py_ngg->state->edge_map_iter->second);
+                py_ngg->state->edge_iter = adj_vector1.cbegin();
+                const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
+                result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
+                                             distance(py_ngg->state->edge_iter, adj_vector1.cbegin()),
+                                             get<1>(py_ngg->state->edge_map_iter->second),
+                                             py_ngg->state->edge_attr_name_space,
+                                             py_ngg->state->edge_attr_names,
+                                             py_ngg->state->opt_attrs);
               }
 
-            const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
-            result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
-                                         get<1>(py_ngg->state->edge_map_iter->second),
-                                         distance(py_ngg->state->edge_iter, adj_vector.cbegin()),
-                                         py_ngg->state->edge_attr_name_space,
-                                         py_ngg->state->edge_attr_names,
-                                         py_ngg->opt_attrs);
           }
         else
           {
@@ -3792,13 +3811,16 @@ extern "C"
             vector <edge_map_t> prj_vector;
             int status;
             
-            status = graph::scatter_projection(all_comm, io_size, py_ngg->state->edge_map_type, 
-                                               file_name, prj_names[i].first, prj_names[i].second,
-                                               py_ngg->opt_attrs, py_ngg->state->node_rank_map,
+            status = graph::scatter_projection(*py_ngg->state->comm_ptr,
+                                               py_ngg->state->io_size, py_ngg->state->edge_map_type, 
+                                               py_ngg->state->file_name,
+                                               py_ngg->state->src_pop_name,
+                                               py_ngg->state->dst_pop_name,
+                                               py_ngg->state->opt_attrs, py_ngg->state->node_rank_map,
                                                py_ngg->state->pop_vector, py_ngg->state->pop_ranges,
                                                py_ngg->state->pop_labels, py_ngg->state->pop_pairs,
                                                py_ngg->state->edge_attr_info, py_ngg->state->edge_attr_num,
-                                               prj_vector, edge_attr_names_vector,
+                                               prj_vector, edge_attr_name_vector,
                                                py_ngg->state->block_index, py_ngg->state->block_cache_size);
             assert (status >= 0);
 
@@ -3817,7 +3839,7 @@ extern "C"
      * (elem will be NULL so we also return NULL).
      */
     
-    return NULL;
+    return result;
   }
 
   
@@ -3906,6 +3928,48 @@ extern "C"
     neuroh5_cell_attr_gen_new,      /* tp_new */
   };
 
+  // NeuroH5 graph read iterator
+  PyTypeObject PyNeuroH5ProjectionGen_Type = {
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "NeuroH5ProjectionGen",                 /* tp_name */
+    sizeof(PyNeuroH5ProjectionGenState),      /* tp_basicsize */
+    0,                              /* tp_itemsize */
+    (destructor)neuroh5_prj_gen_dealloc, /* tp_dealloc */
+    0,                              /* tp_print */
+    0,                              /* tp_getattr */
+    0,                              /* tp_setattr */
+    0,                              /* tp_reserved */
+    0,                              /* tp_repr */
+    0,                              /* tp_as_number */
+    0,                              /* tp_as_sequence */
+    0,                              /* tp_as_mapping */
+    0,                              /* tp_hash */
+    0,                              /* tp_call */
+    0,                              /* tp_str */
+    0,                              /* tp_getattro */
+    0,                              /* tp_setattro */
+    0,                              /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,             /* tp_flags */
+    0,                              /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    PyObject_SelfIter,              /* tp_iter */
+    (iternextfunc)neuroh5_prj_gen_next, /* tp_iternext */
+    0,                              /* tp_methods */
+    0,                              /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    PyType_GenericAlloc,            /* tp_alloc */
+    neuroh5_prj_gen_new,           /* tp_new */
+  };
+
   
   static PyMethodDef module_methods[] = {
     { "read_population_ranges", (PyCFunction)py_read_population_ranges, METH_VARARGS,
@@ -3928,6 +3992,8 @@ extern "C"
       "Writes attributes for the given range of cells." },
     { "append_cell_attributes", (PyCFunction)py_append_cell_attributes, METH_VARARGS | METH_KEYWORDS,
       "Appends additional attributes for the given range of cells." },
+    { "append_cell_trees", (PyCFunction)py_append_cell_trees, METH_VARARGS | METH_KEYWORDS,
+      "Appends tree morphologies." },
     { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
       "Reads graph connectivity in Destination Block Sparse format." },
     { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS | METH_KEYWORDS,
@@ -4003,6 +4069,18 @@ initio(void)
   Py_INCREF((PyObject *)&PyNeuroH5CellAttrGen_Type);
   PyModule_AddObject(module, "NeuroH5CellAttrGen", (PyObject *)&PyNeuroH5CellAttrGen_Type);
 
+  if (PyType_Ready(&PyNeuroH5ProjectionGen_Type) < 0)
+    {
+      printf("NeuroH5ProjectionGen type cannot be added\n");
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else      
+      return;
+#endif
+    }
+
+  Py_INCREF((PyObject *)&PyNeuroH5ProjectionGen_Type);
+  PyModule_AddObject(module, "NeuroH5ProjectionGen", (PyObject *)&PyNeuroH5ProjectionGen_Type);
   
 #if PY_MAJOR_VERSION >= 3
   return module;
