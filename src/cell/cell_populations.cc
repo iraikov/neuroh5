@@ -132,7 +132,7 @@ namespace neuroh5
 
       // MPI rank 0 reads and broadcasts the number of pairs
 
-      uint64_t num_pairs;
+      size_t num_pairs;
 
       hid_t file = -1, dset = -1;
 
@@ -147,12 +147,12 @@ namespace neuroh5
           assert(dset >= 0);
           hid_t fspace = H5Dget_space(dset);
           assert(fspace >= 0);
-          num_pairs = (uint64_t) H5Sget_simple_extent_npoints(fspace);
+          num_pairs = (size_t) H5Sget_simple_extent_npoints(fspace);
           assert(num_pairs > 0);
           assert(H5Sclose(fspace) >= 0);
         }
 
-      assert(MPI_Bcast(&num_pairs, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&num_pairs, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
 
       // allocate buffers
       vector<pop_t> v(2*num_pairs);
@@ -202,7 +202,7 @@ namespace neuroh5
     {
       herr_t ierr = 0;
 
-      uint64_t num_pairs;
+      size_t num_pairs;
 
       hid_t file = -1, dset = -1;
 
@@ -214,7 +214,7 @@ namespace neuroh5
       assert(dset >= 0);
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
-      num_pairs = (uint64_t) H5Sget_simple_extent_npoints(fspace);
+      num_pairs = (size_t) H5Sget_simple_extent_npoints(fspace);
       assert(num_pairs > 0);
       assert(H5Sclose(fspace) >= 0);
 
@@ -271,7 +271,7 @@ namespace neuroh5
 
       // MPI rank 0 reads and broadcasts the number of ranges
 
-      uint64_t num_ranges;
+      size_t num_ranges;
 
       hid_t file = -1, dset = -1;
 
@@ -285,7 +285,7 @@ namespace neuroh5
 
           hid_t fspace = H5Dget_space(dset);
           assert(fspace >= 0);
-          num_ranges = (uint64_t) H5Sget_simple_extent_npoints(fspace);
+          num_ranges = (size_t) H5Sget_simple_extent_npoints(fspace);
           assert(num_ranges > 0);
           assert(H5Sclose(fspace) >= 0);
 
@@ -304,7 +304,7 @@ namespace neuroh5
           assert(H5Fclose(file) >= 0);
         }
 
-      assert(MPI_Bcast(&num_ranges, 1, MPI_UINT64_T, 0, comm) >= 0);
+      assert(MPI_Bcast(&num_ranges, 1, MPI_SIZE_T, 0, comm) >= 0);
       assert(num_ranges > 0);
 
       // allocate buffers
@@ -338,7 +338,7 @@ namespace neuroh5
 
       // MPI rank 0 reads and broadcasts the number of ranges
 
-      uint64_t num_ranges;
+      size_t num_ranges;
 
       hid_t file = -1, dset = -1;
 
@@ -349,7 +349,7 @@ namespace neuroh5
       
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
-      num_ranges = (uint64_t) H5Sget_simple_extent_npoints(fspace);
+      num_ranges = (size_t) H5Sget_simple_extent_npoints(fspace);
       assert(num_ranges > 0);
       assert(H5Sclose(fspace) >= 0);
 

@@ -125,7 +125,8 @@ namespace neuroh5
                                     const vector<int>& rdispls,
                                     const vector<uint32_t> &edge_attr_num,
                                     edge_map_t& prj_edge_map,
-                                    uint64_t& num_unpacked_edges
+                                    size_t& num_unpacked_nodes,
+                                    size_t& num_unpacked_edges
                                     )
     {
       const int recvbuf_size = recvbuf.size();
@@ -155,6 +156,7 @@ namespace neuroh5
                   const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
                   const data::AttrVal&    edge_attr_values = get<1>(it->second);
                   num_unpacked_edges += adj_vector.size();
+                  num_unpacked_nodes ++;
                   
                   if (prj_edge_map.find(key_node) == prj_edge_map.end())
                     {
@@ -178,7 +180,8 @@ namespace neuroh5
     void deserialize_edge_map (const vector<char> &recvbuf,
                                const vector<uint32_t> &edge_attr_num,
                                edge_map_t& prj_edge_map,
-                               uint64_t& num_unpacked_edges
+                               size_t& num_unpacked_nodes,
+                               size_t& num_unpacked_edges
                                )
     {
       edge_map_t edge_map;
@@ -198,6 +201,7 @@ namespace neuroh5
           const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
           const data::AttrVal&    edge_attr_values = get<1>(it->second);
           num_unpacked_edges += adj_vector.size();
+          num_unpacked_nodes ++;
           
           if (prj_edge_map.find(key_node) == prj_edge_map.end())
             {

@@ -174,8 +174,9 @@ int main(int argc, char** argv)
           printf("Reading projection %lu (%s -> %s)\n", i, prj_names[i].first.c_str(), prj_names[i].second.c_str());
           
           assert(graph::read_projection(MPI_COMM_WORLD, input_file_name, prj_names[i].first, prj_names[i].second, 
-                                        dst_start, src_start, total_prj_num_edges, block_base, edge_base,
-                                        dst_blk_ptr, dst_idx, dst_ptr, src_idx) >= 0);
+                                        dst_start, src_start, block_base, edge_base,
+                                        dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                        total_prj_num_edges) >= 0);
 
           
           // validate the edges

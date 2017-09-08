@@ -78,7 +78,7 @@ namespace neuroh5
      )
     {
       size_t io_size;
-      uint64_t num_edges = 0;
+      size_t num_edges = 0;
       assert(edge_attr_names.size() == data::AttrVal::num_attr_types);
       vector <uint32_t> edge_attr_num(data::AttrVal::num_attr_types,0);
       for (size_t i=0; i<data::AttrVal::num_attr_types; i++)
@@ -304,12 +304,12 @@ namespace neuroh5
       sendcounts.clear();
       sdispls.clear();
 
-      uint64_t num_unpacked_edges = 0;
+      size_t num_unpacked_edges = 0, num_unpacked_nodes = 0;
       edge_map_t prj_edge_map;
       if (recvbuf_size > 0)
         {
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
-                                           prj_edge_map, num_unpacked_edges);
+                                           prj_edge_map, num_unpacked_nodes, num_unpacked_edges);
         }
       DEBUG("Task ",rank,": ","append_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
 

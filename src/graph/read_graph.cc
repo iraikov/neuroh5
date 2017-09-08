@@ -39,6 +39,7 @@ namespace neuroh5
      size_t&              total_num_edges
      )
     {
+      int status = 0;
       int rank, size;
       assert(MPI_Comm_size(comm, &size) >= 0);
       assert(MPI_Comm_rank(comm, &rank) >= 0);
@@ -102,8 +103,8 @@ namespace neuroh5
 
           assert(graph::read_projection
                  (comm, file_name, src_pop_name, dst_pop_name, dst_start, src_start,
-                  total_prj_num_edges, block_base, edge_base, dst_blk_ptr,
-                  dst_idx, dst_ptr, src_idx) >= 0);
+                  block_base, edge_base, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                  total_prj_num_edges) >= 0);
 
           DEBUG("reader: projection ", i, " has a total of ", total_prj_num_edges, " edges");
           DEBUG("reader: validating projection ", i, "(", src_pop_name, " -> ", dst_pop_name, ")");
@@ -142,13 +143,15 @@ namespace neuroh5
         }
 
       size_t sum_local_num_edges = 0;
-      MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
-                 MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+      status = MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
+                          MPI_SIZE_T, MPI_SUM, 0, MPI_COMM_WORLD);
+      assert(status == MPI_SUCCESS);
+      
       if (rank == 0)
         {
           if (sum_local_num_edges != total_num_edges)
             {
-              printf("sum_local_num_edges = %u total_num_edges = %u\n",
+              printf("sum_local_num_edges = %lu total_num_edges = %lu\n",
                      sum_local_num_edges, total_num_edges);
             }
           assert(sum_local_num_edges == total_num_edges);
@@ -226,8 +229,8 @@ namespace neuroh5
 
           assert(graph::read_projection_serial
                  (file_name, src_pop_name, dst_pop_name, dst_start, src_start,
-                  total_prj_num_edges, block_base, edge_base, dst_blk_ptr,
-                  dst_idx, dst_ptr, src_idx) >= 0);
+                  block_base, edge_base, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                  total_prj_num_edges) >= 0);
 
           DEBUG("reader: projection ", i, " has a total of ", total_prj_num_edges, " edges");
           DEBUG("reader: validating projection ", i, "(", src_pop_name, " -> ", dst_pop_name, ")");

@@ -123,7 +123,7 @@ namespace neuroh5
 
     
       // Read population info to determine total_num_nodes
-      size_t total_num_nodes, local_num_edges, total_num_edges;
+      size_t local_num_nodes, total_num_nodes, local_num_edges, total_num_edges;
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
@@ -145,6 +145,7 @@ namespace neuroh5
                      node_rank_map,
                      prj_vector,
                      edge_attr_name_vector,
+                     local_num_nodes,
                      total_num_nodes,
                      local_num_edges,
                      total_num_edges);

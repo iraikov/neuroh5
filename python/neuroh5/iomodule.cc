@@ -951,7 +951,7 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
 {
   PyObject *py_attrval = Py_None;
   PyObject *py_attrmap = Py_None;
-  
+
   vector < vector <float> >    float_attrs;
   vector < vector <uint8_t> >  uint8_attrs;
   vector < vector <int8_t> >   int8_attrs;
@@ -1315,7 +1315,7 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr = NULL;
     char *input_file_name;
-    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
+    size_t local_num_nodes = 0, total_num_nodes = 0, total_num_edges = 0, local_num_edges = 0;
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
@@ -1368,7 +1368,7 @@ extern "C"
 
     graph::scatter_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
                          io_size, opt_attrs>0, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
-                         total_num_nodes, local_num_edges, total_num_edges);
+                         local_num_nodes, total_num_nodes, local_num_edges, total_num_edges);
 
     PyObject *py_attribute_info = PyDict_New();
     if (opt_attrs>0)
@@ -3081,12 +3081,12 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t block_index, block_count, block_cache_size, io_size, comm_size;
+    Py_ssize_t edge_index, edge_count, block_index, block_count, cache_index, cache_size, io_size, comm_size;
 
     string file_name;
     MPI_Comm *comm_ptr;
 
-    int opt_attrs;
+    seq_pos pos;
     graph::EdgeMapType edge_map_type;
     map<NODE_IDX_T, rank_t> node_rank_map;
     vector<pop_range_t> pop_vector;
@@ -3102,7 +3102,8 @@ extern "C"
     vector < vector<string> >  edge_attr_names;
     string  edge_attr_name_space;
     string src_pop_name, dst_pop_name;
-    size_t total_num_nodes, total_num_edges, local_num_edges;
+    size_t total_num_nodes, local_num_nodes, total_num_edges, local_num_edges, max_local_num_edges;
+    int opt_attrs;
 
   } NeuroH5ProjectionGenState;
 
@@ -3184,7 +3185,7 @@ extern "C"
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned int io_size, cache_size=100;
+    unsigned int io_size=0, cache_size=1;
     char *file_name, *src_pop_name, *dst_pop_name;
     PyObject* py_attr_name_spaces = NULL;
     vector<string> attr_name_spaces;
@@ -3210,7 +3211,7 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Osssi|iiOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Osss|iiiOi", (char **)kwlist,
                                      &py_comm, &file_name, &src_pop_name, &dst_pop_name, &io_size,
                                      &opt_edge_map_type, &opt_attrs, &py_attr_name_spaces,
                                      &cache_size))
@@ -3256,7 +3257,6 @@ extern "C"
     hsize_t num_blocks = graph::projection_num_blocks(*comm_ptr, string(file_name),
                                                       src_pop_name, dst_pop_name);
 
-    
 
     /* Create a new generator state and initialize it */
     PyNeuroH5ProjectionGenState *py_ngg = (PyNeuroH5ProjectionGenState *)type->tp_alloc(type, 0);
@@ -3265,31 +3265,41 @@ extern "C"
 
     map<CELL_IDX_T, rank_t> node_rank_map;
     // Create C++ map for node_rank_map:
-    // round-robin block to rank assignment from file
-    rank_t r=0; size_t count=0;
-    for (size_t i = 0; i < num_blocks; i++)
+    // round-robin node to rank assignment from file
+    rank_t r=0; 
+    for (size_t i = 0; i < total_num_nodes; i++)
       {
-        if ((unsigned int)rank == r) count++;
         py_ngg->state->node_rank_map.insert(make_pair(i, r++));
         if ((unsigned int)size <= r) r=0;
       }
+    
 
-    py_ngg->state->opt_attrs     = opt_attrs;
-    py_ngg->state->block_index   = 0;
-    py_ngg->state->block_count   = count;
-    py_ngg->state->comm_ptr      = comm_ptr;
-    py_ngg->state->file_name     = string(file_name);
-    py_ngg->state->src_pop_name  = string(src_pop_name);
-    py_ngg->state->dst_pop_name  = string(dst_pop_name);
-    py_ngg->state->total_num_nodes = total_num_nodes;
-    py_ngg->state->pop_vector    = pop_vector;
-    py_ngg->state->pop_ranges    = pop_ranges;
-    py_ngg->state->pop_pairs     = pop_pairs;
-    py_ngg->state->pop_labels    = pop_labels;
-    py_ngg->state->edge_map_type = edge_map_type;
-    py_ngg->state->edge_attr_info = edge_attr_info;
-    py_ngg->state->edge_attr_num  = edge_attr_num;
+    py_ngg->state->pos             = seq_next;
+    py_ngg->state->opt_attrs       = opt_attrs;
+    py_ngg->state->edge_index      = 0;
+    py_ngg->state->edge_count      = 0;
+    py_ngg->state->block_index     = 0;
+    py_ngg->state->block_count     = num_blocks;
+    py_ngg->state->cache_size      = cache_size;
+    py_ngg->state->io_size         = io_size;
+    py_ngg->state->comm_ptr        = comm_ptr;
+    py_ngg->state->file_name       = string(file_name);
+    py_ngg->state->src_pop_name    = string(src_pop_name);
+    py_ngg->state->dst_pop_name    = string(dst_pop_name);
+    py_ngg->state->pop_vector      = pop_vector;
+    py_ngg->state->pop_ranges      = pop_ranges;
+    py_ngg->state->pop_pairs       = pop_pairs;
+    py_ngg->state->pop_labels      = pop_labels;
+    py_ngg->state->edge_map_iter   = py_ngg->state->edge_map.cbegin();
+    py_ngg->state->edge_map_type   = edge_map_type;
+    py_ngg->state->edge_attr_info  = edge_attr_info;
+    py_ngg->state->edge_attr_num   = edge_attr_num;
     py_ngg->state->edge_attr_name_space  = "Attributes";
+    py_ngg->state->total_num_nodes = total_num_nodes;
+    py_ngg->state->local_num_nodes = 0;
+    py_ngg->state->total_num_edges = 0;
+    py_ngg->state->local_num_edges = 0;
+    py_ngg->state->max_local_num_edges = 0;
     
     return (PyObject *)py_ngg;
     
@@ -3421,8 +3431,8 @@ extern "C"
           }
       }
 
-    py_ntrg->state->count         = count;
-    py_ntrg->state->seq_index     = 0;
+    py_ntrg->state->count       = count;
+    py_ntrg->state->seq_index   = 0;
     py_ntrg->state->cache_index = 0;
     py_ntrg->state->comm_ptr   = comm_ptr;
     py_ntrg->state->file_name  = string(file_name);
@@ -3766,50 +3776,23 @@ extern "C"
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
     PyObject *result = NULL; 
+    int status = 0;
     int size, rank;
     assert(MPI_Comm_size(*py_ngg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ngg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
-    if (py_ngg->state->block_index < py_ngg->state->block_count)
+    if (py_ngg->state->pos == seq_next)
       {
-        if (py_ngg->state->edge_map_iter != py_ngg->state->edge_map.cend())
+        if ((py_ngg->state->edge_map_iter == py_ngg->state->edge_map.cend()) &&
+            (py_ngg->state->block_index < py_ngg->state->block_count))
           {
-            const vector<NODE_IDX_T>& adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
-            if (py_ngg->state->edge_iter != adj_vector.cend())
-              {
-                py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
-                const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
-                result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
-                                             distance(py_ngg->state->edge_iter, adj_vector.cbegin()),
-                                             get<1>(py_ngg->state->edge_map_iter->second),
-                                             py_ngg->state->edge_attr_name_space,
-                                             py_ngg->state->edge_attr_names,
-                                             py_ngg->state->opt_attrs);
-              }
-            else
-              {
-                py_ngg->state->edge_map_iter = next(py_ngg->state->edge_map_iter);
-                const vector<NODE_IDX_T>& adj_vector1 = get<0>(py_ngg->state->edge_map_iter->second);
-                py_ngg->state->edge_iter = adj_vector1.cbegin();
-                const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
-                result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
-                                             distance(py_ngg->state->edge_iter, adj_vector1.cbegin()),
-                                             get<1>(py_ngg->state->edge_map_iter->second),
-                                             py_ngg->state->edge_attr_name_space,
-                                             py_ngg->state->edge_attr_names,
-                                             py_ngg->state->opt_attrs);
-              }
-
-          }
-        else
-          {
-            // If the end of the current cache block has been reached,
+            // If the end of the current edge map has been reached,
             // read the next block
             py_ngg->state->edge_map.clear();
 
             vector < vector < vector<string> > > edge_attr_name_vector;
             vector <edge_map_t> prj_vector;
-            int status;
+            size_t max_local_num_edges;
             
             status = graph::scatter_projection(*py_ngg->state->comm_ptr,
                                                py_ngg->state->io_size, py_ngg->state->edge_map_type, 
@@ -3821,15 +3804,91 @@ extern "C"
                                                py_ngg->state->pop_labels, py_ngg->state->pop_pairs,
                                                py_ngg->state->edge_attr_info, py_ngg->state->edge_attr_num,
                                                prj_vector, edge_attr_name_vector,
-                                               py_ngg->state->block_index, py_ngg->state->block_cache_size);
+                                               py_ngg->state->local_num_nodes,
+                                               py_ngg->state->local_num_edges,
+                                               py_ngg->state->total_num_edges,
+                                               py_ngg->state->block_index,
+                                               py_ngg->state->cache_size);
             assert (status >= 0);
-
-            py_ngg->state->edge_attr_names = edge_attr_name_vector[0];
+            assert(prj_vector.size() > 0);
+            if (edge_attr_name_vector.size() > 0)
+              {
+                py_ngg->state->edge_attr_names = edge_attr_name_vector[0];
+              }
+            
             py_ngg->state->edge_map = prj_vector[0];
+            printf("rank %d: py_ngg->state->edge_map.size() = %u\n",
+                   rank, py_ngg->state->edge_map.size());
             py_ngg->state->edge_map_iter = py_ngg->state->edge_map.cbegin();
             py_ngg->state->edge_iter = get<0>(py_ngg->state->edge_map_iter->second).cbegin();
             
-            py_ngg->state->block_index += py_ngg->state->block_cache_size;;
+            py_ngg->state->block_index += py_ngg->state->io_size * py_ngg->state->cache_size;
+            status = MPI_Reduce(&py_ngg->state->local_num_edges, &max_local_num_edges, 1,
+                                MPI_SIZE_T, MPI_MAX, 0, *py_ngg->state->comm_ptr);
+            assert(status == MPI_SUCCESS);
+            py_ngg->state->edge_count += max_local_num_edges;
+            
+          }
+
+        const vector<NODE_IDX_T>& adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
+        if (py_ngg->state->edge_iter != adj_vector.cend())
+          {
+            const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
+            result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
+                                         distance(py_ngg->state->edge_iter, adj_vector.cbegin()),
+                                         get<1>(py_ngg->state->edge_map_iter->second),
+                                         py_ngg->state->edge_attr_name_space,
+                                         py_ngg->state->edge_attr_names,
+                                         py_ngg->state->opt_attrs);
+            py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
+            py_ngg->state->edge_index++;
+          }
+        else
+          {
+            py_ngg->state->edge_map_iter = next(py_ngg->state->edge_map_iter);
+            if (py_ngg->state->edge_map_iter != py_ngg->state->edge_map.cend())
+              {
+                const vector<NODE_IDX_T>& adj_vector1 = get<0>(py_ngg->state->edge_map_iter->second);
+                py_ngg->state->edge_iter = adj_vector1.cbegin();
+                assert(py_ngg->state->edge_iter != adj_vector1.cend());
+                const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
+                const NODE_IDX_T adj = *(py_ngg->state->edge_iter);
+                result = py_build_edge_value(key, adj,
+                                             distance(py_ngg->state->edge_iter, adj_vector1.cbegin()),
+                                             get<1>(py_ngg->state->edge_map_iter->second),
+                                             py_ngg->state->edge_attr_name_space,
+                                             py_ngg->state->edge_attr_names,
+                                             py_ngg->state->opt_attrs);
+                py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
+                py_ngg->state->edge_index++;
+              }
+            else
+              {
+                switch (py_ngg->state->pos)
+                  {
+                  case seq_next:
+                    {
+                      if (py_ngg->state->edge_index == py_ngg->state->edge_count)
+                        {
+                          py_ngg->state->pos = seq_last;
+                        }
+                      result = PyTuple_Pack(3, Py_None, Py_None, Py_None);
+                      py_ngg->state->edge_index++;
+                      break;
+                    }
+                  case seq_last:
+                    {
+                      py_ngg->state->pos = seq_done;
+                      result = NULL;
+                      break;
+                    }
+                  case seq_done:
+                    {
+                      result = NULL;
+                      break;
+                    }
+                  }
+              }
           }
         
         return result;

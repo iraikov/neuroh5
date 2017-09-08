@@ -62,9 +62,8 @@ namespace neuroh5
      const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
      std::vector < edge_map_t >& prj_vector,
      std::vector < std::vector <std::vector<std::string>> >& edge_attr_names_vector,
-     size_t                            &total_num_nodes,
-     size_t                            &local_num_edges,
-     size_t                            &total_num_edges
+     size_t &local_num_nodes, size_t &total_num_nodes,
+     size_t &local_num_edges, size_t &total_num_edges
      );
 
     int scatter_projection (MPI_Comm all_comm, const int io_size, EdgeMapType edge_map_type, 
@@ -79,8 +78,8 @@ namespace neuroh5
                             const vector<uint32_t>& edge_attr_num,
                             vector < edge_map_t >& prj_vector,
                             vector < vector <vector<string>> >& edge_attr_names_vector,
-                            size_t offset = 0,
-                            size_t numitems = 0);
+                            size_t &local_num_nodes, size_t &local_num_edges, size_t &total_num_edges,
+                            size_t offset = 0, size_t numitems = 0);
   }
 }
 

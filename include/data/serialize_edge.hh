@@ -38,13 +38,15 @@ namespace neuroh5
                                     const vector<int>& rdispls,
                                     const vector<uint32_t> &edge_attr_num,
                                     edge_map_t& prj_edge_map,
-                                    uint64_t& num_unpacked_edges
+                                    size_t& num_unpacked_nodes,
+                                    size_t& num_unpacked_edges
                                     );
     
     void deserialize_edge_map (const vector<char> &recvbuf,
                                const vector<uint32_t> &edge_attr_num,
                                edge_map_t& prj_edge_map,
-                               uint64_t& num_unpacked_edges
+                               size_t& num_unpacked_nodes,
+                               size_t& num_unpacked_edges
                                );
 
   }

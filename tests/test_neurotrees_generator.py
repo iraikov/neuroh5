@@ -1,9 +1,6 @@
 from mpi4py import MPI
-from neurotrees.io import append_cell_attributes
-from neurotrees.io import NeurotreeGen
-from neurotrees.io import NeurotreeAttrGen
-from neurotrees.io import bcast_cell_attributes
-from neurotrees.io import population_ranges
+from neuroh5.io import population_ranges, append_cell_attributes, bcast_cell_attributes, NeurotreeGen, NeurotreeAttrGen
+
 # import mkl
 import sys
 import os
@@ -32,7 +29,7 @@ coords_dir = 'data/'
 coords_file = 'dentate_Full_Scale_Control_coords_compressed.h5'
 
 
-g = NeurotreeAttrGen(MPI._addressof(comm), neurotrees_dir+test_file, 'GC', io_size=comm.size,
+g = NeurotreeAttrGen(comm, neurotrees_dir+test_file, 'GC', io_size=comm.size,
                      namespace='Synapse_Attributes')
 global_count = 0
 count = 0
@@ -44,4 +41,4 @@ if rank == 0:
     print 'Total: %i' % np.sum(global_count)
 
 # test = population_ranges(MPI._addressof(comm), coords_dir+coords_file)
-test = bcast_cell_attributes(MPI._addressof(comm), 0, coords_dir+coords_file, 'GC', namespace='Coordinates')
+test = bcast_cell_attributes(comm, 0, coords_dir+coords_file, 'GC', namespace='Coordinates')

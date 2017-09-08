@@ -74,7 +74,7 @@ int main(int argc, char** argv)
   assert(MPI_Init(&argc, &argv) >= 0);
 
   graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
-  int rank, size, io_size; size_t n_nodes;
+  int rank, size, io_size; size_t n_nodes, local_num_nodes;
   size_t local_num_edges, total_num_edges;
   assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
   assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
@@ -250,6 +250,7 @@ int main(int argc, char** argv)
                         node_rank_map,
                         prj_vector,
                         edge_attr_name_vector,
+                        local_num_nodes,
                         n_nodes,
                         local_num_edges,
                         total_num_edges);

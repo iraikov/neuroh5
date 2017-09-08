@@ -26,7 +26,7 @@ namespace neuroh5
      const NODE_IDX_T&         src_end,
      const NODE_IDX_T&         dst_start,
      const NODE_IDX_T&         dst_end,
-     const uint64_t&           num_edges,
+     const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
      const vector<vector<string>>& edge_attr_names,
      const hsize_t             cdim,
@@ -52,16 +52,16 @@ namespace neuroh5
         
       assert(H5Pclose(fapl) >= 0);
 
-      uint64_t num_dest = prj_edge_map.size();
-      uint64_t num_blocks = num_dest > 0 ? 1 : 0;
+      size_t num_dest = prj_edge_map.size();
+      size_t num_blocks = num_dest > 0 ? 1 : 0;
       if (rank == size-1)
         {
           num_blocks++;
         }
         
       // create relative destination pointers and source index
-      vector<uint64_t> dst_blk_ptr; 
-      vector<uint64_t> dst_ptr;
+      vector<DST_BLK_PTR_T> dst_blk_ptr; 
+      vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> dst_blk_idx, src_idx;
       NODE_IDX_T first_idx = 0, last_idx = 0;
       hsize_t num_block_edges = 0, num_prj_edges = 0;
@@ -99,22 +99,22 @@ namespace neuroh5
 
       // exchange allocation data
 
-      vector<uint64_t> sendbuf_num_blocks(size, num_blocks);
-      vector<uint64_t> recvbuf_num_blocks(size);
-      assert(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_UINT64_T,
-                           &recvbuf_num_blocks[0], 1, MPI_UINT64_T, comm)
+      vector<size_t> sendbuf_num_blocks(size, num_blocks);
+      vector<size_t> recvbuf_num_blocks(size);
+      assert(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_SIZE_T,
+                           &recvbuf_num_blocks[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
-      vector<uint64_t> sendbuf_num_dest(size, num_dest);
-      vector<uint64_t> recvbuf_num_dest(size);
-      assert(MPI_Allgather(&sendbuf_num_dest[0], 1, MPI_UINT64_T,
-                           &recvbuf_num_dest[0], 1, MPI_UINT64_T, comm)
+      vector<size_t> sendbuf_num_dest(size, num_dest);
+      vector<size_t> recvbuf_num_dest(size);
+      assert(MPI_Allgather(&sendbuf_num_dest[0], 1, MPI_SIZE_T,
+                           &recvbuf_num_dest[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
-      vector<uint64_t> sendbuf_num_edge(size, num_edges);
-      vector<uint64_t> recvbuf_num_edge(size);
-      assert(MPI_Allgather(&sendbuf_num_edge[0], 1, MPI_UINT64_T,
-                           &recvbuf_num_edge[0], 1, MPI_UINT64_T, comm)
+      vector<size_t> sendbuf_num_edge(size, num_edges);
+      vector<size_t> recvbuf_num_edge(size);
+      assert(MPI_Allgather(&sendbuf_num_edge[0], 1, MPI_SIZE_T,
+                           &recvbuf_num_edge[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
       // determine last rank that has data
@@ -135,19 +135,19 @@ namespace neuroh5
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
-      uint64_t total_num_blocks=0;
+      size_t total_num_blocks=0;
       for (size_t p=0; p<size; p++)
         {
           total_num_blocks = total_num_blocks + recvbuf_num_blocks[p];
         }
 
-      uint64_t total_num_dests=0;
+      size_t total_num_dests=0;
       for (size_t p=0; p<size; p++)
         {
           total_num_dests = total_num_dests + recvbuf_num_dest[p];
         }
 
-      uint64_t total_num_edges=0;
+      size_t total_num_edges=0;
       for (size_t p=0; p<size; p++)
         {
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
@@ -274,7 +274,7 @@ namespace neuroh5
 
       // write destination pointers
       // # dest. pointers = number of destinations + 1
-      uint64_t s = 0;
+      size_t s = 0;
       for (size_t p = 0; p < rank; ++p)
         {
           s += recvbuf_num_edge[p];

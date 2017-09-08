@@ -109,9 +109,9 @@ namespace neuroh5
 
           DEBUG("bcast: reading projection ", src_pop_name, " -> ", dst_pop_name);
           assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
-                                        dst_start, src_start, total_prj_num_edges,
-                                        block_base, edge_base, dst_blk_ptr, dst_idx,
-                                        dst_ptr, src_idx) >= 0);
+                                        dst_start, src_start, block_base, edge_base,
+                                        dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                        total_prj_num_edges) >= 0);
           
           DEBUG("bcast: validating projection ", src_pop_name, " -> ", dst_pop_name);
           // validate the edges
@@ -177,10 +177,11 @@ namespace neuroh5
       sendbuf.resize(sendbuf_size);
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_PACKED, 0, all_comm) == MPI_SUCCESS);
           
-      size_t num_unpacked_edges = 0; 
+      size_t num_unpacked_edges = 0, num_unpacked_nodes = 0; 
       if (rank > 0)
         {
-          data::deserialize_edge_map (sendbuf, edge_attr_num, prj_edge_map, num_unpacked_edges);
+          data::deserialize_edge_map (sendbuf, edge_attr_num, prj_edge_map,
+                                      num_unpacked_nodes, num_unpacked_edges);
       
           DEBUG("bcast: finished unpacking edges for projection ", src_pop_name, " -> ", dst_pop_name);
         }
@@ -212,7 +213,7 @@ namespace neuroh5
       set< pair<pop_t, pop_t> > pop_pairs;
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      uint64_t prj_size = 0;
+      size_t prj_size = 0;
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
       // MPI group color value used for I/O ranks
@@ -270,7 +271,7 @@ namespace neuroh5
         }
       MPI_Barrier(all_comm);
 
-      assert(MPI_Bcast(&prj_size, 1, MPI_UINT64_T, 0, all_comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&prj_size, 1, MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
       DEBUG("rank ", rank, ": bcast: after bcast: prj_size = ", prj_size);
 
       // For each projection, I/O ranks read the edges and scatter

@@ -217,8 +217,6 @@ namespace neuroh5
                 }
               else
                 {
-                  printf("num_attributes: read_edge_attributes: attr_size = %u\n", attr_size);
-
                   throw runtime_error("Unsupported integer attribute size");
                 };
               break;
@@ -362,8 +360,6 @@ namespace neuroh5
                 }
               else
                 {
-                  printf("num_attributes: read_edge_attributes: attr_size = %u\n", attr_size);
-
                   throw runtime_error("Unsupported integer attribute size");
                 };
               break;

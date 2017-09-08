@@ -60,8 +60,8 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
-      uint64_t all_attr_size=0, all_sec_size=0,  all_topo_size=0;
-      std::vector<uint64_t> attr_size_vector, sec_size_vector, topo_size_vector;
+      size_t all_attr_size=0, all_sec_size=0,  all_topo_size=0;
+      std::vector<size_t> attr_size_vector, sec_size_vector, topo_size_vector;
 
       attr_ptr.push_back(0);
       sec_ptr.push_back(0);
@@ -73,9 +73,9 @@ namespace neuroh5
           local_ptr_size=local_ptr_size+1;
         }
 
-      std::vector<uint64_t> ptr_size_vector;
+      std::vector<size_t> ptr_size_vector;
       ptr_size_vector.resize(size);
-      status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
+      status = MPI_Allgather(&local_ptr_size, 1, MPI_SIZE_T, &ptr_size_vector[0], 1, MPI_SIZE_T, comm);
       assert(status == MPI_SUCCESS);
 
       size_t block  = tree_list.size();
@@ -263,9 +263,9 @@ namespace neuroh5
           assert(hdf5::close_file(file) >= 0);
         }
 
-      assert(MPI_Bcast(&attr_size, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
-      assert(MPI_Bcast(&sec_size, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
-      assert(MPI_Bcast(&topo_size, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&attr_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&sec_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&topo_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
 
       return 0;
     }

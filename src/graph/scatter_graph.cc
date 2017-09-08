@@ -56,8 +56,8 @@ namespace neuroh5
                             const vector<uint32_t>& edge_attr_num,
                             vector < edge_map_t >& prj_vector,
                             vector < vector <vector<string>> >& edge_attr_names_vector,
-                            size_t offset,
-                            size_t numitems)
+                            size_t &local_num_nodes, size_t &local_num_edges, size_t &total_num_edges,
+                            size_t offset, size_t numitems)
     {
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
@@ -83,8 +83,8 @@ namespace neuroh5
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
       edge_map_t prj_edge_map;
-      size_t num_edges = 0, total_prj_num_edges = 0;
-      uint64_t num_unpacked_edges=0;
+      size_t num_edges = 0;
+      size_t num_unpacked_edges=0;
       vector< vector<string> > edge_attr_names;
 
       {
@@ -131,9 +131,8 @@ namespace neuroh5
 
               DEBUG("Task ",rank," scatter: reading projection ", src_pop_name, " -> ", dst_pop_name);
               assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
-                                            dst_start, src_start, total_prj_num_edges,
-                                            block_base, edge_base, dst_blk_ptr, dst_idx,
-                                            dst_ptr, src_idx, offset, numitems) >= 0);
+                                            dst_start, src_start, block_base, edge_base, dst_blk_ptr, dst_idx,
+                                            dst_ptr, src_idx, total_num_edges, offset, numitems) >= 0);
           
               DEBUG("Task ",rank," scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges
@@ -167,6 +166,7 @@ namespace neuroh5
               // ensure the correct number of edges is being packed
               assert(num_packed_edges == num_edges);
               DEBUG("scatter: finished packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
+
             } // rank < io_size
 
           MPI_Comm_free(&io_comm);
@@ -178,7 +178,7 @@ namespace neuroh5
         if (recvbuf.size() > 0)
           {
             data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
-                                             prj_edge_map, num_unpacked_edges);
+                                             prj_edge_map, local_num_nodes, local_num_edges);
           }
       }
       
@@ -227,6 +227,7 @@ namespace neuroh5
      const map<NODE_IDX_T, rank_t>&  node_rank_map,
      vector < edge_map_t >& prj_vector,
      vector < vector <vector<string>> >& edge_attr_names_vector,
+     size_t                       &local_num_nodes,
      size_t                       &total_num_nodes,
      size_t                       &local_num_edges,
      size_t                       &total_num_edges
@@ -276,7 +277,8 @@ namespace neuroh5
                              file_name, src_pop_name, dst_pop_name, opt_attrs,
                              node_rank_map, pop_vector, pop_ranges, pop_labels, pop_pairs,
                              edge_attr_info, edge_attr_num, 
-                             prj_vector, edge_attr_names_vector);
+                             prj_vector, edge_attr_names_vector,
+                             local_num_nodes, local_num_edges, total_num_edges);
 
         }
       return ierr;

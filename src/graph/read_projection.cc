@@ -74,13 +74,13 @@ namespace neuroh5
      const std::string&         dst_pop_name,
      const NODE_IDX_T&          dst_start,
      const NODE_IDX_T&          src_start,
-     uint64_t&                  nedges,
      DST_BLK_PTR_T&             block_base,
      DST_PTR_T&                 edge_base,
      vector<DST_BLK_PTR_T>&     dst_blk_ptr,
      vector<NODE_IDX_T>&        dst_idx,
      vector<DST_PTR_T>&         dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
+     size_t&                    nedges,
      size_t                     offset,
      size_t                     numitems,
      bool collective
@@ -313,13 +313,13 @@ namespace neuroh5
      const std::string&         dst_pop_name,
      const NODE_IDX_T&          dst_start,
      const NODE_IDX_T&          src_start,
-     uint64_t&                  nedges,
      DST_BLK_PTR_T&             block_base,
      DST_PTR_T&                 edge_base,
      vector<DST_BLK_PTR_T>&     dst_blk_ptr,
      vector<NODE_IDX_T>&        dst_idx,
      vector<DST_PTR_T>&         dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
+     size_t&                    nedges,
      size_t                     offset,
      size_t                     numitems
      )
@@ -333,7 +333,7 @@ namespace neuroh5
         assert(file >= 0);
 
         // determine number of blocks in projection
-        uint64_t num_blocks = hdf5::dataset_num_elements
+        size_t num_blocks = hdf5::dataset_num_elements
           (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR)) - 1;
 
         // determine number of edges in projection

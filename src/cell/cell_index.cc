@@ -174,9 +174,9 @@ namespace neuroh5
       
       hsize_t local_index_size = cell_index.size();
 
-      std::vector<uint64_t> index_size_vector;
+      std::vector<size_t> index_size_vector;
       index_size_vector.resize(size);
-      ierr = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
+      ierr = MPI_Allgather(&local_index_size, 1, MPI_SIZE_T, &index_size_vector[0], 1, MPI_SIZE_T, comm);
       assert(ierr == MPI_SUCCESS);
 
       hsize_t local_index_start = 0;
