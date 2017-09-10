@@ -101,7 +101,7 @@ namespace neuroh5
 
       // determine number of blocks in projection
       hsize_t num_blocks = hdf5::dataset_num_elements
-        (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR)) - 1;
+         (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR)) - 1;
 
       
       // determine number of edges in projection
@@ -139,7 +139,7 @@ namespace neuroh5
           hsize_t start, stop;
           
           start = bins[rank].first + offset;
-          stop  = bins[rank].first + bins[rank].second;
+          stop  = start + bins[rank].second;
           block_base = start;
           
           hsize_t block;
@@ -225,7 +225,7 @@ namespace neuroh5
             {
               dst_ptr_start = (hsize_t)block_rebase;
               dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-              if ((num_blocks > 1) && (rank < size-1))
+              if  (stop < num_blocks)
                 {
                   dst_ptr_block ++;
                 }

@@ -84,9 +84,10 @@ namespace neuroh5
       rank_edge_map_t prj_rank_edge_map;
       edge_map_t prj_edge_map;
       size_t num_edges = 0;
-      size_t num_unpacked_edges=0;
       vector< vector<string> > edge_attr_names;
 
+      local_num_nodes=0; local_num_edges=0;
+      
       {
         vector<char> recvbuf;
         vector<int> recvcounts, rdispls;
@@ -153,6 +154,7 @@ namespace neuroh5
                                           edge_attr_values, node_rank_map, num_edges, prj_rank_edge_map,
                                           edge_map_type) >= 0);
               edge_attr_values.attr_names(edge_attr_names);
+              DEBUG("scatter: read ", num_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
           
               // ensure that all edges in the projection have been read and appended to edge_list
               assert(num_edges == src_idx.size());
@@ -165,7 +167,7 @@ namespace neuroh5
 
               // ensure the correct number of edges is being packed
               assert(num_packed_edges == num_edges);
-              DEBUG("scatter: finished packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
+              DEBUG("scatter: packed ", num_packed_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
 
             } // rank < io_size
 
@@ -182,7 +184,7 @@ namespace neuroh5
           }
       }
       
-      DEBUG("scatter: rank ", rank, " unpacked ", num_unpacked_edges, " edges for projection ", src_pop_name, " -> ", dst_pop_name);
+      DEBUG("scatter: rank ", rank, " unpacked ", local_num_edges, " edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
       prj_vector.push_back(prj_edge_map);
 

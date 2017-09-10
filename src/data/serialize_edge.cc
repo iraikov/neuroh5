@@ -185,6 +185,8 @@ namespace neuroh5
                                )
     {
       edge_map_t edge_map;
+      num_unpacked_nodes = 0;
+      num_unpacked_edges = 0;
       
       {
         string s = string(recvbuf.begin(), recvbuf.end());
