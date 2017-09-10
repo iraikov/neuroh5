@@ -3885,13 +3885,6 @@ extern "C"
             {
               neuroh5_prj_gen_next_block(py_ngg);
             }
-
-          printf("rank %d: block_index = %u block_count = %u\n",
-                 rank, py_ngg->state->block_index, py_ngg->state->block_count);
-          printf("rank %d: edge_index = %u edge_count = %u\n",
-                 rank, py_ngg->state->edge_index, py_ngg->state->edge_count);
-          printf("rank %d: edge_map size = %u\n",
-                 rank, py_ngg->state->edge_map.size());
           
           if (py_ngg->state->edge_map_iter == py_ngg->state->edge_map.cend())
             {
