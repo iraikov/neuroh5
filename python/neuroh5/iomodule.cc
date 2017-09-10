@@ -3903,7 +3903,9 @@ extern "C"
                 {
                   py_ngg->state->edge_index++;
                 }
-              result = PyTuple_Pack(3, (Py_INCREF(Py_None), Py_None),
+              result = PyTuple_Pack(3,
+                                    (Py_INCREF(Py_None), Py_None),
+                                    (Py_INCREF(Py_None), Py_None),
                                     (Py_INCREF(Py_None), Py_None));
               break;
             }

@@ -10,14 +10,15 @@ if rank == 0:
     print '%i ranks have been allocated' % comm.size
 sys.stdout.flush()
 
-#for (src,dst) in read_projection_names(comm, 'data/dentate_test.h5'):
-#    g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', src, dst)
-#    for (i,j,attr) in g:
-#        if i is not None:
-#            print i, j
-
-g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', 'BC', 'MC')
-for (i,j,attr) in g:
+for (src,dst) in read_projection_names(comm, 'data/dentate_test.h5'):
+    g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', src, dst)
+    for (i,j,attr) in g:
         if i is not None:
             print i, j
+
+#g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', 'BC', 'MC')
+#for (i,j,attr) in g:
+#        if i is not None:
+#            print i, j
 gc.collect()
+
