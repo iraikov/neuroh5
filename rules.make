@@ -28,7 +28,7 @@ endef
 
 .PHONY: all checkdirs clean
 
-all: checkdirs $(DRIVER_OBJ) build/neurograph_reader build/neurograph_scatter build/balance_indegree build/neurograph_vertex_metrics build/neurograph_import build/neurotrees_select build/neurotrees_import build/neurotrees_read build/neurotrees_scatter_read
+all: checkdirs $(DRIVER_OBJ) build/neurograph_reader build/neurograph_scatter build/balance_indegree build/neurograph_vertex_metrics build/neurograph_import build/neurotrees_copy build/neurotrees_select build/neurotrees_import build/neurotrees_read build/neurotrees_scatter_read
 
 ifdef PARMETIS
 build/neurograph_parts: build/driver/neurograph_parts.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.mpi.a
@@ -48,6 +48,9 @@ build/neurograph_vertex_metrics: build/driver/vertex_metrics.o build/libneuroh5.
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/neurograph_import: build/driver/neurograph_import.o build/libneuroh5.graph.a build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.mpi.a 
+	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
+
+build/neurotrees_copy: build/driver/neurotrees_copy.o  build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.mpi.a build/libneuroh5.cell.a 
 	$(LD) -o $@ $^ -L$(HDF5_LIBDIR) -l$(HDF5_LIB) $(LINK_MPI) $(LINK_STDCPLUS)
 
 build/neurotrees_select: build/driver/neurotrees_select.o  build/libneuroh5.io.a build/libneuroh5.hdf5.a build/libneuroh5.mpi.a build/libneuroh5.cell.a 

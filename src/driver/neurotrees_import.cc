@@ -28,10 +28,8 @@
 
 #include "neuroh5_types.hh"
 #include "read_layer_swc.hh"
-#include "dataset_num_elements.hh"
 #include "rank_range.hh"
 #include "append_tree.hh"
-
 #include "path_names.hh"
 #include "create_file_toplevel.hh"
 
@@ -91,14 +89,14 @@ int main(int argc, char** argv)
   assert(MPI_Comm_size(all_comm, &size) >= 0);
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
-  bool opt_split_layers = false;
-  bool opt_layer_offset = false;
+  bool opt_split_layers   = false;
+  bool opt_layer_offset   = false;
   bool opt_node_id_offset = false;
   bool opt_tree_id_offset = false;
-  bool opt_swctype = false;
-  bool opt_filelist = false;
-  bool opt_idfilelist = false;
-  bool opt_singleton = false;
+  bool opt_swctype        = false;
+  bool opt_filelist       = false;
+  bool opt_idfilelist     = false;
+  bool opt_singleton      = false;
   // parse arguments
   static struct option long_options[] = {
     {0,         0,                 0,  0 }
@@ -229,19 +227,17 @@ int main(int argc, char** argv)
   
   if (opt_singleton)
     { // reading a single swc file with multiple ids
+      std::string input_file_name = input_file_names[0];
+      CELL_IDX_T gid0 = gid_list[0];
       if (opt_swctype) 
         {
           // if swc type is given, then we are reading an swc file with layer encoding
-          std::string input_file_name = input_file_names[0];
-          CELL_IDX_T gid0 = gid_list[0];
           status = io::read_layer_swc (input_file_name, gid0, node_id_offset, layer_offset,
                                        swc_type, opt_split_layers, tree_list);
         }
       else
         {
           // if swc type is not given, then we are reading a regular swc file
-          std::string input_file_name = input_file_names[0];
-          CELL_IDX_T gid0 = gid_list[0];
           status = io::read_swc (input_file_name, gid0, node_id_offset, tree_list);
         }
     }
