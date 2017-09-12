@@ -92,12 +92,14 @@ int main(int argc, char** argv)
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
   int optflag_fill         = 0;
+  int optflag_output       = 0;
   bool opt_attributes      = false;
   bool opt_fill            = false;
   bool opt_output_filename = false;
   // parse arguments
   static struct option long_options[] = {
     {"fill",    no_argument, &optflag_fill,  1 },
+    {"output",  required_argument, &optflag_output,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
@@ -111,6 +113,11 @@ int main(int argc, char** argv)
           if (optflag_fill == 1) {
             opt_fill = true;
             optflag_fill = 0;
+          }
+          if (optflag_output == 1) {
+            opt_output_filename = true;
+            output_filename = string(optarg);
+            optflag_output = 0;
           }
           break;
         case 'a':
@@ -129,7 +136,7 @@ int main(int argc, char** argv)
         }
     }
 
-  if (optind < argc-3)
+  if (optind < argc-2)
     {
       input_filename = std::string(argv[optind]);
       pop_name = std::string(argv[optind+1]);
@@ -142,12 +149,15 @@ int main(int argc, char** argv)
         ss << string(argv[optind+2]);
         ss >> source_gid;
       }
-      for (int i = optind+3; i<argc; i++)
+      if (optind+3 < argc)
         {
-          stringstream ss; CELL_IDX_T tree_id=0;
-          ss << string(string(argv[i]));
-          ss >> tree_id;
-          target_gid_list.push_back(tree_id);
+          for (int i = optind+3; i<argc; i++)
+            {
+              stringstream ss; CELL_IDX_T tree_id=0;
+              ss << string(string(argv[i]));
+              ss >> tree_id;
+              target_gid_list.push_back(tree_id);
+            }
         }
     }
   else
