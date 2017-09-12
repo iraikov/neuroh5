@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from neuroh5.io import population_ranges, append_cell_attributes, bcast_cell_attributes, NeurotreeGen, NeurotreeAttrGen
+from neuroh5.io import read_population_ranges, append_cell_attributes, bcast_cell_attributes, NeurotreeGen, NeurotreeAttrGen
 
 # import mkl
 import sys
