@@ -184,7 +184,7 @@ namespace neuroh5
   
   typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
                       std::vector<NODE_IDX_T>, // destination vector
-                      data::AttrVal  // edge attribute vector
+                      std::map<std::string, data::AttrVal>  // edge attribute map
                       > prj_tuple_t;
 
 // In-memory HDF5 datatype of attribute pointers

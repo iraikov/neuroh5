@@ -17,6 +17,27 @@ namespace neuroh5
 {
   namespace graph
   {
+
+
+    template <class T>
+    void write_edge_attribute_map (const map <string, data::NamedAttrVal>& edge_attr_map,
+                                   const map <string, vector < vector <string> > >& edge_attr_names)
+    {
+      for (auto iter : edge_attr_map)
+        {
+          const string& attr_namespace = iter->first;
+          const data::NamedAttrVal& edge_attr_values = iter->second;
+          
+          for (size_t i=0; i<edge_attr_values.size_attr_vec<T>(); i++)
+            {
+              const string& attr_name = edge_attr_names[attr_namespace][data::AttrVal::attr_type_index<T>][i];
+              string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
+              graph::write_edge_attribute<T>(file, path, edge_attr_values.attr_vec<T>(i));
+            }
+        }
+    }
+
+    
     void write_projection
     (
      hid_t                     file,
@@ -28,7 +49,7 @@ namespace neuroh5
      const NODE_IDX_T&         dst_end,
      const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
-     const vector<vector<string>>& edge_attr_names,
+     const map<string, vector < vector <string> > >& edge_attr_names,
      hsize_t                   cdim,
      hsize_t                   block_size
      )
@@ -385,15 +406,24 @@ namespace neuroh5
       /*
         write(file, path, NODE_IDX_H5_FILE_T, src_idx);
       */
+      map <string, data::NamedAttrVal> edge_attr_map;
+
+      for (auto iter : edge_attr_names)
+        {
+          const string & attr_namespace = iter->first;
+          const vector <vector <string> >& attr_names = iter->second;
+
+          data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
+          
+          edge_attr_values.float_values.resize(attr_names[data::AttrVal::attr_index_float].size());
+          edge_attr_values.uint8_values.resize(attr_names[data::AttrVal::attr_index_uint8].size());
+          edge_attr_values.uint16_values.resize(attr_names[data::AttrVal::attr_index_uint16].size());
+          edge_attr_values.uint32_values.resize(attr_names[data::AttrVal::attr_index_uint32].size());
+          edge_attr_values.int8_values.resize(attr_names[data::AttrVal::attr_index_int8].size());
+          edge_attr_values.int16_values.resize(attr_names[data::AttrVal::attr_index_int16].size());
+          edge_attr_values.int32_values.resize(attr_names[data::AttrVal::attr_index_int32].size());
+        }
         
-      data::NamedAttrVal edge_attr_values;
-      edge_attr_values.float_values.resize(edge_attr_names[data::AttrVal::attr_index_float].size());
-      edge_attr_values.uint8_values.resize(edge_attr_names[data::AttrVal::attr_index_uint8].size());
-      edge_attr_values.uint16_values.resize(edge_attr_names[data::AttrVal::attr_index_uint16].size());
-      edge_attr_values.uint32_values.resize(edge_attr_names[data::AttrVal::attr_index_uint32].size());
-      edge_attr_values.int8_values.resize(edge_attr_names[data::AttrVal::attr_index_int8].size());
-      edge_attr_values.int16_values.resize(edge_attr_names[data::AttrVal::attr_index_int16].size());
-      edge_attr_values.int32_values.resize(edge_attr_names[data::AttrVal::attr_index_int32].size());
       
       for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
 	{
@@ -402,37 +432,21 @@ namespace neuroh5
 	  data::AttrVal& a = get<1>(et);
 	  if (v.size() > 0)
 	    {
-	      edge_attr_values.append(a);
+              for (auto iter_a : a)
+                {
+                  const string& attr_namespace = iter_a->first;
+                  const data::AttrVal& attr_values = iter_a->second;
+                  edge_attr_map[attr_namespace].append(attr_values);
+                }
 	    }
 	}
-      
-      for (size_t i=0; i<edge_attr_values.float_values.size(); i++)
-	{
-	  const string& attr_name = edge_attr_names[data::AttrVal::attr_index_float][i];
-	  string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
-	  graph::write_edge_attribute<float>(file, path, edge_attr_values.float_values[i]);
-	}
-      
-      for (size_t i=0; i<edge_attr_values.uint8_values.size(); i++)
-	{
-	  const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint8][i];
-	  string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
-	  graph::write_edge_attribute<uint8_t>(file, path, edge_attr_values.uint8_values[i]);
-	}
-      
-      for (size_t i=0; i<edge_attr_values.uint16_values.size(); i++)
-	{
-	  const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint16][i];
-	  string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
-	  graph::write_edge_attribute<uint16_t>(file, path, edge_attr_values.uint16_values[i]);
-	}
-      
-      for (size_t i=0; i<edge_attr_values.uint32_values.size(); i++)
-	{
-	  const string& attr_name = edge_attr_names[data::AttrVal::attr_index_uint32][i];
-	  string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, "Attributes", attr_name);
-	  graph::write_edge_attribute<uint32_t>(file, path, edge_attr_values.uint32_values[i]);
-	}
+      write_edge_attribute_map<float>(edge_attr_map, edge_attr_names);
+      write_edge_attribute_map<uint8_t>(edge_attr_map, edge_attr_names);
+      write_edge_attribute_map<uint16_t>(edge_attr_map, edge_attr_names);
+      write_edge_attribute_map<uint32_t>(edge_attr_map, edge_attr_names);
+      write_edge_attribute_map<int8_t>(edge_attr_map, edge_attr_names);
+      write_edge_attribute_map<int16_t>(edge_attr_map, edge_attr_names);
+      write_edge_attribute_map<int32_t>(edge_attr_map, edge_attr_names);
       
       // clean-up
       assert(H5Pclose(dcpl) >= 0);

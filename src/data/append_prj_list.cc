@@ -13,7 +13,7 @@
 #include <map>
 
 #include "neuroh5_types.hh"
-#include "attr_map.hh"
+#include "attr_val.hh"
 #include "cell_attributes.hh"
 #include "rank_range.hh"
 
@@ -24,6 +24,7 @@ namespace neuroh5
 
   namespace data
   {
+
     
     /**************************************************************************
      * Append src/dst node indices to a vector of edges
@@ -37,7 +38,7 @@ namespace neuroh5
      const vector<NODE_IDX_T>&           dst_idx,
      const vector<DST_PTR_T>&            dst_ptr,
      const vector<NODE_IDX_T>&           src_idx,
-     const NamedAttrVal&                 edge_attr_values,
+     const map<string, NamedAttrVal>&    edge_attr_map,
      size_t&                             num_edges,
      vector<prj_tuple_t>&                prj_list
      )
@@ -45,22 +46,31 @@ namespace neuroh5
       int ierr = 0; size_t dst_ptr_size;
       num_edges = 0;
       vector<NODE_IDX_T> src_vec, dst_vec;
-      AttrVal edge_attr_vec;
+      vector<AttrVal> edge_attr_vec(edge_attr_map.size());
 
-      edge_attr_vec.resize<float>
-        (edge_attr_values.size_attr_vec<float>());
-      edge_attr_vec.resize<uint8_t>
-        (edge_attr_values.size_attr_vec<uint8_t>());
-      edge_attr_vec.resize<uint16_t>
-        (edge_attr_values.size_attr_vec<uint16_t>());
-      edge_attr_vec.resize<uint32_t>
-        (edge_attr_values.size_attr_vec<uint32_t>());
-      edge_attr_vec.resize<int8_t>
-        (edge_attr_values.size_attr_vec<int8_t>());
-      edge_attr_vec.resize<int16_t>
-        (edge_attr_values.size_attr_vec<int16_t>());
-      edge_attr_vec.resize<int32_t>
-        (edge_attr_values.size_attr_vec<int32_t>());
+      size_t i=0;
+      for (auto item : edge_attr_map) 
+        {
+          const string & attr_namespace = item->first;
+          const NamedAttrVal& edge_attr_values = item->second;
+          
+          edge_attr_vec[i].resize<float>
+            (edge_attr_values.size_attr_vec<float>());
+          edge_attr_vec[i].resize<uint8_t>
+            (edge_attr_values.size_attr_vec<uint8_t>());
+          edge_attr_vec[i].resize<uint16_t>
+            (edge_attr_values.size_attr_vec<uint16_t>());
+          edge_attr_vec[i].resize<uint32_t>
+            (edge_attr_values.size_attr_vec<uint32_t>());
+          edge_attr_vec[i].resize<int8_t>
+            (edge_attr_values.size_attr_vec<int8_t>());
+          edge_attr_vec[i].resize<int16_t>
+            (edge_attr_values.size_attr_vec<int16_t>());
+          edge_attr_vec[i].resize<int32_t>
+            (edge_attr_values.size_attr_vec<int32_t>());
+          
+          i++;
+        }
 
       if (dst_blk_ptr.size() > 0)
         {
@@ -83,48 +93,13 @@ namespace neuroh5
                           NODE_IDX_T src = src_idx[j] + src_start;
                           src_vec.push_back(src);
                           dst_vec.push_back(dst);
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<float>(); k++)
-                            {
-                              edge_attr_vec.push_back<float>
-                                (k, edge_attr_values.at<float>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<uint8_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<uint8_t>
-                                (k, edge_attr_values.at<uint8_t>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<uint16_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<uint16_t>
-                                (k, edge_attr_values.at<uint16_t>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<uint32_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<uint32_t>
-                                (k, edge_attr_values.at<uint32_t>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<int8_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<int8_t>
-                                (k, edge_attr_values.at<int8_t>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<int16_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<int16_t>
-                                (k, edge_attr_values.at<int16_t>(k,j));
-                            }
-                          for (size_t k = 0;
-                               k < edge_attr_vec.size_attr_vec<int32_t>(); k++)
-                            {
-                              edge_attr_vec.push_back<int32_t>
-                                (k, edge_attr_values.at<int32_t>(k,j));
-                            }
+                          fill_attr_vec<float>(edge_attr_map, edge_attr_vec, j);
+                          fill_attr_vec<uint8_t>(edge_attr_map, edge_attr_vec, j);
+                          fill_attr_vec<uint16_t>(edge_attr_map, edge_attr_vec, j);
+                          fill_attr_vec<uint32_t>(edge_attr_map, edge_attr_vec, j);
+                          fill_attr_vec<int8_t>(edge_attr_map, edge_attr_vec, j);
+                          fill_attr_vec<int16_t>(edge_attr_map, edge_attr_vec, j);
+                          fill_attr_vec<int32_t>(edge_attr_map, edge_attr_vec, j);
                           num_edges++;
                         }
                     }

@@ -26,7 +26,7 @@ namespace neuroh5
      const std::vector<NODE_IDX_T>&                     dst_idx,
      const std::vector<DST_PTR_T>&                      dst_ptr,
      const std::vector<NODE_IDX_T>&                     src_idx,
-     const data::NamedAttrVal&                          edge_attr_values,
+     const std::map<std::string, data::NamedAttrVal>&   edge_attr_map,
      size_t&                                            num_edges,
      std::vector<prj_tuple_t>&                          prj_list
      );

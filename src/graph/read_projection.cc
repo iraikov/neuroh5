@@ -65,7 +65,7 @@ namespace neuroh5
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> src_idx;
-      data::NamedAttrVal edge_attr_values;
+      map<string, data::NamedAttrVal> edge_attr_map;
 
       DEBUG("reading projection ", src_pop_name, " -> ", dst_pop_name);
       assert(hdf5::read_projection_datasets(comm, file_name, src_pop_name, dst_pop_name,
@@ -93,7 +93,8 @@ namespace neuroh5
           
           assert(graph::read_all_edge_attributes
                  (comm, file_name, src_pop_name, dst_pop_name, attr_namespace,
-                  edge_base, edge_count, edge_attr_info, edge_attr_values) >= 0);
+                  edge_base, edge_count, edge_attr_info,
+                  edge_attr_map[attr_namespace]) >= 0);
         }
       
       size_t local_prj_num_edges=0;
@@ -101,7 +102,7 @@ namespace neuroh5
       // append to the vectors representing a projection (sources,
       // destinations, edge attributes)
       assert(data::append_prj_list(src_start, dst_start, dst_blk_ptr, dst_idx,
-                                   dst_ptr, src_idx, edge_attr_values,
+                                   dst_ptr, src_idx, edge_attr_map,
                                    local_prj_num_edges, prj_list) >= 0);
       
       // ensure that all edges in the projection have been read and

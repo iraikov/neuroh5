@@ -29,7 +29,7 @@ namespace neuroh5
 
     struct AttrVal
     {
-      static const size_t num_attr_types = 7;
+      static const size_t num_attr_types    = 7;
       static const size_t attr_index_float  = 0;
       static const size_t attr_index_uint8  = 1;
       static const size_t attr_index_int8   = 2;
@@ -288,6 +288,31 @@ namespace neuroh5
       void attr_names (std::vector<std::vector<std::string> > &) const; 
 
     };
+
+
+    
+    template <class T>
+    void fill_attr_vec (const map<string, NamedAttrVal>& edge_attr_map,
+                        vector<AttrVal>& edge_attr_vec,
+                        size_t j)
+    {
+      size_t i=0;
+      for (auto item : edge_attr_map) 
+        {
+          const string & attr_namespace = item->first;
+          const NamedAttrVal& edge_attr_values = item->second;
+
+          for (size_t k = 0;
+               k < edge_attr_vec[i].size_attr_vec<T>(); k++)
+            {
+              edge_attr_vec[i].push_back<T>
+                (k, edge_attr_values.at<T>(k,j));
+            }
+          i++;
+        }
+    }
+
+
   }
 }
 

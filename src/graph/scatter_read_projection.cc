@@ -83,7 +83,7 @@ namespace neuroh5
       rank_edge_map_t prj_rank_edge_map;
       edge_map_t prj_edge_map;
       size_t num_edges = 0;
-      vector< vector<string> > edge_attr_names;
+      map<string, vector< vector<string> > > edge_attr_names;
       vector<size_t> edge_attr_num(data::AttrVal::num_attr_types, 0);
       
       local_num_nodes=0; local_num_edges=0;
@@ -107,7 +107,7 @@ namespace neuroh5
               vector<NODE_IDX_T> dst_idx;
               vector<DST_PTR_T> dst_ptr;
               vector<NODE_IDX_T> src_idx;
-              data::NamedAttrVal edge_attr_values;
+              map<string, data::NamedAttrVal> edge_attr_map;
             
               uint32_t dst_pop_idx=0, src_pop_idx=0;
               bool src_pop_set = false, dst_pop_set = false;
@@ -149,16 +149,24 @@ namespace neuroh5
                   assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name,
                                                     attr_namespace, edge_attr_info) >= 0);
                   assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
-                  assert(graph::read_all_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                         attr_namespace, edge_base, edge_count,
-                                                         edge_attr_info, edge_attr_values) >= 0);
+                  assert(graph::read_all_edge_attributes(io_comm, file_name,
+                                                         src_pop_name, dst_pop_name, attr_namespace,
+                                                         edge_base, edge_count, edge_attr_info,
+                                                         edge_attr_map[attr_namespace]) >= 0);
                 }
 
               // append to the edge map
               assert(data::append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                edge_attr_values, node_rank_map, num_edges, prj_rank_edge_map,
+                                                edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
                                                 edge_map_type) >= 0);
-              edge_attr_values.attr_names(edge_attr_names);
+              for (auto iter : edge_attr_map) 
+                {
+                  const string & attr_namespace = iter->first;
+                  const NamedAttrVal& edge_attr_values = iter->second;
+
+                  edge_attr_values.attr_names(edge_attr_names[attr_namespace]);
+                }
+              
               DEBUG("scatter: read ", num_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
           
               // ensure that all edges in the projection have been read and appended to edge_list
