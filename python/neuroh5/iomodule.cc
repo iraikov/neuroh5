@@ -667,7 +667,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   
   for (auto const& attr_map_entry : attr_maps)
     {
-      const string& attr_name_space  = attr_map_entry.first;
+      const string& attr_namespace  = attr_map_entry.first;
       data::NamedAttrMap attr_map  = attr_map_entry.second;
       vector <vector<string> > attr_names;
 
@@ -774,7 +774,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         }
 
       PyDict_SetItemString(py_treeval,
-                           attr_name_space.c_str(),
+                           attr_namespace.c_str(),
                            py_namespace_dict);
     }
   
@@ -785,7 +785,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
 
 PyObject* py_build_attr_value(const CELL_IDX_T key, 
                               NamedAttrMap& attr_map,
-                              const string& attr_name_space,
+                              const string& attr_namespace,
                               const vector <vector<string> >& attr_names)
 {
   PyObject *py_result = PyDict_New();
@@ -897,7 +897,7 @@ PyObject* py_build_attr_value(const CELL_IDX_T key,
     }
 
   PyDict_SetItemString(py_result,
-                       attr_name_space.c_str(),
+                       attr_namespace.c_str(),
                        py_attrval);
 
   return py_result;
@@ -945,25 +945,26 @@ void py_build_edge_attr_value (const vector < vector<T> >& edge_attr_values,
 PyObject* py_build_edge_value(const NODE_IDX_T key,
                               const NODE_IDX_T adj, 
                               const size_t pos, 
-                              const AttrVal& attr_val,
-                              const string& attr_name_space,
-                              const vector <vector<string> >& attr_names,
-                              const int opt_attrs)
+                              const map <string, AttrVal&>& attr_val_map,
+                              const map <string, vector <vector<string> > >& attr_names)
 {
   PyObject *py_attrval = Py_None;
   PyObject *py_attrmap = Py_None;
 
-  vector < vector <float> >    float_attrs;
-  vector < vector <uint8_t> >  uint8_attrs;
-  vector < vector <int8_t> >   int8_attrs;
-  vector < vector <uint16_t> > uint16_attrs;
-  vector < vector <int16_t> >  int16_attrs;
-  vector < vector <uint32_t> > uint32_attrs;
-  vector < vector <int32_t> >  int32_attrs;
-
-  if (opt_attrs>0)
+  for ( auto it = attr_val_map.cbegin(); it != attr_val_map.cend(); it++ )
     {
-  
+      const string& attr_namespace = it->first;
+
+      const AttrVal& attr_val = it->second;
+      
+      vector < vector <float> >    float_attrs;
+      vector < vector <uint8_t> >  uint8_attrs;
+      vector < vector <int8_t> >   int8_attrs;
+      vector < vector <uint16_t> > uint16_attrs;
+      vector < vector <int16_t> >  int16_attrs;
+      vector < vector <uint32_t> > uint32_attrs;
+      vector < vector <int32_t> >  int32_attrs;
+          
       build_edge_attr_vec<float>(attr_val, pos, float_attrs);
       build_edge_attr_vec<uint8_t>(attr_val, pos, uint8_attrs);
       build_edge_attr_vec<uint16_t>(attr_val, pos, uint16_attrs);
@@ -971,29 +972,28 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
       build_edge_attr_vec<int8_t>(attr_val, pos, int8_attrs);
       build_edge_attr_vec<int16_t>(attr_val, pos, int16_attrs);
       build_edge_attr_vec<int32_t>(attr_val, pos, int32_attrs);
-
+      
       py_attrval = PyDict_New();
       py_attrmap = PyDict_New();
-
+      
       py_build_edge_attr_value (float_attrs, NPY_FLOAT, AttrMap::attr_index_float,
-                                attr_names, py_attrval);
+                                attr_names[attr_namespace], py_attrval);
       py_build_edge_attr_value (uint8_attrs, NPY_UINT8, AttrMap::attr_index_uint8,
-                                attr_names, py_attrval);
+                                attr_names[attr_namespace], py_attrval);
       py_build_edge_attr_value (uint16_attrs, NPY_UINT16, AttrMap::attr_index_uint16,
-                                attr_names, py_attrval);
+                                attr_names[attr_namespace], py_attrval);
       py_build_edge_attr_value (uint32_attrs, NPY_UINT32, AttrMap::attr_index_uint32,
-                                attr_names, py_attrval);
+                                attr_names[attr_namespace], py_attrval);
       py_build_edge_attr_value (int8_attrs,   NPY_INT8, AttrMap::attr_index_int8,
-                                attr_names, py_attrval);
+                                attr_names[attr_namespace], py_attrval);
       py_build_edge_attr_value (int16_attrs,  NPY_INT16, AttrMap::attr_index_int16,
-                                attr_names, py_attrval);
+                                attr_names[attr_namespace], py_attrval);
       py_build_edge_attr_value (int32_attrs,  NPY_INT32, AttrMap::attr_index_int32,
-                                attr_names, py_attrval);
-  
+                                attr_names[attr_namespace], py_attrval);
+      
       PyDict_SetItemString(py_attrmap,
-                           attr_name_space.c_str(),
+                           attr_namespace.c_str(),
                            py_attrval);
-
     }
   
   PyObject *py_result = PyTuple_New(3);
@@ -1003,7 +1003,7 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
   
   PyTuple_SetItem(py_result, 0, py_key);
   PyTuple_SetItem(py_result, 1, py_adj);
-  PyTuple_SetItem(py_result, 2, (opt_attrs>0) ? py_attrmap : (Py_INCREF(Py_None), Py_None));
+  PyTuple_SetItem(py_result, 2, (attr_names.size()>0) ? py_attrmap : (Py_INCREF(Py_None), Py_None));
   
   return py_result;
 }
@@ -1301,10 +1301,11 @@ extern "C"
   
   static PyObject *py_scatter_read_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; int opt_attrs=1; int opt_edge_map_type=0;
+    int status; int opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
     // A vector that maps nodes to compute ranks
     PyObject *py_node_rank_map=NULL;
+    PyObject *py_attr_namespaces=NULL;
     map<NODE_IDX_T, rank_t> node_rank_map;
     vector < edge_map_t > prj_vector;
     vector < vector <vector<string>> > edge_attr_name_vector;
@@ -1315,20 +1316,22 @@ extern "C"
     unsigned long io_size; int size;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr = NULL;
+    
     char *input_file_name;
     size_t local_num_nodes = 0, total_num_nodes = 0, total_num_edges = 0, local_num_edges = 0;
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
-                                   "io_size",
                                    "node_rank_map",
-                                   "attributes",
+                                   "namespaces",
                                    "map_type",
+                                   "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|kOii", (char **)kwlist,
-                                     &py_comm, &input_file_name, &io_size,
-                                     &py_node_rank_map, &opt_attrs, &opt_edge_map_type))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|OOik", (char **)kwlist,
+                                     &py_comm, &input_file_name, 
+                                     &py_node_rank_map, &py_attr_namespaces,
+                                     &opt_edge_map_type, &io_size))
       return NULL;
 
     assert(py_comm != NULL);
@@ -1346,6 +1349,18 @@ extern "C"
     if (io_size == 0)
       {
         io_size = size;
+      }
+
+    vector <string> attr_namespaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_namespaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_namespaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_namespaces, (Py_ssize_t)i);
+            char *str = PyBytes_AsString (pyval);
+            attr_namespaces.push_back(string(str));
+          }
       }
     
     assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
@@ -1368,7 +1383,7 @@ extern "C"
       }
 
     graph::scatter_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
-                         io_size, attrs_namespaces, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
+                         io_size, attr_namespaces, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
                          local_num_nodes, total_num_nodes, local_num_edges, total_num_edges);
 
     PyObject *py_attribute_info = PyDict_New();
@@ -1434,7 +1449,7 @@ extern "C"
                 PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
                 uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
 
-                if (opt_attrs>0)
+                if (attr_namespaces.size()>0)
                   {
                     for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
                       {
@@ -1530,7 +1545,7 @@ extern "C"
                 PyObject *py_edgeval  = PyList_New(0);
                 status = PyList_Append(py_edgeval, adj_arr);
                 assert (status == 0);
-                if (opt_attrs > 0)
+                if (attr_namespaces.size() > 0)
                   {
                     for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
                       {
@@ -1587,7 +1602,7 @@ extern "C"
         
       }
 
-    if (opt_attrs > 0)
+    if (attr_namespaces.size() > 0)
       {
         PyObject *py_prj_tuple = PyTuple_New(2);
         PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
@@ -1603,7 +1618,7 @@ extern "C"
   
   static PyObject *py_bcast_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; int opt_attrs=1; int opt_edge_map_type=0;
+    int status; int opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
     vector < edge_map_t > prj_vector;
     vector < vector <vector<string>> > edge_attr_name_vector;
@@ -1615,17 +1630,18 @@ extern "C"
     char *input_file_name;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
+    PyObject *py_attr_namespaces=NULL;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
-                                   "attributes",
+                                   "namespaces",
                                    "map_type",
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|ii", (char **)kwlist,
                                      &py_comm, &input_file_name, 
-                                     &opt_attrs, &opt_edge_map_type))
+                                     &py_attr_namespaces, &opt_edge_map_type))
       return NULL;
 
     assert(py_comm != NULL);
@@ -1640,17 +1656,29 @@ extern "C"
     
     assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
 
+    vector <string> attr_namespaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_namespaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_namespaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_namespaces, (Py_ssize_t)i);
+            char *str = PyBytes_AsString (pyval);
+            attr_namespaces.push_back(string(str));
+          }
+      }
+
     assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
     assert(cell::read_population_ranges(*comm_ptr, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
     graph::bcast_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
-                       opt_attrs>0, prj_names, prj_vector, edge_attr_name_vector, 
+                       attr_namespaces, prj_names, prj_vector, edge_attr_name_vector, 
                        total_num_nodes, local_num_edges, total_num_edges);
 
     PyObject *py_attribute_info = PyDict_New();
-    if (opt_attrs>0)
+    if (attr_namespaces.size()>0)
       {
         for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
           {
@@ -1705,7 +1733,7 @@ extern "C"
                 PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
                 uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
 
-                if (opt_attrs>0)
+                if (attr_namespaces.size()>0)
                   {
                     for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
                       {
@@ -1760,7 +1788,7 @@ extern "C"
                 PyObject *py_edgeval  = PyList_New(0);
                 status = PyList_Append(py_edgeval, adj_arr);
                 assert (status == 0);
-                if (opt_attrs > 0)
+                if (attr_namespaces.size() > 0)
                   {
                     for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
                       {
@@ -1802,7 +1830,7 @@ extern "C"
         
       }
 
-    if (opt_attrs > 0)
+    if (attr_namespaces.size() > 0)
       {
         PyObject *py_prj_tuple = PyTuple_New(2);
         PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
@@ -2050,9 +2078,9 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
-    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_attr_namespaces=NULL;
 
-    if (!PyArg_ParseTuple(args, "Oss|O", &py_comm, &file_name,  &pop_name, &py_attr_name_spaces))
+    if (!PyArg_ParseTuple(args, "Oss|O", &py_comm, &file_name,  &pop_name, &py_attr_namespaces))
       return NULL;
 
     assert(py_comm != NULL);
@@ -2060,15 +2088,15 @@ extern "C"
     assert(comm_ptr != NULL);
     assert(*comm_ptr != MPI_COMM_NULL);
 
-    vector <string> attr_name_spaces;
+    vector <string> attr_namespaces;
     // Create C++ vector of namespace strings:
-    if (py_attr_name_spaces != NULL)
+    if (py_attr_namespaces != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_namespaces); i++)
           {
-            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            PyObject *pyval = PyList_GetItem(py_attr_namespaces, (Py_ssize_t)i);
             char *str = PyBytes_AsString (pyval);
-            attr_name_spaces.push_back(string(str));
+            attr_namespaces.push_back(string(str));
           }
       }
 
@@ -2109,13 +2137,13 @@ extern "C"
     assert (status >= 0);
     map <string, NamedAttrMap> attr_maps;
     
-    for (string attr_name_space : attr_name_spaces)
+    for (string attr_namespace : attr_namespaces)
       {
         data::NamedAttrMap attr_map;
         cell::read_cell_attributes(*comm_ptr, string(file_name), 
-                                   attr_name_space, pop_name,
+                                   attr_namespace, pop_name,
                                    pop_vector[pop_idx].start, attr_map);
-        attr_maps.insert(make_pair(attr_name_space, attr_map));
+        attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
 
     for (size_t i = 0; i < tree_list.size(); i++)
@@ -2146,20 +2174,20 @@ extern "C"
     unsigned long io_size = 0;
     char *file_name, *pop_name;
     PyObject *py_node_rank_map=NULL;
-    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_attr_namespaces=NULL;
     map<CELL_IDX_T, rank_t> node_rank_map;
     static const char *kwlist[] = {"comm",
                                    "file_name",
                                    "pop_name",
-                                   "io_size",
                                    "node_rank_map",
-                                   "attributes",
                                    "namespaces",
+                                   "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss|kOO", (char **)kwlist,
-                                     &py_comm, &file_name, &pop_name, &io_size,
-                                     &py_node_rank_map, &py_attr_name_spaces))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss|OOk", (char **)kwlist,
+                                     &py_comm, &file_name, &pop_name
+                                     &py_node_rank_map, &py_attr_namespaces,
+                                     &io_size))
       return NULL;
 
     assert(py_comm != NULL);
@@ -2176,7 +2204,7 @@ extern "C"
         io_size = size;
       }
     
-    vector <string> attr_name_spaces;
+    vector <string> attr_namespaces;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
     vector< vector <string> > attr_names;
@@ -2187,13 +2215,13 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
     // Create C++ vector of namespace strings:
-    if (py_attr_name_spaces != NULL)
+    if (py_attr_namespaces != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_namespaces); i++)
           {
-            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            PyObject *pyval = PyList_GetItem(py_attr_namespaces, (Py_ssize_t)i);
             char *str = PyBytes_AsString (pyval);
-            attr_name_spaces.push_back(string(str));
+            attr_namespaces.push_back(string(str));
           }
       }
     
@@ -2235,7 +2263,7 @@ extern "C"
     map<string, NamedAttrMap> attr_maps;
 
     status = cell::scatter_read_trees (*comm_ptr, string(file_name),
-                                       io_size, attr_name_spaces,
+                                       io_size, attr_namespaces,
                                        node_rank_map, string(pop_name),
                                        pop_vector[pop_idx].start,
                                        tree_map, attr_maps);
@@ -2264,12 +2292,12 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
-    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_attr_namespaces=NULL;
     PyObject *py_selection=NULL;
     vector <CELL_IDX_T> selection;
 
     if (!PyArg_ParseTuple(args, "OssO|O", &py_comm, &file_name,  &pop_name,
-                          &py_selection, &py_attr_name_spaces))
+                          &py_selection, &py_attr_namespaces))
       return NULL;
 
     assert(py_comm != NULL);
@@ -2277,15 +2305,15 @@ extern "C"
     assert(comm_ptr != NULL);
     assert(*comm_ptr != MPI_COMM_NULL);
 
-    vector <string> attr_name_spaces;
+    vector <string> attr_namespaces;
     // Create C++ vector of namespace strings:
-    if (py_attr_name_spaces != NULL)
+    if (py_attr_namespaces != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_namespaces); i++)
           {
-            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            PyObject *pyval = PyList_GetItem(py_attr_namespaces, (Py_ssize_t)i);
             char *str = PyBytes_AsString (pyval);
-            attr_name_spaces.push_back(string(str));
+            attr_namespaces.push_back(string(str));
           }
       }
 
@@ -2337,14 +2365,14 @@ extern "C"
     assert (status >= 0);
     map <string, NamedAttrMap> attr_maps;
     
-    for (string attr_name_space : attr_name_spaces)
+    for (string attr_namespace : attr_namespaces)
       {
         data::NamedAttrMap attr_map;
         cell::read_cell_attribute_selection(string(file_name), 
-                                            attr_name_space, pop_name,
+                                            attr_namespace, pop_name,
                                             pop_vector[pop_idx].start,
                                             selection, attr_map);
-        attr_maps.insert(make_pair(attr_name_space, attr_map));
+        attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
 
     for (size_t i = 0; i < tree_list.size(); i++)
@@ -2370,8 +2398,8 @@ extern "C"
     herr_t status;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    const string default_name_space = "Attributes";
-    char *file_name, *pop_name, *name_space = (char *)default_name_space.c_str();
+    const string default_namespace = "Attributes";
+    char *file_name, *pop_name, *namespace = (char *)default_namespace.c_str();
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
@@ -2381,7 +2409,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss|s", (char **)kwlist,
                                      &py_comm, &file_name,
-                                     &pop_name, &name_space))
+                                     &pop_name, &namespace))
         return NULL;
 
     assert(py_comm != NULL);
@@ -2419,7 +2447,7 @@ extern "C"
 
     NamedAttrMap attr_values;
     cell::read_cell_attributes (*comm_ptr,
-                                string(file_name), string(name_space),
+                                string(file_name), string(namespace),
                                 string(pop_name), pop_vector[pop_idx].start,
                                 attr_values);
     vector<vector<string>> attr_names;
@@ -2477,8 +2505,8 @@ extern "C"
     herr_t status;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    const string default_name_space = "Attributes";
-    char *file_name, *pop_name, *name_space = (char *)default_name_space.c_str();
+    const string default_namespace = "Attributes";
+    char *file_name, *pop_name, *namespace = (char *)default_namespace.c_str();
     PyObject *py_selection = NULL;
     vector <CELL_IDX_T> selection;
     
@@ -2492,7 +2520,7 @@ extern "C"
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO|s", (char **)kwlist,
                                      &py_comm, &file_name,
                                      &pop_name, &py_selection,
-                                     &name_space))
+                                     &namespace))
         return NULL;
 
     assert(py_comm != NULL);
@@ -2540,7 +2568,7 @@ extern "C"
 
 
     NamedAttrMap attr_values;
-    cell::read_cell_attribute_selection (string(file_name), string(name_space),
+    cell::read_cell_attribute_selection (string(file_name), string(namespace),
                                          string(pop_name), pop_vector[pop_idx].start,
                                          selection, attr_values);
     vector<vector<string>> attr_names;
@@ -2599,8 +2627,8 @@ extern "C"
     unsigned long root;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    const string default_name_space = "Attributes";
-    char *file_name, *pop_name, *name_space = (char *)default_name_space.c_str();
+    const string default_namespace = "Attributes";
+    char *file_name, *pop_name, *namespace = (char *)default_namespace.c_str();
     NamedAttrMap attr_values;
     
     static const char *kwlist[] = {"comm",
@@ -2612,7 +2640,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "Pkss|s", (char **)kwlist,
                                      &py_comm, &root, &file_name,
-                                     &pop_name, &name_space))
+                                     &pop_name, &namespace))
         return NULL;
 
     assert(py_comm != NULL);
@@ -2649,7 +2677,7 @@ extern "C"
 
 
     cell::bcast_cell_attributes (*comm_ptr, (int)root,
-                                 string(file_name), string(name_space),
+                                 string(file_name), string(namespace),
                                  string(pop_name), pop_vector[pop_idx].start,
                                  attr_values);
     vector<vector<string>> attr_names;
@@ -2707,8 +2735,8 @@ extern "C"
     PyObject *idx_values;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    const string default_name_space = "Attributes";
-    char *file_name_arg, *pop_name_arg, *name_space_arg = (char *)default_name_space.c_str();
+    const string default_namespace = "Attributes";
+    char *file_name_arg, *pop_name_arg, *namespace_arg = (char *)default_namespace.c_str();
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
@@ -2719,7 +2747,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO|s", (char **)kwlist,
                                      &py_comm, &file_name_arg, &pop_name_arg, &idx_values,
-                                     &name_space_arg))
+                                     &namespace_arg))
         return NULL;
 
     assert(py_comm != NULL);
@@ -2729,7 +2757,7 @@ extern "C"
 
     string file_name = string(file_name_arg);
     string pop_name = string(pop_name_arg);
-    string attr_namespace = string(name_space_arg);
+    string attr_namespace = string(namespace_arg);
     
     int npy_type=0;
     
@@ -2816,14 +2844,14 @@ extern "C"
     const unsigned long default_cache_size = 4*1024*1024;
     const unsigned long default_chunk_size = 4000;
     const unsigned long default_value_chunk_size = 4000;
-    const string default_name_space = "Attributes";
+    const string default_namespace = "Attributes";
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size = 0;
     unsigned long chunk_size = default_chunk_size;
     unsigned long value_chunk_size = default_value_chunk_size;
     unsigned long cache_size = default_cache_size;
-    char *file_name_arg, *pop_name_arg, *name_space_arg = (char *)default_name_space.c_str();
+    char *file_name_arg, *pop_name_arg, *namespace_arg = (char *)default_namespace.c_str();
     herr_t status;
     
     static const char *kwlist[] = {"comm",
@@ -2840,7 +2868,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO|skkkkk", (char **)kwlist,
                                      &py_comm, &file_name_arg, &pop_name_arg, &idx_values,
-                                     &name_space_arg,
+                                     &namespace_arg,
                                      &io_size, &chunk_size, &value_chunk_size, &cache_size))
         return NULL;
 
@@ -2881,7 +2909,7 @@ extern "C"
     
     string file_name      = string(file_name_arg);
     string pop_name       = string(pop_name_arg);
-    string attr_namespace = string(name_space_arg);
+    string attr_namespace = string(namespace_arg);
     
     int npy_type=0;
     
@@ -3107,7 +3135,7 @@ extern "C"
    * file_name: input file name
    * src_pop: source population name
    * dst_pop: destination population name
-   * name_space: attribute namespace
+   * namespace: attribute namespace
    * node_rank_map: used to assign edges to MPI ranks
    * seq_index: index of the next edge in the sequence to yield
    * start_index: starting index of the next batch of edges to read from file
@@ -3132,12 +3160,12 @@ extern "C"
     edge_map_iter_t edge_map_iter;
     vector<NODE_IDX_T>::const_iterator edge_iter;
     vector< pair<string,hid_t> >  edge_attr_info;
-    vector<uint32_t> edge_attr_num;
-    vector < vector<string> >  edge_attr_names;
-    string  edge_attr_name_space;
+    vector<size_t> edge_attr_num;
+    vector< vector<string> >  edge_attr_names;
+    vector<string> edge_attr_namespaces;
     string src_pop_name, dst_pop_name;
     size_t total_num_nodes, local_num_nodes, total_num_edges, local_num_edges;
-    int opt_attrs;
+
 
   } NeuroH5ProjectionGenState;
 
@@ -3150,7 +3178,7 @@ extern "C"
    *
    * file_name: input file name
    * pop_name: population name
-   * name_space: attribute namespace
+   * namespace: attribute namespace
    * node_rank_map: used to assign trees to MPI ranks
    * seq_index: index of the next tree in the sequence to yield
    * start_index: starting index of the next batch of trees to read from file
@@ -3166,7 +3194,7 @@ extern "C"
     MPI_Comm *comm_ptr;
     vector<pop_range_t> pop_vector;
     map<CELL_IDX_T, neurotree_t> tree_map;
-    vector<string> attr_name_spaces;
+    vector<string> attr_namespaces;
     map <string, NamedAttrMap> attr_maps;
     map <string, vector< vector <string> > > attr_names;
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
@@ -3183,7 +3211,7 @@ extern "C"
    *
    * file_name: input file name
    * pop_name: population name
-   * name_space: attribute namespace
+   * namespace: attribute namespace
    * node_rank_map: used to assign trees to MPI ranks
    * seq_index: index of the next tree in the sequence to yield
    * start_index: starting index of the next batch of trees to read from file
@@ -3196,10 +3224,10 @@ extern "C"
     string pop_name;
     size_t pop_idx;
     string file_name;
-    string name_space;
+    string namespace;
     MPI_Comm* comm_ptr;
     vector<pop_range_t> pop_vector;
-    string attr_name_space;
+    string attr_namespace;
     NamedAttrMap attr_map;
     vector< vector <string> > attr_names;
     set<CELL_IDX_T>::const_iterator it_idx;
@@ -3215,21 +3243,21 @@ extern "C"
   static PyObject *
   neuroh5_prj_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
-    int status, opt_attrs=0, opt_edge_map_type=0;
+    int status, opt_edge_map_type=0;
     graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned int io_size=0, cache_size=1;
     char *file_name, *src_pop_name, *dst_pop_name;
-    PyObject* py_attr_name_spaces = NULL;
-    vector<string> attr_name_spaces;
+    PyObject* py_attr_namespaces = NULL;
+    vector<string> attr_namespaces;
     vector<pop_range_t> pop_vector;
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     set< pair<pop_t, pop_t> > pop_pairs;
     vector<pair <pop_t, string> > pop_labels;
     vector<pair<string,string> > prj_names;
     vector< pair<string,hid_t> >  edge_attr_info;
-    vector<uint32_t> edge_attr_num;
+    vector<size_t> edge_attr_num;
     size_t total_num_nodes;
 
     edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
@@ -3238,17 +3266,16 @@ extern "C"
                                    "file_name",
                                    "src_pop_name",
                                    "dst_pop_name",
-                                   "io_size",
-                                   "opt_edge_map_type",
-                                   "attributes",
                                    "namespaces",
+                                   "edge_map_type",
+                                   "io_size",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Osss|iiiOi", (char **)kwlist,
-                                     &py_comm, &file_name, &src_pop_name, &dst_pop_name, &io_size,
-                                     &opt_edge_map_type, &opt_attrs, &py_attr_name_spaces,
-                                     &cache_size))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Osss|Oikk", (char **)kwlist,
+                                     &py_comm, &file_name, &src_pop_name, &dst_pop_name, 
+                                     &py_attr_namespaces, &opt_edge_map_type, 
+                                     &io_size, &cache_size))
       return NULL;
     
     assert(py_comm != NULL);
@@ -3269,6 +3296,18 @@ extern "C"
       {
         io_size = size;
       }
+
+    vector <string> attr_namespaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_namespaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_namespaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_namespaces, (Py_ssize_t)i);
+            char *str = PyBytes_AsString (pyval);
+            attr_namespaces.push_back(string(str));
+          }
+      }
     
     assert(graph::read_projection_names(*comm_ptr, string(file_name), prj_names) >= 0);
 
@@ -3278,18 +3317,18 @@ extern "C"
     assert(cell::read_population_labels(*comm_ptr, file_name, pop_labels) >= 0);
     assert(cell::read_population_combos(*comm_ptr, string(file_name), pop_pairs) >= 0);
 
-    if (opt_attrs>0)
+    if (attr_namespaces.size()>0)
       {
 
-        assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, "Attributes",
+        assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, attr_namespace,
                                           edge_attr_info) >= 0);
         assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
         
         assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, *comm_ptr) == MPI_SUCCESS);
       }
     
-    hsize_t num_blocks = graph::num_projection_blocks(*comm_ptr, string(file_name),
-                                                      src_pop_name, dst_pop_name);
+    hsize_t num_blocks = hdf5::num_projection_blocks(*comm_ptr, string(file_name),
+                                                     src_pop_name, dst_pop_name);
 
 
     /* Create a new generator state and initialize it */
@@ -3309,7 +3348,6 @@ extern "C"
     
 
     py_ngg->state->pos             = seq_next;
-    py_ngg->state->opt_attrs       = opt_attrs;
     py_ngg->state->edge_index      = 0;
     py_ngg->state->edge_count      = 0;
     py_ngg->state->block_index     = 0;
@@ -3328,7 +3366,7 @@ extern "C"
     py_ngg->state->edge_map_type   = edge_map_type;
     py_ngg->state->edge_attr_info  = edge_attr_info;
     py_ngg->state->edge_attr_num   = edge_attr_num;
-    py_ngg->state->edge_attr_name_space  = "Attributes";
+    py_ngg->state->edge_attr_namespaces = attr_namespaces;
     py_ngg->state->total_num_nodes = total_num_nodes;
     py_ngg->state->local_num_nodes = 0;
     py_ngg->state->total_num_edges = 0;
@@ -3341,27 +3379,26 @@ extern "C"
   static PyObject *
   neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
-    int status, opt_attrs=0; 
+    int status;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned int io_size, cache_size=100;
     char *file_name, *pop_name;
-    PyObject* py_attr_name_spaces = NULL;
-    vector<string> attr_name_spaces;
+    PyObject* py_attr_namespaces = NULL;
+    vector<string> attr_namespaces;
 
     static const char *kwlist[] = {"comm",
                                    "file_name",
                                    "pop_name",
-                                   "io_size",
-                                   "attributes",
                                    "namespaces",
+                                   "io_size",
                                    "cache_size",
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OssI|iOi", (char **)kwlist,
-                                     &py_comm, &file_name, &pop_name, &io_size,
-                                     &opt_attrs, &py_attr_name_spaces,
-                                     &cache_size))
+                                     &py_comm, &file_name, &pop_name, 
+                                     &py_attr_namespaces,
+                                     &io_size, &cache_size))
       return NULL;
 
     assert(py_comm != NULL);
@@ -3382,13 +3419,13 @@ extern "C"
       cache_size = size;
 
     // Create C++ vector of namespace strings:
-    if (py_attr_name_spaces != NULL)
+    if (py_attr_namespaces != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_namespaces); i++)
           {
-            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            PyObject *pyval = PyList_GetItem(py_attr_namespaces, (Py_ssize_t)i);
             char *str = PyBytes_AsString (pyval);
-            attr_name_spaces.push_back(string(str));
+            attr_namespaces.push_back(string(str));
           }
       }
     
@@ -3475,7 +3512,7 @@ extern "C"
     py_ntrg->state->io_size    = io_size;
     py_ntrg->state->comm_size  = size;
     py_ntrg->state->cache_size = cache_size;
-    py_ntrg->state->attr_name_spaces  = attr_name_spaces;
+    py_ntrg->state->attr_namespaces  = attr_namespaces;
 
     map<CELL_IDX_T, neurotree_t> tree_map;
     py_ntrg->state->tree_map  = tree_map;
@@ -3492,8 +3529,8 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size=1, cache_size=100;
-    const string default_name_space = "Attributes";
-    char *file_name, *pop_name, *attr_name_space = (char *)default_name_space.c_str();
+    const string default_namespace = "Attributes";
+    char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
 
     static const char *kwlist[] = {"comm",
                                    "file_name",
@@ -3505,7 +3542,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oss|ksi", (char **)kwlist,
                                      &py_comm, &file_name, &pop_name, 
-                                     &io_size, &attr_name_space, &cache_size))
+                                     &io_size, &attr_namespace, &cache_size))
       return NULL;
 
     assert(py_comm != NULL);
@@ -3553,14 +3590,14 @@ extern "C"
                                         n_nodes) >= 0);
 
     vector< pair<string,hid_t> > attr_info;
-    assert(cell::get_cell_attributes (string(file_name), string(attr_name_space),
+    assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
                                       get<1>(pop_labels[pop_idx]), attr_info) >= 0);
     
     vector<CELL_IDX_T> cell_index;
     assert(cell::read_cell_index(*comm_ptr,
                                  string(file_name),
                                  get<1>(pop_labels[pop_idx]),
-                                 string(attr_name_space) + "/" + attr_info[0].first,
+                                 string(attr_namespace) + "/" + attr_info[0].first,
                                  cell_index) >= 0);
 
     for (size_t i=0; i<cell_index.size(); i++)
@@ -3614,7 +3651,7 @@ extern "C"
     py_ntrg->state->io_size    = io_size;
     py_ntrg->state->comm_size  = size;
     py_ntrg->state->cache_size = cache_size;
-    py_ntrg->state->attr_name_space  = string(attr_name_space);
+    py_ntrg->state->attr_namespace  = string(attr_namespace);
 
     NamedAttrMap attr_map;
     py_ntrg->state->attr_map  = attr_map;
@@ -3668,7 +3705,7 @@ extern "C"
             py_ntrg->state->tree_map.clear();
             py_ntrg->state->attr_maps.clear();
             status = cell::scatter_read_trees (*py_ntrg->state->comm_ptr, py_ntrg->state->file_name,
-                                               py_ntrg->state->io_size, py_ntrg->state->attr_name_spaces,
+                                               py_ntrg->state->io_size, py_ntrg->state->attr_namespaces,
                                                py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
                                                py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
                                                py_ntrg->state->tree_map, py_ntrg->state->attr_maps,
@@ -3753,7 +3790,7 @@ extern "C"
             
             int status;
             status = cell::scatter_read_cell_attributes (*py_ntrg->state->comm_ptr, py_ntrg->state->file_name,
-                                                         py_ntrg->state->io_size, py_ntrg->state->attr_name_space,
+                                                         py_ntrg->state->io_size, py_ntrg->state->attr_namespace,
                                                          py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
                                                          py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
                                                          py_ntrg->state->attr_map,
@@ -3770,7 +3807,7 @@ extern "C"
           {
             const CELL_IDX_T key = *(py_ntrg->state->it_idx);
             PyObject *elem = py_build_attr_value(key, py_ntrg->state->attr_map,
-                                                 py_ntrg->state->attr_name_space,
+                                                 py_ntrg->state->attr_namespace,
                                                  py_ntrg->state->attr_names);
             assert(elem != NULL);
             py_ntrg->state->it_idx++;
@@ -3836,7 +3873,7 @@ extern "C"
                                        py_ngg->state->file_name,
                                        py_ngg->state->src_pop_name,
                                        py_ngg->state->dst_pop_name,
-                                       py_ngg->state->opt_attrs, py_ngg->state->node_rank_map,
+                                       py_ngg->state->attr_namespaces, py_ngg->state->node_rank_map,
                                        py_ngg->state->pop_vector, py_ngg->state->pop_ranges,
                                        py_ngg->state->pop_labels, py_ngg->state->pop_pairs,
                                        py_ngg->state->edge_attr_info, py_ngg->state->edge_attr_num,
@@ -3911,9 +3948,7 @@ extern "C"
               result = py_build_edge_value(key, *(py_ngg->state->edge_iter),
                                            distance(py_ngg->state->edge_iter, adj_vector.cbegin()),
                                            get<1>(py_ngg->state->edge_map_iter->second),
-                                           py_ngg->state->edge_attr_name_space,
-                                           py_ngg->state->edge_attr_names,
-                                           py_ngg->state->opt_attrs);
+                                           py_ngg->state->edge_attr_names);
               py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
             }
           else
@@ -3934,9 +3969,7 @@ extern "C"
                   result = py_build_edge_value(key, adj,
                                                distance(py_ngg->state->edge_iter, adj_vector1.cbegin()),
                                                get<1>(py_ngg->state->edge_map_iter->second),
-                                               py_ngg->state->edge_attr_name_space,
-                                               py_ngg->state->edge_attr_names,
-                                               py_ngg->state->opt_attrs);
+                                               py_ngg->state->edge_attr_names);
                   py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
                  }
               else

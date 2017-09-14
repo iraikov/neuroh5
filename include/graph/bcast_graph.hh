@@ -37,7 +37,7 @@ namespace neuroh5
     /// @param io_size       Number of I/O ranks (those ranks that conduct I/O
     ///                      operations)
     ///
-    /// @param opt_attrs     If true, read edge attributes
+    /// @param attr_namespaces  Namespaces to read edge attributes from
     ///
     /// @param prj_names     Vector of projection names to be read
     ///
@@ -55,7 +55,7 @@ namespace neuroh5
      MPI_Comm                           all_comm,
      const EdgeMapType                  edge_map_type,
      const std::string&                 file_name,
-     const bool                         opt_attrs,
+     const std::vector< std::string > & attr_namespaces,
      const std::vector< std::pair<std::string,std::string> >&    prj_names,
      std::vector < edge_map_t >& prj_vector,
      std::vector < std::vector <std::vector<std::string>> >& edge_attr_names_vector,
