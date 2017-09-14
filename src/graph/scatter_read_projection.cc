@@ -1,8 +1,8 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file scatter_graph.cc
+///  @file scatter_read_projection.cc
 ///
-///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
+///  Top-level functions for reading edges in DBS (Destination Block Sparse)
 ///  format.
 ///
 ///  Copyright (C) 2016-2017 Project Neurograph.
@@ -11,15 +11,16 @@
 #include "debug.hh"
 
 #include "neuroh5_types.hh"
-#include "read_projection.hh"
+#include "read_projection_datasets.hh"
 #include "edge_attributes.hh"
 #include "cell_populations.hh"
 #include "validate_edge_list.hh"
-#include "scatter_graph.hh"
+#include "scatter_read_projection.hh"
 #include "bcast_template.hh"
 #include "alltoallv_template.hh"
 #include "serialize_edge.hh"
 #include "serialize_data.hh"
+#include "append_rank_edge_map.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -44,18 +45,16 @@ namespace neuroh5
      * Load and scatter edge data structures 
      *****************************************************************************/
 
-    int scatter_projection (MPI_Comm all_comm, const int io_size, EdgeMapType edge_map_type, 
+    int scatter_read_projection (MPI_Comm all_comm, const int io_size, EdgeMapType edge_map_type, 
                             const string& file_name, const string& src_pop_name, const string& dst_pop_name, 
-                            const bool opt_attrs,
+                            const vector<string> &attr_namespaces,
                             const map<NODE_IDX_T, rank_t>&  node_rank_map,
                             const vector<pop_range_t>& pop_vector,
                             const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
                             const vector< pair<pop_t, string> >& pop_labels,
                             const set< pair<pop_t, pop_t> >& pop_pairs,
-                            const vector< pair<string,hid_t> >& edge_attr_info, 
-                            const vector<uint32_t>& edge_attr_num,
                             vector < edge_map_t >& prj_vector,
-                            vector < vector <vector<string>> >& edge_attr_names_vector,
+                            vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
                             size_t &local_num_nodes, size_t &local_num_edges, size_t &total_num_edges,
                             size_t offset, size_t numitems)
     {
@@ -85,7 +84,8 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       size_t num_edges = 0;
       vector< vector<string> > edge_attr_names;
-
+      vector<size_t> edge_attr_num(data::AttrVal::num_attr_types, 0);
+      
       local_num_nodes=0; local_num_edges=0;
       
       {
@@ -131,9 +131,10 @@ namespace neuroh5
               src_start = pop_vector[src_pop_idx].start;
 
               DEBUG("Task ",rank," scatter: reading projection ", src_pop_name, " -> ", dst_pop_name);
-              assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
-                                            dst_start, src_start, block_base, edge_base, dst_blk_ptr, dst_idx,
-                                            dst_ptr, src_idx, total_num_edges, offset, numitems) >= 0);
+              assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
+                                                    dst_start, src_start, block_base, edge_base,
+                                                    dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                    total_num_edges, offset, numitems) >= 0);
           
               DEBUG("Task ",rank," scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges
@@ -141,18 +142,22 @@ namespace neuroh5
                                         pop_ranges, pop_pairs) == true);
           
           
-              if (opt_attrs)
+              edge_count = src_idx.size();
+              for (string& attr_namespace : attr_namespaces) 
                 {
-                  edge_count = src_idx.size();
+                  vector< pair<string,hid_t> > edge_attr_info;
+                  assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name,
+                                                    attr_namespace, edge_attr_info) >= 0);
+                  assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
                   assert(graph::read_all_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                         "Attributes", edge_base, edge_count,
+                                                         attr_namespace, edge_base, edge_count,
                                                          edge_attr_info, edge_attr_values) >= 0);
                 }
 
               // append to the edge map
-              assert(append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                          edge_attr_values, node_rank_map, num_edges, prj_rank_edge_map,
-                                          edge_map_type) >= 0);
+              assert(data::append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                edge_attr_values, node_rank_map, num_edges, prj_rank_edge_map,
+                                                edge_map_type) >= 0);
               edge_attr_values.attr_names(edge_attr_names);
               DEBUG("scatter: read ", num_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
           
@@ -173,6 +178,7 @@ namespace neuroh5
 
           MPI_Comm_free(&io_comm);
 
+          assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
           assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                              recvcounts, rdispls, recvbuf) >= 0);
         }
@@ -188,7 +194,7 @@ namespace neuroh5
       
       prj_vector.push_back(prj_edge_map);
 
-      if (opt_attrs)
+      if (!attr_namespaces.empty())
         {
           vector<char> sendbuf; uint32_t sendbuf_size=0;
           if (rank == 0)
@@ -210,81 +216,10 @@ namespace neuroh5
           DEBUG("scatter: finished broadcasting attribute names for projection ", src_pop_name, " -> ", dst_pop_name);
         }
       
-      assert(MPI_Barrier(all_comm) == MPI_SUCCESS);
-
 
       return 0;
     }
 
-
-    int scatter_graph
-    (
-     MPI_Comm                      all_comm,
-     const EdgeMapType             edge_map_type,
-     const std::string&            file_name,
-     const int                     io_size,
-     const bool                    opt_attrs,
-     const vector< pair<string, string> >&         prj_names,
-     // A vector that maps nodes to compute ranks
-     const map<NODE_IDX_T, rank_t>&  node_rank_map,
-     vector < edge_map_t >& prj_vector,
-     vector < vector <vector<string>> >& edge_attr_names_vector,
-     size_t                       &local_num_nodes,
-     size_t                       &total_num_nodes,
-     size_t                       &local_num_edges,
-     size_t                       &total_num_edges
-     )
-    {
-      int ierr = 0;
-      // The set of compute ranks for which the current I/O rank is responsible
-      set< pair<pop_t, pop_t> > pop_pairs;
-      vector<pop_range_t> pop_vector;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      vector< pair<pop_t, string> > pop_labels;
-      
-      int rank, size;
-      assert(MPI_Comm_size(all_comm, &size) >= 0);
-      assert(MPI_Comm_rank(all_comm, &rank) >= 0);
-          
-       assert(cell::read_population_ranges
-              (all_comm, file_name, pop_ranges, pop_vector, total_num_nodes)
-              >= 0);
-       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
-       assert(cell::read_population_combos(all_comm, file_name, pop_pairs)  >= 0);
-          
-      // For each projection, I/O ranks read the edges and scatter
-      for (size_t i = 0; i < prj_names.size(); i++)
-        {
-
-          string src_pop_name = prj_names[i].first;
-          string dst_pop_name = prj_names[i].second;
-          
-          vector< pair<string,hid_t> >  edge_attr_info;
-          vector< vector<string> > edge_attr_names;
-          vector<uint32_t> edge_attr_num;
-
-          edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
-          edge_attr_names.resize(data::AttrVal::num_attr_types);
-
-          if (opt_attrs)
-            {
-              assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, "Attributes",
-                                                edge_attr_info) >= 0);
-              assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
-
-              assert(MPI_Bcast(&edge_attr_num[0], data::AttrVal::num_attr_types, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
-            }
-
-          scatter_projection(all_comm, io_size, edge_map_type,
-                             file_name, src_pop_name, dst_pop_name, opt_attrs,
-                             node_rank_map, pop_vector, pop_ranges, pop_labels, pop_pairs,
-                             edge_attr_info, edge_attr_num, 
-                             prj_vector, edge_attr_names_vector,
-                             local_num_nodes, local_num_edges, total_num_edges);
-
-        }
-      return ierr;
-    }
 
   }
   

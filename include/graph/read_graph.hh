@@ -23,55 +23,7 @@ namespace neuroh5
 {
   namespace graph
   {
-        
-    enum EdgeMapType
-      {
-        EdgeMapDst,
-        EdgeMapSrc
-      };
 
-
-    extern int append_rank_edge_map
-    (
-     const NODE_IDX_T&                 dst_start,
-     const NODE_IDX_T&                 src_start,
-     const std::vector<DST_BLK_PTR_T>& dst_blk_ptr,
-     const std::vector<NODE_IDX_T>&    dst_idx,
-     const std::vector<DST_PTR_T>&     dst_ptr,
-     const std::vector<NODE_IDX_T>&    src_idx,
-     const data::NamedAttrVal&         edge_attr_values,
-     const std::map<NODE_IDX_T, rank_t>& node_rank_map,
-     size_t&                           num_edges,
-     rank_edge_map_t &                 rank_edge_map,
-     EdgeMapType                       edge_map_type
-     );
-
-    extern int append_edge_map
-    (
-     const NODE_IDX_T&                 dst_start,
-     const NODE_IDX_T&                 src_start,
-     const std::vector<DST_BLK_PTR_T>& dst_blk_ptr,
-     const std::vector<NODE_IDX_T>&    dst_idx,
-     const std::vector<DST_PTR_T>&     dst_ptr,
-     const std::vector<NODE_IDX_T>&    src_idx,
-     const data::NamedAttrVal&         edge_attr_values,
-     size_t&                           num_edges,
-     edge_map_t &                      edge_map,
-     EdgeMapType                       edge_map_type
-     );
-
-    extern int append_prj_list
-    (
-     const NODE_IDX_T&                                  dst_start,
-     const NODE_IDX_T&                                  src_start,
-     const std::vector<DST_BLK_PTR_T>&                  dst_blk_ptr,
-     const std::vector<NODE_IDX_T>&                     dst_idx,
-     const std::vector<DST_PTR_T>&                      dst_ptr,
-     const std::vector<NODE_IDX_T>&                     src_idx,
-     const data::NamedAttrVal&                          edge_attr_values,
-     size_t&                                            num_edges,
-     std::vector<prj_tuple_t>&                          prj_list
-     );
 
     /// @brief Reads the edges of the given projections
     ///
@@ -79,7 +31,7 @@ namespace neuroh5
     ///
     /// @param file_name     Input file name
     ///
-    /// @param opt_attrs     If true, read edge attributes
+    /// @param attr_namespaces     Vector of edge attribute namespaces to read
     ///
     /// @param prj_names     Vector of <src, dst> projections to be read
     ///
@@ -101,7 +53,7 @@ namespace neuroh5
     (
      MPI_Comm                         comm,
      const std::string&               file_name,
-     const bool                       opt_attrs,
+     const std::vector< std::string > attr_namespaces,
      const std::vector< std::pair<std::string, std::string> > prj_names,
      std::vector<prj_tuple_t>&        prj_list,
      size_t&                          total_num_nodes,
@@ -112,7 +64,7 @@ namespace neuroh5
     extern int read_graph_serial
     (
      const std::string&               file_name,
-     const bool                       opt_attrs,
+     const std::vector< std::string > attr_namespaces,
      const std::vector< std::pair<std::string, std::string> > prj_names,
      std::vector<prj_tuple_t>&        prj_list,
      size_t&                          total_num_nodes,

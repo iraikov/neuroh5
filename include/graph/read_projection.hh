@@ -24,7 +24,7 @@ namespace neuroh5
   namespace graph
   {
 
-    hsize_t projection_num_blocks
+    hsize_t num_projection_blocks
     (
      MPI_Comm                   comm,
      const std::string&         file_name,
@@ -75,13 +75,9 @@ namespace neuroh5
      const std::string&              dst_pop_name,
      const NODE_IDX_T&               dst_start,
      const NODE_IDX_T&               src_start,
-     DST_BLK_PTR_T&                  block_base,
-     DST_PTR_T&                      edge_base,
-     std::vector<DST_BLK_PTR_T>&     dst_blk_ptr,
-     std::vector<NODE_IDX_T>&        dst_idx,
-     std::vector<DST_PTR_T>&         dst_ptr,
-     std::vector<NODE_IDX_T>&        src_idx,
-     size_t&                         nedges,
+     vector<prj_tuple_t>&            prj_list,
+     size_t&                         local_num_edges,
+     size_t&                         total_num_edges,
      size_t                          offset = 0,
      size_t                          numitems = 0,
      bool collective = true
@@ -94,13 +90,9 @@ namespace neuroh5
      const std::string&              dst_pop_name,
      const NODE_IDX_T&               dst_start,
      const NODE_IDX_T&               src_start,
-     DST_BLK_PTR_T&                  block_base,
-     DST_PTR_T&                      edge_base,
-     std::vector<DST_BLK_PTR_T>&     dst_blk_ptr,
-     std::vector<NODE_IDX_T>&        dst_idx,
-     std::vector<DST_PTR_T>&         dst_ptr,
-     std::vector<NODE_IDX_T>&        src_idx,
-     size_t&                         nedges,
+     vector<prj_tuple_t>&            prj_list,
+     size_t&                         local_num_edges,
+     size_t&                         total_num_edges,
      size_t                          offset = 0,
      size_t                          numitems = 0
      );

@@ -203,15 +203,36 @@ namespace neuroh5
             case H5T_INTEGER:
               if (attr_size == 4)
                 {
-                  num_attrs[3]++;
+                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+                    {
+                      num_attrs[data::AttrVal::attr_index_uint32]++;
+                    }
+                  else
+                    {
+                      num_attrs[data::AttrVal::attr_index_int32]++;
+                    }
                 }
               else if (attr_size == 2)
                 {
-                  num_attrs[2]++;
+                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+                    {
+                      num_attrs[data::AttrVal::attr_index_uint16]++;
+                    }
+                  else
+                    {
+                      num_attrs[data::AttrVal::attr_index_int16]++;
+                    }
                 }
               else if (attr_size == 1)
                 {
-                  num_attrs[1]++;
+                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+                    {
+                      num_attrs[data::AttrVal::attr_index_uint8]++;
+                    }
+                  else
+                    {
+                      num_attrs[data::AttrVal::attr_index_int8]++;
+                    }
                 }
               else
                 {
@@ -219,12 +240,19 @@ namespace neuroh5
                 };
               break;
             case H5T_FLOAT:
-              num_attrs[0]++;
+              num_attrs[data::AttrVal::attr_index_float]++;
               break;
             case H5T_ENUM:
               if (attr_size == 1)
                 {
-                  num_attrs[1]++;
+                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+                    {
+                      num_attrs[data::AttrVal::attr_index_uint8]++;
+                    }
+                  else
+                    {
+                      num_attrs[data::AttrVal::attr_index_int8]++;
+                    }
                 }
               else
                 {

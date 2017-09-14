@@ -47,6 +47,7 @@
 #include "scatter_read_tree.hh"
 #include "cell_index.hh"
 #include "dataset_num_elements.hh"
+#include "num_projection_blocks.hh"
 #include "attr_map.hh"
 
 #include "read_projection.hh"
@@ -1367,17 +1368,17 @@ extern "C"
       }
 
     graph::scatter_graph(*comm_ptr, edge_map_type, std::string(input_file_name),
-                         io_size, opt_attrs>0, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
+                         io_size, attrs_namespaces, prj_names, node_rank_map, prj_vector, edge_attr_name_vector, 
                          local_num_nodes, total_num_nodes, local_num_edges, total_num_edges);
 
     PyObject *py_attribute_info = PyDict_New();
-    if (opt_attrs>0)
+    for (string& attr_namespace : attr_namespaces) 
       {
         for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
           {
             PyObject *py_prj_attr_info  = PyDict_New();
             int attr_index=0;
-            for (size_t n = 0; n<edge_attr_name_vector[p].size(); n++)
+            for (size_t n = 0; n<edge_attr_name_vector[p][attr_namespace].size(); n++)
               {
                 for (size_t t = 0; t<edge_attr_name_vector[p][n].size(); t++)
                   {
@@ -3287,7 +3288,7 @@ extern "C"
         assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, *comm_ptr) == MPI_SUCCESS);
       }
     
-    hsize_t num_blocks = graph::projection_num_blocks(*comm_ptr, string(file_name),
+    hsize_t num_blocks = graph::num_projection_blocks(*comm_ptr, string(file_name),
                                                       src_pop_name, dst_pop_name);
 
 

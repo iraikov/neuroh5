@@ -63,18 +63,12 @@ namespace neuroh5
   
   // Block offset type
   typedef uint64_t DST_BLK_PTR_T;
-  
-  // Size and header type used for indicating structure size in packed edge data
-  struct EdgeHeader
-  {
-    NODE_IDX_T key;
-    uint32_t size;
-  };
-  
-  struct Size
-  {
-    uint32_t size;
-  };
+        
+  enum EdgeMapType
+    {
+      EdgeMapDst,
+      EdgeMapSrc
+    };
 
   enum CellIndex
     {

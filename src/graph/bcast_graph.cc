@@ -10,12 +10,13 @@
 
 #include "debug.hh"
 
-#include "read_projection.hh"
+#include "neuroh5_types.hh"
+#include "read_projection_datasets.hh"
 #include "edge_attributes.hh"
 #include "cell_populations.hh"
 #include "validate_edge_list.hh"
-#include "scatter_graph.hh"
 #include "bcast_template.hh"
+#include "append_edge_map.hh"
 #include "serialize_edge.hh"
 #include "serialize_data.hh"
 
@@ -49,13 +50,13 @@ namespace neuroh5
                           const string& file_name,
                           const string& src_pop_name, 
                           const string& dst_pop_name, 
-                          const bool opt_attrs,
+                          const vector< string >& attr_namespaces,
                           const vector<pop_range_t>& pop_vector,
                           const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
                           const set< pair<pop_t, pop_t> >& pop_pairs,
                           vector < edge_map_t >& prj_vector,
-                          vector<vector<vector<string>>>& edge_attr_names_vector
-                          )
+                          vector < vector < vector<string> > > & edge_attr_names_vector)
+                          
     {
 
       int rank, size;
@@ -65,7 +66,7 @@ namespace neuroh5
       vector<char> sendbuf; 
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       edge_map_t prj_edge_map;
-      vector<uint32_t> edge_attr_num;
+      vector<size_t> edge_attr_num;
       vector<vector<string>> edge_attr_names;
       vector< pair<pop_t, string> > pop_labels;
       size_t num_edges = 0, total_prj_num_edges = 0;
@@ -108,10 +109,10 @@ namespace neuroh5
           src_start = pop_vector[src_pop_idx].start;
 
           DEBUG("bcast: reading projection ", src_pop_name, " -> ", dst_pop_name);
-          assert(graph::read_projection(io_comm, file_name, src_pop_name, dst_pop_name,
-                                        dst_start, src_start, block_base, edge_base,
-                                        dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                        total_prj_num_edges) >= 0);
+          assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
+                                                dst_start, src_start, block_base, edge_base,
+                                                dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                total_prj_num_edges) >= 0);
           
           DEBUG("bcast: validating projection ", src_pop_name, " -> ", dst_pop_name);
           // validate the edges
@@ -119,22 +120,24 @@ namespace neuroh5
                                     pop_ranges, pop_pairs) == true);
           
           
-          if (opt_attrs)
+          edge_count = src_idx.size();
+
+          for (string& attr_namespace : attr_namespaces) 
             {
-              edge_count = src_idx.size();
-              assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name, "Attributes",
-                                                edge_attr_info) >= 0);
+              vector< pair<string,hid_t> > edge_attr_info;
+              assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name,
+                                                attr_namespace, edge_attr_info) >= 0);
               assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
               assert(graph::read_all_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                     "Attributes", edge_base, edge_count,
+                                                     attr_namespace, edge_base, edge_count,
                                                      edge_attr_info, edge_attr_values) >= 0);
             }
 
           // append to the edge map
           
-          assert(append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                 edge_attr_values, num_edges, prj_edge_map,
-                                 edge_map_type) >= 0);
+          assert(data::append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                       edge_attr_values, num_edges, prj_edge_map,
+                                       edge_map_type) >= 0);
           edge_attr_values.attr_names(edge_attr_names);
 
           
@@ -153,7 +156,7 @@ namespace neuroh5
     
       // 0. Broadcast the number of attributes of each type to all ranks
       edge_attr_num.resize(data::AttrVal::num_attr_types, 0);
-      assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
       {
         vector<char> names_sendbuf; uint32_t names_sendbuf_size=0;
         if (rank == 0)
@@ -199,7 +202,7 @@ namespace neuroh5
      MPI_Comm                      all_comm,
      const EdgeMapType             edge_map_type,
      const std::string&            file_name,
-     const bool                    opt_attrs,
+     const vector< string >&       attr_namespaces,
      const vector< pair<string,string> >& prj_names,
      vector < edge_map_t >& prj_vector,
      vector < vector <vector<string>> >& edge_attr_names_vector,
@@ -279,7 +282,7 @@ namespace neuroh5
         {
           bcast_projection(all_comm, io_comm, edge_map_type, header_type, size_type, file_name,
                            prj_names[i].first, prj_names[i].second,
-                           opt_attrs, pop_vector, pop_ranges, pop_pairs,
+                           attr_namespaces, pop_vector, pop_ranges, pop_pairs,
                            prj_vector, edge_attr_names_vector);
                              
         }
