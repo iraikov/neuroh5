@@ -43,12 +43,12 @@ namespace neuroh5
       /// @return              True if the edges are valid, false otherwise
       extern bool validate_edge_list
       (
-       NODE_IDX_T&                                              dst_start,
-       NODE_IDX_T&                                              src_start,
-       std::vector<DST_BLK_PTR_T>&                              dst_blk_ptr,
-       std::vector<NODE_IDX_T>&                                 dst_idx,
-       std::vector<DST_PTR_T>&                                  dst_ptr,
-       std::vector<NODE_IDX_T>&                                 src_idx,
+       const NODE_IDX_T&                                              dst_start,
+       const NODE_IDX_T&                                              src_start,
+       const std::vector<DST_BLK_PTR_T>&                              dst_blk_ptr,
+       const std::vector<NODE_IDX_T>&                                 dst_idx,
+       const std::vector<DST_PTR_T>&                                  dst_ptr,
+       const std::vector<NODE_IDX_T>&                                 src_idx,
        const pop_range_map_t&                                   pop_ranges,
        const std::set< std::pair<pop_t, pop_t> >&               pop_pairs
        );

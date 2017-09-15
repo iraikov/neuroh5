@@ -73,18 +73,13 @@ namespace neuroh5
      const string&    file_name,
      const string&    src_pop_name,
      const string&    dst_pop_name,
-     const vector<vector<string>>& edge_attr_names,
+     const map <string, vector <vector <string> > >& edge_attr_names,
      const edge_map_t&  input_edge_map
      )
     {
       size_t io_size;
       size_t num_edges = 0;
       assert(edge_attr_names.size() == data::AttrVal::num_attr_types);
-      vector <uint32_t> edge_attr_num(data::AttrVal::num_attr_types,0);
-      for (size_t i=0; i<data::AttrVal::num_attr_types; i++)
-        {
-          edge_attr_num[i] = edge_attr_names[i].size();
-        }
       
       // read the population info
       set< pair<pop_t, pop_t> > pop_pairs;
@@ -164,14 +159,14 @@ namespace neuroh5
       // construct a map where each set of edges are arranged by destination I/O rank
       auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       rank_edge_map_t rank_edge_map;
-      for (auto & element: input_edge_map)
+      for (auto element: input_edge_map)
         {
           NODE_IDX_T dst = element.first;
           // all source/destination node IDs must be in range
           assert(dst_start <= dst && dst < dst_end);
-          edge_tuple_t et        = element.second;
-          vector<NODE_IDX_T> v   = get<0>(et);
-          AttrVal a        = get<1>(et);
+          edge_tuple_t& et        = element.second;
+          vector<NODE_IDX_T>& v   = get<0>(et);
+          vector <AttrVal>& va    = get<1>(et);
 
           vector<NODE_IDX_T> adj_vector;
           for (auto & src: v)
@@ -189,81 +184,62 @@ namespace neuroh5
 
           apply_permutation_in_place(adj_vector, p);
 
-          for (size_t i=0; i<a.float_values.size(); i++)
+          for (auto & a : va)
             {
-              apply_permutation_in_place(a.float_values[i], p);
+              for (size_t i=0; i<a.float_values.size(); i++)
+                {
+                  apply_permutation_in_place(a.float_values[i], p);
+                }
+              for (size_t i=0; i<a.uint8_values.size(); i++)
+                {
+                  apply_permutation_in_place(a.uint8_values[i], p);
+                }
+              for (size_t i=0; i<a.uint16_values.size(); i++)
+                {
+                  apply_permutation_in_place(a.uint16_values[i], p);
+                }
+              for (size_t i=0; i<a.uint32_values.size(); i++)
+                {
+                  apply_permutation_in_place(a.uint32_values[i], p);
+                }
+              for (size_t i=0; i<a.int8_values.size(); i++)
+                {
+                  apply_permutation_in_place(a.int8_values[i], p);
+                }
+              for (size_t i=0; i<a.int16_values.size(); i++)
+                {
+                  apply_permutation_in_place(a.int16_values[i], p);
+                }
+              for (size_t i=0; i<a.int32_values.size(); i++)
+                {
+                  apply_permutation_in_place(a.int32_values[i], p);
+                }
             }
-          for (size_t i=0; i<a.uint8_values.size(); i++)
-            {
-              apply_permutation_in_place(a.uint8_values[i], p);
-            }
-          for (size_t i=0; i<a.uint16_values.size(); i++)
-            {
-              apply_permutation_in_place(a.uint16_values[i], p);
-            }
-          for (size_t i=0; i<a.uint32_values.size(); i++)
-            {
-              apply_permutation_in_place(a.uint32_values[i], p);
-            }
-          for (size_t i=0; i<a.int8_values.size(); i++)
-            {
-              apply_permutation_in_place(a.int8_values[i], p);
-            }
-          for (size_t i=0; i<a.int16_values.size(); i++)
-            {
-              apply_permutation_in_place(a.int16_values[i], p);
-            }
-          for (size_t i=0; i<a.int32_values.size(); i++)
-            {
-              apply_permutation_in_place(a.int32_values[i], p);
-            }
-
           auto it = node_rank_map.find(dst);
           assert(it != node_rank_map.end());
           size_t dst_rank = it->second;
           edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
-          AttrVal &edge_attr_vec = get<1>(et1);
-          
-          edge_attr_vec.float_values.resize(a.float_values.size());
-          edge_attr_vec.uint8_values.resize(a.uint8_values.size());
-          edge_attr_vec.uint16_values.resize(a.uint16_values.size());
-          edge_attr_vec.uint32_values.resize(a.uint32_values.size());
-          edge_attr_vec.int8_values.resize(a.int8_values.size());
-          edge_attr_vec.int16_values.resize(a.int16_values.size());
-          edge_attr_vec.int32_values.resize(a.int32_values.size());
-          edge_attr_vec.append(a);
+          vector <AttrVal> &edge_attr_vec = get<1>(et1);
+
+          size_t i=0;
+          for (auto & edge_attr : edge_attr_vec)
+            {
+              AttrVal& a = va[i];
+              edge_attr.float_values.resize(a.float_values.size());
+              edge_attr.uint8_values.resize(a.uint8_values.size());
+              edge_attr.uint16_values.resize(a.uint16_values.size());
+              edge_attr.uint32_values.resize(a.uint32_values.size());
+              edge_attr.int8_values.resize(a.int8_values.size());
+              edge_attr.int16_values.resize(a.int16_values.size());
+              edge_attr.int32_values.resize(a.int32_values.size());
+              edge_attr.append(a);
+              i++;
+            }
         }
 
 
-
-      // Create an MPI datatype to describe the sizes of edge structures
-      Size sizeval;
-      MPI_Datatype size_type, size_struct_type;
-      MPI_Datatype size_fld_types[1] = { MPI_UINT32_T };
-      int size_blocklen[1] = { 1 };
-      MPI_Aint size_disp[1];
-      
-      size_disp[0] = reinterpret_cast<const unsigned char*>(&sizeval.size) - 
-        reinterpret_cast<const unsigned char*>(&sizeval);
-      assert(MPI_Type_create_struct(1, size_blocklen, size_disp, size_fld_types, &size_struct_type) == MPI_SUCCESS);
-      assert(MPI_Type_create_resized(size_struct_type, 0, sizeof(sizeval), &size_type) == MPI_SUCCESS);
-      assert(MPI_Type_commit(&size_type) == MPI_SUCCESS);
-      
-      EdgeHeader header;
-      MPI_Datatype header_type, header_struct_type;
-      MPI_Datatype header_fld_types[2] = { NODE_IDX_MPI_T, MPI_UINT32_T };
-      int header_blocklen[2] = { 1, 1 };
-      MPI_Aint header_disp[2];
-      
-      header_disp[0] = reinterpret_cast<const unsigned char*>(&header.key) - 
-        reinterpret_cast<const unsigned char*>(&header);
-      header_disp[1] = reinterpret_cast<const unsigned char*>(&header.size) - 
-        reinterpret_cast<const unsigned char*>(&header);
-      assert(MPI_Type_create_struct(2, header_blocklen, header_disp, header_fld_types, &header_struct_type) == MPI_SUCCESS);
-      assert(MPI_Type_create_resized(header_struct_type, 0, sizeof(header), &header_type) == MPI_SUCCESS);
-      assert(MPI_Type_commit(&header_type) == MPI_SUCCESS);
 
       // send buffer and structures for MPI Alltoall operation
       vector<char> sendbuf;
@@ -308,7 +284,7 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       if (recvbuf_size > 0)
         {
-          data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
+          data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes, num_unpacked_edges);
         }
       DEBUG("Task ",rank,": ","append_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
@@ -325,7 +301,8 @@ namespace neuroh5
           
           append_projection (file, src_pop_name, dst_pop_name,
                              src_start, src_end, dst_start, dst_end,
-                             num_unpacked_edges, prj_edge_map, edge_attr_names);
+                             num_unpacked_edges, prj_edge_map,
+                             edge_attr_names);
           
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);

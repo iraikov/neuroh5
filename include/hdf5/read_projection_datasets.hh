@@ -36,8 +36,8 @@ namespace neuroh5
      vector<DST_PTR_T>&         dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
-     size_t                     offset,
-     size_t                     numitems,
+     size_t                     offset = 0,
+     size_t                     numitems = 0,
      bool collective = true
      );
 
@@ -55,8 +55,8 @@ namespace neuroh5
      vector<DST_PTR_T>&         dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
-     size_t                     offset,
-     size_t                     numitems
+     size_t                     offset = 0,
+     size_t                     numitems = 0
      );
   }
 }

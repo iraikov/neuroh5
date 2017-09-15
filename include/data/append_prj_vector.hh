@@ -1,7 +1,7 @@
 
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file append_prj_map.cc
+///  @file append_prj_vector.hh
 ///
 ///  Populates a list of projections with edge values. 
 ///
@@ -18,7 +18,7 @@ namespace neuroh5
 
   namespace data
   {
-    int append_prj_list
+    int append_prj_vector
     (
      const NODE_IDX_T&                                  dst_start,
      const NODE_IDX_T&                                  src_start,

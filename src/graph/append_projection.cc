@@ -19,17 +19,20 @@ namespace neuroh5
   {
 
     template <class T>
-    void append_edge_attribute_map (const map <string, data::NamedAttrVal>& edge_attr_map,
+    void append_edge_attribute_map (hid_t file,
+                                    const string &src_pop_name,
+                                    const string &dst_pop_name,
+                                    const map <string, data::NamedAttrVal>& edge_attr_map,
                                     const map <string, vector < vector <string> > >& edge_attr_names)
     {
       for (auto iter : edge_attr_map)
         {
-          const string& attr_namespace = iter->first;
-          const data::NamedAttrVal& edge_attr_values = iter->second;
+          const string& attr_namespace = iter.first;
+          const data::NamedAttrVal& edge_attr_values = iter.second;
           
           for (size_t i=0; i<edge_attr_values.size_attr_vec<T>(); i++)
             {
-              const string& attr_name = edge_attr_names[attr_namespace][data::AttrVal::attr_type_index<T>][i];
+              const string& attr_name = edge_attr_names.at(attr_namespace)[data::AttrVal::attr_type_index<T>()][i];
               string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
               graph::write_edge_attribute<T>(file, path, edge_attr_values.attr_vec<T>(i));
             }
@@ -407,13 +410,14 @@ namespace neuroh5
       /*
         write(file, path, NODE_IDX_H5_FILE_T, src_idx);
       */
-        
+
+      vector <string> edge_attr_name_spaces;
       map <string, data::NamedAttrVal> edge_attr_map;
 
       for (auto iter : edge_attr_names)
         {
-          const string & attr_namespace = iter->first;
-          const vector <vector <string> >& attr_names = iter->second;
+          const string & attr_namespace = iter.first;
+          const vector <vector <string> >& attr_names = iter.second;
 
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           
@@ -424,31 +428,41 @@ namespace neuroh5
           edge_attr_values.int8_values.resize(attr_names[data::AttrVal::attr_index_int8].size());
           edge_attr_values.int16_values.resize(attr_names[data::AttrVal::attr_index_int16].size());
           edge_attr_values.int32_values.resize(attr_names[data::AttrVal::attr_index_int32].size());
+
+          edge_attr_name_spaces.push_back(attr_namespace);
         }
         
-      for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
+      for (auto iter = prj_edge_map.cbegin(); iter != prj_edge_map.cend(); ++iter)
         {
-          edge_tuple_t et = iter->second;
-          vector<NODE_IDX_T>& v = get<0>(et);
-          map <string, data::AttrVal>& a = get<1>(et);
+          const edge_tuple_t& et = iter->second;
+          const vector<NODE_IDX_T>& v = get<0>(et);
+          const vector <data::AttrVal>& a = get<1>(et);
           if (v.size() > 0)
             {
-              for (auto iter_a : a)
+              size_t ni=0;
+              for (auto & attr_values : a)
                 {
-                  const string& attr_namespace = iter_a->first;
-                  const data::AttrVal& attr_values = iter_a->second;
+                  const string & attr_namespace = edge_attr_name_spaces[ni];
                   edge_attr_map[attr_namespace].append(attr_values);
+                  ni++;
                 }
             }
         }
 
-      append_edge_attribute_map<float>(edge_attr_map, edge_attr_names);
-      append_edge_attribute_map<uint8_t>(edge_attr_map, edge_attr_names);
-      append_edge_attribute_map<uint16_t>(edge_attr_map, edge_attr_names);
-      append_edge_attribute_map<uint32_t>(edge_attr_map, edge_attr_names);
-      append_edge_attribute_map<int8_t>(edge_attr_map, edge_attr_names);
-      append_edge_attribute_map<int16_t>(edge_attr_map, edge_attr_names);
-      append_edge_attribute_map<int32_t>(edge_attr_map, edge_attr_names);
+      append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
+                                       edge_attr_map, edge_attr_names);
+      append_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,
+                                         edge_attr_map, edge_attr_names);
+      append_edge_attribute_map<uint16_t>(file, src_pop_name, dst_pop_name,
+                                          edge_attr_map, edge_attr_names);
+      append_edge_attribute_map<uint32_t>(file, src_pop_name, dst_pop_name,
+                                          edge_attr_map, edge_attr_names);
+      append_edge_attribute_map<int8_t>(file, src_pop_name, dst_pop_name,
+                                        edge_attr_map, edge_attr_names);
+      append_edge_attribute_map<int16_t>(file, src_pop_name, dst_pop_name,
+                                         edge_attr_map, edge_attr_names);
+      append_edge_attribute_map<int32_t>(file, src_pop_name, dst_pop_name,
+                                         edge_attr_map, edge_attr_names);
         
         
       // clean-up

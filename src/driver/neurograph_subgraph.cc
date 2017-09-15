@@ -5,7 +5,7 @@
 
 #include "read_projection.hh"
 #include "read_graph.hh"
-#include "scatter_graph.hh"
+#include "scatter_read_graph.hh"
 #include "cell_populations.hh"
 #include "projection_names.hh"
 #include "validate_edge_list.hh"
@@ -34,47 +34,24 @@ using namespace neuroh5;
 
 int filter_edge_list
 (
- const NODE_IDX_T&         base,
- const NODE_IDX_T&         dst_start,
- const NODE_IDX_T&         src_start,
- const vector<DST_BLK_PTR_T>&  dst_blk_ptr,
- const vector<NODE_IDX_T>& dst_idx,
- const vector<DST_PTR_T>&  dst_ptr,
- const vector<NODE_IDX_T>& src_idx,
+ prj_tuple_t&              projection,
  const set<NODE_IDX_T>&    src_selection,
  const set<NODE_IDX_T>&    dst_selection,
  vector<NODE_IDX_T>&       edge_list
  )
 {
-  int ierr = 0; size_t dst_ptr_size;
+  int ierr = 0;
+  const vector <NODE_IDX_T>& src_vector = get<0>(projection);
+  const vector <NODE_IDX_T>& dst_vector = get<1>(projection);
   
-  if (dst_blk_ptr.size() > 0) 
+  for (size_t i = 0; i<src_vector.size(); i++)
     {
-      dst_ptr_size = dst_ptr.size();
-      for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+      NODE_IDX_T src = src_vector[i];
+      NODE_IDX_T dst = dst_vector[i];
+      if (src_selection.empty() || (src_selection.find(src) != src_selection.end()))
         {
-          size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = dst_blk_ptr[b+1];
-          NODE_IDX_T dst_base = dst_idx[b];
-          for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
-            {
-              if (i < dst_ptr_size-1) 
-                {
-                  NODE_IDX_T dst = dst_base + ii + dst_start;
-                  if (dst_selection.empty() || (dst_selection.find(dst) != dst_selection.end()))
-                    {
-                      size_t low = dst_ptr[i], high = dst_ptr[i+1];
-                      for (size_t j = low; j < high; ++j)
-                        {
-                          NODE_IDX_T src = src_idx[j] + src_start;
-                          if (src_selection.empty() || (src_selection.find(src) != src_selection.end()))
-                            {
-                              edge_list.push_back(src);
-                              edge_list.push_back(dst);
-                            }
-                        }
-                    }
-                }
-            }
+          edge_list.push_back(src);
+          edge_list.push_back(dst);
         }
     }
 
@@ -89,7 +66,7 @@ int filter_edge_list
 int main(int argc, char** argv)
 {
   string input_file_name, src_pop_name, dst_pop_name;
-  
+  vector <string> edge_attr_name_spaces;
   assert(MPI_Init(&argc, &argv) >= 0);
 
   int rank, size;
@@ -144,46 +121,65 @@ int main(int argc, char** argv)
   assert (!((src_selection.size() == 0) && (dst_selection.size() == 0)));
   // read the population info
   set< pair<pop_t, pop_t> > pop_pairs;
-  assert(cell::read_population_combos(MPI_COMM_WORLD, input_file_name.c_str(), pop_pairs) >= 0);
+  assert(cell::read_population_combos(MPI_COMM_WORLD, input_file_name, pop_pairs) >= 0);
 
   size_t total_num_nodes;
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-  assert(cell::read_population_ranges(MPI_COMM_WORLD, input_file_name.c_str(), pop_ranges, pop_vector, total_num_nodes) >= 0);
+  assert(cell::read_population_ranges(MPI_COMM_WORLD, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
+  vector< pair<pop_t, string> > pop_labels;
+  assert(cell::read_population_labels(MPI_COMM_WORLD, input_file_name, pop_labels) >= 0);
+  
   vector< pair<string, string> > prj_names;
-  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name.c_str(), prj_names) >= 0);
+  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
       
   vector<NODE_IDX_T> edge_list;
+  vector<prj_tuple_t> prj_vector;
+  vector < map <string, vector < vector<string> > > >  edge_attr_names_vector;
 
   // read the edges
   for (size_t i = 0; i < prj_names.size(); i++)
     {
-      size_t total_prj_num_edges = 0;
-      DST_BLK_PTR_T block_base;
-      DST_PTR_T edge_base;
-      NODE_IDX_T base, dst_start, src_start;
-      vector<DST_BLK_PTR_T> dst_blk_ptr;
-      vector<NODE_IDX_T> dst_idx;
-      vector<DST_PTR_T> dst_ptr;
-      vector<NODE_IDX_T> src_idx;
+      size_t total_prj_num_edges = 0, local_prj_num_edges = 0;
 
       if ((src_pop_name.compare(prj_names[i].first) == 0) &&
           (dst_pop_name.compare(prj_names[i].second) == 0))
         {
           printf("Reading projection %lu (%s -> %s)\n", i, prj_names[i].first.c_str(), prj_names[i].second.c_str());
-          
-          assert(graph::read_projection(MPI_COMM_WORLD, input_file_name, prj_names[i].first, prj_names[i].second, 
-                                        dst_start, src_start, block_base, edge_base,
-                                        dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                        total_prj_num_edges) >= 0);
+
+          uint32_t dst_pop_idx = 0, src_pop_idx = 0;
+          bool src_pop_set = false, dst_pop_set = false;
+      
+          for (size_t i=0; i< pop_labels.size(); i++)
+            {
+              if (src_pop_name == get<1>(pop_labels[i]))
+                {
+                  src_pop_idx = get<0>(pop_labels[i]);
+                  src_pop_set = true;
+                }
+              if (dst_pop_name == get<1>(pop_labels[i]))
+                {
+                  dst_pop_idx = get<0>(pop_labels[i]);
+                  dst_pop_set = true;
+                }
+            }
+          assert(dst_pop_set && src_pop_set);
+
+          NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
+          NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
+
+          assert(graph::read_projection(MPI_COMM_WORLD, input_file_name,
+                                        pop_ranges, pop_pairs,
+                                        prj_names[i].first, prj_names[i].second,
+                                        dst_start, src_start, 
+                                        edge_attr_name_spaces, 
+                                        prj_vector, edge_attr_names_vector,
+                                        local_prj_num_edges, total_prj_num_edges) >= 0);
 
           
-          // validate the edges
-          assert(graph::validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, pop_ranges, pop_pairs) == true);
-          
           // filter/append to the edge list
-          assert(filter_edge_list(base, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx, src_selection, dst_selection, edge_list) >= 0);
+          assert(filter_edge_list(prj_vector[0], src_selection, dst_selection, edge_list) >= 0);
         }
     }
   

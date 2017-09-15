@@ -1,5 +1,7 @@
 
 #include "num_projection_blocks.hh"
+#include "dataset_num_elements.hh"
+#include "path_names.hh"
 
 #include <cassert>
 

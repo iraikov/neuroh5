@@ -21,12 +21,12 @@ namespace neuroh5
   {
     bool validate_edge_list
     (
-     NODE_IDX_T&         dst_start,
-     NODE_IDX_T&         src_start,
-     vector<DST_BLK_PTR_T>&  dst_blk_ptr,
-     vector<NODE_IDX_T>& dst_idx,
-     vector<DST_PTR_T>&  dst_ptr,
-     vector<NODE_IDX_T>& src_idx,
+     const NODE_IDX_T&         dst_start,
+     const NODE_IDX_T&         src_start,
+     const vector<DST_BLK_PTR_T>&  dst_blk_ptr,
+     const vector<NODE_IDX_T>& dst_idx,
+     const vector<DST_PTR_T>&  dst_ptr,
+     const vector<NODE_IDX_T>& src_idx,
      const pop_range_map_t&           pop_ranges,
      const set< pair<pop_t, pop_t> >& pop_pairs
      )

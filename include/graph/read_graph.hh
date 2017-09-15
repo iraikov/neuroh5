@@ -53,9 +53,10 @@ namespace neuroh5
     (
      MPI_Comm                         comm,
      const std::string&               file_name,
-     const std::vector< std::string > attr_namespaces,
-     const std::vector< std::pair<std::string, std::string> > prj_names,
-     std::vector<prj_tuple_t>&        prj_list,
+     const std::vector< std::string >& edge_attr_name_spaces,
+     const std::vector< std::pair<std::string, std::string> >& prj_names,
+     std::vector<prj_tuple_t>&        prj_vector,
+     vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&                          total_num_nodes,
      size_t&                          local_prj_num_edges,
      size_t&                          total_prj_num_edges
@@ -64,9 +65,10 @@ namespace neuroh5
     extern int read_graph_serial
     (
      const std::string&               file_name,
-     const std::vector< std::string > attr_namespaces,
-     const std::vector< std::pair<std::string, std::string> > prj_names,
-     std::vector<prj_tuple_t>&        prj_list,
+     const std::vector< std::string >& edge_attr_name_spaces,
+     const std::vector< std::pair<std::string, std::string> >& prj_names,
+     std::vector<prj_tuple_t>&        prj_vector,
+     vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&                          total_num_nodes,
      size_t&                          total_prj_num_edges
      );

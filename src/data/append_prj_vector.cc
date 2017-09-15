@@ -30,7 +30,7 @@ namespace neuroh5
      * Append src/dst node indices to a vector of edges
      **************************************************************************/
 
-    int append_prj_list
+    int append_prj_vector
     (
      const NODE_IDX_T&                   src_start,
      const NODE_IDX_T&                   dst_start,
@@ -40,38 +40,13 @@ namespace neuroh5
      const vector<NODE_IDX_T>&           src_idx,
      const map<string, NamedAttrVal>&    edge_attr_map,
      size_t&                             num_edges,
-     vector<prj_tuple_t>&                prj_list
+     vector<prj_tuple_t>&                prj_vector
      )
     {
       int ierr = 0; size_t dst_ptr_size;
       num_edges = 0;
       vector<NODE_IDX_T> src_vec, dst_vec;
-      vector<AttrVal> edge_attr_vec(edge_attr_map.size());
-
-      size_t i=0;
-      for (auto item : edge_attr_map) 
-        {
-          const string & attr_namespace = item->first;
-          const NamedAttrVal& edge_attr_values = item->second;
-          
-          edge_attr_vec[i].resize<float>
-            (edge_attr_values.size_attr_vec<float>());
-          edge_attr_vec[i].resize<uint8_t>
-            (edge_attr_values.size_attr_vec<uint8_t>());
-          edge_attr_vec[i].resize<uint16_t>
-            (edge_attr_values.size_attr_vec<uint16_t>());
-          edge_attr_vec[i].resize<uint32_t>
-            (edge_attr_values.size_attr_vec<uint32_t>());
-          edge_attr_vec[i].resize<int8_t>
-            (edge_attr_values.size_attr_vec<int8_t>());
-          edge_attr_vec[i].resize<int16_t>
-            (edge_attr_values.size_attr_vec<int16_t>());
-          edge_attr_vec[i].resize<int32_t>
-            (edge_attr_values.size_attr_vec<int32_t>());
-          
-          i++;
-        }
-
+      
       if (dst_blk_ptr.size() > 0)
         {
           dst_ptr_size = dst_ptr.size();
@@ -93,13 +68,6 @@ namespace neuroh5
                           NODE_IDX_T src = src_idx[j] + src_start;
                           src_vec.push_back(src);
                           dst_vec.push_back(dst);
-                          fill_attr_vec<float>(edge_attr_map, edge_attr_vec, j);
-                          fill_attr_vec<uint8_t>(edge_attr_map, edge_attr_vec, j);
-                          fill_attr_vec<uint16_t>(edge_attr_map, edge_attr_vec, j);
-                          fill_attr_vec<uint32_t>(edge_attr_map, edge_attr_vec, j);
-                          fill_attr_vec<int8_t>(edge_attr_map, edge_attr_vec, j);
-                          fill_attr_vec<int16_t>(edge_attr_map, edge_attr_vec, j);
-                          fill_attr_vec<int32_t>(edge_attr_map, edge_attr_vec, j);
                           num_edges++;
                         }
                     }
@@ -107,7 +75,7 @@ namespace neuroh5
             }
         }
 
-      prj_list.push_back(make_tuple(src_vec, dst_vec, edge_attr_vec));
+      prj_vector.push_back(make_tuple(src_vec, dst_vec, edge_attr_map));
 
       return ierr;
     }

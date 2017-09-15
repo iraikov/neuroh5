@@ -83,10 +83,10 @@ namespace neuroh5
                                 edge_attr_vec.resize(edge_attr_map.size());
                                 {
                                   size_t ni=0;
-                                  for (auto item : edge_attr_map) 
+                                  for (auto iter : edge_attr_map) 
                                     {
-                                      const string & attr_namespace = item->first;
-                                      const NamedAttrVal& edge_attr_values = item->second;
+                                      const string & attr_namespace = iter.first;
+                                      const NamedAttrVal& edge_attr_values = iter.second;
                                       
                                       edge_attr_vec[ni].resize<float>
                                         (edge_attr_values.size_attr_vec<float>());
@@ -138,10 +138,10 @@ namespace neuroh5
                                     edge_attr_vec.resize(edge_attr_map.size());
                                     {
                                       size_t ni=0;
-                                      for (auto item : edge_attr_map) 
+                                      for (auto iter : edge_attr_map) 
                                         {
-                                          const string & attr_namespace = item->first;
-                                          const NamedAttrVal& edge_attr_values = item->second;
+                                          const string & attr_namespace = iter.first;
+                                          const NamedAttrVal& edge_attr_values = iter.second;
                                           
                                           edge_attr_vec[ni].resize<float>
                                             (edge_attr_values.size_attr_vec<float>());

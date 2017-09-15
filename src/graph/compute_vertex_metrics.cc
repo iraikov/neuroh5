@@ -13,7 +13,7 @@
 #include "neuroh5_types.hh"
 #include "read_projection.hh"
 #include "cell_populations.hh"
-#include "scatter_graph.hh"
+#include "scatter_read_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
 #include "validate_edge_list.hh"
@@ -84,6 +84,7 @@ namespace neuroh5
       // Read population info to determine total_num_nodes
       size_t local_num_nodes, total_num_nodes, local_num_edges, total_num_edges;
 
+      vector<string> edge_attr_name_spaces;
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       assert(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
@@ -93,21 +94,21 @@ namespace neuroh5
       compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
-      vector < vector <vector<string>> > edge_attr_name_vector;
+      vector < map <string, vector <vector<string> > > > edge_attr_name_vector;
       vector < edge_map_t > prj_vector;
-      scatter_graph (comm,
-                     EdgeMapDst,
-                     file_name,
-                     io_size,
-                     false,
-                     prj_names,
-                     node_rank_map,
-                     prj_vector,
-                     edge_attr_name_vector,
-                     local_num_nodes,
-                     total_num_nodes,
-                     local_num_edges,
-                     total_num_edges);
+      scatter_read_graph (comm,
+                          EdgeMapDst,
+                          file_name,
+                          io_size,
+                          edge_attr_name_spaces,
+                          prj_names,
+                          node_rank_map,
+                          prj_vector,
+                          edge_attr_name_vector,
+                          local_num_nodes,
+                          total_num_nodes,
+                          local_num_edges,
+                          total_num_edges);
 
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
@@ -181,6 +182,7 @@ namespace neuroh5
       size_t local_num_nodes, total_num_nodes,
         local_num_edges, total_num_edges;
 
+      vector<string> edge_attr_name_spaces;
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       assert(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
@@ -190,21 +192,21 @@ namespace neuroh5
       compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
-      vector < vector <vector<string>> > edge_attr_name_vector;
+      vector < map <string, vector <vector<string> > > > edge_attr_name_vector;
       vector < edge_map_t > prj_vector;
-      scatter_graph (comm,
-                     EdgeMapSrc,
-                     file_name,
-                     io_size,
-                     false,
-                     prj_names,
-                     node_rank_map,
-                     prj_vector,
-                     edge_attr_name_vector,
-                     local_num_nodes,
-                     total_num_nodes,
-                     local_num_edges,
-                     total_num_edges);
+      scatter_read_graph (comm,
+                          EdgeMapSrc,
+                          file_name,
+                          io_size,
+                          edge_attr_name_spaces,
+                          prj_names,
+                          node_rank_map,
+                          prj_vector,
+                          edge_attr_name_vector,
+                          local_num_nodes,
+                          total_num_nodes,
+                          local_num_edges,
+                          total_num_edges);
       
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;

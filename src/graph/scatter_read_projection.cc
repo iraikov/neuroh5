@@ -84,7 +84,6 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       size_t num_edges = 0;
       map<string, vector< vector<string> > > edge_attr_names;
-      vector<size_t> edge_attr_num(data::AttrVal::num_attr_types, 0);
       
       local_num_nodes=0; local_num_edges=0;
       
@@ -143,29 +142,23 @@ namespace neuroh5
           
           
               edge_count = src_idx.size();
-              for (string& attr_namespace : attr_namespaces) 
+              for (string attr_namespace : attr_namespaces) 
                 {
                   vector< pair<string,hid_t> > edge_attr_info;
                   assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name,
                                                     attr_namespace, edge_attr_info) >= 0);
-                  assert(graph::num_edge_attributes(edge_attr_info, edge_attr_num) >= 0);
                   assert(graph::read_all_edge_attributes(io_comm, file_name,
                                                          src_pop_name, dst_pop_name, attr_namespace,
                                                          edge_base, edge_count, edge_attr_info,
                                                          edge_attr_map[attr_namespace]) >= 0);
+                  
+                  edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
                 }
 
               // append to the edge map
               assert(data::append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                 edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
                                                 edge_map_type) >= 0);
-              for (auto iter : edge_attr_map) 
-                {
-                  const string & attr_namespace = iter->first;
-                  const NamedAttrVal& edge_attr_values = iter->second;
-
-                  edge_attr_values.attr_names(edge_attr_names[attr_namespace]);
-                }
               
               DEBUG("scatter: read ", num_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
           
@@ -186,14 +179,13 @@ namespace neuroh5
 
           MPI_Comm_free(&io_comm);
 
-          assert(MPI_Bcast(&edge_attr_num[0], edge_attr_num.size(), MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
           assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                              recvcounts, rdispls, recvbuf) >= 0);
         }
 
         if (recvbuf.size() > 0)
           {
-            data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, edge_attr_num,
+            data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                              prj_edge_map, local_num_nodes, local_num_edges);
           }
       }

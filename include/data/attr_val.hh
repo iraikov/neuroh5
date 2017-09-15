@@ -62,6 +62,9 @@ namespace neuroh5
       }
 
       template<class T>
+      static const size_t attr_type_index ();
+
+      template<class T>
       const size_t size_attr_vec () const;
 
       template<class T>
@@ -292,15 +295,14 @@ namespace neuroh5
 
     
     template <class T>
-    void fill_attr_vec (const map<string, NamedAttrVal>& edge_attr_map,
-                        vector<AttrVal>& edge_attr_vec,
+    void fill_attr_vec (const std::map< std::string, NamedAttrVal>& edge_attr_map,
+                        std::vector<AttrVal>& edge_attr_vec,
                         size_t j)
     {
       size_t i=0;
-      for (auto item : edge_attr_map) 
+      for (auto iter : edge_attr_map) 
         {
-          const string & attr_namespace = item->first;
-          const NamedAttrVal& edge_attr_values = item->second;
+          const NamedAttrVal& edge_attr_values = iter.second;
 
           for (size_t k = 0;
                k < edge_attr_vec[i].size_attr_vec<T>(); k++)

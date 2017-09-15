@@ -170,8 +170,8 @@ namespace neuroh5
   
   typedef uint32_t rank_t;
   
-  typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
-                      data::AttrVal  // edge attribute vector,
+  typedef std::tuple< std::vector<NODE_IDX_T>, // adjacency vector
+                      std::vector< data::AttrVal >  // edge attribute vector,
                       > edge_tuple_t;
 
   typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
@@ -184,7 +184,7 @@ namespace neuroh5
   
   typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
                       std::vector<NODE_IDX_T>, // destination vector
-                      std::map<std::string, data::AttrVal>  // edge attribute map
+                      std::map<std::string, data::NamedAttrVal>  // edge attribute map
                       > prj_tuple_t;
 
 // In-memory HDF5 datatype of attribute pointers

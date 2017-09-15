@@ -87,7 +87,7 @@ namespace neuroh5
     herr_t num_edge_attributes
     (
      const vector< pair<string,hid_t> >& attributes,
-     vector <uint32_t> &num_attrs
+     vector <size_t> &num_attrs
      )
     {
       herr_t ierr = 0;
@@ -330,7 +330,8 @@ namespace neuroh5
     {
       hid_t file;
       herr_t ierr = 0;
-      hsize_t block = edge_count, base = edge_base;
+      hsize_t block = edge_count;
+      
       vector <float>    attr_values_float;
       vector <uint16_t> attr_values_uint16;
       vector <uint32_t> attr_values_uint32;
@@ -345,8 +346,6 @@ namespace neuroh5
 
       if (edge_count > 0)
         {
-          hsize_t one = 1;
-
           hid_t mspace = H5Screate_simple(1, &block, NULL);
           assert(mspace >= 0);
           ierr = H5Sselect_all(mspace);

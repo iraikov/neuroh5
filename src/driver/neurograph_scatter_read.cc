@@ -12,7 +12,7 @@
 #include "neuroh5_types.hh"
 #include "cell_populations.hh"
 #include "read_graph.hh"
-#include "scatter_graph.hh"
+#include "scatter_read_graph.hh"
 #include "projection_names.hh"
 
 #include <mpi.h>
@@ -68,12 +68,13 @@ int main(int argc, char** argv)
   map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
   vector<pair<string,string>> prj_names;
   vector < edge_map_t > prj_vector;
-  vector < vector <vector<string>> > edge_attr_name_vector;
+  vector < map <string, vector <vector<string> > > > edge_attr_name_vector;
+  vector <string> edge_attr_name_spaces;
   stringstream ss;
 
   assert(MPI_Init(&argc, &argv) >= 0);
 
-  graph::EdgeMapType edge_map_type = graph::EdgeMapDst;
+  EdgeMapType edge_map_type = EdgeMapDst;
   int rank, size, io_size; size_t n_nodes, local_num_nodes;
   size_t local_num_edges, total_num_edges;
   assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
@@ -140,11 +141,11 @@ int main(int argc, char** argv)
             opt_edgemap = true;
             if (string(optarg) == "dst")
               {
-                edge_map_type = graph::EdgeMapDst;
+                edge_map_type = EdgeMapDst;
               }
             if (string(optarg) == "src")
               {
-                edge_map_type = graph::EdgeMapSrc;
+                edge_map_type = EdgeMapSrc;
               }
             optflag_edgemap = 0;
           }
@@ -156,11 +157,11 @@ int main(int argc, char** argv)
           opt_edgemap = true;
           if (string(optarg) == "dst")
             {
-              edge_map_type = graph::EdgeMapDst;
+              edge_map_type = EdgeMapDst;
             }
           if (string(optarg) == "src")
             {
-              edge_map_type = graph::EdgeMapSrc;
+              edge_map_type = EdgeMapSrc;
             }
           break;
         case 'b':
@@ -241,19 +242,19 @@ int main(int argc, char** argv)
 
   
   DEBUG("scatter: calling scatter_graph");
-  graph::scatter_graph (all_comm,
-                        edge_map_type,
-                        input_file_name,
-                        io_size,
-                        opt_attrs,
-                        prj_names,
-                        node_rank_map,
-                        prj_vector,
-                        edge_attr_name_vector,
-                        local_num_nodes,
-                        n_nodes,
-                        local_num_edges,
-                        total_num_edges);
+  graph::scatter_read_graph (all_comm,
+                             edge_map_type,
+                             input_file_name,
+                             io_size,
+                             edge_attr_name_spaces,
+                             prj_names,
+                             node_rank_map,
+                             prj_vector,
+                             edge_attr_name_vector,
+                             local_num_nodes,
+                             n_nodes,
+                             local_num_edges,
+                             total_num_edges);
 
 
   if (opt_output)
@@ -279,20 +280,20 @@ int main(int argc, char** argv)
                       edge_tuple_t& et = it->second;
 
                       vector<NODE_IDX_T> adj_vector = get<0>(et);
-                      const data::AttrVal&   edge_attr_values = get<1>(et);
+                      const vector<data::AttrVal>& edge_attr_map = get<1>(et);
 
                       for (size_t j = 0; j < adj_vector.size(); j++)
                         {
                           switch (edge_map_type)
                             {
-                            case graph::EdgeMapDst:
+                            case EdgeMapDst:
                               {
                                 NODE_IDX_T src = adj_vector[j];
                                 NODE_IDX_T dst = key_node;
                                 outfile << src << dst;
                               }
                               break;
-                            case graph::EdgeMapSrc:
+                            case EdgeMapSrc:
                               {
                                 NODE_IDX_T dst = adj_vector[j];
                                 NODE_IDX_T src = key_node;
@@ -300,26 +301,44 @@ int main(int argc, char** argv)
                               }
                               break;
                             }
-                          
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<float>(); k++)
+
+                          for (const data::AttrVal& edge_attr_values : edge_attr_map)
                             {
-                              outfile << edge_attr_values.at<float>(k,j);
-                            }
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<uint8_t>(); k++)
-                            {
-                              outfile << edge_attr_values.at<uint8_t>(k,j);
-                            }
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<uint16_t>(); k++)
-                            {
-                              outfile << edge_attr_values.at<uint16_t>(k,j);
-                            }
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<uint32_t>(); k++)
-                            {
-                              outfile << edge_attr_values.at<uint32_t>(k,j);
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<float>(); k++)
+                                {
+                                  outfile << edge_attr_values.at<float>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<uint8_t>(); k++)
+                                {
+                                  outfile << edge_attr_values.at<uint8_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<uint16_t>(); k++)
+                                {
+                                  outfile << edge_attr_values.at<uint16_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<uint32_t>(); k++)
+                                {
+                                  outfile << edge_attr_values.at<uint32_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<int8_t>(); k++)
+                                {
+                                  outfile << edge_attr_values.at<int8_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<int16_t>(); k++)
+                                {
+                                  outfile << edge_attr_values.at<int16_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<int32_t>(); k++)
+                                {
+                                  outfile << edge_attr_values.at<int32_t>(k,j);
+                                }
                             }
 
                         }
@@ -348,21 +367,21 @@ int main(int argc, char** argv)
                       edge_tuple_t& et = it->second;
 
                       const vector<NODE_IDX_T> adj_vector = get<0>(et);
-                      const data::AttrVal&   edge_attr_values = get<1>(et);
+                      const vector <data::AttrVal>& edge_attr_map = get<1>(et);
 
                       for (size_t j = 0; j < adj_vector.size(); j++)
                         {
                           
                           switch (edge_map_type)
                             {
-                            case graph::EdgeMapDst:
+                            case EdgeMapDst:
                               {
                                 NODE_IDX_T src = adj_vector[j];
                                 NODE_IDX_T dst = key_node;
                                 outfile << src << " " << dst;
                               }
                               break;
-                            case graph::EdgeMapSrc:
+                            case EdgeMapSrc:
                               {
                                 NODE_IDX_T src = key_node;
                                 NODE_IDX_T dst = adj_vector[i];
@@ -370,30 +389,51 @@ int main(int argc, char** argv)
                               }
                               break;
                             }
-                          
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<float>(); k++)
+
+                          for (const data::AttrVal& edge_attr_values : edge_attr_map)
                             {
-                              outfile << " " << setprecision(9) <<
-                                edge_attr_values.at<float>(k,j);
-                            }
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<uint8_t>(); k++)
-                            {
-                              outfile << " " <<
-                                (unsigned int)edge_attr_values.at<uint8_t>(k,j);
-                            }
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<uint16_t>(); k++)
-                            {
-                              outfile << " " <<
-                                edge_attr_values.at<uint16_t>(k,j);
-                            }
-                          for (size_t k = 0; k <
-                                 edge_attr_values.size_attr_vec<uint32_t>(); k++)
-                            {
-                              outfile << " " <<
-                                edge_attr_values.at<uint32_t>(k,j);
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<float>(); k++)
+                                {
+                                  outfile << " " << setprecision(9) <<
+                                    edge_attr_values.at<float>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<uint8_t>(); k++)
+                                {
+                                  outfile << " " <<
+                                    (unsigned int)edge_attr_values.at<uint8_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<uint16_t>(); k++)
+                                {
+                                  outfile << " " <<
+                                    edge_attr_values.at<uint16_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<uint32_t>(); k++)
+                                {
+                                  outfile << " " <<
+                                    edge_attr_values.at<uint32_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<int8_t>(); k++)
+                                {
+                                  outfile << " " <<
+                                    edge_attr_values.at<int8_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<int16_t>(); k++)
+                                {
+                                  outfile << " " <<
+                                    edge_attr_values.at<int16_t>(k,j);
+                                }
+                              for (size_t k = 0; k <
+                                     edge_attr_values.size_attr_vec<int32_t>(); k++)
+                                {
+                                  outfile << " " <<
+                                    edge_attr_values.at<int32_t>(k,j);
+                                }
                             }
 
                           outfile << std::endl;

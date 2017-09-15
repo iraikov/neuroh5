@@ -123,7 +123,6 @@ namespace neuroh5
                                     const vector<char> &recvbuf,
                                     const vector<int>& recvcounts,
                                     const vector<int>& rdispls,
-                                    const vector<size_t> &edge_attr_num,
                                     edge_map_t& prj_edge_map,
                                     size_t& num_unpacked_nodes,
                                     size_t& num_unpacked_edges
@@ -154,7 +153,7 @@ namespace neuroh5
                 {
                   NODE_IDX_T key_node = it->first;
                   const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
-                  const data::AttrVal&    edge_attr_values = get<1>(it->second);
+                  const vector<data::AttrVal>&    edge_attr_values = get<1>(it->second);
                   num_unpacked_edges += adj_vector.size();
                   num_unpacked_nodes ++;
                   
@@ -166,10 +165,15 @@ namespace neuroh5
                     {
                       edge_tuple_t et = prj_edge_map[key_node];
                       vector<NODE_IDX_T> &v = get<0>(et);
-                      data::AttrVal &a = get<1>(et);
+                      vector <data::AttrVal> &va = get<1>(et);
                       v.insert(v.end(),adj_vector.begin(),adj_vector.end());
-                      a.append(edge_attr_values);
-                      prj_edge_map[key_node] = make_tuple(v,a);
+                      size_t ni=0;
+                      for (auto & a : va)
+                        {
+                          a.append(edge_attr_values[ni]);
+                          ni++;
+                        }
+                      prj_edge_map[key_node] = make_tuple(v,va);
                     }
                 }
             }
@@ -178,7 +182,6 @@ namespace neuroh5
 
     
     void deserialize_edge_map (const vector<char> &recvbuf,
-                               const vector<size_t> &edge_attr_num,
                                edge_map_t& prj_edge_map,
                                size_t& num_unpacked_nodes,
                                size_t& num_unpacked_edges
@@ -201,7 +204,7 @@ namespace neuroh5
         {
           NODE_IDX_T key_node = it->first;
           const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
-          const data::AttrVal&    edge_attr_values = get<1>(it->second);
+          const vector <data::AttrVal>&  edge_attr_values = get<1>(it->second);
           num_unpacked_edges += adj_vector.size();
           num_unpacked_nodes ++;
           
@@ -213,10 +216,15 @@ namespace neuroh5
             {
               edge_tuple_t et = prj_edge_map[key_node];
               vector<NODE_IDX_T> &v = get<0>(et);
-              data::AttrVal &a = get<1>(et);
+              vector <data::AttrVal> &va = get<1>(et);
               v.insert(v.end(),adj_vector.begin(),adj_vector.end());
-              a.append(edge_attr_values);
-              prj_edge_map[key_node] = make_tuple(v,a);
+              size_t ni=0;
+              for (auto & a : va)
+                {
+                  a.append(edge_attr_values[ni]);
+                  ni++;
+                }
+              prj_edge_map[key_node] = make_tuple(v,va);
             }
         }
     }

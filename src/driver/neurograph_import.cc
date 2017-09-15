@@ -101,7 +101,7 @@ int append_syn_adj_map
             high_syn_ptr = syn_idx_ptr[d+1];
 
           vector<NODE_IDX_T> adj_vector;
-          data::AttrVal edge_attr_values;
+          vector <data::AttrVal> edge_attr_values(1);
           vector<NODE_IDX_T> syn_id_vector;
 
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
@@ -118,7 +118,7 @@ int append_syn_adj_map
                 }
             }
 
-          edge_attr_values.insert(syn_id_vector);
+          edge_attr_values[0].insert(syn_id_vector);
 
           if (num_edges > 0)
             {
@@ -130,9 +130,9 @@ int append_syn_adj_map
                 {
                   edge_tuple_t et = edge_map[dst];
                   vector<NODE_IDX_T> &v = get<0>(et);
-                  data::AttrVal &a = get<1>(et);
+                  vector <data::AttrVal> &a = get<1>(et);
                   v.insert(v.end(),adj_vector.begin(),adj_vector.end());
-                  a.append(edge_attr_values);
+                  a[0].append(edge_attr_values[0]);
                   edge_map[dst] = make_tuple(v,a);
                 }
             }
@@ -169,15 +169,15 @@ int append_adj_map
             high_src_ptr = src_idx_ptr[d+1];
 
           vector<NODE_IDX_T> adj_vector;
-          data::AttrVal edge_attr_values;
+          vector <data::AttrVal> edge_attr_values(1);
 
-          edge_attr_values.resize<float>(edge_attrs.size_attr_vec<float> ());
-          edge_attr_values.resize<uint8_t>(edge_attrs.size_attr_vec<uint8_t> ());
-          edge_attr_values.resize<uint16_t>(edge_attrs.size_attr_vec<uint16_t> ());
-          edge_attr_values.resize<uint32_t>(edge_attrs.size_attr_vec<uint32_t> ());
-          edge_attr_values.resize<int8_t>(edge_attrs.size_attr_vec<int8_t> ());
-          edge_attr_values.resize<int16_t>(edge_attrs.size_attr_vec<int16_t> ());
-          edge_attr_values.resize<int32_t>(edge_attrs.size_attr_vec<int32_t> ());
+          edge_attr_values[0].resize<float>(edge_attrs.size_attr_vec<float> ());
+          edge_attr_values[0].resize<uint8_t>(edge_attrs.size_attr_vec<uint8_t> ());
+          edge_attr_values[0].resize<uint16_t>(edge_attrs.size_attr_vec<uint16_t> ());
+          edge_attr_values[0].resize<uint32_t>(edge_attrs.size_attr_vec<uint32_t> ());
+          edge_attr_values[0].resize<int8_t>(edge_attrs.size_attr_vec<int8_t> ());
+          edge_attr_values[0].resize<int16_t>(edge_attrs.size_attr_vec<int16_t> ());
+          edge_attr_values[0].resize<int32_t>(edge_attrs.size_attr_vec<int32_t> ());
           
           for (size_t i = low_src_ptr; i < high_src_ptr; ++i)
             {
@@ -189,37 +189,37 @@ int append_adj_map
                   for (size_t ai=0; ai<edge_attrs.size_attr_vec<float> (); ai++)
                     {
                       float v = edge_attrs.at<float>(ai, i);
-                      edge_attr_values.push_back(ai, v);
+                      edge_attr_values[0].push_back(ai, v);
                     }
                   for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint8_t> (); ai++)
                     {
                       uint8_t v = edge_attrs.at<uint8_t>(ai, i);
-                      edge_attr_values.push_back(ai, v);
+                      edge_attr_values[0].push_back(ai, v);
                     }
                   for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint16_t> (); ai++)
                     {
                       uint16_t v = edge_attrs.at<uint16_t>(ai, i);
-                      edge_attr_values.push_back(ai, v);
+                      edge_attr_values[0].push_back(ai, v);
                     }
                   for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint32_t> (); ai++)
                     {
                       uint32_t v = edge_attrs.at<uint32_t>(ai, i);
-                      edge_attr_values.push_back(ai, v);
+                      edge_attr_values[0].push_back(ai, v);
                     }
                   for (size_t ai=0; ai<edge_attrs.size_attr_vec<int8_t> (); ai++)
                     {
                       int8_t v = edge_attrs.at<int8_t>(ai, i);
-                      edge_attr_values.push_back(ai, v);
+                      edge_attr_values[0].push_back(ai, v);
                     }
                   for (size_t ai=0; ai<edge_attrs.size_attr_vec<int16_t> (); ai++)
                     {
                       int16_t v = edge_attrs.at<int16_t>(ai, i);
-                      edge_attr_values.push_back(ai, v);
+                      edge_attr_values[0].push_back(ai, v);
                     }
                   for (size_t ai=0; ai<edge_attrs.size_attr_vec<int32_t> (); ai++)
                     {
                       int32_t v = edge_attrs.at<int32_t>(ai, i);
-                      edge_attr_values.push_back(ai, v);
+                      edge_attr_values[0].push_back(ai, v);
                     }
                   num_edges++;
                 }
@@ -235,9 +235,9 @@ int append_adj_map
                 {
                   edge_tuple_t et = edge_map[dst];
                   vector<NODE_IDX_T> &v = get<0>(et);
-                  data::AttrVal &a = get<1>(et);
+                  vector <data::AttrVal> &a = get<1>(et);
                   v.insert(v.end(),adj_vector.begin(),adj_vector.end());
-                  a.append(edge_attr_values);
+                  a[0].append(edge_attr_values[0]);
                   edge_map[dst] = make_tuple(v,a);
                 }
             }
@@ -264,7 +264,7 @@ int main(int argc, char** argv)
   vector <string> txt_input_file_names;
   string hdf5_input_file_name, hdf5_input_dsetpath;
   vector <size_t> num_attrs(data::AttrMap::num_attr_types);
-  vector< vector<string> > edge_attr_names(data::AttrVal::num_attr_types);
+  map<string, vector< vector<string> > > edge_attr_names;
   MPI_Comm all_comm;
   
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -332,7 +332,7 @@ int main(int argc, char** argv)
                     pos = pos1;
                   }
                 ss1 >> attr_name;
-                edge_attr_names[attr_index].push_back(attr_name);
+                edge_attr_names["Attributes"][attr_index].push_back(attr_name);
               }
             while (pos != string::npos);
             optflag_attr_names=0;
@@ -568,7 +568,7 @@ int main(int argc, char** argv)
                                    dst_idx, src_idx_ptr, src_idx,
                                    syn_idx_ptr, syn_idx,
                                    num_edges, edge_map);
-      edge_attr_names[data::AttrVal::attr_index_uint32].push_back("syn_id");
+      edge_attr_names["Attributes"][data::AttrVal::attr_index_uint32].push_back("syn_id");
     }
   else
     {

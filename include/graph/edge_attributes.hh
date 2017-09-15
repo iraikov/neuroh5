@@ -61,7 +61,7 @@ namespace neuroh5
     herr_t num_edge_attributes
     (
      const std::vector< std::pair<std::string,hid_t> >& attributes,
-     std:: vector <uint32_t> &num_attrs
+     std:: vector <size_t> &num_attrs
      );
 
     /// @brief Reads the values of edge attributes.

@@ -13,7 +13,7 @@
 #include "neuroh5_types.hh"
 #include "read_projection.hh"
 #include "cell_populations.hh"
-#include "scatter_graph.hh"
+#include "scatter_read_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
 #include "validate_edge_list.hh"
@@ -125,6 +125,7 @@ namespace neuroh5
       // Read population info to determine total_num_nodes
       size_t local_num_nodes, total_num_nodes, local_num_edges, total_num_edges;
 
+      vector <string> edge_attr_name_spaces;
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       assert(cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
@@ -135,20 +136,20 @@ namespace neuroh5
     
       // read the edges
       vector < edge_map_t > prj_vector;
-      vector < vector <vector<string>> > edge_attr_name_vector;
-      scatter_graph (comm,
-                     EdgeMapDst,
-                     input_file_name,
-                     io_size,
-                     false,
-                     prj_names,
-                     node_rank_map,
-                     prj_vector,
-                     edge_attr_name_vector,
-                     local_num_nodes,
-                     total_num_nodes,
-                     local_num_edges,
-                     total_num_edges);
+      vector < map <string, vector <vector<string> > > > edge_attr_name_vector;
+      scatter_read_graph (comm,
+                          EdgeMapDst,
+                          input_file_name,
+                          io_size,
+                          edge_attr_name_spaces,
+                          prj_names,
+                          node_rank_map,
+                          prj_vector,
+                          edge_attr_name_vector,
+                          local_num_nodes,
+                          total_num_nodes,
+                          local_num_edges,
+                          total_num_edges);
       
       DEBUG("rank ", rank, ": parts: after scatter");
       // Combine the edges from all projections into a single edge map
