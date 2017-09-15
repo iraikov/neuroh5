@@ -77,6 +77,7 @@ setup(
                   libraries = libraries,
                   define_macros = [('NPY_NO_DEPRECATED_API','NPY_1_7_API_VERSION')],
                   sources = [
+                      'python/neuroh5/iomodule.cc',
                       'src/data/append_rank_tree_map.cc',
                       'src/data/attr_map.cc',
                       'src/data/attr_val.cc',
@@ -89,7 +90,7 @@ setup(
                       'src/cell/cell_index.cc',
                       'src/cell/cell_attributes.cc',
                       'src/cell/append_tree.cc',
-                      'src/graph/scatter_graph.cc',
+                      'src/graph/scatter_read_graph.cc',
                       'src/graph/edge_attributes.cc',
                       'src/graph/read_graph.cc',
                       'src/graph/write_projection.cc',
@@ -117,8 +118,7 @@ setup(
                       'src/hdf5/group_contents.cc',
                       'src/hdf5/dataset_type.cc',
                       'src/hdf5/create_group.cc',
-                      'src/hdf5/file_access.cc',
-                      'python/neuroh5/iomodule.cc'
+                      'src/hdf5/file_access.cc'
                   ])
         ]
     )

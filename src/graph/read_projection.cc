@@ -140,7 +140,7 @@ namespace neuroh5
      )
     {
         herr_t ierr = 0;
-        DST_PTR_T edge_base, edge_count;
+        DST_PTR_T edge_base;
         vector<DST_BLK_PTR_T> dst_blk_ptr;
         vector<NODE_IDX_T> dst_idx;
         vector<DST_PTR_T> dst_ptr;
@@ -161,7 +161,7 @@ namespace neuroh5
                true);
         DEBUG("reader: validation of ", src_pop_name, " -> ", dst_pop_name, " finished");
 
-        edge_count = src_idx.size();
+        total_num_edges = src_idx.size();
         
         return ierr;
     }

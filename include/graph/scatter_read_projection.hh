@@ -24,8 +24,12 @@ namespace neuroh5
   namespace graph
   {
 
-    int scatter_read_projection (MPI_Comm all_comm, const int io_size, EdgeMapType edge_map_type, 
-                                 const string& file_name, const string& src_pop_name, const string& dst_pop_name, 
+    int scatter_read_projection (MPI_Comm all_comm,
+                                 const int io_size,
+                                 const EdgeMapType edge_map_type, 
+                                 const string& file_name,
+                                 const string& src_pop_name,
+                                 const string& dst_pop_name, 
                                  const std::vector< std::string >&  attr_namespaces,
                                  const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
                                  const std::vector<pop_range_t>& pop_vector,

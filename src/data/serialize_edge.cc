@@ -130,7 +130,7 @@ namespace neuroh5
     {
       const int recvbuf_size = recvbuf.size();
 
-      for (size_t ridx = 0; (int)ridx < num_ranks; ridx++)
+      for (size_t ridx = 0; ridx < num_ranks; ridx++)
         {
           if (recvcounts[ridx] > 0)
             {
