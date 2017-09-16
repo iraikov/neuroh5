@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "neuroh5_types.hh"
 #include "attr_val.hh"
@@ -18,10 +19,11 @@ namespace neuroh5
   namespace io
   {
     int read_txt_projection (const string&          file_name,
-                             const vector <size_t>& num_attrs,
+                             const map < string, vector <size_t> >& num_attrs,
                              vector<NODE_IDX_T>&    dst_idx,
                              vector<DST_PTR_T>&     src_idx_ptr,
                              vector<NODE_IDX_T>&    src_idx,
-                             neuroh5::data::AttrVal& attrs);
+                             map <string, neuroh5::data::AttrVal>& attrs_map);
+    
   }
 }

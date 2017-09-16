@@ -32,6 +32,7 @@
 #include "pack_tree.hh"
 #include "alltoallv_packed.hh"
 #include "sort_permutation.hh"
+#include "tokenize.hh"
 
 #include "dataset_num_elements.hh"
 #include "validate_tree.hh"
@@ -171,14 +172,7 @@ int main(int argc, char** argv)
             string attr_name_space;
             string arg = string(optarg);
             string delimiter = ":";
-            size_t startpos=0, endpos = arg.find(delimiter);
-            while (startpos < arg.length()-1)
-              {
-                attr_name_space = arg.substr(startpos, endpos);
-                attr_name_spaces.push_back(attr_name_space);
-                startpos = endpos + delimiter.length();
-                endpos = arg.find(delimiter, startpos);
-              }
+            tokenize(arg, delimiter, attr_name_spaces);
             optflag_namespace = 0;
           }
           if (optflag_iosize == 1) {
@@ -224,14 +218,7 @@ int main(int argc, char** argv)
             string attr_name_space;
             string arg = string(optarg);
             string delimiter = ":";
-            size_t startpos=0, endpos = arg.find(delimiter);
-            while (startpos < arg.length()-1)
-              {
-                attr_name_space = arg.substr(startpos, endpos);
-                attr_name_spaces.push_back(attr_name_space);
-                startpos = endpos + delimiter.length();
-                endpos = arg.find(delimiter, startpos);
-              }
+            tokenize(arg, delimiter, attr_name_spaces);
           }
           break;
         case 'p':

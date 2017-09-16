@@ -19,6 +19,7 @@
 #include "write_graph.hh"
 #include "attr_map.hh"
 #include "attr_val.hh"
+#include "tokenize.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
@@ -151,7 +152,7 @@ int append_adj_map
  const vector<NODE_IDX_T>&   dst_idx,
  const vector<DST_PTR_T>&    src_idx_ptr,
  const vector<NODE_IDX_T>&   src_idx,
- const data::AttrVal&        edge_attrs,
+ const map <string, data::AttrVal>& edge_attr_map,
  size_t&                     num_edges,
  edge_map_t&                 edge_map
  )
@@ -169,15 +170,24 @@ int append_adj_map
             high_src_ptr = src_idx_ptr[d+1];
 
           vector<NODE_IDX_T> adj_vector;
-          vector <data::AttrVal> edge_attr_values(1);
+          vector <data::AttrVal> edge_attr_values_vector(edge_attr_map.size());
 
-          edge_attr_values[0].resize<float>(edge_attrs.size_attr_vec<float> ());
-          edge_attr_values[0].resize<uint8_t>(edge_attrs.size_attr_vec<uint8_t> ());
-          edge_attr_values[0].resize<uint16_t>(edge_attrs.size_attr_vec<uint16_t> ());
-          edge_attr_values[0].resize<uint32_t>(edge_attrs.size_attr_vec<uint32_t> ());
-          edge_attr_values[0].resize<int8_t>(edge_attrs.size_attr_vec<int8_t> ());
-          edge_attr_values[0].resize<int16_t>(edge_attrs.size_attr_vec<int16_t> ());
-          edge_attr_values[0].resize<int32_t>(edge_attrs.size_attr_vec<int32_t> ());
+          {
+            size_t ns_index=0;
+            for (auto iter : edge_attr_map)
+              {
+                auto & edge_attrs = iter.second;
+                auto & edge_attr_values = edge_attr_values_vector[ns_index];
+                edge_attr_values.resize<float>(edge_attrs.size_attr_vec<float> ());
+                edge_attr_values.resize<uint8_t>(edge_attrs.size_attr_vec<uint8_t> ());
+                edge_attr_values.resize<uint16_t>(edge_attrs.size_attr_vec<uint16_t> ());
+                edge_attr_values.resize<uint32_t>(edge_attrs.size_attr_vec<uint32_t> ());
+                edge_attr_values.resize<int8_t>(edge_attrs.size_attr_vec<int8_t> ());
+                edge_attr_values.resize<int16_t>(edge_attrs.size_attr_vec<int16_t> ());
+                edge_attr_values.resize<int32_t>(edge_attrs.size_attr_vec<int32_t> ());
+                ns_index++;
+              }
+          }
           
           for (size_t i = low_src_ptr; i < high_src_ptr; ++i)
             {
@@ -186,40 +196,47 @@ int append_adj_map
                 {
                   NODE_IDX_T src1 = src + src_offset;
                   adj_vector.push_back(src1);
-                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<float> (); ai++)
+                  size_t ns_index = 0;
+                  for (auto iter : edge_attr_map)
                     {
-                      float v = edge_attrs.at<float>(ai, i);
-                      edge_attr_values[0].push_back(ai, v);
-                    }
-                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint8_t> (); ai++)
-                    {
-                      uint8_t v = edge_attrs.at<uint8_t>(ai, i);
-                      edge_attr_values[0].push_back(ai, v);
-                    }
-                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint16_t> (); ai++)
-                    {
-                      uint16_t v = edge_attrs.at<uint16_t>(ai, i);
-                      edge_attr_values[0].push_back(ai, v);
-                    }
-                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint32_t> (); ai++)
-                    {
-                      uint32_t v = edge_attrs.at<uint32_t>(ai, i);
-                      edge_attr_values[0].push_back(ai, v);
-                    }
-                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<int8_t> (); ai++)
-                    {
-                      int8_t v = edge_attrs.at<int8_t>(ai, i);
-                      edge_attr_values[0].push_back(ai, v);
-                    }
-                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<int16_t> (); ai++)
-                    {
-                      int16_t v = edge_attrs.at<int16_t>(ai, i);
-                      edge_attr_values[0].push_back(ai, v);
-                    }
-                  for (size_t ai=0; ai<edge_attrs.size_attr_vec<int32_t> (); ai++)
-                    {
-                      int32_t v = edge_attrs.at<int32_t>(ai, i);
-                      edge_attr_values[0].push_back(ai, v);
+                      auto & edge_attrs = iter.second;
+                      auto & edge_attr_values = edge_attr_values_vector[ns_index];
+                      for (size_t ai=0; ai<edge_attrs.size_attr_vec<float> (); ai++)
+                        {
+                          float v = edge_attrs.at<float>(ai, i);
+                          edge_attr_values.push_back(ai, v);
+                        }
+                      for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint8_t> (); ai++)
+                        {
+                          uint8_t v = edge_attrs.at<uint8_t>(ai, i);
+                          edge_attr_values.push_back(ai, v);
+                        }
+                      for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint16_t> (); ai++)
+                        {
+                          uint16_t v = edge_attrs.at<uint16_t>(ai, i);
+                          edge_attr_values.push_back(ai, v);
+                        }
+                      for (size_t ai=0; ai<edge_attrs.size_attr_vec<uint32_t> (); ai++)
+                        {
+                          uint32_t v = edge_attrs.at<uint32_t>(ai, i);
+                          edge_attr_values.push_back(ai, v);
+                        }
+                      for (size_t ai=0; ai<edge_attrs.size_attr_vec<int8_t> (); ai++)
+                        {
+                          int8_t v = edge_attrs.at<int8_t>(ai, i);
+                          edge_attr_values.push_back(ai, v);
+                        }
+                      for (size_t ai=0; ai<edge_attrs.size_attr_vec<int16_t> (); ai++)
+                        {
+                          int16_t v = edge_attrs.at<int16_t>(ai, i);
+                          edge_attr_values.push_back(ai, v);
+                        }
+                      for (size_t ai=0; ai<edge_attrs.size_attr_vec<int32_t> (); ai++)
+                        {
+                          int32_t v = edge_attrs.at<int32_t>(ai, i);
+                          edge_attr_values.push_back(ai, v);
+                        }
+                      ns_index++;
                     }
                   num_edges++;
                 }
@@ -229,16 +246,21 @@ int append_adj_map
             {
               if (edge_map.find(dst) == edge_map.end())
                 {
-                  edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values)));
+                  edge_map.insert(make_pair(dst,make_tuple(adj_vector, edge_attr_values_vector)));
                 }
               else
                 {
                   edge_tuple_t et = edge_map[dst];
                   vector<NODE_IDX_T> &v = get<0>(et);
-                  vector <data::AttrVal> &a = get<1>(et);
+                  vector <data::AttrVal> &va = get<1>(et);
                   v.insert(v.end(),adj_vector.begin(),adj_vector.end());
-                  a[0].append(edge_attr_values[0]);
-                  edge_map[dst] = make_tuple(v,a);
+                  size_t ns_index = 0;
+                  for (auto & a : va)
+                    {
+                      a.append(edge_attr_values_vector[ns_index]);
+                      ns_index++;
+                    }
+                  edge_map[dst] = make_tuple(v,va);
                 }
             }
 
@@ -263,7 +285,7 @@ int main(int argc, char** argv)
   string txt_filelist_file_name;
   vector <string> txt_input_file_names;
   string hdf5_input_file_name, hdf5_input_dsetpath;
-  vector <size_t> num_attrs(data::AttrMap::num_attr_types);
+  map < string, vector <size_t> > num_edge_attrs;
   map<string, vector< vector<string> > > edge_attr_names;
   MPI_Comm all_comm;
   
@@ -294,7 +316,7 @@ int main(int argc, char** argv)
     {"src-offset",    required_argument, &optflag_src_offset,  1 },
     {"format",        required_argument, &optflag_input_format,  1 },
     {"io-size",       required_argument, &optflag_io_size,  1 },
-    {"attr-names",    required_argument, &optflag_attr_names,  1 },
+    {"attributes",    required_argument, &optflag_attr_names,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
@@ -305,36 +327,33 @@ int main(int argc, char** argv)
         {
         case 0:
           if (optflag_attr_names == 1) {
-            stringstream ss;
             opt_attr_names = true;
+
+            stringstream ss;
             string arg = string(optarg);
-            string index_delimiter = ":";
+            string nsindex_delimiter = ":";
             string name_delimiter = ",";
-            size_t pos = arg.find(index_delimiter), pos1=0, attr_index=0;
-            string attr_index_str = arg.substr(0, pos); 
-            string attr_names_str = arg.substr(pos + index_delimiter.length());
+            vector <string> attr_type_spec;
+            tokenize(arg, nsindex_delimiter, attr_type_spec);
+
+            string attr_namespace = attr_type_spec[0];
+            string attr_index_str = attr_type_spec[1];
+            string attr_names_str = attr_type_spec[2];
+            size_t attr_index     = 0;
+            
             ss << attr_index_str;
             ss >> attr_index;
-            pos = 0;
-            do 
+
+            vector <string> attr_names;
+            tokenize(attr_names_str, name_delimiter, attr_names);
+
+            num_edge_attrs[attr_namespace].resize(data::AttrVal::num_attr_types);
+            for (auto & attr_name : attr_names)
               {
-                string attr_name;
-                stringstream ss1;
-                pos1 = attr_names_str.find(name_delimiter, pos);
-                if (pos1 != string::npos)
-                  {
-                    ss1 << attr_names_str.substr(pos, pos1);
-                    pos = pos1 + name_delimiter.length();
-                  }
-                else
-                  {
-                    ss1 << attr_names_str.substr(pos);
-                    pos = pos1;
-                  }
-                ss1 >> attr_name;
-                edge_attr_names["Attributes"][attr_index].push_back(attr_name);
+                edge_attr_names[attr_namespace][attr_index].push_back(attr_name);
+                num_edge_attrs[attr_namespace][attr_index]++;
               }
-            while (pos != string::npos);
+
             optflag_attr_names=0;
           }
           if (optflag_io_size == 1) {
@@ -388,38 +407,43 @@ int main(int argc, char** argv)
           {
             string arg = string(optarg);
             string delimiter = ":";
-            size_t pos = arg.find(delimiter);
-            hdf5_input_file_name = arg.substr(0, pos); 
-            hdf5_input_dsetpath = arg.substr(pos + delimiter.length(),
-                                             arg.find(delimiter, pos + delimiter.length()));
+            vector <string> hdf5_spec;
+
+            tokenize(arg, delimiter, hdf5_spec);
+
+            hdf5_input_file_name = hdf5_spec[0];
+            hdf5_input_dsetpath  = hdf5_spec[1];
           }
           break;
         case 'a':
           {
+            opt_attr_names = true;
+
+            stringstream ss;
             string arg = string(optarg);
-            string delimiter = ",";
-            size_t ntype=0, pos=0, pos1;
-            do
+            string nsindex_delimiter = ":";
+            string name_delimiter = ",";
+            vector <string> attr_type_spec;
+            tokenize(arg, nsindex_delimiter, attr_type_spec);
+
+            string attr_namespace = attr_type_spec[0];
+            string attr_index_str = attr_type_spec[1];
+            string attr_names_str = attr_type_spec[2];
+            size_t attr_index     = 0;
+            
+            ss << attr_index_str;
+            ss >> attr_index;
+
+            vector <string> attr_names;
+            tokenize(attr_names_str, name_delimiter, attr_names);
+            num_edge_attrs[attr_namespace].resize(data::AttrVal::num_attr_types);
+            for (auto & attr_name : attr_names)
               {
-                size_t nval;
-                stringstream ss;
-                pos1 = arg.find(delimiter, pos);
-                if (pos1 != string::npos)
-                  {
-                    ss << arg.substr(pos, pos1);
-                    ss >> nval;
-                    num_attrs[ntype] = nval;
-                    pos = pos1 + delimiter.length();
-                    ntype ++;
-                  }
-                else
-                  {
-                    ss << arg;
-                    ss >> nval;
-                    num_attrs[ntype] = nval;
-                    pos = pos1;
-                  }
-              } while (pos != string::npos);
+                edge_attr_names[attr_namespace][attr_index].push_back(attr_name);
+                num_edge_attrs[attr_namespace][attr_index]++;
+              }
+
+            optflag_attr_names=0;
           }
           break;
         case 'i':
@@ -534,7 +558,7 @@ int main(int argc, char** argv)
             }
         }
   
-  data::AttrVal edge_attrs;
+  map <string, data::AttrVal> edge_attrs;
   if (opt_txt)
     {
       // determine which connection files are read by which rank
@@ -547,7 +571,7 @@ int main(int argc, char** argv)
         {
           string txt_input_file_name = txt_input_file_names[i];
           
-          status = io::read_txt_projection (txt_input_file_name, num_attrs,
+          status = io::read_txt_projection (txt_input_file_name, num_edge_attrs,
                                             dst_idx, src_idx_ptr, src_idx,
                                             edge_attrs);
         }

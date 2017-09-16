@@ -9,6 +9,7 @@
 
 #include "debug.hh"
 
+#include "tokenize.hh"
 #include "neuroh5_types.hh"
 #include "cell_populations.hh"
 #include "read_graph.hh"
@@ -102,12 +103,12 @@ int main(int argc, char** argv)
     {"binary",    no_argument, &optflag_binary,  1 },
     {"rankfile",  required_argument, &optflag_rankfile,  1 },
     {"iosize",    required_argument, &optflag_iosize,  1 },
-    {"edgemap",    required_argument, &optflag_edgemap,  1 },
+    {"edgemap",   required_argument, &optflag_edgemap,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "abe:o:r:i:h",
+  while ((c = getopt_long (argc, argv, "a:be:o:r:i:h",
                            long_options, &option_index)) != -1)
     {
       switch (c)
@@ -151,15 +152,22 @@ int main(int argc, char** argv)
           }
           break;
         case 'a':
-          opt_attrs = true;
+          {
+            opt_attrs = true;
+            string arg = string(optarg);
+            string namespace_delimiter = ",";
+            tokenize(arg, namespace_delimiter, edge_attr_name_spaces);
+          }
           break;
         case 'e':
           opt_edgemap = true;
-          if (string(optarg) == "dst")
+          if ((string(optarg) == "dst") ||
+              (string(optarg) == "destination"))
             {
               edge_map_type = EdgeMapDst;
             }
-          if (string(optarg) == "src")
+          if ((string(optarg) == "src") ||
+              (string(optarg) == "source"))
             {
               edge_map_type = EdgeMapSrc;
             }

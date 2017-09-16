@@ -66,7 +66,7 @@ namespace neuroh5
     (
      const std::string&               file_name,
      const std::vector< std::string >& edge_attr_name_spaces,
-     const std::vector< std::pair<std::string, std::string> >& prj_names,
+     const std::vector< std::pair<std::string, std::string> >&  prj_names,
      std::vector<prj_tuple_t>&        prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&                          total_num_nodes,
