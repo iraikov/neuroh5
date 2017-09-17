@@ -297,13 +297,34 @@ namespace neuroh5
     template <class T>
     void fill_attr_vec (const std::map< std::string, NamedAttrVal>& edge_attr_map,
                         std::vector<AttrVal>& edge_attr_vec,
-                        size_t j)
+                        size_t start, size_t end)
     {
       size_t i=0;
-      for (auto iter : edge_attr_map) 
+      for (auto const& iter : edge_attr_map) 
         {
           const NamedAttrVal& edge_attr_values = iter.second;
+          for (size_t j = start; j < end; ++j)
+            {
+              for (size_t k = 0;
+                   k < edge_attr_vec[i].size_attr_vec<T>(); k++)
+                {
+                  edge_attr_vec[i].push_back<T>
+                    (k, edge_attr_values.at<T>(k,j));
+                }
+            }
+          i++;
+        }
+    }
 
+    template <class T>
+    void set_attr_vec (const std::map< std::string, NamedAttrVal>& edge_attr_map,
+                       std::vector<AttrVal>& edge_attr_vec,
+                       size_t j)
+    {
+      size_t i=0;
+      for (auto const& iter : edge_attr_map) 
+        {
+          const NamedAttrVal& edge_attr_values = iter.second;
           for (size_t k = 0;
                k < edge_attr_vec[i].size_attr_vec<T>(); k++)
             {

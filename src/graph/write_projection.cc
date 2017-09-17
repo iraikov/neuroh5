@@ -26,7 +26,7 @@ namespace neuroh5
                                    const map <string, data::NamedAttrVal>& edge_attr_map,
                                    const map <string, vector < vector <string> > >& edge_attr_names)
     {
-      for (auto iter : edge_attr_map)
+      for (auto const& iter : edge_attr_map)
         {
           const string& attr_namespace = iter.first;
           const data::NamedAttrVal& edge_attr_values = iter.second;
@@ -91,11 +91,11 @@ namespace neuroh5
           last_idx  = first_idx;
           dst_blk_idx.push_back(first_idx - dst_start);
           dst_blk_ptr.push_back(0);
-          for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
+          for (auto const& iter : prj_edge_map)
             {
-              NODE_IDX_T dst = iter->first;
-              edge_tuple_t et = iter->second;
-              vector<NODE_IDX_T> &v = get<0>(et);
+              const NODE_IDX_T dst = iter.first;
+              const edge_tuple_t& et = iter.second;
+              const vector<NODE_IDX_T> &v = get<0>(et);
               
               // creates new block if non-contiguous dst indices
               if (((dst-1) > last_idx) || (num_block_edges > block_size))
@@ -412,7 +412,7 @@ namespace neuroh5
       vector <string> edge_attr_name_spaces;
       map <string, data::NamedAttrVal> edge_attr_map;
 
-      for (auto iter : edge_attr_names)
+      for (auto const& iter : edge_attr_names)
         {
           const string & attr_namespace = iter.first;
           const vector <vector <string> >& attr_names = iter.second;
@@ -431,9 +431,9 @@ namespace neuroh5
         }
         
       
-      for (auto iter = prj_edge_map.cbegin(); iter != prj_edge_map.cend(); ++iter)
+      for (auto const& iter : prj_edge_map)
 	{
-	  const edge_tuple_t& et = iter->second;
+	  const edge_tuple_t& et = iter.second;
           const vector<NODE_IDX_T>& v = get<0>(et);
           const vector<data::AttrVal>& a = get<1>(et);
 	  if (v.size() > 0)

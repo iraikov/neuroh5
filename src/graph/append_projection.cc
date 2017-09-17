@@ -414,7 +414,7 @@ namespace neuroh5
       vector <string> edge_attr_name_spaces;
       map <string, data::NamedAttrVal> edge_attr_map;
 
-      for (auto iter : edge_attr_names)
+      for (auto const& iter : edge_attr_names)
         {
           const string & attr_namespace = iter.first;
           const vector <vector <string> >& attr_names = iter.second;
@@ -440,7 +440,7 @@ namespace neuroh5
           if (v.size() > 0)
             {
               size_t ni=0;
-              for (auto & attr_values : a)
+              for (auto const& attr_values : a)
                 {
                   const string & attr_namespace = edge_attr_name_spaces[ni];
                   edge_attr_map[attr_namespace].append(attr_values);

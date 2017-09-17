@@ -142,6 +142,7 @@ namespace neuroh5
           
           
               edge_count = src_idx.size();
+              DEBUG("Task ",rank," scatter: reading attributes for ", src_pop_name, " -> ", dst_pop_name);
               for (string attr_namespace : attr_namespaces) 
                 {
                   vector< pair<string,hid_t> > edge_attr_info;
@@ -154,6 +155,8 @@ namespace neuroh5
                   
                   edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
                 }
+
+              DEBUG("Task ",rank," scatter: creating rank edge map for ", src_pop_name, " -> ", dst_pop_name);
 
               // append to the edge map
               assert(data::append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,

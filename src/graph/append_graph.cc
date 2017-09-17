@@ -159,12 +159,12 @@ namespace neuroh5
       // construct a map where each set of edges are arranged by destination I/O rank
       auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       rank_edge_map_t rank_edge_map;
-      for (auto element: input_edge_map)
+      for (auto iter: input_edge_map)
         {
-          NODE_IDX_T dst = element.first;
+          NODE_IDX_T dst = iter.first;
           // all source/destination node IDs must be in range
           assert(dst_start <= dst && dst < dst_end);
-          edge_tuple_t& et        = element.second;
+          edge_tuple_t& et        = iter.second;
           vector<NODE_IDX_T>& v   = get<0>(et);
           vector <AttrVal>& va    = get<1>(et);
 
