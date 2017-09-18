@@ -920,11 +920,11 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
   PyObject *py_attrval = Py_None;
   PyObject *py_attrmap = Py_None;
 
-  for (auto it = attr_val_map.cbegin(); it != attr_val_map.cend(); it++ )
+  for (auto const &it : attr_val_map)
     {
-      const string& attr_namespace = it->first;
+      const string& attr_namespace = it.first;
 
-      const NamedAttrVal& attr_val = it->second;
+      const NamedAttrVal& attr_val = it.second;
       
       vector < vector <float> >    float_attrs;
       vector < vector <uint8_t> >  uint8_attrs;
@@ -998,7 +998,7 @@ PyObject* py_build_edge_tuple_value (const edge_tuple_t& et,
   
   PyObject *py_attrmap  = PyDict_New();
   size_t namespace_index=0;
-  for (auto & edge_attr_values : edge_attr_vector)
+  for (auto const & edge_attr_values : edge_attr_vector)
     {
       PyObject *py_attrval  = PyList_New(0);
           
@@ -1263,6 +1263,7 @@ extern "C"
     graph::read_graph_serial(std::string(input_file_name), attr_namespaces,
                              prj_names, prj_vector, edge_attr_name_vector,
                              total_num_nodes, total_num_edges);
+    
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
         const prj_tuple_t& prj = prj_vector[i];
@@ -1427,10 +1428,10 @@ extern "C"
         
         if (prj_edge_map.size() > 0)
           {
-            for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
+            for (auto const& it : prj_edge_map)
               {
-                NODE_IDX_T key_node = it->first;
-                edge_tuple_t& et    = it->second;
+                const NODE_IDX_T key_node = it.first;
+                const edge_tuple_t& et    = it.second;
 
                 PyObject* py_edge_tuple_value = py_build_edge_tuple_value (et, edge_attr_namespaces);
 
@@ -1557,10 +1558,10 @@ extern "C"
         
         if (prj_edge_map.size() > 0)
           {
-            for (auto it = prj_edge_map.begin(); it != prj_edge_map.end(); it++)
+            for (auto const& it : prj_edge_map)
               {
-                NODE_IDX_T key_node = it->first;
-                edge_tuple_t& et    = it->second;
+                const NODE_IDX_T key_node = it.first;
+                const edge_tuple_t& et    = it.second;
 
                 PyObject* py_edge_tuple_value = py_build_edge_tuple_value (et, edge_attr_namespaces);
 

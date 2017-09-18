@@ -128,9 +128,8 @@ namespace neuroh5
     int read_graph_serial
     (
      const std::string&   file_name,
-     const vector<string>& attr_namespaces,
-     const vector< pair<string, string> >& prj_names,
      const vector<string>& edge_attr_name_spaces,
+     const vector< pair<string, string> >& prj_names,
      vector<prj_tuple_t>& prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&              total_num_nodes,
