@@ -1400,11 +1400,12 @@ extern "C"
           {
             PyObject *py_prj_ns_attr_info  = PyDict_New();
             int attr_index=0;
-            for (size_t n = 0; n<edge_attr_name_vector[p][attr_namespace][p].size(); n++)
+            const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
+            for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
               {
-                for (size_t t = 0; t<edge_attr_name_vector[p][attr_namespace][n].size(); t++)
+                for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
                   {
-                    PyObject *py_attr_key = PyBytes_FromString(edge_attr_name_vector[p][attr_namespace][n][t].c_str());
+                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
@@ -1531,11 +1532,12 @@ extern "C"
           {
             PyObject *py_prj_ns_attr_info  = PyDict_New();
             int attr_index=0;
-            for (size_t n = 0; n<edge_attr_name_vector[p][attr_namespace][p].size(); n++)
+            const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
+            for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
               {
-                for (size_t t = 0; t<edge_attr_name_vector[p][attr_namespace][n].size(); t++)
+                for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
                   {
-                    PyObject *py_attr_key = PyBytes_FromString(edge_attr_name_vector[p][attr_namespace][n][t].c_str());
+                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
