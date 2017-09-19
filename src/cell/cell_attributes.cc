@@ -200,7 +200,7 @@ namespace neuroh5
       
       assert(H5Gclose(grp) >= 0);
       ierr = H5Fclose(in_file);
-      
+
       return ierr;
     }
   
@@ -845,7 +845,8 @@ namespace neuroh5
           rdispls[p] = rdispls[p-1] + recvcounts[p-1];
           recvbuf_size += recvcounts[p];
         }
-      if (recvbuf_size > 0) recvbuf.resize(recvbuf_size);
+      if (recvbuf_size > 0)
+        recvbuf.resize(recvbuf_size);
     
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
@@ -856,7 +857,10 @@ namespace neuroh5
     
       MPI_Barrier(all_comm);
 
-      data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
+      if (recvbuf.size() > 0)
+        {
+          data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
+        }
       recvbuf.clear();
       
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);

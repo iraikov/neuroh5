@@ -157,12 +157,16 @@ namespace neuroh5
 
       vector<int> recvcounts, rdispls;
       vector<char> recvbuf;
-      
+
+
       assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                          recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
 
-      data::deserialize_rank_tree_map (size, recvbuf, recvcounts, rdispls, tree_map);
+      if (recvbuf.size() > 0)
+        {
+          data::deserialize_rank_tree_map (size, recvbuf, recvcounts, rdispls, tree_map);
+        }
       recvbuf.clear();
 
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);

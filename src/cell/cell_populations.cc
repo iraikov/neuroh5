@@ -98,7 +98,12 @@ namespace neuroh5
         if (rank == 0)
           {
             data::serialize_data(pop_names, sendbuf);
+            assert(sendbuf.size() > 0);
           }
+
+        size_t sendbuf_size = sendbuf.size();
+        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) >= 0);
+        sendbuf.resize(sendbuf_size);
         
         assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
         

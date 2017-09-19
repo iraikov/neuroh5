@@ -2018,8 +2018,6 @@ extern "C"
                                        tree_map, attr_maps);
     assert (status >= 0);
 
-    printf("tree_map.size = %u\n", tree_map.size());
-    
     for (auto const& element : tree_map)
       {
         const CELL_IDX_T key = element.first;

@@ -25,10 +25,9 @@ namespace neuroh5
   namespace data
   {
 
-    void append_rank_tree_map
-    (NamedAttrMap&       attr_values,
-     const map<CELL_IDX_T, rank_t>& node_rank_map,
-     map <rank_t, map<CELL_IDX_T, neurotree_t> > &rank_tree_map)
+    void append_rank_tree_map (NamedAttrMap& attr_values,
+                               const map<CELL_IDX_T, rank_t>& node_rank_map,
+                               map <rank_t, map<CELL_IDX_T, neurotree_t> > &rank_tree_map)
     {
       for (CELL_IDX_T gid : attr_values.index_set)
         {
