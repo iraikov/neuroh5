@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from neuroh5.io import read_population_ranges, append_cell_attributes, bcast_cell_attributes, NeurotreeGen, NeurotreeAttrGen
+from neuroh5.io import read_population_ranges, append_cell_attributes, bcast_cell_attributes, NeuroH5TreeGen, NeuroH5CellAttrGen
 
 # import mkl
 import sys
@@ -20,7 +20,7 @@ forest_file = 'DGC_forest_connectivity_040617.h5'
 test_file = 'DGC_forest_syns_test_012717.h5'
 
 # synapse_dict = read_from_pkl(neurotrees_dir+'010117_GC_test_synapse_attrs.pkl')
-#synapse_dict = read_tree_attributes(MPI._addressof(comm), neurotrees_dir+forest_file, 'GC',
+#synapse_dict = read_cell_attributes(comm, neurotrees_dir+forest_file, 'GC',
 #                                    namespace='Synapse_Attributes')
 
 coords_dir = 'data/'
@@ -29,7 +29,7 @@ coords_dir = 'data/'
 coords_file = 'dentate_Full_Scale_Control_coords_compressed.h5'
 
 
-g = NeurotreeAttrGen(comm, neurotrees_dir+test_file, 'GC', io_size=comm.size,
+g = NeuroH5CellAttrGen(comm, neurotrees_dir+test_file, 'GC', io_size=comm.size,
                      namespace='Synapse_Attributes')
 global_count = 0
 count = 0
@@ -40,5 +40,4 @@ global_count = comm.gather(count, root=0)
 if rank == 0:
     print 'Total: %i' % np.sum(global_count)
 
-# test = population_ranges(MPI._addressof(comm), coords_dir+coords_file)
 test = bcast_cell_attributes(comm, 0, coords_dir+coords_file, 'GC', namespace='Coordinates')

@@ -5,7 +5,7 @@ comm = MPI.COMM_WORLD
 print "rank = ", comm.Get_rank()
 print "size = ", comm.Get_size()
 
-(g,a) = bcast_graph(MPI._addressof(comm), "data/dentate_test.h5", attributes=True)
+(g,a) = bcast_graph(comm, "data/dentate_test.h5", attributes=True)
 
 print a
 print g
