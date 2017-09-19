@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from neurotrees.io import read_trees, write_tree_attributes, read_tree_attributes
+from neuroh5.io import read_trees, write_cell_attributes, read_cell_attributes
 import numpy as np
 
 comm = MPI.COMM_WORLD
@@ -7,7 +7,7 @@ rank = comm.Get_rank()
 
 #g = read_trees(MPI._addressof(comm), "data/DGC_forest_test.h5", "GC")
 
-va = read_tree_attributes(MPI._addressof(comm), "DG_forest_coords_reduced.h5", "MC", namespace="Coordinates")
+va = read_tree_attributes(comm, "DG_forest_coords_reduced.h5", "MC", namespace="Coordinates")
 #va = read_tree_attributes(MPI._addressof(comm), 
 #                          "/projects/sciteam/baef/DGC_forest_syns_test.h5", "GC",
 #                          namespace="Synapse_Attributes")

@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from neurograph.io import scatter_graph
+from neuroh5.io import scatter_read_graph
 import numpy as np
 
 comm = MPI.COMM_WORLD
@@ -16,6 +16,6 @@ else:
 
 
 
-g = scatter_graph(MPI._addressof(comm), 
+g = scatter_read_graph(comm, 
                   "/projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5", 
                   128, node_rank_vector)

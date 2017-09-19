@@ -19,8 +19,8 @@
 #include "cell_attributes.hh"
 #include "rank_range.hh"
 #include "append_rank_tree_map.hh"
-#include "alltoallv_packed.hh"
-#include "pack_tree.hh"
+#include "alltoallv_template.hh"
+#include "serialize_tree.hh"
 #include "dataset_num_elements.hh"
 #include "enum_type.hh"
 #include "path_names.hh"
@@ -57,7 +57,7 @@ namespace neuroh5
       vector< pair<hsize_t,hsize_t> > ranges;
       size_t dset_size, read_size; hsize_t start=0, end=0, block=0;
     
-      vector<uint8_t> sendbuf; int sendpos = 0;
+      vector<char> sendbuf; 
       vector<int> sendcounts, sdispls;
     
       // MPI Communicator for I/O ranks
@@ -152,17 +152,17 @@ namespace neuroh5
             data::append_rank_tree_map(attr_values, node_rank_map, rank_tree_map);
           }
 
-          assert(mpi::pack_rank_tree_map (all_comm, rank_tree_map, sendcounts, sdispls, sendpos, sendbuf) >= 0);
+          data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
         }
 
       vector<int> recvcounts, rdispls;
-      vector<uint8_t> recvbuf;
-      assert(mpi::alltoallv_packed(all_comm, sendcounts, sdispls, sendbuf,
-                                   recvcounts, rdispls, recvbuf) >= 0);
+      vector<char> recvbuf;
+      
+      assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                         recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
 
-      int recvpos = 0;
-      assert(mpi::unpack_tree_map (all_comm, recvbuf, recvpos, tree_map) >= 0);
+      data::deserialize_rank_tree_map (size, recvbuf, recvcounts, rdispls, tree_map);
       recvbuf.clear();
 
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);

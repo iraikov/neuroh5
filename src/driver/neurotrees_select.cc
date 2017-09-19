@@ -29,8 +29,8 @@
 #include "append_tree.hh"
 #include "cell_attributes.hh"
 #include "cell_populations.hh"
-#include "pack_tree.hh"
-#include "alltoallv_packed.hh"
+#include "serialize_tree.hh"
+#include "alltoallv_template.hh"
 #include "sort_permutation.hh"
 #include "tokenize.hh"
 
@@ -499,7 +499,7 @@ int main(int argc, char** argv)
                     MPI_SUM, 0, all_comm) >= 0);
   assert(MPI_Bcast(&global_subset_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
 
-  for (auto & tree : tree_subset)
+  for (auto const& tree : tree_subset)
     {
       CELL_IDX_T idx = get<0>(tree);
 
@@ -512,28 +512,28 @@ int main(int argc, char** argv)
   tree_subset.clear();
 
   // Created packed representation of the tree subset arranged per rank
-  vector<uint8_t> sendbuf; int sendpos = 0;
+  vector<char> sendbuf; 
   vector<int> sendcounts, sdispls;
-  assert(mpi::pack_rank_tree_map (all_comm, tree_subset_rank_map, sendcounts, sdispls, sendpos, sendbuf) >= 0);
+  data::serialize_rank_tree_map (size, rank, tree_subset_rank_map,
+                                 sendcounts, sendbuf, sdispls);
   tree_subset_rank_map.clear();
   
   // Send packed representation of the tree subset to the respective ranks
-  vector<uint8_t> recvbuf; 
+  vector<char> recvbuf; 
   vector<int> recvcounts, rdispls;
-  assert(mpi::alltoallv_packed(all_comm, sendcounts, sdispls, sendbuf,
+  assert(mpi::alltoallv_vector(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                recvcounts, rdispls, recvbuf) >= 0);
   sendbuf.clear();
 
   // Unpack tree subset on the owning ranks
-  int recvpos = 0;
-  assert(mpi::unpack_tree_vector (all_comm, recvbuf, recvpos, tree_subset) >= 0);
+  data::deserialize_rank_tree_vector (size, recvbuf, recvcounts, rdispls, tree_subset);
   recvbuf.clear();
 
   auto compare_trees = [](const neurotree_t& a, const neurotree_t& b) { return (get<0>(a) < get<0>(b)); };
   vector<size_t> p = data::sort_permutation(tree_subset, compare_trees);
   data::apply_permutation_in_place(tree_subset, p);
   
-  printf("Task %d local selection size is %u\n", rank, tree_subset.size());
+  printf("Task %d local selection size is %lu\n", rank, tree_subset.size());
 
   if (global_subset_size > 0)
     {

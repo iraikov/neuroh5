@@ -8,7 +8,6 @@
 //==============================================================================
 
 #include "neuroh5_types.hh"
-#include "pack_tree.hh"
 #include "path_names.hh"
 #include "read_template.hh"
 #include "write_template.hh"
@@ -17,7 +16,10 @@
 #include "create_group.hh"
 #include "attr_map.hh"
 #include "infer_datatype.hh"
+#include "alltoallv_template.hh"
+#include "bcast_template.hh"
 #include "serialize_data.hh"
+#include "serialize_cell_attributes.hh"
 
 #include <hdf5.h>
 #include <mpi.h>
@@ -206,7 +208,7 @@ namespace neuroh5
     herr_t num_cell_attributes
     (
      const vector< pair<string,hid_t> >& attributes,
-     vector <uint32_t> &num_attrs
+     vector <size_t> &num_attrs
      )
     {
       herr_t ierr = 0;
@@ -285,7 +287,7 @@ namespace neuroh5
     (
      const map<CELL_IDX_T, rank_t> &node_rank_map,
      const data::NamedAttrMap   &attr_values,
-     map <size_t, data::AttrMap> &rank_attr_map)
+     map <rank_t, data::AttrMap> &rank_attr_map)
     {
       const vector<map< CELL_IDX_T, vector<float> > > &all_float_values     = attr_values.attr_maps<float>();
       const vector<map< CELL_IDX_T, vector<int8_t> > > &all_int8_values     = attr_values.attr_maps<int8_t>();
@@ -734,7 +736,7 @@ namespace neuroh5
 
       assert(io_size > 0);
     
-      vector<uint8_t> sendbuf; int sendpos = 0;
+      vector<char> sendbuf; 
       vector<int> sendcounts, sdispls, recvcounts, rdispls;
 
       sendcounts.resize(size,0);
@@ -748,7 +750,7 @@ namespace neuroh5
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
-          map <size_t, data::AttrMap > rank_attr_map;
+          map <rank_t, data::AttrMap > rank_attr_map;
           {
             data::NamedAttrMap  attr_values;
             read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
@@ -757,74 +759,8 @@ namespace neuroh5
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
           }
-            
-          vector<int> rank_sequence;
-          // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
-          // (as opposed to starting at rank 0)
-          for (size_t dst_rank = rank; dst_rank < size; dst_rank++)
-            {
-              rank_sequence.push_back(dst_rank);
-            }
-          for (size_t dst_rank = 0; dst_rank < rank; dst_rank++)
-            {
-              rank_sequence.push_back(dst_rank);
-            }
-      
-          for (const int& dst_rank : rank_sequence)
-            {
-              auto it1 = rank_attr_map.find(dst_rank); 
-              sdispls[dst_rank] = sendpos;
-	    
-              if (it1 != rank_attr_map.end())
-                {
-                  data::AttrMap &m = it1->second;
-		
-                  // Create MPI_PACKED object with the number of gids for this rank
-                  int packsize=0;
-                  uint32_t rank_numitems = m.index_set.size();
-                  assert(MPI_Pack_size(1, MPI_UINT32_T, all_comm, &packsize) == MPI_SUCCESS);
-                  sendbuf.resize(sendbuf.size() + packsize);
-                  assert(MPI_Pack(&rank_numitems, 1, MPI_UINT32_T, &sendbuf[0],
-                                  (int)sendbuf.size(), &sendpos, all_comm) == MPI_SUCCESS);
-		
-                  for (auto it2 = m.index_set.begin(); it2 != m.index_set.end(); ++it2)
-                    {
-                      int packsize = 0;
-                      CELL_IDX_T index = *it2;
-		    
 
-                      const vector<vector<float>>    float_values  = m.find<float>(index);
-                      const vector<vector<uint8_t>>  uint8_values  = m.find<uint8_t>(index);
-                      const vector<vector<int8_t>>   int8_values   = m.find<int8_t>(index);
-                      const vector<vector<uint16_t>> uint16_values = m.find<uint16_t>(index);
-                      const vector<vector<int16_t>>  int16_values  = m.find<int16_t>(index);
-                      const vector<vector<uint32_t>> uint32_values = m.find<uint32_t>(index);
-                      const vector<vector<int32_t>>  int32_values  = m.find<int32_t>(index);
-		    
-                      mpi::pack_size_index(all_comm, packsize);
-                      mpi::pack_size_attr<float>(all_comm, MPI_FLOAT, index, float_values, packsize);
-                      mpi::pack_size_attr<uint8_t>(all_comm, MPI_UINT8_T, index, uint8_values, packsize);
-                      mpi::pack_size_attr<int8_t>(all_comm, MPI_INT8_T, index, int8_values, packsize);
-                      mpi::pack_size_attr<uint16_t>(all_comm, MPI_UINT16_T, index, uint16_values, packsize);
-                      mpi::pack_size_attr<int16_t>(all_comm, MPI_INT16_T, index, int16_values, packsize);
-                      mpi::pack_size_attr<uint32_t>(all_comm, MPI_UINT32_T, index, uint32_values, packsize);
-                      mpi::pack_size_attr<int32_t>(all_comm, MPI_INT32_T, index, int32_values, packsize);
-                    
-                      sendbuf.resize(sendbuf.size()+packsize);
-                      int sendbuf_size = sendbuf.size();
-                    
-                      mpi::pack_index(all_comm, index, sendbuf_size, sendbuf, sendpos);
-                      mpi::pack_attr<float>(all_comm, MPI_FLOAT, index, float_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<uint8_t>(all_comm, MPI_UINT8_T, index, uint8_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<int8_t>(all_comm, MPI_INT8_T, index, int8_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<uint16_t>(all_comm, MPI_UINT16_T, index, uint16_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<int16_t>(all_comm, MPI_INT16_T, index, int16_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<uint32_t>(all_comm, MPI_UINT32_T, index, uint32_values, sendbuf_size, sendpos, sendbuf);
-                      mpi::pack_attr<int32_t>(all_comm, MPI_INT32_T, index, int32_values, sendbuf_size, sendpos, sendbuf);
-                    }
-                }
-              sendcounts[dst_rank] = sendpos - sdispls[dst_rank];
-            }
+          data::serialize_rank_attr_map (size, rank, rank_attr_map, sendcounts, sendbuf, sdispls);
         }
       else
         {
@@ -832,13 +768,13 @@ namespace neuroh5
         }
       MPI_Barrier(all_comm);
     
-      vector<uint32_t> num_attrs_bcast(num_attrs.size());
+      vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs_bcast[i] = num_attrs[i];
         }
       // 4. Broadcast the number of attributes of each type to all ranks
-      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_UINT32_T, 0, all_comm) >= 0);
+      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, all_comm) >= 0);
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs[i] = num_attrs_bcast[i];
@@ -846,14 +782,14 @@ namespace neuroh5
     
       // 5. Broadcast the names of each attributes of each type to all ranks
       {
-        vector<char> sendbuf; uint32_t sendbuf_size=0;
+        vector<char> sendbuf; size_t sendbuf_size=0;
         if (rank == 0)
           {
             data::serialize_data(attr_names, sendbuf);
             sendbuf_size = sendbuf.size();
           }
 
-        assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, all_comm) >= 0);
         sendbuf.resize(sendbuf_size);
         assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
         
@@ -901,7 +837,7 @@ namespace neuroh5
       // 7. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
       size_t recvbuf_size;
-      vector<uint8_t> recvbuf;
+      vector<char> recvbuf;
 
       recvbuf_size = recvcounts[0];
       for (int p = 1; p < ssize; ++p)
@@ -912,44 +848,17 @@ namespace neuroh5
       if (recvbuf_size > 0) recvbuf.resize(recvbuf_size);
     
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
-                           all_comm) >= 0);
+      assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                         recvcounts, rdispls, recvbuf) >= 0);
+
     
       sendbuf.clear();
     
       MPI_Barrier(all_comm);
-    
-      int recvpos = 0; 
-      while ((size_t)recvpos < recvbuf_size)
-        {
-          uint32_t num_recv_items=0;
-          // Unpack number of received blocks for this rank
-          assert(MPI_Unpack(&recvbuf[0], recvbuf_size, 
-                            &recvpos, &num_recv_items, 1, MPI_UINT32_T, all_comm) ==
-                 MPI_SUCCESS);
-	
-          for (size_t i=0; i<num_recv_items; i++)
-            {
-              CELL_IDX_T index;
-              mpi::unpack_index(all_comm, index, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<float>(all_comm, MPI_FLOAT, index, attr_map, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<uint8_t>(all_comm, MPI_UINT8_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<int8_t>(all_comm, MPI_INT8_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<uint16_t>(all_comm, MPI_UINT16_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<int16_t>(all_comm, MPI_INT16_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<uint32_t>(all_comm, MPI_UINT32_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-              mpi::unpack_attr<int32_t>(all_comm, MPI_INT32_T, index, attr_map, recvbuf_size, recvbuf, recvpos);
-              assert((size_t)recvpos <= recvbuf_size);
-            }
-        }
+
+      data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
+      recvbuf.clear();
+      
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       return 0;
@@ -978,7 +887,7 @@ namespace neuroh5
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
       fflush(stdout);
 
-      vector<uint8_t> sendrecvbuf; 
+      vector<char> sendrecvbuf; 
       vector< pair<string,hid_t> > attr_info;
 
       vector< size_t > num_attrs;
@@ -1128,60 +1037,22 @@ namespace neuroh5
           attr_map.num_attrs(num_attrs);
           attr_map.attr_names(attr_names);
 
-          // Create MPI_PACKED object with the number of gids
-          int sendpos = 0;
-          int packsize=0;
-          uint32_t numitems = attr_map.index_set.size();
-          assert(MPI_Pack_size(1, MPI_UINT32_T, comm, &packsize) == MPI_SUCCESS);
-          sendrecvbuf.resize(sendrecvbuf.size() + packsize);
-          assert(MPI_Pack(&numitems, 1, MPI_UINT32_T, &sendrecvbuf[0],
-                          (int)sendrecvbuf.size(), &sendpos, comm) == MPI_SUCCESS);
-		
-          for (auto it = attr_map.index_set.begin(); it != attr_map.index_set.end(); ++it)
-            {
-              int packsize = 0;
-              CELL_IDX_T index = *it;
+          if (rank == 0)
+          {
+            data::serialize_data(attr_map, sendrecvbuf);
+          }
 
-              const vector<vector<float>>    float_values = attr_map.find<float>(index);
-              const vector<vector<uint8_t>>  uint8_values = attr_map.find<uint8_t>(index);
-              const vector<vector<int8_t>>   int8_values = attr_map.find<int8_t>(index);
-              const vector<vector<uint16_t>> uint16_values = attr_map.find<uint16_t>(index);
-              const vector<vector<int16_t>>  int16_values = attr_map.find<int16_t>(index);
-              const vector<vector<uint32_t>> uint32_values = attr_map.find<uint32_t>(index);
-              const vector<vector<int32_t>>  int32_values = attr_map.find<int32_t>(index);
-		    
-              mpi::pack_size_index(comm, packsize);
-              mpi::pack_size_attr<float>(comm, MPI_FLOAT, index, float_values, packsize);
-              mpi::pack_size_attr<uint8_t>(comm, MPI_UINT8_T, index, uint8_values, packsize);
-              mpi::pack_size_attr<int8_t>(comm, MPI_INT8_T, index, int8_values, packsize);
-              mpi::pack_size_attr<uint16_t>(comm, MPI_UINT16_T, index, uint16_values, packsize);
-              mpi::pack_size_attr<int16_t>(comm, MPI_INT16_T, index, int16_values, packsize);
-              mpi::pack_size_attr<uint32_t>(comm, MPI_UINT32_T, index, uint32_values, packsize);
-              mpi::pack_size_attr<int32_t>(comm, MPI_INT32_T, index, int32_values, packsize);
-              
-              sendrecvbuf.resize(sendrecvbuf.size()+packsize);
-              int sendrecvbuf_size = sendrecvbuf.size();
-              
-              mpi::pack_index(comm, index, sendrecvbuf_size, sendrecvbuf, sendpos);
-              mpi::pack_attr<float>(comm, MPI_FLOAT, index, float_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<uint8_t>(comm, MPI_UINT8_T, index, uint8_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<int8_t>(comm, MPI_INT8_T, index, int8_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<uint16_t>(comm, MPI_UINT16_T, index, uint16_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<int16_t>(comm, MPI_INT16_T, index, int16_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<uint32_t>(comm, MPI_UINT32_T, index, uint32_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-              mpi::pack_attr<int32_t>(comm, MPI_INT32_T, index, int32_values, sendrecvbuf_size, sendpos, sendrecvbuf);
-            }
         }
 
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
-      vector<uint32_t> num_attrs_bcast(num_attrs.size());
+      vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs_bcast[i] = num_attrs[i];
         }
       // Broadcast the number of attributes of each type to all ranks
-      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_UINT32_T, root, comm) >= 0);
+      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, root, comm) >= 0);
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs[i] = num_attrs_bcast[i];
@@ -1233,43 +1104,14 @@ namespace neuroh5
           attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i],i);
         }
 
-      uint32_t sendrecvbuf_size = sendrecvbuf.size();
-      assert(MPI_Bcast(&sendrecvbuf_size, 1, MPI_UINT32_T, root, comm) == MPI_SUCCESS);
+      size_t sendrecvbuf_size = sendrecvbuf.size();
+      assert(MPI_Bcast(&sendrecvbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
       sendrecvbuf.resize(sendrecvbuf_size);
-      assert(MPI_Bcast(&sendrecvbuf[0], sendrecvbuf_size, MPI_PACKED, root, comm) == MPI_SUCCESS);
-    
+      assert(MPI_Bcast(&sendrecvbuf[0], sendrecvbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
+      
       if (rank != (unsigned int)root)
         {
-          int recvpos = 0; 
-          while ((size_t)recvpos < sendrecvbuf_size)
-            {
-              uint32_t num_recv_items=0;
-              // Unpack number of received blocks for this rank
-              assert(MPI_Unpack(&sendrecvbuf[0], sendrecvbuf_size, 
-                                &recvpos, &num_recv_items, 1, MPI_UINT32_T, comm) ==
-                     MPI_SUCCESS);
-            
-              for (size_t i=0; i<num_recv_items; i++)
-                {
-                  CELL_IDX_T index;
-                  mpi::unpack_index(comm, index, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<float>(comm, MPI_FLOAT, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<uint8_t>(comm, MPI_UINT8_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<int8_t>(comm, MPI_INT8_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<uint16_t>(comm, MPI_UINT16_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<int16_t>(comm, MPI_INT16_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<uint32_t>(comm, MPI_UINT32_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                  mpi::unpack_attr<int32_t>(comm, MPI_INT32_T, index, attr_map, sendrecvbuf_size, sendrecvbuf, recvpos);
-                  assert((size_t)recvpos <= sendrecvbuf_size);
-                }
-            }
+          data::deserialize_data(sendrecvbuf, attr_map);
         }
     
       status = H5Pclose(fapl);

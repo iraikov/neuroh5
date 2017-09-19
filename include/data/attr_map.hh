@@ -14,6 +14,15 @@
 #include <set>
 #include <vector>
 
+// type support
+#include "cereal/types/vector.hpp"
+#include "cereal/types/tuple.hpp"
+#include "cereal/types/set.hpp"
+#include "cereal/types/map.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/complex.hpp"
+#include <cereal/types/memory.hpp>
+
 #include "neuroh5_types.hh"
 
 namespace neuroh5
@@ -42,6 +51,20 @@ namespace neuroh5
       std::vector <std::map < CELL_IDX_T, std::vector <uint32_t> > > uint32_values;
       std::vector <std::map < CELL_IDX_T, std::vector <int32_t> > >  int32_values;
 
+      // This method lets cereal know which data members to serialize
+      template<class Archive>
+      void serialize(Archive & archive)
+      {
+        archive(index_set,
+                float_values,
+                uint8_values,
+                int8_values,
+                uint16_values,
+                int16_values,
+                uint32_values,
+                int32_values); // serialize things by passing them to the archive
+      }
+
       template<class T>
       size_t insert (const std::vector<CELL_IDX_T> &index,
                      const std::vector<ATTR_PTR_T> &ptr,
@@ -65,8 +88,33 @@ namespace neuroh5
       template<class T>
       const vector<vector<T>> find (CELL_IDX_T index);
 
+      template<class T>
+      void insert_map1 (vector <map <CELL_IDX_T, std::vector<T> > >& a,
+                        const vector <map <CELL_IDX_T, std::vector<T> > >& b)
+      {
+        assert(a.size() == b.size());
+        for (size_t i=0; i<a.size(); i++)
+          {
+            a[i].insert(b[i].cbegin(), b[i].cend());
+          }
+      }
+      
+      void insert_map (AttrMap a)
+      {
+        index_set.insert(a.index_set.begin(), a.index_set.end());
+        insert_map1(float_values, a.float_values);
+        insert_map1(uint8_values, a.uint8_values);
+        insert_map1(uint16_values, a.uint16_values);
+        insert_map1(uint32_values, a.uint32_values);
+        insert_map1(int8_values,  a.int8_values);
+        insert_map1(int16_values, a.int16_values);
+        insert_map1(int32_values, a.int32_values);
+      }
+
       void append (AttrMap a)
       {
+        index_set.insert(a.index_set.begin(),
+                         a.index_set.end());
         float_values.insert(float_values.end(),
                             a.float_values.begin(),
                             a.float_values.end());

@@ -1,12 +1,11 @@
 from mpi4py import MPI
-from neurotrees.io import scatter_read_trees, population_ranges
+from neuroh5.io import scatter_read_trees, read_population_ranges
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 print "rank = ", rank
 
-pr = population_ranges(MPI._addressof(comm), "data/DGC_forest_test.h5")
-(g,_)  = scatter_read_trees(MPI._addressof(comm), "data/DGC_forest_test_attrs.h5", "GC", 2, attributes=True)
-print "pr = ", pr
+(g,n)  = scatter_read_trees(comm, "data/DGC_forest_test_attrs.h5", "GC")
+
 for gid in g.keys():
-    print "g[%d] = " % gid, g[gid]['Attributes.a']
+    print "g[%d] = " % gid, g[gid]

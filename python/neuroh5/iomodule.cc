@@ -2017,6 +2017,8 @@ extern "C"
                                        pop_vector[pop_idx].start,
                                        tree_map, attr_maps);
     assert (status >= 0);
+
+    printf("tree_map.size = %u\n", tree_map.size());
     
     for (auto const& element : tree_map)
       {
@@ -2397,7 +2399,7 @@ extern "C"
                                    "namespace",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Pkss|s", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Okss|s", (char **)kwlist,
                                      &py_comm, &root, &file_name,
                                      &pop_name, &attr_namespace))
         return NULL;
