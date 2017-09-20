@@ -46,6 +46,10 @@ namespace neuroh5
                                   vector<int> &sdispls)
     {
       vector<int> rank_sequence;
+
+      sdispls.resize(num_ranks);
+      sendcounts.resize(num_ranks);
+
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
       // (as opposed to starting at rank 0)
       for (int key_rank = start_rank; (int)key_rank < num_ranks; key_rank++)
