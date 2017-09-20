@@ -3163,7 +3163,7 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OssI|iOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oss|Oii", (char **)kwlist,
                                      &py_comm, &file_name, &pop_name, 
                                      &py_attr_namespaces,
                                      &io_size, &cache_size))

@@ -58,8 +58,7 @@ template<class Archive>
 void save(Archive & archive, ResponseWrapper const &m) 
 {
   m.response.match([&archive] (Result r) { int tag=0; archive(tag, r.data); },
-                   [&archive] (Error e)  { int tag=1; 
-                                           archive(tag, e.code, e.message); });
+                   [&archive] (Error e)  { int tag=1; archive(tag, e.code, e.message); });
 }
 
 template<class Archive>
