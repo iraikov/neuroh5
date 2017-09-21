@@ -80,7 +80,7 @@ namespace neuroh5
             break;
           }
         default:
-          assert("Unspported type for enumeration base type found.");
+          assert("Unsupported type for enumeration base type found.");
           break;
         }
 

@@ -22,7 +22,6 @@
 #include "alltoallv_template.hh"
 #include "serialize_tree.hh"
 #include "dataset_num_elements.hh"
-#include "enum_type.hh"
 #include "path_names.hh"
 #include "read_template.hh"
 
@@ -53,7 +52,7 @@ namespace neuroh5
      size_t numitems = 0
      )
     {
-      herr_t status; hid_t fapl=-1, rapl=-1, file=-1, hdf5_swc_type=-1;
+      herr_t status; hid_t fapl=-1, rapl=-1, file=-1;
       vector< pair<hsize_t,hsize_t> > ranges;
       size_t dset_size, read_size; hsize_t start=0, end=0, block=0;
     
@@ -74,9 +73,6 @@ namespace neuroh5
       assert(ssize > 0);
       rank = srank;
       size = ssize;
-
-      /* Create HDF5 enumerated type for reading SWC type information */
-      hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
 
       // Am I an I/O rank?
       if (srank < io_size)

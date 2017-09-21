@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file attr_map.hh
+///  @file optional_value.hh
 ///
 ///  Functions for storing optional values.
 ///

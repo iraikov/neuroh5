@@ -395,7 +395,6 @@ namespace neuroh5
           break;
         }
 
-
       status = write<T> (file, path + "/" + ATTR_VAL,
                          global_value_size, local_value_start, local_value_size,
                          mtype, value, wapl);

@@ -233,7 +233,7 @@ namespace neuroh5
         {
           istringstream iss(line);
           NODE_IDX_T id, idpar; int opt_idpar;
-          SWC_TYPE_T swc_type;
+          int swc_value; SWC_TYPE_T swc_type;
           REALVAL_T radius;
           COORD_T x, y, z;
 
@@ -241,7 +241,8 @@ namespace neuroh5
           id = id+id_offset;
           if (iss.fail()) continue;
         
-          assert (iss >> swc_type);
+          assert (iss >> swc_value);
+          swc_type = swc_value;
           assert (iss >> x);
           assert (iss >> y);
           assert (iss >> z);
@@ -332,7 +333,15 @@ namespace neuroh5
           for_each(layers.cbegin(),
                    layers.cend(),
                    [] (const LAYER_IDX_T i)
-                   { cout << " " << i; } 
+                   { cout << " " << (int)i; } 
+                   );
+          cout << endl;
+
+          cout << "SWC types: " << endl;
+          for_each(swc_types.cbegin(),
+                   swc_types.cend(),
+                   [] (const SWC_TYPE_T i)
+                   { cout << " " << (int)i; } 
                    );
           cout << endl;
 

@@ -98,6 +98,7 @@ namespace neuroh5
           const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
           const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
 
+          
           topo_size = src_vector.size();
           assert(src_vector.size() == topo_size);
           assert(dst_vector.size() == topo_size);
@@ -290,9 +291,6 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
-
-      /* Create HDF5 enumerated type for reading SWC type information */
-      hid_t hdf5_swc_type = hdf5::create_H5Tenum<SWC_TYPE_T> (swc_type_enumeration);
       
       std::vector<SEC_PTR_T> sec_ptr;
       std::vector<TOPO_PTR_T> topo_ptr;
@@ -337,7 +335,7 @@ namespace neuroh5
       const data::optional_hid layer_data_type(LAYER_IDX_H5_NATIVE_T);
       const data::optional_hid parent_node_data_type(PARENT_NODE_IDX_H5_NATIVE_T);
       const data::optional_hid section_data_type(SECTION_IDX_H5_NATIVE_T);
-      const data::optional_hid swc_data_type(hdf5_swc_type);
+      const data::optional_hid swc_data_type(SWC_TYPE_H5_NATIVE_T);
 
       string attr_ptr_owner_path = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD) + "/" + hdf5::ATTR_PTR;
       string sec_ptr_owner_path  = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC) + "/" + hdf5::SEC_PTR;
@@ -366,11 +364,11 @@ namespace neuroh5
                              all_index_vector, attr_ptr, all_parents,
                              parent_node_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
+
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SWCTYPE,
                              all_index_vector, attr_ptr, all_swc_types,
                              swc_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
-
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SRCSEC,
                              all_index_vector, topo_ptr, all_src_vector,
                              section_data_type, IndexShared,
@@ -387,9 +385,6 @@ namespace neuroh5
 
 
         
-      status = H5Tclose(hdf5_swc_type);
-      assert(status == 0);
-    
       return 0;
     }
   }

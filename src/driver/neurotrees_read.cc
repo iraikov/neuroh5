@@ -89,7 +89,7 @@ void output_tree(string outfilename,
            );
   outfile << endl;
 
-  outfile << "types: " << endl;
+  outfile << "SWC types: " << endl;
   for_each(swc_types.cbegin(),
            swc_types.cend(),
            [&] (const SWC_TYPE_T i)

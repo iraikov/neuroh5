@@ -116,16 +116,6 @@ namespace neuroh5
   #define MPI_PARENT_NODE_IDX_T MPI_INT32_T 
   #define MPI_ATTR_PTR_T    MPI_UINT64_T 
   
-  const static std::vector< std::pair<SWC_TYPE_T, std::string> > swc_type_enumeration
-  {
-    {(SWC_TYPE_T)0, "SWC_UNDEFINED"},
-    {(SWC_TYPE_T)1, "SWC_SOMA"},
-    {(SWC_TYPE_T)2, "SWC_AXON"},
-    {(SWC_TYPE_T)3, "SWC_BASAL_DENDRITE"},
-    {(SWC_TYPE_T)4, "SWC_APICAL_DENDRITE"},
-    {(SWC_TYPE_T)5, "SWC_CUSTOM"}
-  };
-
   // population type
   typedef uint16_t pop_t;
   
