@@ -60,7 +60,19 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s population-name hdf-file swc-file...\n\n", argv[0]);
+  cout << "Usage: " << string(argv[0]) << " [OPTIONS] <POPULATION> <HDF FILE> <SWC FILE>..." << endl <<
+    "Options:" << endl <<
+    "-h         Print this help" << endl <<
+    "-s         Split morphology by layer" << endl <<
+    "-d FILE    Read a list of ids and swc files from the given file " << endl <<
+    "-l FILE    Read a list of SWC files from the given file and assign them sequential ids " << endl <<
+    "-r FILE    Read singleton SWC file and assign it id 0 " << endl <<
+    "-n OFFSET  Specify SWC node id offset " << endl <<
+    "-o OFFSET  Specify cell id offset " << endl <<
+    "-t SWCTYPE Specify default SWC type (indicates that input SWC has layer info instead of type) " << endl <<
+    "-y OFFSET  Specify layer offset " << endl <<
+    "-i FILE    Read given SWC file and prepend its points into every read file " << endl <<
+    endl;
 }
 
 
@@ -74,11 +86,11 @@ int main(int argc, char** argv)
   int status;
   std::string pop_name;
   std::string output_file_name;
-  std::string filelist_name, idfilelist_name, singleton_filename;
+  std::string filelist_name, idfilelist_name, singleton_filename, include_filename;
   std::vector<std::string> input_file_names;
   std::vector<CELL_IDX_T> gid_list;
   int tree_id_offset=0, node_id_offset=0, layer_offset=0; int swc_type=0;
-  vector<neurotree_t> tree_list;
+  vector<neurotree_t> tree_list, include_tree_list;
   MPI_Comm all_comm;
   
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -97,13 +109,14 @@ int main(int argc, char** argv)
   bool opt_filelist       = false;
   bool opt_idfilelist     = false;
   bool opt_singleton      = false;
+  bool opt_include        = false;
   // parse arguments
   static struct option long_options[] = {
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hd:o:r:t:l:n:sy:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "hd:i:o:r:t:l:n:sy:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
@@ -116,6 +129,10 @@ int main(int argc, char** argv)
         case 'd':
           opt_idfilelist = true;
           idfilelist_name = string(optarg);
+          break;
+        case 'i':
+          opt_include = true;
+          include_filename = string(optarg);
           break;
         case 'r':
           opt_singleton = true;
@@ -225,6 +242,14 @@ int main(int argc, char** argv)
 
   assert(gid_list.size() > 0);
   
+  if (opt_include)
+    { 
+      CELL_IDX_T gid0 = 0;
+      // if swc type is not given, then we are reading a regular swc file
+      status = io::read_swc (include_filename, gid0, 0, include_tree_list);
+      node_id_offset += get<10>(include_tree_list[0]).size();
+    }
+
   if (opt_singleton)
     { // reading a single swc file with multiple ids
       std::string input_file_name = input_file_names[0];
@@ -279,6 +304,11 @@ int main(int argc, char** argv)
   
   printf("Task %d has read a total of %lu trees\n", rank,  tree_list.size());
 
+  if (opt_include)
+    {
+      //include_tree(include_tree_list[0], tree_list);
+    }
+  
   if (access( output_file_name.c_str(), F_OK ) != 0)
     {
       vector <string> groups;
