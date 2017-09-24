@@ -30,6 +30,7 @@
 #include "read_layer_swc.hh"
 #include "rank_range.hh"
 #include "append_tree.hh"
+#include "insert_tree_points.hh"
 #include "path_names.hh"
 #include "create_file_toplevel.hh"
 
@@ -306,7 +307,10 @@ int main(int argc, char** argv)
 
   if (opt_include)
     {
-      //include_tree(include_tree_list[0], tree_list);
+      for (auto & tree : tree_list)
+        {
+          cell::insert_tree_points(include_tree_list[0], tree);
+        }
     }
   
   if (access( output_file_name.c_str(), F_OK ) != 0)
