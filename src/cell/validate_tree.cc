@@ -24,6 +24,7 @@ namespace neuroh5
     
     void validate_tree(const neurotree_t& tree)
     {
+      const CELL_IDX_T tree_id = get<0>(tree);
       /*const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);*/
       /*const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);*/
       const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
@@ -55,6 +56,7 @@ namespace neuroh5
               NODE_IDX_T node_idx = sections[sections_ptr];
               if (!(node_idx <= num_nodes))
                 {
+                  printf("tree id = %u\n",tree_id);
                   printf("node_idx = %u\n",node_idx);
                   printf("num_nodes = %lu\n", num_nodes);
                 }

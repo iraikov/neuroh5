@@ -34,7 +34,7 @@ namespace neuroh5
                             Graph::vertex sp, Graph::vertex spp)
     {
     
-      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); p++)
+      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
         
           vector <Graph::vertex> section_members; 
@@ -89,8 +89,7 @@ namespace neuroh5
                             Graph &S, contraction_map_t& contraction_map,
                             Graph::vertex sp, Graph::vertex spp)
     {
-    
-      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); p++)
+      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
           vector <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
@@ -123,8 +122,9 @@ namespace neuroh5
         
           while (outs.size() == 1)
             {
+              Graph::vertex_set::const_iterator out = outs.cbegin();
               // adds the output node to the section map for the current section
-              v = Graph::node(outs.cbegin());
+              v = Graph::node(out);
               contraction_map[s].push_back(v);
               // obtains the neighbors of the next node
               outs = A.out_neighbors(v);
@@ -133,10 +133,10 @@ namespace neuroh5
           // if the node is a branching point, recurse to create new section entry
           if (outs.size() > 1)
             {
-              for ( Graph::vertex_set::const_iterator out = outs.begin(); out != outs.end(); out++)
+              for ( Graph::vertex_set::const_iterator out = outs.cbegin(); out != outs.cend(); ++out)
                 {
                   Graph::vertex_set new_root;
-                  new_root.insert(*out);
+                  new_root.insert(Graph::node(out));
                   contract_tree_dfs(A, new_root, S, contraction_map, s, v);
                 }
             }
@@ -150,7 +150,7 @@ namespace neuroh5
                                     Graph::vertex sp, Graph::vertex spp)
     {
     
-      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); p++)
+      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
         
           vector <Graph::vertex> section_members; 
@@ -215,7 +215,7 @@ namespace neuroh5
                                     Graph::vertex sp, Graph::vertex spp)
     {
     
-      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); p++)
+      for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
           vector <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
@@ -267,7 +267,7 @@ namespace neuroh5
           // if the node is a branching point, recurse to create new section entry
           if ((outs.size() > 1) || region_change)
             {
-              for ( Graph::vertex_set::const_iterator out = outs.begin(); out != outs.end(); out++)
+              for ( Graph::vertex_set::const_iterator out = outs.begin(); out != outs.end(); ++out)
                 {
                   Graph::vertex_set new_root;
                   new_root.insert(*out);

@@ -29,6 +29,7 @@
 #include "neuroh5_types.hh"
 #include "read_layer_swc.hh"
 #include "rank_range.hh"
+#include "validate_tree.hh"
 #include "append_tree.hh"
 #include "insert_tree_points.hh"
 #include "path_names.hh"
@@ -248,7 +249,7 @@ int main(int argc, char** argv)
       CELL_IDX_T gid0 = 0;
       // if swc type is not given, then we are reading a regular swc file
       status = io::read_swc (include_filename, gid0, 0, include_tree_list);
-      node_id_offset += get<10>(include_tree_list[0]).size();
+      cell::validate_tree(include_tree_list[0]);
     }
 
   if (opt_singleton)
@@ -305,12 +306,19 @@ int main(int argc, char** argv)
   
   printf("Task %d has read a total of %lu trees\n", rank,  tree_list.size());
 
+  
+  
   if (opt_include)
     {
       for (auto & tree : tree_list)
         {
           cell::insert_tree_points(include_tree_list[0], tree);
         }
+    }
+
+  for (auto & tree : tree_list)
+    {
+      cell::validate_tree(tree);
     }
   
   if (access( output_file_name.c_str(), F_OK ) != 0)
