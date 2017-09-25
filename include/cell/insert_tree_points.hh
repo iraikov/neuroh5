@@ -21,6 +21,8 @@ namespace neuroh5
   namespace cell
   {
     
-    void insert_tree_points(const neurotree_t& src_tree, neurotree_t& dst_tree);
+    void insert_tree_points(const neurotree_t& src_tree,
+                            neurotree_t& dst_tree,
+                            LAYER_IDX_T include_layer);
   }
 }

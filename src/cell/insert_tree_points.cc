@@ -23,7 +23,7 @@ namespace neuroh5
   namespace cell
   {
     
-    void insert_tree_points(const neurotree_t& src_tree, neurotree_t& dst_tree)
+    void insert_tree_points(const neurotree_t& src_tree, neurotree_t& dst_tree, LAYER_IDX_T include_layer)
     {
       CELL_IDX_T tree_id = get<0>(dst_tree);
       std::vector<SECTION_IDX_T> & src_vector=get<1>(dst_tree);
@@ -125,6 +125,13 @@ namespace neuroh5
             {
               *it = *it + num_nodes;
             }
+        }
+
+      for (auto it = include_layers.begin();
+           it != include_layers.end();
+           ++it)
+        {
+          *it = include_layer;
         }
       
       sections[0] += include_num_sections;

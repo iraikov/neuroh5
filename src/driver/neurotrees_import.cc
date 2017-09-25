@@ -91,7 +91,7 @@ int main(int argc, char** argv)
   std::string filelist_name, idfilelist_name, singleton_filename, include_filename;
   std::vector<std::string> input_file_names;
   std::vector<CELL_IDX_T> gid_list;
-  int tree_id_offset=0, node_id_offset=0, layer_offset=0; int swc_type=0;
+  int tree_id_offset=0, node_id_offset=0, layer_offset=0; int swc_type=0; int include_layer=0;
   vector<neurotree_t> tree_list, include_tree_list;
   MPI_Comm all_comm;
   
@@ -103,6 +103,7 @@ int main(int argc, char** argv)
   assert(MPI_Comm_size(all_comm, &size) >= 0);
   assert(MPI_Comm_rank(all_comm, &rank) >= 0);
 
+  bool opt_include_layer  = false;
   bool opt_split_layers   = false;
   bool opt_layer_offset   = false;
   bool opt_node_id_offset = false;
@@ -118,7 +119,7 @@ int main(int argc, char** argv)
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hd:i:o:r:t:l:n:sy:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "hd:e:i:o:r:t:l:n:sy:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
@@ -135,6 +136,11 @@ int main(int argc, char** argv)
         case 'i':
           opt_include = true;
           include_filename = string(optarg);
+          break;
+        case 'e':
+          opt_include_layer = true;
+          ss << string(optarg);
+          ss >> include_layer;
           break;
         case 'r':
           opt_singleton = true;
@@ -312,7 +318,7 @@ int main(int argc, char** argv)
     {
       for (auto & tree : tree_list)
         {
-          cell::insert_tree_points(include_tree_list[0], tree);
+          cell::insert_tree_points(include_tree_list[0], tree, include_layer);
         }
     }
 
