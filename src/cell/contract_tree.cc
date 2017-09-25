@@ -28,7 +28,8 @@ namespace neuroh5
   namespace cell
   {
   
-    void contract_tree_bfs (const Graph &A,  
+    void contract_tree_bfs (const Graph &A,
+                            const vector<SWC_TYPE_T>& types, 
                             Graph::vertex_set& roots,
                             Graph &S, contraction_map_t& contraction_map,
                             Graph::vertex sp, Graph::vertex spp)
@@ -36,9 +37,9 @@ namespace neuroh5
     
       for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); p++)
         {
-        
           vector <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
+          LAYER_IDX_T p_type = types[v];
                                      
           if (contraction_map[sp].size() > 1)
             {
@@ -65,26 +66,35 @@ namespace neuroh5
         
           // identifies the node neighbors
           Graph::vertex_set outs = A.out_neighbors(v);
+          bool type_change = false;
         
           while (outs.size() == 1)
             {
-              // adds the output node to the section map for the current section
-              v = Graph::node(outs.cbegin());
-              contraction_map[s].push_back(v);
-              // obtains the neighbors of the next node
-              outs = A.out_neighbors(v);
+              if (types[v] != p_type)
+                {
+                  type_change = true;
+                }
+              else
+                {
+                  // adds the output node to the section map for the current section
+                  v = Graph::node(outs.cbegin());
+                  contraction_map[s].push_back(v);
+                  // obtains the neighbors of the next node
+                  outs = A.out_neighbors(v);
+                }
             }
         
           // if the node is a branching point or region change point, recurse to create new section entry
-          if (outs.size() > 1)
+          if ((outs.size() > 1) || type_change)
             {
-              contract_tree_bfs(A, outs, S, contraction_map, s, v);
+              contract_tree_bfs(A, types, outs, S, contraction_map, s, v);
             }
         }
 
     }
 
     void contract_tree_dfs (const Graph &A, 
+                            const vector<SWC_TYPE_T>& types, 
                             Graph::vertex_set& roots,
                             Graph &S, contraction_map_t& contraction_map,
                             Graph::vertex sp, Graph::vertex spp)
@@ -94,6 +104,7 @@ namespace neuroh5
         {
           vector <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
+          SWC_TYPE_T p_type = types[v];
 
           if (contraction_map[sp].size() > 1)
             {
@@ -120,31 +131,41 @@ namespace neuroh5
 
           // identifies the node neighbors
           Graph::vertex_set outs = A.out_neighbors(v);
-        
+          bool type_change = false;
+          
           while (outs.size() == 1)
             {
-              // adds the output node to the section map for the current section
-              v = Graph::node(outs.cbegin());
-              contraction_map[s].push_back(v);
-              // obtains the neighbors of the next node
-              outs = A.out_neighbors(v);
+              if (types[v] != p_type)
+                {
+                  type_change = true;
+                }
+              else
+                {
+                  // adds the output node to the section map for the current section
+                  v = Graph::node(outs.cbegin());
+                  contraction_map[s].push_back(v);
+                  // obtains the neighbors of the next node
+                  outs = A.out_neighbors(v);
+                }
             }
 
           // if the node is a branching point, recurse to create new section entry
-          if (outs.size() > 1)
+          if ((outs.size() > 1) || type_change)
             {
               for ( Graph::vertex_set::const_iterator out = outs.begin(); out != outs.end(); out++)
                 {
                   Graph::vertex_set new_root;
                   new_root.insert(*out);
-                  contract_tree_dfs(A, new_root, S, contraction_map, s, v);
+                  contract_tree_dfs(A, types, new_root, S, contraction_map, s, v);
                 }
             }
         }
 
     }
 
-    void contract_tree_regions_bfs (const Graph &A,  const vector<LAYER_IDX_T>& regions, 
+    void contract_tree_regions_bfs (const Graph &A,
+                                    const vector<LAYER_IDX_T>& regions,
+                                    const vector<SWC_TYPE_T>& types, 
                                     Graph::vertex_set& roots,
                                     Graph &S, contraction_map_t& contraction_map,
                                     Graph::vertex sp, Graph::vertex spp)
@@ -156,6 +177,7 @@ namespace neuroh5
           vector <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
           LAYER_IDX_T p_region = regions[v];
+          SWC_TYPE_T p_type = types[v];
                                      
           if (contraction_map[sp].size() > 1)
             {
@@ -183,14 +205,19 @@ namespace neuroh5
           // identifies the node neighbors
           Graph::vertex_set outs = A.out_neighbors(v);
           bool region_change = false;
+          bool type_change = false;
         
-          while ((outs.size() == 1) && (!region_change))
+          while ((outs.size() == 1) && (!(region_change || type_change)))
             {
               // adds the output node to the section map for the current section
               v = Graph::node(outs.cbegin());
               if (regions[v] != p_region)
                 {
                   region_change = true;
+                }
+              else if (types[v] != p_type)
+                {
+                  type_change = true;
                 }
               else
                 {
@@ -201,15 +228,17 @@ namespace neuroh5
             }
         
           // if the node is a branching point or region change point, recurse to create new section entry
-          if ((outs.size() > 1) || region_change)
+          if ((outs.size() > 1) || region_change || type_change)
             {
-              contract_tree_regions_bfs(A, regions, outs, S, contraction_map, s, v);
+              contract_tree_regions_bfs(A, regions, types, outs, S, contraction_map, s, v);
             }
         }
 
     }
 
-    void contract_tree_regions_dfs (const Graph &A, const vector<LAYER_IDX_T>& regions, 
+    void contract_tree_regions_dfs (const Graph &A,
+                                    const vector<LAYER_IDX_T>& regions,
+                                    const vector<SWC_TYPE_T>& types, 
                                     Graph::vertex_set& roots,
                                     Graph &S, contraction_map_t& contraction_map,
                                     Graph::vertex sp, Graph::vertex spp)
@@ -220,6 +249,7 @@ namespace neuroh5
           vector <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
           LAYER_IDX_T p_region = regions[v];
+          SWC_TYPE_T p_type = types[v];
 
           if (contraction_map[sp].size() > 1)
             {
@@ -247,14 +277,19 @@ namespace neuroh5
           // identifies the node neighbors
           Graph::vertex_set outs = A.out_neighbors(v);
           bool region_change = false;
+          bool type_change = false;
         
-          while ((outs.size() == 1) && (!region_change))
+          while ((outs.size() == 1) && (!(region_change || type_change)))
             {
               // adds the output node to the section map for the current section
               v = Graph::node(outs.cbegin());
               if (regions[v] != p_region)
                 {
                   region_change = true;
+                }
+              else if (types[v] != p_type)
+                {
+                  type_change = true;
                 }
               else
                 {
@@ -265,13 +300,13 @@ namespace neuroh5
             }
 
           // if the node is a branching point, recurse to create new section entry
-          if ((outs.size() > 1) || region_change)
+          if ((outs.size() > 1) || region_change || type_change)
             {
               for ( Graph::vertex_set::const_iterator out = outs.begin(); out != outs.end(); out++)
                 {
                   Graph::vertex_set new_root;
                   new_root.insert(*out);
-                  contract_tree_regions_dfs(A, regions, new_root, S, contraction_map, s, v);
+                  contract_tree_regions_dfs(A, regions, types, new_root, S, contraction_map, s, v);
                 }
             }
         }

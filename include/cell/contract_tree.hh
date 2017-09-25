@@ -18,19 +18,25 @@ namespace neuroh5
 {
   namespace cell
   {
-    void contract_tree_bfs (const NGraph::Graph &A, 
+    void contract_tree_bfs (const NGraph::Graph &A,
+                            const std::vector<SWC_TYPE_T>& types,
                             NGraph::Graph::vertex_set& roots,
                             NGraph::Graph &S, contraction_map_t& contraction_map,
                             NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);
     void contract_tree_dfs (const NGraph::Graph &A, 
+                            const std::vector<SWC_TYPE_T>& types,
                             NGraph::Graph::vertex_set& roots,
                             NGraph::Graph &S, contraction_map_t& contraction_map,
                             NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);
-    void contract_tree_regions_bfs (const NGraph::Graph &A, const std::vector<LAYER_IDX_T>& regions,
+    void contract_tree_regions_bfs (const NGraph::Graph &A,
+                                    const std::vector<LAYER_IDX_T>& regions,
+                                    const std::vector<SWC_TYPE_T>& types,
                                     NGraph::Graph::vertex_set& roots,
                                     NGraph::Graph &S, contraction_map_t& contraction_map,
                                     NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);
-    void contract_tree_regions_dfs (const NGraph::Graph &A, const std::vector<LAYER_IDX_T>& regions,
+    void contract_tree_regions_dfs (const NGraph::Graph &A,
+                                    const std::vector<LAYER_IDX_T>& regions,
+                                    const std::vector<SWC_TYPE_T>& types,
                                     NGraph::Graph::vertex_set& roots,
                                     NGraph::Graph &S, contraction_map_t& contraction_map,
                                     NGraph::Graph::vertex sp, NGraph::Graph::vertex spp);

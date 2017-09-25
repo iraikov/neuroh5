@@ -129,9 +129,9 @@ namespace neuroh5
       S.insert_vertex(0);
 
       if (split_layers)
-        cell::contract_tree_regions_dfs (A, layers, roots, S, contraction_map, 0, 0);
+        cell::contract_tree_regions_dfs (A, layers, swc_types, roots, S, contraction_map, 0, 0);
       else
-        cell::contract_tree_dfs (A, roots, S, contraction_map, 0, 0);
+        cell::contract_tree_dfs (A, swc_types, roots, S, contraction_map, 0, 0);
     
       //cout << S;
       size_t num_sections = contraction_map.size();
@@ -288,7 +288,7 @@ namespace neuroh5
       vector<SECTION_IDX_T> sec_vector;
       S.insert_vertex(0);
 
-      cell::contract_tree_dfs (A, roots, S, contraction_map, 0, 0);
+      cell::contract_tree_dfs (A, swc_types, roots, S, contraction_map, 0, 0);
     
       //cout << S;
       size_t num_sections = contraction_map.size();
