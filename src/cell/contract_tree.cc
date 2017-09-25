@@ -134,7 +134,6 @@ namespace neuroh5
           
           while (outs.size() == 1)
             {
-<<<<<<< HEAD
               if (types[v] != p_type)
                 {
                   type_change = true;
@@ -147,14 +146,6 @@ namespace neuroh5
                   // obtains the neighbors of the next node
                   outs = A.out_neighbors(v);
                 }
-=======
-              Graph::vertex_set::const_iterator out = outs.cbegin();
-              // adds the output node to the section map for the current section
-              v = Graph::node(out);
-              contraction_map[s].push_back(v);
-              // obtains the neighbors of the next node
-              outs = A.out_neighbors(v);
->>>>>>> 74b7e2a33ce019f08392c7f1a2ffd7af2c2d0dbb
             }
 
           // if the node is a branching point, recurse to create new section entry
@@ -163,13 +154,8 @@ namespace neuroh5
               for ( Graph::vertex_set::const_iterator out = outs.cbegin(); out != outs.cend(); ++out)
                 {
                   Graph::vertex_set new_root;
-<<<<<<< HEAD
-                  new_root.insert(*out);
-                  contract_tree_dfs(A, types, new_root, S, contraction_map, s, v);
-=======
                   new_root.insert(Graph::node(out));
-                  contract_tree_dfs(A, new_root, S, contraction_map, s, v);
->>>>>>> 74b7e2a33ce019f08392c7f1a2ffd7af2c2d0dbb
+                  contract_tree_dfs(A, types, new_root, S, contraction_map, s, v);
                 }
             }
         }
