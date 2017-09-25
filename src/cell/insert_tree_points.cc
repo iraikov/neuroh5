@@ -25,6 +25,7 @@ namespace neuroh5
     
     void insert_tree_points(const neurotree_t& src_tree, neurotree_t& dst_tree)
     {
+      CELL_IDX_T tree_id = get<0>(dst_tree);
       std::vector<SECTION_IDX_T> & src_vector=get<1>(dst_tree);
       std::vector<SECTION_IDX_T> & dst_vector=get<2>(dst_tree);
       std::vector<SECTION_IDX_T> & sections=get<3>(dst_tree);
@@ -65,6 +66,7 @@ namespace neuroh5
               NODE_IDX_T node_idx = sections[sections_ptr];
               if (!(node_idx <= num_nodes))
                 {
+                  printf("tree id = %u\n",tree_id);
                   printf("node_idx = %u\n",node_idx);
                   printf("num_nodes = %lu\n", num_nodes);
                 }
@@ -100,7 +102,7 @@ namespace neuroh5
           sections_ptr++;
           for (size_t p = 0; p < num_section_nodes; p++)
             {
-              NODE_IDX_T node_idx = sections[sections_ptr];
+              NODE_IDX_T node_idx = include_sections[sections_ptr];
               if (!(node_idx <= include_num_nodes))
                 {
                   printf("node_idx = %u\n",node_idx);
@@ -108,7 +110,7 @@ namespace neuroh5
                 }
               assert(node_idx <= include_num_nodes);
               include_all_section_nodes.insert(node_idx);
-              sections[sections_ptr] += num_nodes;              
+              include_sections[sections_ptr] += num_nodes;              
               sections_ptr++;
             }
       

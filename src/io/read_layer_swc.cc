@@ -122,7 +122,7 @@ namespace neuroh5
       infile.close();
 
       //cout << A;
-    
+
       contraction_map_t contraction_map;
       vector<SECTION_IDX_T> src_vector, dst_vector;
       vector<SECTION_IDX_T> sec_vector;
@@ -149,7 +149,8 @@ namespace neuroh5
           sec_idx++;
         }
       assert(sec_idx == num_sections);
-    
+
+      
       for ( Graph::const_iterator p = S.begin(); p != S.end(); p++)
         {
           Graph::vertex u = Graph::node (p); 
@@ -172,11 +173,12 @@ namespace neuroh5
 
       if (debug_enabled)
         {
+          cout << "gid " << gid << ": " << endl;
           cout << "layers: " << endl;
           for_each(layers.cbegin(),
                    layers.cend(),
                    [] (const LAYER_IDX_T i)
-                   { cout << " " << i; } 
+                   { cout << " " << (unsigned int)i; } 
                    );
           cout << endl;
 
