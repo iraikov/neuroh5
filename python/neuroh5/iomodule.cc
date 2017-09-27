@@ -2653,7 +2653,7 @@ extern "C"
                                    NULL};
 
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO|skkkkk", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO|skkkk", (char **)kwlist,
                                      &py_comm, &file_name_arg, &pop_name_arg, &idx_values,
                                      &namespace_arg,
                                      &io_size, &chunk_size, &value_chunk_size, &cache_size))
