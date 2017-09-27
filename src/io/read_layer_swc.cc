@@ -251,7 +251,7 @@ namespace neuroh5
           assert (iss >> z);
           assert (iss >> radius);
           assert (iss >> opt_idpar);
-          assert (iss >> opt_layer);
+          iss >> opt_layer;
           if (!iss.fail())
             {
               layer = opt_layer;
