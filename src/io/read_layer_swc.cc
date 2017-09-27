@@ -235,7 +235,8 @@ namespace neuroh5
         {
           istringstream iss(line);
           NODE_IDX_T id, idpar; int opt_idpar;
-          int swc_value; SWC_TYPE_T swc_type;
+          int swc_value; int opt_layer; LAYER_IDX_T layer=-1;
+          SWC_TYPE_T swc_type;
           REALVAL_T radius;
           COORD_T x, y, z;
 
@@ -250,7 +251,13 @@ namespace neuroh5
           assert (iss >> z);
           assert (iss >> radius);
           assert (iss >> opt_idpar);
-        
+          assert (iss >> opt_layer);
+          if (!iss.fail())
+            {
+              layer = opt_layer;
+            }
+          
+          
           A.insert_vertex(id);
           if (opt_idpar > -1)
             {
@@ -276,7 +283,7 @@ namespace neuroh5
           ycoords.push_back(y);
           zcoords.push_back(z);
           radiuses.push_back(radius);
-          layers.push_back(-1);
+          layers.push_back(layer);
         
           i++;
         }
