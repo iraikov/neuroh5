@@ -92,7 +92,6 @@ namespace neuroh5
       void insert_map1 (vector <map <CELL_IDX_T, std::vector<T> > >& a,
                         const vector <map <CELL_IDX_T, std::vector<T> > >& b)
       {
-        printf("insert_map1: a.size() = %u b.size() = %u\n", a.size(), b.size());
         assert(a.size() == b.size());
         for (size_t i=0; i<a.size(); i++)
           {
