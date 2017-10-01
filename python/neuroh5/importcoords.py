@@ -9,12 +9,10 @@ import numpy as np
 import sys, os
 import click
 import itertools
-from neurotrees.io import write_cell_attributes, append_cell_attributes
+from neuroh5.io import write_cell_attributes, append_cell_attributes
 
 grp_h5types   = 'H5Types'
 ns_coords     = 'Coordinates'
-
-attr_gid      = 'GID'
 
 attr_x_coord     = 'X Coordinate'
 attr_y_coord     = 'Y Coordinate'
@@ -24,8 +22,10 @@ attr_u_coord     = 'U Coordinate'
 attr_v_coord     = 'V Coordinate'
 attr_l_coord     = 'L Coordinate'
 
-def import_xyz_uvl_coords (header,offset,lines,colsep,groupname,outputfile,iosize):
-    
+comm = MPI.COMM_WORLD
+
+def import_xyz_uvl_coords (header,offset,lines,colsep,population,outputfile,iosize):
+
     l_gid = []
     l_x_coord = []
     l_y_coord = []
@@ -48,7 +48,7 @@ def import_xyz_uvl_coords (header,offset,lines,colsep,groupname,outputfile,iosiz
                 try:
                     l_gid.append(int(float(a[0])))
                 except ValueError:
-                    l_gid.append(int(int(a[0])))
+                    l_gid.append(int(a[0]))
                 l_x_coord.append(float(a[1]))
                 l_y_coord.append(float(a[2]))
                 l_z_coord.append(float(a[3]))
@@ -89,11 +89,11 @@ def import_xyz_uvl_coords (header,offset,lines,colsep,groupname,outputfile,iosiz
                             attr_u_coord:np.asarray([u]).astype('float32'),
                             attr_v_coord:np.asarray([v]).astype('float32')}
     
-    append_cell_attributes(MPI._addressof(MPI.COMM_WORLD), outputfile, groupname, values, io_size=iosize, namespace=ns_coords)
+    append_cell_attributes(comm, outputfile, population, values, io_size=iosize, namespace=ns_coords)
 
 
 @click.command()
-@click.argument("groupname", type=str)
+@click.argument("population", type=str)
 @click.argument("inputfiles", type=click.Path(exists=True), nargs=-1)
 @click.argument("outputfile", type=click.Path())
 @click.option("--header", is_flag=True)
@@ -101,7 +101,7 @@ def import_xyz_uvl_coords (header,offset,lines,colsep,groupname,outputfile,iosiz
 @click.option("--offset", type=int, default=0)
 @click.option("--iosize", type=int, default=1)
 @click.option("--bufsize", type=int, default=1000000)
-def cli(inputfiles, outputfile, groupname, header, colsep, offset, iosize, bufsize):
+def cli(inputfiles, outputfile, population, header, colsep, offset, iosize, bufsize):
 
     skip_header = header
     startindex = offset
@@ -112,7 +112,7 @@ def cli(inputfiles, outputfile, groupname, header, colsep, offset, iosize, bufsi
         lines = f.readlines(bufsize)
         
         while lines:
-            import_xyz_uvl_coords(skip_header, offset, lines, colsep, groupname, outputfile, iosize)
+            import_xyz_uvl_coords(skip_header, offset, lines, colsep, population, outputfile, iosize)
             lines = f.readlines(bufsize)
             skip_header = False
 

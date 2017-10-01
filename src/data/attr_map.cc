@@ -609,36 +609,43 @@ namespace neuroh5
   void NamedAttrMap::insert_name<float> (string name, size_t index)
   {
     float_names.insert(make_pair(name, index));
+    float_values.resize(max(float_values.size(), index+1));
   }
   template<>
   void NamedAttrMap::insert_name<uint8_t> (string name, size_t index)
   {
     uint8_names.insert(make_pair(name, index));
+    uint8_values.resize(max(uint8_values.size(), index+1));
   }
   template<>
   void NamedAttrMap::insert_name<int8_t> (string name, size_t index)
   {
     int8_names.insert(make_pair(name, index));
+    int8_values.resize(max(int8_values.size(), index+1));
   }
   template<>
   void NamedAttrMap::insert_name<uint16_t> (string name, size_t index)
   {
     uint16_names.insert(make_pair(name, index));
+    uint16_values.resize(max(uint16_values.size(), index+1));
   }
   template<>
   void NamedAttrMap::insert_name<int16_t> (string name, size_t index)
   {
     int16_names.insert(make_pair(name, index));
+    int16_values.resize(max(int16_values.size(), index+1));
   }
   template<>
   void NamedAttrMap::insert_name<uint32_t> (string name, size_t index)
   {
     uint32_names.insert(make_pair(name, index));
+    uint32_values.resize(max(uint32_values.size(), index+1));
   }
   template<>
   void NamedAttrMap::insert_name<int32_t> (string name, size_t index)
   {
     int32_names.insert(make_pair(name, index));
+    int32_values.resize(max(int32_values.size(), index+1));
   }
 
   template<>
