@@ -480,6 +480,35 @@ void build_edge_map (PyObject *py_edge_values,
     }
 }
 
+void build_edge_maps (PyObject *py_edge_dict,
+                      map <string, map <string, pair <map <string, vector<vector<string> > >, edge_map_t> > >& edge_maps)
+{
+  PyObject *py_dst_dict_key, *py_dst_dict_value;
+  Py_ssize_t dst_dict_pos = 0;
+  
+  while (PyDict_Next(py_edge_dict, &dst_dict_pos, &py_dst_dict_key, &py_dst_dict_value))
+    {
+      assert(py_dst_dict_key != Py_None);
+      assert(py_dst_dict_value != Py_None);
+      string dst_pop_name = string(PyBytes_AsString (py_dst_dict_key));
+
+      PyObject *py_src_dict_key, *py_src_dict_value;
+      Py_ssize_t src_dict_pos = 0;
+
+      while (PyDict_Next(py_dst_dict_value, &src_dict_pos, &py_src_dict_key, &py_src_dict_value))
+        {
+          string src_pop_name = string(PyBytes_AsString (py_src_dict_key));
+
+          edge_map_t edge_map;
+          map <string, vector< vector <string> > > attr_names;
+
+          build_edge_map (py_src_dict_value, attr_names, edge_map);
+
+          edge_maps[dst_pop_name][src_pop_name] = make_pair(attr_names, edge_map);
+        }
+    }
+}
+
 
 
 PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
@@ -1647,24 +1676,21 @@ extern "C"
 
   static PyObject *py_append_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    PyObject *edge_values = NULL;
+    PyObject *py_edge_dict = NULL;
     PyObject *py_comm  = NULL;
     MPI_Comm *comm_ptr = NULL;
-    char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg;
+    char *file_name_arg;
     unsigned long io_size = 0;
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
-                                   "src_pop_name",
-                                   "dst_pop_name",
-                                   "edges",
+                                   "edge_dict",
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OsssO|k", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OsO|k", (char **)kwlist,
                                      &py_comm, &file_name_arg,
-                                     &src_pop_name_arg, &dst_pop_name_arg,
-                                     &edge_values, &io_size))
+                                     &py_edge_dict, &io_size))
         return NULL;
 
     assert(py_comm != NULL);
@@ -1682,16 +1708,24 @@ extern "C"
       }
     
     string file_name = string(file_name_arg);
-    string src_pop_name = string(src_pop_name_arg);
-    string dst_pop_name = string(dst_pop_name_arg);
     
-    map <string, vector<vector<string> > > edge_attr_names;
-    edge_map_t edge_map;
+    map <string, map <string, pair <map <string, vector<vector<string> > >, edge_map_t> > > edge_maps;
     
-    build_edge_map(edge_values, edge_attr_names, edge_map);
+    build_edge_maps (py_edge_dict, edge_maps);
 
-    assert(graph::append_graph(*comm_ptr, io_size, file_name, src_pop_name, dst_pop_name,
-                              edge_attr_names, edge_map) >= 0);
+    for (auto const& dst_edge_map_item : edge_maps)
+      {
+        const string & dst_pop_name = dst_edge_map_item.first;
+        for (auto const& edge_map_item : dst_edge_map_item.second)
+          {
+            const string & src_pop_name = edge_map_item.first;
+            const map <string, vector<vector<string> > > & edge_attr_names = edge_map_item.second.first; 
+            const edge_map_t & edge_map = edge_map_item.second.second; 
+            assert(graph::append_graph(*comm_ptr, io_size, file_name, src_pop_name, dst_pop_name,
+                                       edge_attr_names, edge_map) >= 0);
+          }
+      }
+    
     Py_INCREF(Py_None);
     return Py_None;
   }
