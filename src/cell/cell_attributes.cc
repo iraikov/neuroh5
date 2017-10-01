@@ -1048,7 +1048,7 @@ namespace neuroh5
           attr_map.num_attrs(num_attrs);
           attr_map.attr_names(attr_names);
 
-          if (rank == 0)
+          if (rank == (unsigned int) root)
           {
             data::serialize_data(attr_map, sendrecvbuf);
           }
@@ -1072,14 +1072,19 @@ namespace neuroh5
       // Broadcast the names of each attributes of each type to all ranks
       {
         vector<char> sendbuf;
-        if (rank == 0)
+        size_t sendbuf_size=0;
+        if (rank == (unsigned int)root)
           {
             data::serialize_data(attr_names, sendbuf);
+            sendbuf_size = sendbuf.size();
           }
         
-        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) >= 0);
         
-        if (rank != 0)
+        sendbuf.resize(sendbuf_size);
+        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, root, comm) >= 0);
+        
+        if (rank != (unsigned int)root)
           {
             data::deserialize_data(sendbuf, attr_names);
           }
