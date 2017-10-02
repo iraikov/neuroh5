@@ -490,6 +490,7 @@ void build_edge_maps (PyObject *py_edge_dict,
     {
       assert(py_dst_dict_key != Py_None);
       assert(py_dst_dict_value != Py_None);
+      assert(PyString_Check(py_dst_dict_key));
       string dst_pop_name = string(PyBytes_AsString (py_dst_dict_key));
 
       PyObject *py_src_dict_key, *py_src_dict_value;
@@ -497,6 +498,8 @@ void build_edge_maps (PyObject *py_edge_dict,
 
       while (PyDict_Next(py_dst_dict_value, &src_dict_pos, &py_src_dict_key, &py_src_dict_value))
         {
+          assert(py_src_dict_key != Py_None);
+          assert(PyString_Check(py_src_dict_key));
           string src_pop_name = string(PyBytes_AsString (py_src_dict_key));
 
           edge_map_t edge_map;
