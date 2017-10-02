@@ -79,7 +79,6 @@ namespace neuroh5
     {
       size_t io_size;
       size_t num_edges = 0;
-      assert(edge_attr_names.size() == data::AttrVal::num_attr_types);
       
       // read the population info
       set< pair<pop_t, pop_t> > pop_pairs;

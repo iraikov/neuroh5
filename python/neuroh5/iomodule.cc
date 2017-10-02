@@ -323,6 +323,7 @@ void build_edge_map (PyObject *py_edge_values,
           Py_ssize_t attr_pos = 0;
           size_t attr_idx = 0;
 
+          assert(PyString_Check(py_attr_namespace));
           char *str = PyBytes_AsString (py_attr_namespace);
           string attr_namespace = string(str);
           
@@ -342,8 +343,9 @@ void build_edge_map (PyObject *py_edge_values,
             {
               assert(py_attr_key != Py_None);
               assert(py_attr_values != Py_None);
+              assert(PyString_Check(py_attr_key));
               string attr_name = string(PyBytes_AsString(py_attr_key));
-              
+
               npy_type = PyArray_TYPE((PyArrayObject *)py_attr_values);
               
               switch (npy_type)
