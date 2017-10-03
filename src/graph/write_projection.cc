@@ -448,6 +448,7 @@ namespace neuroh5
                 }
             }
 	}
+
       write_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
                                       edge_attr_map, edge_attr_names);
       write_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,

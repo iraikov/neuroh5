@@ -222,7 +222,8 @@ namespace neuroh5
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
           vector <AttrVal> &edge_attr_vec = get<1>(et1);
-
+          edge_attr_vec.resize(va.size());
+          
           size_t i=0;
           for (auto & edge_attr : edge_attr_vec)
             {
@@ -295,7 +296,7 @@ namespace neuroh5
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
           assert(fapl >= 0);
           assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
-          
+
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           assert(file >= 0);
           
@@ -303,10 +304,14 @@ namespace neuroh5
                              src_start, src_end, dst_start, dst_end,
                              num_unpacked_edges, prj_edge_map,
                              edge_attr_names);
+
+          assert(H5Fflush (file, H5F_SCOPE_GLOBAL) >= 0);
           
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);
         }
+
+      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       return 0;
     }

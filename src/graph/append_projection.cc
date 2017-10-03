@@ -26,7 +26,7 @@ namespace neuroh5
                                     const map <string, data::NamedAttrVal>& edge_attr_map,
                                     const map <string, vector < vector <string> > >& edge_attr_names)
     {
-      for (auto iter : edge_attr_map)
+      for (auto const& iter : edge_attr_map)
         {
           const string& attr_namespace = iter.first;
           const data::NamedAttrVal& edge_attr_values = iter.second;
@@ -64,18 +64,19 @@ namespace neuroh5
       // get the I/O communicator
       MPI_Comm comm;
       MPI_Info info;
+
       hid_t fapl = H5Fget_access_plist(file);
       assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
-
+      
       int ssize, srank;
       assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
       size_t size, rank;
       size = (size_t)ssize;
       rank = (size_t)srank;
-        
-      assert(H5Pclose(fapl) >= 0);
 
+      assert(H5Pclose(fapl) >= 0);
+        
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
         
@@ -115,10 +116,6 @@ namespace neuroh5
         }
       dst_ptr.push_back(num_prj_edges);
       assert(num_edges == src_idx.size());
-
-      printf("src: %s dst: %s num_edges = %u src_idx.size() = %u\n",
-             src_pop_name.c_str(), dst_pop_name.c_str(),
-             num_edges, src_idx.size());
 
       // exchange allocation data
 
@@ -161,7 +158,6 @@ namespace neuroh5
       assert(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
       hsize_t chunk = cdim;
       assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-      assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
       
@@ -187,7 +183,6 @@ namespace neuroh5
             
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          printf("Creating group %s\n", path.c_str());
           hdf5::create_group(file, path.c_str());
         }
 
@@ -195,7 +190,6 @@ namespace neuroh5
             
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          printf("Creating group %s\n", path.c_str());
           hdf5::create_group(file, path.c_str());
         }
 
@@ -203,7 +197,6 @@ namespace neuroh5
 
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          printf("Creating group %s\n", path.c_str());
           hdf5::create_group(file, path.c_str());
         }
       
@@ -211,7 +204,6 @@ namespace neuroh5
             
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          printf("Creating group %s\n", path.c_str());
           hdf5::create_group(file, path.c_str());
         }
       
@@ -220,7 +212,6 @@ namespace neuroh5
 
       hid_t dset; hid_t fspace;
       
-      printf("Writing to path %s\n", path.c_str());
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
@@ -298,7 +289,6 @@ namespace neuroh5
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
       hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
-      printf("dst_blk_ptr.size = %u\n", dst_blk_ptr.size());
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
@@ -315,16 +305,13 @@ namespace neuroh5
 
           dset = H5Dcreate2 (file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
                              fspace, lcpl, dcpl, H5P_DEFAULT);
+          assert(H5Sclose(fspace) >= 0);
         }
       else
         {
           dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
           assert(dset >= 0);
-          
-          fspace = H5Dget_space(dset);
-          assert(fspace >= 0);
         }
-      assert(H5Sclose(fspace) >= 0);
 
       hsize_t dst_blk_ptr_newsize = dst_blk_start + dst_blk_ptr_dims;
       if (dst_blk_ptr_newsize > 0)
@@ -418,6 +405,7 @@ namespace neuroh5
           dset = H5Dcreate2 (file, path.c_str(), DST_PTR_H5_FILE_T,
                              fspace, lcpl, dcpl, H5P_DEFAULT);
           assert(dset >= 0);
+          assert(H5Sclose(fspace) >= 0);
         }
       else
         {
@@ -550,9 +538,6 @@ namespace neuroh5
           const string & attr_namespace = iter.first;
           const vector <vector <string> >& attr_names = iter.second;
 
-          printf("attr namespace: %s attr_names.size = %d\n", attr_namespace.c_str(),
-                 attr_names.size());
-          
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           
           edge_attr_values.float_values.resize(attr_names[data::AttrVal::attr_index_float].size());
@@ -566,13 +551,13 @@ namespace neuroh5
           edge_attr_name_spaces.push_back(attr_namespace);
         }
         
-      for (auto iter = prj_edge_map.cbegin(); iter != prj_edge_map.cend(); ++iter)
-        {
-          const edge_tuple_t& et = iter->second;
+      for (auto const& iter : prj_edge_map)
+	{
+	  const edge_tuple_t& et = iter.second;
           const vector<NODE_IDX_T>& v = get<0>(et);
-          const vector <data::AttrVal>& a = get<1>(et);
-          if (v.size() > 0)
-            {
+          const vector<data::AttrVal>& a = get<1>(et);
+	  if (v.size() > 0)
+	    {
               size_t ni=0;
               for (auto const& attr_values : a)
                 {
@@ -581,7 +566,7 @@ namespace neuroh5
                   ni++;
                 }
             }
-        }
+	}
 
       append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
                                        edge_attr_map, edge_attr_names);

@@ -329,6 +329,7 @@ void build_edge_map (PyObject *py_edge_values,
           
           attr_names[attr_namespace].resize(AttrMap::num_attr_types);
 
+          
           vector<uint32_t>    attr_values_uint32;
           vector<uint16_t>    attr_values_uint16;
           vector<uint8_t>     attr_values_uint8;

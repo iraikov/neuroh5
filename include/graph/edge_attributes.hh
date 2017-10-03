@@ -147,7 +147,7 @@ namespace neuroh5
       hid_t file = H5Iget_file_id(loc);
       assert(file >= 0);
 
-      printf("write_edge_Attribute: value.size() = %u\n", value.size());
+      printf("write_edge_attribute: path = %s value.size() = %u\n", path.c_str(), value.size());
       
       MPI_Comm comm;
       MPI_Info info;

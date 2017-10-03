@@ -228,7 +228,8 @@ namespace neuroh5
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
           vector <AttrVal> &edge_attr_vec = get<1>(et1);
-
+          edge_attr_vec.resize(va.size());
+          
           size_t i=0;
           for (auto & edge_attr : edge_attr_vec)
             {
@@ -314,6 +315,8 @@ namespace neuroh5
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);
         }
+
+      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       return 0;
     }
