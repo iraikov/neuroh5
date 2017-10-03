@@ -3,6 +3,7 @@
 #include "debug.hh"
 #include "neuroh5_types.hh"
 #include "path_names.hh"
+#include "create_group.hh"
 #include "append_projection.hh"
 #include "write_template.hh"
 #include "edge_attributes.hh"
@@ -119,6 +120,9 @@ namespace neuroh5
       dst_ptr.push_back(num_prj_edges);
       assert(num_edges == src_idx.size());
 
+      printf("src: %s dst: %s num_edges = %u src_idx.size() = %u\n",
+             src_pop_name.c_str(), dst_pop_name.c_str(),
+             num_edges, src_idx.size());
 
       // exchange allocation data
 
@@ -157,7 +161,13 @@ namespace neuroh5
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
-
+      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+      assert(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      hsize_t chunk = cdim;
+      assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+      assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      
       size_t total_num_blocks=0;
       for (size_t p=0; p<size; p++)
         {
@@ -175,17 +185,71 @@ namespace neuroh5
         {
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
-        
-      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
-      hsize_t dst_blk_idx_dims    = total_num_blocks, one=1;
 
-      hid_t dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
-      assert(dset >= 0);
+      string path = "/" + hdf5::PROJECTIONS;
+            
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          printf("Creating group %s\n", path.c_str());
+          hdf5::create_group(file, path.c_str());
+        }
 
-      hid_t fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
+      path = "/" + hdf5::PROJECTIONS + "/" + dst_pop_name;
+            
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          printf("Creating group %s\n", path.c_str());
+          hdf5::create_group(file, path.c_str());
+        }
 
-      hsize_t dst_blk_start       = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      path = hdf5::projection_prefix(src_pop_name, dst_pop_name);
+
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          printf("Creating group %s\n", path.c_str());
+          hdf5::create_group(file, path.c_str());
+        }
+      
+      path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, hdf5::EDGES);
+            
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          printf("Creating group %s\n", path.c_str());
+          hdf5::create_group(file, path.c_str());
+        }
+      
+      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
+      hsize_t dst_blk_idx_dims = total_num_blocks, one=1;
+
+      hid_t dset; hid_t fspace;
+      
+      printf("Writing to path %s\n", path.c_str());
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          fspace = H5Screate_simple(1, &dst_blk_idx_dims, maxdims);
+          assert(fspace >= 0);
+          if (chunk < dst_blk_idx_dims)
+            {
+              assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+            }
+          else
+            {
+              assert(H5Pset_chunk(dcpl, 1, &dst_blk_idx_dims ) >= 0);
+            }
+          dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
+                            lcpl, dcpl, H5P_DEFAULT);
+          assert(dset >= 0);
+        }
+      else
+        {
+          dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+      
+          fspace = H5Dget_space(dset);
+          assert(fspace >= 0);
+        }
+      
+      hsize_t dst_blk_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
       hsize_t dst_blk_idx_newsize = dst_blk_start + dst_blk_idx_dims;
       if (dst_blk_idx_newsize > 0)
         {
@@ -238,8 +302,32 @@ namespace neuroh5
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
       hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
 
-      dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
-      assert(dset >= 0);
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          fspace = H5Screate_simple(1, &dst_blk_ptr_dims, maxdims);
+          assert(fspace >= 0);
+
+          if (chunk < dst_blk_ptr_dims)
+            {
+              assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+            }
+          else
+            {
+              assert(H5Pset_chunk(dcpl, 1, &dst_blk_ptr_dims ) >= 0);
+            }
+
+          dset = H5Dcreate2 (file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
+                             fspace, lcpl, dcpl, H5P_DEFAULT);
+        }
+      else
+        {
+          dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+          
+          fspace = H5Dget_space(dset);
+          assert(fspace >= 0);
+        }
+      assert(H5Sclose(fspace) >= 0);
 
       hsize_t dst_blk_ptr_newsize = dst_blk_start + dst_blk_ptr_dims;
       if (dst_blk_ptr_newsize > 0)
@@ -267,6 +355,8 @@ namespace neuroh5
           start += recvbuf_num_blocks[p];
         }
 
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
       if (block > 0)
         {
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
@@ -276,8 +366,6 @@ namespace neuroh5
         {
           assert(H5Sselect_none(fspace) >= 0);
         }
-      fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
       assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &dst_blk_ptr[0]) >= 0);
 
@@ -312,15 +400,39 @@ namespace neuroh5
         {
           dst_ptr.resize(num_dest);
         }
+      
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);
       hsize_t dst_ptr_dims = total_num_dests+1;
 
-      dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
-      assert(dset >= 0);
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          fspace = H5Screate_simple(1, &dst_ptr_dims, maxdims);
+          assert(fspace >= 0);
+
+          if (chunk < dst_ptr_dims)
+            {
+              assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+            }
+          else
+            {
+              assert(H5Pset_chunk(dcpl, 1, &dst_ptr_dims ) >= 0);
+            }
+
+          dset = H5Dcreate2 (file, path.c_str(), DST_PTR_H5_FILE_T,
+                             fspace, lcpl, dcpl, H5P_DEFAULT);
+          assert(dset >= 0);
+        }
+      else
+        {
+          dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+
+        }
 
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
-      hsize_t dst_ptr_start = (hsize_t) H5Sget_simple_extent_npoints(fspace)-1;
+      hsize_t dst_ptr_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      if (dst_ptr_start > 0) dst_ptr_start--;
       assert(H5Sclose(fspace) >= 0);
 
       hsize_t dst_ptr_newsize = dst_ptr_start + dst_ptr_dims;
@@ -369,10 +481,32 @@ namespace neuroh5
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX);
       hsize_t src_idx_dims = total_num_edges;
 
-      dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
-      assert(dset >= 0);
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          fspace = H5Screate_simple(1, &src_idx_dims, maxdims);
+          assert(fspace >= 0);
 
-      fspace = H5Dget_space(dset);
+          if (chunk < dst_ptr_dims)
+            {
+              assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+            }
+          else
+            {
+              assert(H5Pset_chunk(dcpl, 1, &dst_ptr_dims ) >= 0);
+            }
+
+          dset = H5Dcreate2 (file, path.c_str(), NODE_IDX_H5_FILE_T,
+                             fspace, lcpl, dcpl, H5P_DEFAULT);
+          assert(dset >= 0);
+        }
+      else
+        {
+          dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+          fspace = H5Dget_space(dset);
+          assert(fspace >= 0);
+        }
+
       hsize_t src_idx_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
       assert(H5Sclose(fspace) >= 0);
 
@@ -467,6 +601,7 @@ namespace neuroh5
         
       // clean-up
       assert(H5Pclose(lcpl) >= 0);
+      assert(H5Pclose(dcpl) >= 0);
     }
   }
 }

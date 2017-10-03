@@ -147,6 +147,8 @@ namespace neuroh5
       hid_t file = H5Iget_file_id(loc);
       assert(file >= 0);
 
+      printf("write_edge_Attribute: value.size() = %u\n", value.size());
+      
       MPI_Comm comm;
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
@@ -192,15 +194,12 @@ namespace neuroh5
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
       assert(mtype >= 0);
 
-      // Ready to roll!
-
-      // we write the values first
-      // everything needs to be scaled by 2 for the edge IDs
 
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
+      printf("write_edge_attribute: before create %s\n", path.c_str());
       hid_t dset = H5Dcreate(loc, path.c_str(), ftype, fspace,
                              lcpl, H5P_DEFAULT, H5P_DEFAULT);
       assert(dset >= 0);

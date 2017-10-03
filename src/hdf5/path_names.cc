@@ -67,6 +67,15 @@ namespace neuroh5
     {
       return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name + "/" + name_space;
     }
+
+    string projection_prefix
+    (
+     const string& src_pop_name,
+     const string& dst_pop_name
+     )
+    {
+      return "/" + PROJECTIONS + "/" + dst_pop_name + "/" + src_pop_name;
+    }
     
     string node_attribute_prefix
     (

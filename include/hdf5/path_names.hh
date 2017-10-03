@@ -101,6 +101,12 @@ namespace neuroh5
      const std::string& name_space
      );
 
+    std::string projection_prefix
+    (
+     const std::string& src_pop_name,
+     const std::string& dst_pop_name
+     );
+
     std::string node_attribute_path
     (
      const std::string& name_space,

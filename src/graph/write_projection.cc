@@ -78,10 +78,14 @@ namespace neuroh5
 
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
+      if (rank == size-1)
+        {
+          num_blocks++;
+        }
         
       // create relative destination pointers and source index
-      vector<size_t> dst_blk_ptr; 
-      vector<size_t> dst_ptr;
+      vector<DST_BLK_PTR_T> dst_blk_ptr; 
+      vector<DST_PTR_T> dst_ptr;
       vector<NODE_IDX_T> dst_blk_idx, src_idx;
       NODE_IDX_T first_idx = 0, last_idx = 0;
       hsize_t num_block_edges = 0, num_prj_edges = 0;
@@ -91,11 +95,11 @@ namespace neuroh5
           last_idx  = first_idx;
           dst_blk_idx.push_back(first_idx - dst_start);
           dst_blk_ptr.push_back(0);
-          for (auto const& iter : prj_edge_map)
+          for (auto iter = prj_edge_map.begin(); iter != prj_edge_map.end(); ++iter)
             {
-              const NODE_IDX_T dst = iter.first;
-              const edge_tuple_t& et = iter.second;
-              const vector<NODE_IDX_T> &v = get<0>(et);
+              NODE_IDX_T dst = iter->first;
+              edge_tuple_t et = iter->second;
+              vector<NODE_IDX_T> &v = get<0>(et);
               
               // creates new block if non-contiguous dst indices
               if (((dst-1) > last_idx) || (num_block_edges > block_size))
@@ -115,6 +119,7 @@ namespace neuroh5
         }
       dst_ptr.push_back(num_prj_edges);
       assert(num_edges == src_idx.size());
+
       
 
       // exchange allocation data
