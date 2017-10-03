@@ -78,10 +78,6 @@ namespace neuroh5
 
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
-      if (rank == size-1)
-        {
-          num_blocks++;
-        }
         
       // create relative destination pointers and source index
       vector<DST_BLK_PTR_T> dst_blk_ptr; 

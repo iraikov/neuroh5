@@ -78,10 +78,6 @@ namespace neuroh5
 
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
-      if (rank == size-1)
-        {
-          num_blocks++;
-        }
         
       // create relative destination pointers and source index
       vector<DST_BLK_PTR_T> dst_blk_ptr; 
@@ -167,6 +163,7 @@ namespace neuroh5
       assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
       assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
       hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hsize_t zerodims[1] = {0};
       
       size_t total_num_blocks=0;
       for (size_t p=0; p<size; p++)
@@ -226,7 +223,7 @@ namespace neuroh5
       printf("Writing to path %s\n", path.c_str());
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          fspace = H5Screate_simple(1, &dst_blk_idx_dims, maxdims);
+          fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);
           if (chunk < dst_blk_idx_dims)
             {
@@ -301,10 +298,10 @@ namespace neuroh5
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
       hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
-
+      printf("dst_blk_ptr.size = %u\n", dst_blk_ptr.size());
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          fspace = H5Screate_simple(1, &dst_blk_ptr_dims, maxdims);
+          fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);
 
           if (chunk < dst_blk_ptr_dims)
@@ -406,7 +403,7 @@ namespace neuroh5
 
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          fspace = H5Screate_simple(1, &dst_ptr_dims, maxdims);
+          fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);
 
           if (chunk < dst_ptr_dims)
@@ -483,7 +480,7 @@ namespace neuroh5
 
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
-          fspace = H5Screate_simple(1, &src_idx_dims, maxdims);
+          fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);
 
           if (chunk < dst_ptr_dims)
@@ -553,6 +550,9 @@ namespace neuroh5
           const string & attr_namespace = iter.first;
           const vector <vector <string> >& attr_names = iter.second;
 
+          printf("attr namespace: %s attr_names.size = %d\n", attr_namespace.c_str(),
+                 attr_names.size());
+          
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           
           edge_attr_values.float_values.resize(attr_names[data::AttrVal::attr_index_float].size());
