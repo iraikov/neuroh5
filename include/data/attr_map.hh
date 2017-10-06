@@ -51,6 +51,30 @@ namespace neuroh5
       std::vector <std::map < CELL_IDX_T, std::vector <uint32_t> > > uint32_values;
       std::vector <std::map < CELL_IDX_T, std::vector <int32_t> > >  int32_values;
 
+      typedef std::map < CELL_IDX_T, std::vector <float> > float_values_map;
+      typedef std::map < CELL_IDX_T, std::vector <uint8_t> > uint8_values_map;
+      typedef std::map < CELL_IDX_T, std::vector <uint16_t> > uint16_values_map;
+      typedef std::map < CELL_IDX_T, std::vector <uint32_t> > uint32_values_map;
+      typedef std::map < CELL_IDX_T, std::vector <int8_t> > int8_values_map;
+      typedef std::map < CELL_IDX_T, std::vector <int16_t> > int16_values_map;
+      typedef std::map < CELL_IDX_T, std::vector <int32_t> > int32_values_map;
+
+      typedef float_values_map::iterator float_values_iter;
+      typedef uint8_values_map::iterator uint8_values_iter;
+      typedef uint16_values_map::iterator uint16_values_iter;
+      typedef uint32_values_map::iterator uint32_values_iter;
+      typedef int8_values_map::iterator int8_values_iter;
+      typedef int16_values_map::iterator int16_values_iter;
+      typedef int32_values_map::iterator int32_values_iter;
+
+      typedef float_values_map::const_iterator float_values_const_iter;
+      typedef uint8_values_map::const_iterator uint8_values_const_iter;
+      typedef uint16_values_map::const_iterator uint16_values_const_iter;
+      typedef uint32_values_map::const_iterator uint32_values_const_iter;
+      typedef int8_values_map::const_iterator int8_values_const_iter;
+      typedef int16_values_map::const_iterator int16_values_const_iter;
+      typedef int32_values_map::const_iterator int32_values_const_iter;
+
       // This method lets cereal know which data members to serialize
       template<class Archive>
       void serialize(Archive & archive)
@@ -86,7 +110,7 @@ namespace neuroh5
       size_t num_attr () const;
 
       template<class T>
-      const vector<vector<T>> find (CELL_IDX_T index);
+      const vector<vector<T>> find (CELL_IDX_T index) const;
 
       template<class T>
       void insert_map1 (vector <map <CELL_IDX_T, std::vector<T> > >& a,

@@ -149,12 +149,12 @@ namespace neuroh5
   }
 
   template<>
-  const vector<vector<float>> AttrMap::find<float> (CELL_IDX_T index)
+  const vector<vector<float>> AttrMap::find<float> (CELL_IDX_T index) const
   {
     vector< vector<float> > result;
     for (size_t i =0; i<float_values.size(); i++)
       {
-        auto it = float_values[i].find(index);
+        float_values_const_iter it = float_values[i].find(index);
         if (it != float_values[i].end())
           {
             result.push_back(it->second);
@@ -164,12 +164,12 @@ namespace neuroh5
   }
   
   template<>
-  const vector<vector<uint8_t>> AttrMap::find<uint8_t> (CELL_IDX_T index)
+  const vector<vector<uint8_t>> AttrMap::find<uint8_t> (CELL_IDX_T index) const
   {
     vector< vector<uint8_t> > result;
     for (size_t i =0; i<uint8_values.size(); i++)
       {
-        auto it = uint8_values[i].find(index);
+        uint8_values_const_iter it = uint8_values[i].find(index);
         if (it != uint8_values[i].end())
           {
             result.push_back(it->second);
@@ -178,12 +178,13 @@ namespace neuroh5
     return result;
   }
   template<>
-  const vector<vector<int8_t>> AttrMap::find<int8_t> (CELL_IDX_T index)
+  const vector<vector<int8_t>> AttrMap::find<int8_t> (CELL_IDX_T index) const
   {
+    
     vector< vector<int8_t> > result;
     for (size_t i =0; i<int8_values.size(); i++)
       {
-        auto it = int8_values[i].find(index);
+        int8_values_const_iter it = int8_values[i].find(index);
         if (it != int8_values[i].end())
           {
             result.push_back(it->second);
@@ -192,12 +193,12 @@ namespace neuroh5
     return result;
   }
   template<>
-  const vector<vector<uint16_t>> AttrMap::find<uint16_t> (CELL_IDX_T index)
+  const vector<vector<uint16_t>> AttrMap::find<uint16_t> (CELL_IDX_T index) const
   {
     vector< vector<uint16_t> > result;
     for (size_t i =0; i<uint16_values.size(); i++)
       {
-        auto it = uint16_values[i].find(index);
+        uint16_values_const_iter it = uint16_values[i].find(index);
         if (it != uint16_values[i].end())
           {
             result.push_back(it->second);
@@ -206,12 +207,12 @@ namespace neuroh5
     return result;
   }
   template<>
-  const vector<vector<int16_t>> AttrMap::find<int16_t> (CELL_IDX_T index)
+  const vector<vector<int16_t>> AttrMap::find<int16_t> (CELL_IDX_T index) const
   {
     vector< vector<int16_t> > result;
     for (size_t i =0; i<int16_values.size(); i++)
       {
-        auto it = int16_values[i].find(index);
+        int16_values_const_iter it = int16_values[i].find(index);
         if (it != int16_values[i].end())
           {
             result.push_back(it->second);
@@ -220,12 +221,12 @@ namespace neuroh5
     return result;
   }
   template<>
-  const vector<vector<uint32_t>> AttrMap::find<uint32_t> (CELL_IDX_T index)
+  const vector<vector<uint32_t>> AttrMap::find<uint32_t> (CELL_IDX_T index) const
   {
     vector< vector<uint32_t> > result;
     for (size_t i =0; i<uint32_values.size(); i++)
       {
-        auto it = uint32_values[i].find(index);
+        uint32_values_const_iter it = uint32_values[i].find(index);
         if (it != uint32_values[i].end())
           {
             result.push_back(it->second);
@@ -234,12 +235,12 @@ namespace neuroh5
     return result;
   }
   template<>
-  const vector<vector<int32_t>> AttrMap::find<int32_t> (CELL_IDX_T index)
+  const vector<vector<int32_t>> AttrMap::find<int32_t> (CELL_IDX_T index) const
   {
     vector< vector<int32_t> > result;
     for (size_t i =0; i<int32_values.size(); i++)
       {
-        auto it = int32_values[i].find(index);
+        int32_values_const_iter it = int32_values[i].find(index);
         if (it != int32_values[i].end())
           {
             result.push_back(it->second);

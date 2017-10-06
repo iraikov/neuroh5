@@ -1228,7 +1228,6 @@ PyObject* py_build_edge_tuple_value (const edge_tuple_t& et,
   PyObject *py_edgeval  = PyTuple_New(2);
   PyTuple_SetItem(py_edgeval, 0, adj_arr);
   PyTuple_SetItem(py_edgeval, 1, py_attrmap);
-  Py_DECREF(py_attrmap);
 
   return py_edgeval;
 
@@ -1707,7 +1706,6 @@ extern "C"
     PyObject *py_prj_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
     PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
-    Py_DECREF(py_attribute_info);
     return py_prj_tuple;
   }
 
@@ -1907,7 +1905,6 @@ extern "C"
     PyObject *py_result_tuple = PyTuple_New(2);
 
     PyTuple_SetItem(py_result_tuple, 0, py_population_ranges_dict);
-    Py_DECREF(py_population_ranges_dict);
     PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
     
     return py_result_tuple;
@@ -3693,11 +3690,6 @@ extern "C"
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
-    printf("cell_attr_gen_next: rank %d: pos = %u it_idx = %u seq_index = %u\n",
-           rank,
-           py_ntrg->state->pos,
-           py_ntrg->state->it_idx,
-           py_ntrg->state->seq_index);
     if (py_ntrg->state->pos != seq_done)
       {
         /* seq_index = count-1 means that the generator is exhausted.
@@ -3711,9 +3703,6 @@ extern "C"
             // read the next block
             py_ntrg->state->attr_map.clear();
 
-            printf("cell_attr_gen_next: rank %d: before scatter_read_cell_attributes\n",
-                   rank);
-            
             int status;
             status = cell::scatter_read_cell_attributes (*py_ntrg->state->comm_ptr, py_ntrg->state->file_name,
                                                          py_ntrg->state->io_size, py_ntrg->state->attr_namespace,
@@ -3722,8 +3711,6 @@ extern "C"
                                                          py_ntrg->state->attr_map,
                                                          py_ntrg->state->cache_index, py_ntrg->state->cache_size);
             assert (status >= 0);
-            printf("cell_attr_gen_next: rank %d: after scatter_read_cell_attributes\n",
-                   rank);
             py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
             py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
             py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();

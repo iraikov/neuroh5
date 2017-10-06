@@ -732,9 +732,6 @@ namespace neuroh5
       size = ssize;
       rank = srank;
 
-      printf("rank %d: entering scatter_read_cell_attributes: offset = %u numitems = %u\n",
-             rank, offset, numitems);
-
       vector< size_t > num_attrs(data::AttrMap::num_attr_types, 0);
       vector< vector<string> > attr_names;
 
@@ -757,11 +754,8 @@ namespace neuroh5
           map <rank_t, data::AttrMap > rank_attr_map;
           {
             data::NamedAttrMap  attr_values;
-            printf("rank %d: before read_cell_attributes: offset = %u numitems = %u\n",
-                   rank, offset, numitems);
             read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
                                  attr_values, offset, numitems);
-            printf("rank %d: after read_cell_attributes\n", rank);
             append_rank_attr_map(node_rank_map, attr_values, rank_attr_map);
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
@@ -862,9 +856,6 @@ namespace neuroh5
     
       sendbuf.clear();
     
-      MPI_Barrier(all_comm);
-      printf("rank %d: after alltoallv_vector\n", srank);
-      
       if (recvbuf.size() > 0)
         {
           data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
