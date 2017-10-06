@@ -572,6 +572,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           sections_ptr++;
         }
       PyDict_SetItem(py_section_node_map, py_section_key, py_section_nodes);
+      Py_DECREF(py_section_nodes);
+      Py_DECREF(py_section_key);
       section_idx++;
     }
   assert(section_idx == num_sections);
@@ -586,11 +588,16 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       section_src_ptr[s] = src_vector[s];
       section_dst_ptr[s] = dst_vector[s];
     }
-  
-  PyDict_SetItemString(py_section_topology, "num_sections", PyLong_FromUnsignedLong(num_sections));
+
+  PyObject *py_num_sections = PyLong_FromUnsignedLong(num_sections);
+  PyDict_SetItemString(py_section_topology, "num_sections", py_num_sections);
+  Py_DECREF(py_num_sections);
   PyDict_SetItemString(py_section_topology, "nodes", py_section_node_map);
+  Py_DECREF(py_section_node_map);
   PyDict_SetItemString(py_section_topology, "src", py_section_src);
+  Py_DECREF(py_section_src);
   PyDict_SetItemString(py_section_topology, "dst", py_section_dst);
+  Py_DECREF(py_section_dst);
   
   dims[0] = xcoords.size();
   
@@ -621,14 +628,31 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   
   PyObject *py_treeval = PyDict_New();
   PyDict_SetItemString(py_treeval, "x", py_xcoords);
+  Py_DECREF(py_xcoords);
+
   PyDict_SetItemString(py_treeval, "y", py_ycoords);
+  Py_DECREF(py_ycoords);
+  
   PyDict_SetItemString(py_treeval, "z", py_zcoords);
+  Py_DECREF(py_zcoords);
+
   PyDict_SetItemString(py_treeval, "radius", py_radiuses);
+  Py_DECREF(py_radiuses);
+  
   PyDict_SetItemString(py_treeval, "layer", py_layers);
+  Py_DECREF(py_layers);
+  
   PyDict_SetItemString(py_treeval, "parent", py_parents);
+  Py_DECREF(py_parents);
+  
   PyDict_SetItemString(py_treeval, "swc_type", py_swc_types);
+  Py_DECREF(py_swc_types);
+
   PyDict_SetItemString(py_treeval, "section", py_section_vector);
+  Py_DECREF(py_section_vector);
+
   PyDict_SetItemString(py_treeval, "section_topology", py_section_topology);
+  Py_DECREF(py_section_topology);
 
   
   for (auto const& attr_map_entry : attr_maps)
@@ -662,6 +686,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_float][i]).c_str(),
                                py_value);
+          Py_DECREF(py_value);
+
         }
       for (size_t i=0; i<uint8_attrs.size(); i++)
         {
@@ -677,6 +703,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_uint8][i]).c_str(),
                                py_value);
+          Py_DECREF(py_value);
         }
       for (size_t i=0; i<int8_attrs.size(); i++)
         {
@@ -692,6 +719,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_int8][i]).c_str(),
                                py_value);
+          Py_DECREF(py_value);
         }
       for (size_t i=0; i<uint16_attrs.size(); i++)
         {
@@ -707,6 +735,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_uint16][i]).c_str(),
                                py_value);
+          Py_DECREF(py_value);
         }
       for (size_t i=0; i<uint32_attrs.size(); i++)
         {
@@ -722,6 +751,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_uint32][i]).c_str(),
                                py_value);
+          Py_DECREF(py_value);
         }
       for (size_t i=0; i<int32_attrs.size(); i++)
         {
@@ -737,11 +767,13 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_int32][i]).c_str(),
                                py_value);
+          Py_DECREF(py_value);
         }
 
       PyDict_SetItemString(py_treeval,
                            attr_namespace.c_str(),
                            py_namespace_dict);
+      Py_DECREF(py_namespace_dict);
     }
   
 
@@ -775,6 +807,7 @@ PyObject *py_build_cell_attr_value (const CELL_IDX_T idx,
             }
       
           PyDict_SetItemString(attr_dict, attr_names[k].c_str(), py_values);
+          Py_DECREF(py_values);
         }
     }
   
@@ -782,7 +815,7 @@ PyObject *py_build_cell_attr_value (const CELL_IDX_T idx,
 }
 
 PyObject* py_build_cell_attr_values(const CELL_IDX_T key, 
-                                    NamedAttrMap& attr_map,
+                                    const NamedAttrMap& attr_map,
                                     const string& attr_namespace,
                                     const vector <vector<string> >& attr_names)
 {
@@ -813,6 +846,7 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_float][i]).c_str(),
                            py_value);
+      Py_DECREF(py_value);
     }
 
   for (size_t i=0; i<uint8_attrs.size(); i++)
@@ -829,6 +863,7 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_uint8][i]).c_str(),
                            py_value);
+      Py_DECREF(py_value);
     }
   
   for (size_t i=0; i<int8_attrs.size(); i++)
@@ -845,6 +880,8 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_int8][i]).c_str(),
                            py_value);
+      Py_DECREF(py_value);
+
     }
   
   for (size_t i=0; i<uint16_attrs.size(); i++)
@@ -861,6 +898,8 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_uint16][i]).c_str(),
                            py_value);
+      Py_DECREF(py_value);
+
     }
 
   for (size_t i=0; i<uint32_attrs.size(); i++)
@@ -877,6 +916,8 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_uint32][i]).c_str(),
                            py_value);
+      Py_DECREF(py_value);
+
     }
   
   for (size_t i=0; i<int32_attrs.size(); i++)
@@ -893,11 +934,15 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_int32][i]).c_str(),
                            py_value);
+      Py_DECREF(py_value);
+
     }
 
   PyDict_SetItemString(py_result,
                        attr_namespace.c_str(),
                        py_attrval);
+  Py_DECREF(py_attrval);
+
 
   return py_result;
 }
@@ -941,6 +986,7 @@ void py_build_edge_attr_value (const vector < vector<T> >& edge_attr_values,
           PyDict_SetItemString(py_attrval,
                                (attr_names[attr_index][i]).c_str(),
                                py_value);
+          Py_DECREF(py_value);
         }
     }
 }
@@ -998,6 +1044,8 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
       PyDict_SetItemString(py_attrmap,
                            attr_namespace.c_str(),
                            py_attrval);
+      Py_DECREF(py_attrval);
+
     }
   
   PyObject *py_result = PyTuple_New(3);
@@ -1172,12 +1220,15 @@ PyObject* py_build_edge_tuple_value (const edge_tuple_t& et,
         }
           
       PyDict_SetItemString(py_attrmap, edge_attr_namespaces[namespace_index].c_str(), py_attrval);
+      Py_DECREF(py_attrval);
+
       namespace_index++;
     }
                 
   PyObject *py_edgeval  = PyTuple_New(2);
   PyTuple_SetItem(py_edgeval, 0, adj_arr);
   PyTuple_SetItem(py_edgeval, 1, py_attrmap);
+  Py_DECREF(py_attrmap);
 
   return py_edgeval;
 
@@ -1255,11 +1306,17 @@ extern "C"
           {
             py_src_dict = PyDict_New();
             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
+            Py_DECREF(py_prjval);
+
             PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+            Py_DECREF(py_src_dict);
+
           }
         else
           {
             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
+            Py_DECREF(py_prjval);
+
           }
         
       }
@@ -1326,11 +1383,17 @@ extern "C"
           {
             py_src_dict = PyDict_New();
             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
+            Py_DECREF(py_prjval);
+
             PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+            Py_DECREF(py_src_dict);
+
           }
         else
           {
             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
+            Py_DECREF(py_prjval);
+
           }
       }
 
@@ -1444,6 +1507,9 @@ extern "C"
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
+                    Py_DECREF(py_attr_key);
+                    Py_DECREF(py_attr_index);
+
                     attr_index++;
                   }
               }
@@ -1454,6 +1520,8 @@ extern "C"
         PyTuple_SetItem(py_prj_key, 0, PyBytes_FromString(prj_names[p].first.c_str()));
         PyTuple_SetItem(py_prj_key, 1, PyBytes_FromString(prj_names[p].second.c_str()));
         PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
+        Py_DECREF(py_prj_key);
+        Py_DECREF(py_prj_attr_info);
       }
 
     
@@ -1473,6 +1541,8 @@ extern "C"
 
                 PyObject *key = PyLong_FromLong(key_node);
                 PyDict_SetItem(py_edge_dict, key, py_edge_tuple_value);
+                Py_DECREF(key);
+                Py_DECREF(py_edge_tuple_value);
               }
           }
         
@@ -1482,10 +1552,13 @@ extern "C"
              py_src_dict = PyDict_New();
              PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
              PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+             Py_DECREF(py_edge_dict);
+             Py_DECREF(py_src_dict);
            }
          else
            {
              PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
+             Py_DECREF(py_edge_dict);
            }
         
       }
@@ -1576,16 +1649,21 @@ extern "C"
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
+                    Py_DECREF(py_attr_key);
+                    Py_DECREF(py_attr_index);
                     attr_index++;
                   }
               }
             PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
             PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
+            Py_DECREF(py_prj_ns_attr_info);
+
           }
         PyObject *py_prj_key = PyTuple_New(2);
         PyTuple_SetItem(py_prj_key, 0, PyBytes_FromString(prj_names[p].first.c_str()));
         PyTuple_SetItem(py_prj_key, 1, PyBytes_FromString(prj_names[p].second.c_str()));
         PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
+        Py_DECREF(py_prj_attr_info);
       }
 
     for (size_t i = 0; i < prj_vector.size(); i++)
@@ -1604,6 +1682,8 @@ extern "C"
 
                 PyObject *key = PyLong_FromLong(key_node);
                 PyDict_SetItem(py_edge_dict, key, py_edge_tuple_value);
+                Py_DECREF(py_edge_tuple_value);
+
               }
           }
         
@@ -1613,10 +1693,13 @@ extern "C"
              py_src_dict = PyDict_New();
              PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
              PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+             Py_DECREF(py_edge_dict);
+             Py_DECREF(py_src_dict);
            }
          else
            {
              PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
+             Py_DECREF(py_edge_dict);
            }
         
       }
@@ -1624,6 +1707,7 @@ extern "C"
     PyObject *py_prj_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
     PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+    Py_DECREF(py_attribute_info);
     return py_prj_tuple;
   }
 
@@ -1815,12 +1899,15 @@ extern "C"
             PyDict_SetItemString(py_population_ranges_dict,
                                  get<1>(pop_labels[range.second.second]).c_str(),
                                  py_range_tuple);
+            Py_DECREF(py_range_tuple);
+
           }
       }
 
     PyObject *py_result_tuple = PyTuple_New(2);
 
     PyTuple_SetItem(py_result_tuple, 0, py_population_ranges_dict);
+    Py_DECREF(py_population_ranges_dict);
     PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
     
     return py_result_tuple;
@@ -1943,6 +2030,8 @@ extern "C"
         PyObject *py_treeval = py_build_tree_value(idx, tree, attr_maps);
 
         PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);
+        Py_DECREF(py_treeval);
+
       }
 
     PyObject *py_result_tuple = PyTuple_New(2);
@@ -2065,6 +2154,8 @@ extern "C"
 
         PyObject *py_treeval = py_build_tree_value(key, tree, attr_maps);
         PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(key), py_treeval);
+        Py_DECREF(py_treeval);
+
       }
 
     PyObject *py_result_tuple = PyTuple_New(2);
@@ -2172,6 +2263,8 @@ extern "C"
         PyObject *py_treeval = py_build_tree_value(idx, tree, attr_maps);
 
         PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);
+        Py_DECREF(py_treeval);
+
       }
 
     PyObject *py_result_tuple = PyTuple_New(2);
@@ -2287,6 +2380,8 @@ extern "C"
                                            py_attr_dict);
 
         PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
+        Py_DECREF(py_attr_dict);
+
 
       }
     
@@ -2413,6 +2508,8 @@ extern "C"
                                            py_attr_dict);
 
         PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
+        Py_DECREF(py_attr_dict);
+
 
       }
     
@@ -2537,6 +2634,7 @@ extern "C"
                                            py_attr_dict);
 
         PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
+        Py_DECREF(py_attr_dict);
 
       }
     
