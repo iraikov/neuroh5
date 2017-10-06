@@ -50,7 +50,7 @@ namespace neuroh5
     void serialize_data (const T& data, 
                          vector<char>& sendbuf)
     {
-      std::stringstream ss;
+      std::stringstream ss(ios::in | ios::out | ios::binary);
       {
         cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive
         oarchive(data); // Write the data to the archive
@@ -69,7 +69,7 @@ namespace neuroh5
     {
       {
         string s = string(recvbuf.begin(), recvbuf.end());
-        stringstream ss(s);
+        stringstream ss(s, ios::in | ios::out | ios::binary);
         
         cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
         

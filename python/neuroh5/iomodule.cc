@@ -2447,6 +2447,14 @@ extern "C"
     assert(comm_ptr != NULL);
     assert(*comm_ptr != MPI_COMM_NULL);
 
+    int srank, ssize; size_t size, rank;
+    assert(MPI_Comm_size(*comm_ptr, &ssize) >= 0);
+    assert(MPI_Comm_rank(*comm_ptr, &srank) >= 0);
+    assert(ssize > 0);
+    assert(srank >= 0);
+    size = ssize;
+    rank = srank;
+
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(*comm_ptr, string(file_name), pop_labels);
     assert (status >= 0);
@@ -2474,11 +2482,13 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
-
+    MPI_Barrier(*comm_ptr);
     cell::bcast_cell_attributes (*comm_ptr, (int)root,
                                  string(file_name), string(attr_namespace),
                                  string(pop_name), pop_vector[pop_idx].start,
                                  attr_values);
+    MPI_Barrier(*comm_ptr);
+
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
@@ -2530,6 +2540,8 @@ extern "C"
 
       }
     
+    MPI_Barrier(*comm_ptr);
+
     return py_idx_dict;
   }
 
@@ -3583,6 +3595,11 @@ extern "C"
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
+    printf("cell_attr_gen_next: rank %d: pos = %u it_idx = %u seq_index = %u\n",
+           rank,
+           py_ntrg->state->pos,
+           py_ntrg->state->it_idx,
+           py_ntrg->state->seq_index);
     if (py_ntrg->state->pos != seq_done)
       {
         /* seq_index = count-1 means that the generator is exhausted.
@@ -3595,6 +3612,9 @@ extern "C"
             // If the end of the current cache block has been reached,
             // read the next block
             py_ntrg->state->attr_map.clear();
+
+            printf("cell_attr_gen_next: rank %d: before scatter_read_cell_attributes\n",
+                   rank);
             
             int status;
             status = cell::scatter_read_cell_attributes (*py_ntrg->state->comm_ptr, py_ntrg->state->file_name,
@@ -3604,6 +3624,8 @@ extern "C"
                                                          py_ntrg->state->attr_map,
                                                          py_ntrg->state->cache_index, py_ntrg->state->cache_size);
             assert (status >= 0);
+            printf("cell_attr_gen_next: rank %d: after scatter_read_cell_attributes\n",
+                   rank);
             py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
             py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
             py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();

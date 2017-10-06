@@ -65,7 +65,7 @@ namespace neuroh5
       size_t sendpos = 0;
       for (const int& key_rank : rank_sequence)
         {
-          std::stringstream ss; 
+          std::stringstream ss(ios::in | ios::out | ios::binary); 
           sdispls[key_rank] = sendpos;
           
           auto it1 = prj_rank_edge_map.find(key_rank);
@@ -110,7 +110,7 @@ namespace neuroh5
           num_packed_edges += adj_vector.size();
         }
       
-      std::stringstream ss;
+      std::stringstream ss(ios::in | ios::out | ios::binary);
       {
         cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive
         oarchive(edge_map); // Write the data to the archive
@@ -146,7 +146,7 @@ namespace neuroh5
 
               {
                 string s = string(recvbuf.begin()+startpos, recvbuf.begin()+startpos+recvsize);
-                stringstream ss(s);
+                stringstream ss(s, ios::in | ios::out | ios::binary);
 
                 cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
                 
@@ -197,7 +197,7 @@ namespace neuroh5
       
       {
         string s = string(recvbuf.begin(), recvbuf.end());
-        stringstream ss(s);
+        stringstream ss(s, ios::in | ios::out | ios::binary);
         
         cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
         

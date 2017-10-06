@@ -64,7 +64,7 @@ namespace neuroh5
       size_t sendpos = 0;
       for (const int& key_rank : rank_sequence)
         {
-          std::stringstream ss; 
+          std::stringstream ss(ios::in | ios::out | ios::binary); 
           sdispls[key_rank] = sendpos;
           
           auto it1 = rank_attr_map.find(key_rank);
@@ -111,7 +111,7 @@ namespace neuroh5
               {
                 string s = string(recvbuf.begin()+startpos,
                                   recvbuf.begin()+startpos+recvsize);
-                stringstream ss(s);
+                stringstream ss(s, ios::in | ios::out | ios::binary);
 
                 cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
                 

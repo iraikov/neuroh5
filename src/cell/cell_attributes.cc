@@ -732,8 +732,10 @@ namespace neuroh5
       size = ssize;
       rank = srank;
 
-      vector< size_t > num_attrs;
-      num_attrs.resize(data::AttrMap::num_attr_types);
+      printf("rank %d: entering scatter_read_cell_attributes: offset = %u numitems = %u\n",
+             rank, offset, numitems);
+
+      vector< size_t > num_attrs(data::AttrMap::num_attr_types, 0);
       vector< vector<string> > attr_names;
 
       // MPI Communicator for I/O ranks
@@ -744,12 +746,7 @@ namespace neuroh5
       assert(io_size > 0);
     
       vector<char> sendbuf; 
-      vector<int> sendcounts, sdispls, recvcounts, rdispls;
-
-      sendcounts.resize(size,0);
-      sdispls.resize(size,0);
-      recvcounts.resize(size,0);
-      rdispls.resize(size,0);
+      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
         
       if (srank < io_size)
         {
@@ -760,8 +757,11 @@ namespace neuroh5
           map <rank_t, data::AttrMap > rank_attr_map;
           {
             data::NamedAttrMap  attr_values;
+            printf("rank %d: before read_cell_attributes: offset = %u numitems = %u\n",
+                   rank, offset, numitems);
             read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
                                  attr_values, offset, numitems);
+            printf("rank %d: after read_cell_attributes\n", rank);
             append_rank_attr_map(node_rank_map, attr_values, rank_attr_map);
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
@@ -863,7 +863,8 @@ namespace neuroh5
       sendbuf.clear();
     
       MPI_Barrier(all_comm);
-
+      printf("rank %d: after alltoallv_vector\n", srank);
+      
       if (recvbuf.size() > 0)
         {
           data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
@@ -922,7 +923,6 @@ namespace neuroh5
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
-
     
       hid_t file;
       if (rank == (unsigned int)root)
@@ -943,7 +943,7 @@ namespace neuroh5
               hid_t attr_h5type = attr_info[i].second;
               size_t attr_size  = H5Tget_size(attr_h5type);
               string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
-            
+
               switch (H5Tget_class(attr_h5type))
                 {
                 case H5T_INTEGER:
@@ -1048,14 +1048,15 @@ namespace neuroh5
           attr_map.num_attrs(num_attrs);
           attr_map.attr_names(attr_names);
 
-          if (rank == (unsigned int) root)
-          {
-            data::serialize_data(attr_map, sendrecvbuf);
-          }
+
+          data::serialize_data(attr_map, sendrecvbuf);
 
         }
-
+      MPI_Barrier(io_comm);
+      status = H5Pclose(fapl);
+      assert(status == 0);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      
 
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
@@ -1124,15 +1125,11 @@ namespace neuroh5
       assert(MPI_Bcast(&sendrecvbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
       sendrecvbuf.resize(sendrecvbuf_size);
       assert(MPI_Bcast(&sendrecvbuf[0], sendrecvbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
-      
+
       if (rank != (unsigned int)root)
         {
           data::deserialize_data(sendrecvbuf, attr_map);
         }
-    
-      status = H5Pclose(fapl);
-      assert(status == 0);
-
     }
 
       
