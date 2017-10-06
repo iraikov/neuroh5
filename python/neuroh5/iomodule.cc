@@ -3118,7 +3118,7 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t seq_index, cache_index, cache_size, io_size, comm_size, count;
+    Py_ssize_t seq_index, cache_index, cache_size, io_size, comm_size, local_count, max_local_count, count;
     seq_pos pos;
     string pop_name;
     size_t pop_idx;
@@ -3151,7 +3151,7 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t seq_index, cache_index, cache_size, io_size, comm_size, count;
+    Py_ssize_t seq_index, cache_index, cache_size, io_size, comm_size, local_count, max_local_count, count;
     seq_pos pos;
     string pop_name;
     size_t pop_idx;
@@ -3391,7 +3391,7 @@ extern "C"
     map<CELL_IDX_T, rank_t> node_rank_map;
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
-    rank_t r=0; size_t count=0;
+    rank_t r=0; size_t count=0; size_t max_local_count=0;
     for (size_t i = 0; i < tree_index.size(); i++)
       {
         if ((unsigned int)rank == r) count++;
@@ -3416,7 +3416,12 @@ extern "C"
           }
       }
 
-    py_ntrg->state->count       = count;
+    status = MPI_Allreduce(&(count), &max_local_count, 1,
+                           MPI_SIZE_T, MPI_MAX, *comm_ptr);
+    assert(status == MPI_SUCCESS);
+
+    py_ntrg->state->count       = max_local_count;
+    py_ntrg->state->local_count = count;
     py_ntrg->state->seq_index   = 0;
     py_ntrg->state->cache_index = 0;
     py_ntrg->state->comm_ptr   = comm_ptr;
@@ -3430,7 +3435,7 @@ extern "C"
     py_ntrg->state->attr_namespaces  = attr_namespaces;
 
     map<CELL_IDX_T, neurotree_t> tree_map;
-    py_ntrg->state->tree_map  = tree_map;
+    py_ntrg->state->tree_map = tree_map;
     py_ntrg->state->it_tree  = py_ntrg->state->tree_map.cbegin();
 
     return (PyObject *)py_ntrg;
@@ -3514,8 +3519,9 @@ extern "C"
                                  get<1>(pop_labels[pop_idx]),
                                  string(attr_namespace) + "/" + attr_info[0].first,
                                  cell_index) >= 0);
-
-    for (size_t i=0; i<cell_index.size(); i++)
+    
+    size_t count = cell_index.size();
+    for (size_t i=0; i<count; i++)
       {
         cell_index[i] += pop_vector[pop_idx].start;
       }
@@ -3530,34 +3536,24 @@ extern "C"
 
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
-    rank_t r=0; size_t count=0;
+    rank_t r=0; size_t local_count=0; size_t max_local_count = 0;
     for (size_t i = 0; i < cell_index.size(); i++)
       {
-        if ((unsigned int)rank == r) count++;
+        if ((unsigned int)rank == r) local_count++;
         py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
         if ((unsigned int)size <= r) r=0;
       }
 
-    size_t m = cell_index.size() % size;
-    if (m == 0)
-      {
-        py_ntrg->state->pos = seq_last;
-      }
-    else
-      {
-        if ((unsigned int)rank < m)
-          {
-            py_ntrg->state->pos = seq_last;
-          }
-        else
-          {
-            py_ntrg->state->pos = seq_next;
-          }
-      }
+    status = MPI_Allreduce(&(count), &max_local_count, 1,
+                           MPI_SIZE_T, MPI_MAX, *comm_ptr);
+    assert(status == MPI_SUCCESS);
 
-    py_ntrg->state->count       = count;
-    py_ntrg->state->seq_index   = 0;
-    py_ntrg->state->cache_index = 0;
+    py_ntrg->state->pos             = seq_next;
+    py_ntrg->state->count           = count;
+    py_ntrg->state->max_local_count = max_local_count;
+    py_ntrg->state->local_count     = local_count;
+    py_ntrg->state->seq_index       = 0;
+    py_ntrg->state->cache_index     = 0;
     py_ntrg->state->comm_ptr   = comm_ptr;
     py_ntrg->state->file_name  = string(file_name);
     py_ntrg->state->pop_name   = string(pop_name);
@@ -3686,18 +3682,21 @@ extern "C"
   static PyObject *
   neuroh5_cell_attr_gen_next(PyNeuroH5CellAttrGenState *py_ntrg)
   {
+    PyObject *result = NULL; 
     int size, rank;
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
-    if (py_ntrg->state->pos != seq_done)
+    switch (py_ntrg->state->pos)
       {
+      case seq_next:
+        {
         /* seq_index = count-1 means that the generator is exhausted.
          * Returning NULL in this case is enough. The next() builtin will raise the
          * StopIteration error for us.
          */
         if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
-            (py_ntrg->state->seq_index < py_ntrg->state->count))
+            (py_ntrg->state->cache_index < py_ntrg->state->count))
           {
             // If the end of the current cache block has been reached,
             // read the next block
@@ -3716,57 +3715,69 @@ extern "C"
             py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
           }
 
-        PyObject *result = NULL;
-
-        if (py_ntrg->state->it_idx != py_ntrg->state->attr_map.index_set.cend())
-          {
-            const CELL_IDX_T key = *(py_ntrg->state->it_idx);
-            PyObject *elem = py_build_cell_attr_values(key, py_ntrg->state->attr_map,
-                                                       py_ntrg->state->attr_namespace,
-                                                       py_ntrg->state->attr_names);
-            assert(elem != NULL);
-            py_ntrg->state->it_idx++;
-            py_ntrg->state->seq_index++;
-            result = Py_BuildValue("lO", key, elem);
-          }
-        else
-          {
-            switch (py_ntrg->state->pos)
-              {
-              case seq_next:
+          if (py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend())
+            {
+              if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
                   py_ntrg->state->pos = seq_last;
-                  result = PyTuple_Pack(2, (Py_INCREF(Py_None), Py_None),
-                                        (Py_INCREF(Py_None), Py_None));
-                  break;
                 }
-              case seq_last:
+              else
                 {
-                  py_ntrg->state->pos = seq_done;
-                  result = NULL;
-                  break;
+                  py_ntrg->state->seq_index++;
                 }
-              case seq_done:
-                {
-                  result = NULL;
-                  break;
-                }
-              case seq_empty:
-                {
-                  result = NULL;
-                  break;
-                }
-              }
-          }
-        
-        /* Exceptions from PySequence_GetItem are propagated to the caller
-         * (elem will be NULL so we also return NULL).
-        */
-        return result;
+              result = PyTuple_Pack(2,
+                                    (Py_INCREF(Py_None), Py_None),
+                                    (Py_INCREF(Py_None), Py_None));
+              break;
+            }
+          else
+            {
+              const CELL_IDX_T key = *(py_ntrg->state->it_idx);
+              PyObject *elem = py_build_cell_attr_values(key, py_ntrg->state->attr_map,
+                                                         py_ntrg->state->attr_namespace,
+                                                         py_ntrg->state->attr_names);
+              assert(elem != NULL);
+              py_ntrg->state->it_idx++;
+              py_ntrg->state->seq_index++;
+              result = Py_BuildValue("lO", key, elem);
+            }
+
+          break;
+        }
+      case seq_empty:
+        {
+          if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
+            {
+              py_ntrg->state->pos = seq_last;
+            }
+          else
+            {
+              py_ntrg->state->seq_index++;
+            }
+
+          result = PyTuple_Pack(2,
+                                (Py_INCREF(Py_None), Py_None),
+                                (Py_INCREF(Py_None), Py_None));
+          
+        }
+      case seq_last:
+        {
+          py_ntrg->state->pos = seq_done;
+          result = NULL;
+          break;
+        }
+      case seq_done:
+        {
+          result = NULL;
+          break;
+        }
       }
-    
-    return NULL;
+    /* Exceptions from PySequence_GetItem are propagated to the caller
+     * (elem will be NULL so we also return NULL).
+     */
+    return result;
   }
+
   
   static int neuroh5_prj_gen_next_block(PyNeuroH5ProjectionGenState *py_ngg)
   {
