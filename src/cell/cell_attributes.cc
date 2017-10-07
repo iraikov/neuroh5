@@ -778,6 +778,7 @@ namespace neuroh5
         {
           printf("rank %u: scatter_read_cell_attributes: before comm split\n", rank);
           MPI_Comm_split(all_comm,0,rank,&io_comm);
+          printf("rank %u: scatter_read_cell_attributes: after comm split\n", rank);
         }
       MPI_Barrier(all_comm);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);

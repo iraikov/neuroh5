@@ -3546,6 +3546,8 @@ extern "C"
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, *comm_ptr);
     assert(status == MPI_SUCCESS);
+    status = MPI_Comm_dup(*comm_ptr, py_ntrg->state->comm_ptr);
+    assert(status == MPI_SUCCESS);
 
     py_ntrg->state->pos             = seq_next;
     py_ntrg->state->count           = count;
@@ -3553,7 +3555,6 @@ extern "C"
     py_ntrg->state->local_count     = local_count;
     py_ntrg->state->seq_index       = 0;
     py_ntrg->state->cache_index     = 0;
-    py_ntrg->state->comm_ptr   = comm_ptr;
     py_ntrg->state->file_name  = string(file_name);
     py_ntrg->state->pop_name   = string(pop_name);
     py_ntrg->state->pop_idx    = pop_idx;
@@ -3580,6 +3581,8 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
+    MPI_Comm_free(py_ntrg->state->comm_ptr);
+
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
