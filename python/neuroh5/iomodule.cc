@@ -2814,9 +2814,26 @@ extern "C"
     status = MPI_Comm_dup(*comm_ptr, &comm);
     assert(status == MPI_SUCCESS);
 
+    Py_ssize_t dict_size = PyDict_Size(idx_values);
+    int data_color = 2;
+
+    MPI_Comm data_comm;
+    // In cases where some ranks do not have any data to write, split
+    // the communicator, so that collective operations can be executed
+    // only on the ranks that do have data.
+    if (dict_size > 0)
+      {
+        MPI_Comm_split(*comm_ptr,data_color,0,&data_comm);
+      }
+    else
+      {
+        MPI_Comm_split(*comm_ptr,0,0,&data_comm);
+      }
+    MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
+    
     int srank, ssize; size_t size;
-    assert(MPI_Comm_size(comm, &ssize) >= 0);
-    assert(MPI_Comm_rank(comm, &srank) >= 0);
+    assert(MPI_Comm_size(data_comm, &ssize) >= 0);
+    assert(MPI_Comm_rank(data_comm, &srank) >= 0);
     assert(ssize > 0);
     assert(srank >= 0);
     size = ssize;
@@ -2859,14 +2876,14 @@ extern "C"
       {
         vector <string> groups;
         groups.push_back (hdf5::POPULATIONS);
-        status = hdf5::create_file_toplevel (comm, file_name, groups);
+        status = hdf5::create_file_toplevel (data_comm, file_name, groups);
       }
     else
       {
         status = 0;
       }
     assert(status == 0);
-    MPI_Barrier(comm);
+    MPI_Barrier(data_comm);
 
     const data::optional_hid dflt_data_type;
     size_t attr_idx=0;
@@ -2880,7 +2897,7 @@ extern "C"
           {
           case NPY_UINT32:
             {
-              cell::append_cell_attribute_map<uint32_t> (comm, file_name, attr_namespace, pop_name, attr_name,
+              cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                          all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
                                                          io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint32]++;
@@ -2888,7 +2905,7 @@ extern "C"
             }
           case NPY_INT32:
             {
-              cell::append_cell_attribute_map<int32_t> (comm, file_name, attr_namespace, pop_name, attr_name,
+              cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                          all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
                                                          io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_int32]++;
@@ -2896,7 +2913,7 @@ extern "C"
             }
           case NPY_UINT16:
             {
-              cell::append_cell_attribute_map<uint16_t> (comm, file_name, attr_namespace, pop_name, attr_name,
+              cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                          all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
                                                          io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint16]++;
@@ -2904,7 +2921,7 @@ extern "C"
             }
           case NPY_INT16:
             {
-              cell::append_cell_attribute_map<int16_t> (comm, file_name, attr_namespace, pop_name, attr_name,
+              cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                         all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
                                                         io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_int16]++;
@@ -2912,7 +2929,7 @@ extern "C"
             }
           case NPY_UINT8:
             {
-              cell::append_cell_attribute_map<uint8_t> (comm, file_name, attr_namespace, pop_name, attr_name,
+              cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                         all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
                                                         io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_uint8]++;
@@ -2920,7 +2937,7 @@ extern "C"
             }
           case NPY_INT8:
             {
-              cell::append_cell_attribute_map<int8_t> (comm, file_name, attr_namespace, pop_name, attr_name,
+              cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                        all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
                                                        io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_int8]++;
@@ -2928,7 +2945,7 @@ extern "C"
             }
           case NPY_FLOAT:
             {
-              cell::append_cell_attribute_map<float> (comm, file_name, attr_namespace, pop_name, attr_name,
+              cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, attr_name,
                                                       all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
                                                       io_size, dflt_data_type);
               attr_type_idx[AttrMap::attr_index_float]++;
@@ -2940,6 +2957,8 @@ extern "C"
           }
       }
 
+    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);;
+    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
     Py_INCREF(Py_None);
@@ -2956,15 +2975,12 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
 
-    MPI_Comm comm;
-    status = MPI_Comm_dup(*comm_ptr, &comm);
-    assert(status == MPI_SUCCESS);
-
     unsigned long create_index = 0, io_size = 0;
     unsigned long chunk_size = default_chunk_size;
     unsigned long value_chunk_size = default_value_chunk_size;
     unsigned long cache_size = default_cache_size;
     char *file_name_arg, *pop_name_arg;
+    herr_t status;
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
@@ -2987,11 +3003,33 @@ extern "C"
     assert(comm_ptr != NULL);
     assert(*comm_ptr != MPI_COMM_NULL);
 
-    
+
+    MPI_Comm comm;
+    status = MPI_Comm_dup(*comm_ptr, &comm);
+    assert(status == MPI_SUCCESS);
+
+    Py_ssize_t dict_size = PyDict_Size(idx_values);
+    int data_color = 2;
+
+
+    MPI_Comm data_comm;
+    // In cases where some ranks do not have any data to write, split
+    // the communicator, so that collective operations can be executed
+    // only on the ranks that do have data.
+    if (dict_size > 0)
+      {
+        MPI_Comm_split(*comm_ptr,data_color,0,&data_comm);
+      }
+    else
+      {
+        MPI_Comm_split(*comm_ptr,0,0,&data_comm);
+      }
+    MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
+
     
     int srank, ssize; size_t size;
-    assert(MPI_Comm_size(comm, &ssize) >= 0);
-    assert(MPI_Comm_rank(comm, &srank) >= 0);
+    assert(MPI_Comm_size(data_comm, &ssize) >= 0);
+    assert(MPI_Comm_rank(data_comm, &srank) >= 0);
     assert(ssize > 0);
     assert(srank >= 0);
     size = ssize;
@@ -3030,8 +3068,10 @@ extern "C"
                                all_attr_values_int8,
                                all_attr_values_float);
 
-    assert(cell::append_trees (comm, file_name, pop_name, tree_list) >= 0);
+    assert(cell::append_trees (data_comm, file_name, pop_name, tree_list) >= 0);
+    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
     
+    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     Py_INCREF(Py_None);
     return Py_None;
