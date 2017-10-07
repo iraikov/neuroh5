@@ -3544,7 +3544,7 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
 
-    status = MPI_Allreduce(&(count), &max_local_count, 1,
+    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, *comm_ptr);
     assert(status == MPI_SUCCESS);
 
@@ -3687,6 +3687,10 @@ extern "C"
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
+    printf("cell_attr_gen_next: rank %u: cache_index = %u seq_index = %u count = %u local_count = %u max_local_count = %u \n",
+           rank, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->count, py_ntrg->state->local_count,
+           py_ntrg->state->max_local_count);
+    
     switch (py_ntrg->state->pos)
       {
       case seq_next:
