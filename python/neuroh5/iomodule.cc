@@ -3391,10 +3391,10 @@ extern "C"
     map<CELL_IDX_T, rank_t> node_rank_map;
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
-    rank_t r=0; size_t count=0; size_t max_local_count=0;
+    rank_t r=0; size_t local_count=0; size_t max_local_count=0;
     for (size_t i = 0; i < tree_index.size(); i++)
       {
-        if ((unsigned int)rank == r) count++;
+        if ((unsigned int)rank == r) local_count++;
         py_ntrg->state->node_rank_map.insert(make_pair(tree_index[i], r++));
         if ((unsigned int)size <= r) r=0;
       }
@@ -3416,12 +3416,11 @@ extern "C"
           }
       }
 
-    status = MPI_Allreduce(&(count), &max_local_count, 1,
+    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, *comm_ptr);
     assert(status == MPI_SUCCESS);
 
     py_ntrg->state->count       = max_local_count;
-    py_ntrg->state->local_count = count;
     py_ntrg->state->seq_index   = 0;
     py_ntrg->state->cache_index = 0;
     py_ntrg->state->comm_ptr   = comm_ptr;
@@ -3544,7 +3543,7 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
 
-    status = MPI_Allreduce(&(count), &max_local_count, 1,
+    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, *comm_ptr);
     assert(status == MPI_SUCCESS);
 
@@ -3687,33 +3686,35 @@ extern "C"
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
+    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u local_count = %u max_local_count = %u \n", rank, py_ntrg->state->pos, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->count, py_ntrg->state->local_count, py_ntrg->state->max_local_count);
+
     switch (py_ntrg->state->pos)
       {
       case seq_next:
         {
-        /* seq_index = count-1 means that the generator is exhausted.
-         * Returning NULL in this case is enough. The next() builtin will raise the
-         * StopIteration error for us.
-         */
-        if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
-            (py_ntrg->state->cache_index < py_ntrg->state->count))
-          {
-            // If the end of the current cache block has been reached,
-            // read the next block
-            py_ntrg->state->attr_map.clear();
+          
 
-            int status;
-            status = cell::scatter_read_cell_attributes (*py_ntrg->state->comm_ptr, py_ntrg->state->file_name,
-                                                         py_ntrg->state->io_size, py_ntrg->state->attr_namespace,
-                                                         py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
-                                                         py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
-                                                         py_ntrg->state->attr_map,
-                                                         py_ntrg->state->cache_index, py_ntrg->state->cache_size);
-            assert (status >= 0);
-            py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
-            py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
-            py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
-          }
+          if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
+              (py_ntrg->state->cache_index < py_ntrg->state->count))
+            {
+              // If the end of the current cache block has been reached,
+              // read the next block
+              py_ntrg->state->attr_map.clear();
+              
+              int status;
+              status = cell::scatter_read_cell_attributes (*py_ntrg->state->comm_ptr, py_ntrg->state->file_name,
+                                                           py_ntrg->state->io_size, py_ntrg->state->attr_namespace,
+                                                           py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
+                                                           py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
+                                                           py_ntrg->state->attr_map,
+                                                           py_ntrg->state->cache_index, py_ntrg->state->cache_size);
+              assert (status >= 0);
+              py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
+              py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
+              py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
+            }
+
+          printf("cell_attr_gen_next: rank %u: py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend() = %d\n", rank, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
 
           if (py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend())
             {
