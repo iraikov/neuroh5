@@ -3759,7 +3759,7 @@ extern "C"
           result = PyTuple_Pack(2,
                                 (Py_INCREF(Py_None), Py_None),
                                 (Py_INCREF(Py_None), Py_None));
-          
+          break;
         }
       case seq_last:
         {
