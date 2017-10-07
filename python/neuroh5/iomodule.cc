@@ -3547,13 +3547,17 @@ extern "C"
                            MPI_SIZE_T, MPI_MAX, *comm_ptr);
     assert(status == MPI_SUCCESS);
 
+    py_ntrg->state->comm_ptr = new MPI_Comm[1];
+    status = MPI_Comm_dup(*comm_ptr, py_ntrg->state->comm_ptr);
+    assert(status == MPI_SUCCESS);
+
+    
     py_ntrg->state->pos             = seq_next;
     py_ntrg->state->count           = count;
     py_ntrg->state->max_local_count = max_local_count;
     py_ntrg->state->local_count     = local_count;
     py_ntrg->state->seq_index       = 0;
     py_ntrg->state->cache_index     = 0;
-    py_ntrg->state->comm_ptr   = comm_ptr;
     py_ntrg->state->file_name  = string(file_name);
     py_ntrg->state->pop_name   = string(pop_name);
     py_ntrg->state->pop_idx    = pop_idx;
@@ -3580,6 +3584,8 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
+    MPI_Comm_free(py_ntrg->state->comm_ptr);
+    delete py_ntrg->state->comm_ptr;
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
@@ -3686,7 +3692,7 @@ extern "C"
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
 
-    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u local_count = %u max_local_count = %u \n", rank, py_ntrg->state->pos, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->count, py_ntrg->state->local_count, py_ntrg->state->max_local_count);
+    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u local_count = %u max_local_count = %u py_ntrg->state->it_idx == end = %d\n", rank, py_ntrg->state->pos, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->count, py_ntrg->state->local_count, py_ntrg->state->max_local_count, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
 
     switch (py_ntrg->state->pos)
       {
@@ -3759,7 +3765,7 @@ extern "C"
           result = PyTuple_Pack(2,
                                 (Py_INCREF(Py_None), Py_None),
                                 (Py_INCREF(Py_None), Py_None));
-          
+          break;
         }
       case seq_last:
         {
