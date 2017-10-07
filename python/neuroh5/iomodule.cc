@@ -2773,7 +2773,6 @@ extern "C"
   
   static PyObject *py_append_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    MPI_Comm data_comm;
     PyObject *idx_values;
     const unsigned long default_cache_size = 4*1024*1024;
     const unsigned long default_chunk_size = 4000;
@@ -2814,9 +2813,6 @@ extern "C"
     MPI_Comm comm;
     status = MPI_Comm_dup(*comm_ptr, &comm);
     assert(status == MPI_SUCCESS);
-    
-    Py_ssize_t dict_size = PyDict_Size(idx_values);
-    int data_color = 2;
 
     int srank, ssize; size_t size;
     assert(MPI_Comm_size(comm, &ssize) >= 0);
@@ -2953,13 +2949,16 @@ extern "C"
 
   static PyObject *py_append_cell_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    MPI_Comm data_comm;
     PyObject *idx_values;
     const unsigned long default_cache_size = 4*1024*1024;
     const unsigned long default_chunk_size = 4000;
     const unsigned long default_value_chunk_size = 4000;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
+
+    MPI_Comm comm;
+    status = MPI_Comm_dup(*comm_ptr, &comm);
+    assert(status == MPI_SUCCESS);
 
     unsigned long create_index = 0, io_size = 0;
     unsigned long chunk_size = default_chunk_size;
@@ -2988,26 +2987,11 @@ extern "C"
     assert(comm_ptr != NULL);
     assert(*comm_ptr != MPI_COMM_NULL);
 
-    Py_ssize_t dict_size = PyDict_Size(idx_values);
-    int data_color = 2;
-
-    // In cases where some ranks do not have any data to write, split
-    // the communicator, so that collective operations can be executed
-    // only on the ranks that do have data.
-    if (dict_size > 0)
-      {
-        MPI_Comm_split(*comm_ptr,data_color,0,&data_comm);
-      }
-    else
-      {
-        MPI_Comm_split(*comm_ptr,0,0,&data_comm);
-      }
-    MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
     
     
     int srank, ssize; size_t size;
-    assert(MPI_Comm_size(data_comm, &ssize) >= 0);
-    assert(MPI_Comm_rank(data_comm, &srank) >= 0);
+    assert(MPI_Comm_size(comm, &ssize) >= 0);
+    assert(MPI_Comm_rank(comm, &srank) >= 0);
     assert(ssize > 0);
     assert(srank >= 0);
     size = ssize;
@@ -3046,9 +3030,9 @@ extern "C"
                                all_attr_values_int8,
                                all_attr_values_float);
 
-    assert(cell::append_trees (data_comm, file_name, pop_name, tree_list) >= 0);
+    assert(cell::append_trees (comm, file_name, pop_name, tree_list) >= 0);
     
-    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     Py_INCREF(Py_None);
     return Py_None;
   }
