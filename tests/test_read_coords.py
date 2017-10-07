@@ -1,30 +1,54 @@
+import sys
 from mpi4py import MPI
-from neuroh5.io import read_trees, write_cell_attributes, read_cell_attributes
+from neuroh5.io import read_population_ranges, read_population_names, NeuroH5CellAttrGen
 import numpy as np
+import click
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
+def list_find (f, lst):
+    i=0
+    for x in lst:
+        if f(x):
+            return i
+        else:
+            i=i+1
+    return None
 
-#g = read_trees(comm, "data/DGC_forest_test.h5", "GC")
+script_name = 'test_read_coords.py'
 
-va = read_tree_attributes(comm, "DG_forest_coords_reduced.h5", "MC", namespace="Coordinates")
-#va = read_cell_attributes(comm, 
-#                          "/projects/sciteam/baef/DGC_forest_syns_test.h5", "GC",
-#                          namespace="Synapse_Attributes")
+@click.command()
+@click.option("--coords-path", required=True, type=click.Path(exists=True, file_okay=True, dir_okay=False))
+@click.option("--coords-namespace", type=str, default='Sorted Coordinates')
+@click.option("--io-size", type=int, default=-1)
+def main(coords_path, coords_namespace, io_size):
 
-ks = va.keys()
-if rank == 0:
-    print "rank ",rank,": len va.keys = ", len(ks)
-    print "rank ",rank,": va[",ks[0]," = ",va[ks[0]].keys()
-    for k in va[ks[0]].keys():
-        print "rank ",rank,": ",k, " size = ", va[ks[0]][k].size
-        print "rank ",rank,": ",k, " = ", va[ks[0]][k]
-if rank == 1:
-    print "rank ",rank,": len va.keys = ", len(ks)
-    print "rank ",rank,": va[",ks[0]," = ",va[ks[0]].keys()
-    for k in va[ks[0]].keys():
-        print "rank ",rank,": ",k, " size = ", va[ks[0]][k].size
-        print "rank ",rank,": ",k, " = ", va[ks[0]][k]
+    comm = MPI.COMM_WORLD
+    rank = comm.rank
+    size = comm.size
+
+    print 'Allocated %i ranks' % size
+
+    population_ranges = read_population_ranges(comm, coords_path)[0]
+
+    print population_ranges
+    
+    soma_coords = {}
+    for population in population_ranges.keys():
+        (population_start, _) = population_ranges[population]
+
+        for cell_gid, attr_dict in NeuroH5CellAttrGen(comm, coords_path, population, io_size=io_size,
+                                                       namespace=coords_namespace):
+
+            if cell_gid is None:
+                print 'Rank %i cell gid is None' % rank
+            else:
+                coords_dict = attr_dict[coords_namespace]
+
+                cell_u = coords_dict['U Coordinate']
+                cell_v = coords_dict['V Coordinate']
+                
+                print 'Rank %i: gid = %i u = %f v = %f' % (rank, cell_gid, cell_u, cell_v)
 
 
+if __name__ == '__main__':
+    main(args=sys.argv[(list_find(lambda s: s.find(script_name) != -1,sys.argv)+1):])
 
