@@ -3172,7 +3172,9 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t seq_index, cache_index, cache_size, io_size, comm_size, local_count, max_local_count, count;
+    Py_ssize_t seq_index, cache_index, local_cache_index, cache_size,
+      io_size, comm_size, local_count, max_local_count, count,
+      local_cache_count, max_local_cache_count;
     seq_pos pos;
     string pop_name;
     size_t pop_idx;
@@ -3563,8 +3565,17 @@ extern "C"
         py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
         if ((unsigned int)size <= r) r=0;
       }
-
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
+                           MPI_SIZE_T, MPI_MAX, *comm_ptr);
+    assert(status == MPI_SUCCESS);
+    
+    size_t local_cache_count=0; size_t max_local_cache_count = 0;
+    for (size_t i = 0, r=0; i < cache_size; i++)
+      {
+        if ((unsigned int)rank == r) local_cache_count++; r++;
+        if ((unsigned int)size <= r) r=0;
+      }
+    status = MPI_Allreduce(&(local_cache_count), &max_local_cache_count, 1,
                            MPI_SIZE_T, MPI_MAX, *comm_ptr);
     assert(status == MPI_SUCCESS);
 
@@ -3577,6 +3588,9 @@ extern "C"
     py_ntrg->state->count           = count;
     py_ntrg->state->max_local_count = max_local_count;
     py_ntrg->state->local_count     = local_count;
+    py_ntrg->state->max_local_cache_count = max_local_cache_count;
+    py_ntrg->state->local_cache_count     = local_cache_count;
+    py_ntrg->state->local_cache_index     = 0;
     py_ntrg->state->seq_index       = 0;
     py_ntrg->state->cache_index     = 0;
     py_ntrg->state->file_name  = string(file_name);
@@ -3724,6 +3738,7 @@ extern "C"
           
 
           if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
+              (py_ntrg->state->seq_index == py_ntrg->state->local_cache_index) &&
               (py_ntrg->state->cache_index < py_ntrg->state->count))
             {
               // If the end of the current cache block has been reached,
@@ -3739,8 +3754,11 @@ extern "C"
                                                            py_ntrg->state->cache_index, py_ntrg->state->cache_size);
               assert (status >= 0);
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
-              py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
+              py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
+              py_ntrg->state->local_cache_index += py_ntrg->state->max_local_cache_count;
+              assert(status == MPI_SUCCESS);
+
             }
 
           mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
