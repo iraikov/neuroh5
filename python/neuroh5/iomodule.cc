@@ -49,7 +49,7 @@
 #include "dataset_num_elements.hh"
 #include "num_projection_blocks.hh"
 #include "attr_map.hh"
-
+#include "mpe_seq.hh"
 #include "read_projection.hh"
 #include "read_graph.hh"
 #include "scatter_read_graph.hh"
@@ -2830,135 +2830,141 @@ extern "C"
         MPI_Comm_split(*comm_ptr,0,0,&data_comm);
       }
     MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
-    
-    int srank, ssize; size_t size;
-    assert(MPI_Comm_size(data_comm, &ssize) >= 0);
-    assert(MPI_Comm_rank(data_comm, &srank) >= 0);
-    assert(ssize > 0);
-    assert(srank >= 0);
-    size = ssize;
-    
-    if ((io_size == 0) || (io_size > size))
-      {
-        io_size = size;
-      }
-    assert(io_size <= size);
-    
-    string file_name      = string(file_name_arg);
-    string pop_name       = string(pop_name_arg);
-    string attr_namespace = string(namespace_arg);
-    
-    int npy_type=0;
-    
-    vector<string> attr_names;
-    vector<int> attr_types;
-        
-    vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-    vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
-    vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-    vector< map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
-    vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-    vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
-    vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
 
-    build_cell_attr_value_maps(idx_values,
-                               attr_names,
-                               attr_types,
-                               all_attr_values_uint32,
-                               all_attr_values_uint16,
-                               all_attr_values_uint8,
-                               all_attr_values_int32,
-                               all_attr_values_int16,
-                               all_attr_values_int8,
-                               all_attr_values_float);
-
-    if (access( file_name.c_str(), F_OK ) != 0)
+    if (dict_size > 0)
       {
-        vector <string> groups;
-        groups.push_back (hdf5::POPULATIONS);
-        status = hdf5::create_file_toplevel (data_comm, file_name, groups);
-      }
-    else
-      {
-        status = 0;
-      }
-    assert(status == 0);
-    MPI_Barrier(data_comm);
-
-    const data::optional_hid dflt_data_type;
-    size_t attr_idx=0;
-    vector<size_t> attr_type_idx(AttrMap::num_attr_types);
-    for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
-      {
-        const string attr_name = *it;
-        npy_type=attr_types[attr_idx];
-
-        switch (npy_type)
+        int srank, ssize; size_t size;
+        assert(MPI_Comm_size(data_comm, &ssize) >= 0);
+        assert(MPI_Comm_rank(data_comm, &srank) >= 0);
+        assert(ssize > 0);
+        assert(srank >= 0);
+        size = ssize;
+    
+        if ((io_size == 0) || (io_size > size))
           {
-          case NPY_UINT32:
-            {
-              cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
-                                                         all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
-                                                         io_size, dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_uint32]++;
-              break;
-            }
-          case NPY_INT32:
-            {
-              cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
-                                                         all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
-                                                         io_size, dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_int32]++;
-              break;
-            }
-          case NPY_UINT16:
-            {
-              cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
-                                                         all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
-                                                         io_size, dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_uint16]++;
-              break;
-            }
-          case NPY_INT16:
-            {
-              cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
-                                                        all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
-                                                        io_size, dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_int16]++;
-              break;
-            }
-          case NPY_UINT8:
-            {
-              cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
-                                                        all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
-                                                        io_size, dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_uint8]++;
-              break;
-            }
-          case NPY_INT8:
-            {
-              cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
-                                                       all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
-                                                       io_size, dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_int8]++;
-              break;
-            }
-          case NPY_FLOAT:
-            {
-              cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, attr_name,
-                                                      all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
-                                                      io_size, dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_float]++;
-              break;
-            }
-          default:
-            throw runtime_error("Unsupported attribute type");
-            break;
+            io_size = size;
           }
-      }
+        assert(io_size <= size);
+    
+        string file_name      = string(file_name_arg);
+        string pop_name       = string(pop_name_arg);
+        string attr_namespace = string(namespace_arg);
+    
+        int npy_type=0;
+    
+        vector<string> attr_names;
+        vector<int> attr_types;
+        
+        vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+        vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
+        vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+        vector< map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
+        vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+        vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
+        vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
 
+        build_cell_attr_value_maps(idx_values,
+                                   attr_names,
+                                   attr_types,
+                                   all_attr_values_uint32,
+                                   all_attr_values_uint16,
+                                   all_attr_values_uint8,
+                                   all_attr_values_int32,
+                                   all_attr_values_int16,
+                                   all_attr_values_int8,
+                                   all_attr_values_float);
+
+        if (access( file_name.c_str(), F_OK ) != 0)
+          {
+            vector <string> groups;
+            groups.push_back (hdf5::POPULATIONS);
+            status = hdf5::create_file_toplevel (data_comm, file_name, groups);
+          }
+        else
+          {
+            status = 0;
+          }
+        assert(status == 0);
+        MPI_Barrier(data_comm);
+
+        const data::optional_hid dflt_data_type;
+        size_t attr_idx=0;
+        vector<size_t> attr_type_idx(AttrMap::num_attr_types);
+        for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
+          {
+            const string attr_name = *it;
+            npy_type=attr_types[attr_idx];
+
+            switch (npy_type)
+              {
+              case NPY_UINT32:
+                {
+                  cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                             all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
+                                                             io_size, dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_uint32]++;
+                  break;
+                }
+              case NPY_INT32:
+                {
+                  cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                            all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
+                                                            io_size, dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_int32]++;
+                  break;
+                }
+              case NPY_UINT16:
+                {
+                  cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                             all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
+                                                             io_size, dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_uint16]++;
+                  break;
+                }
+              case NPY_INT16:
+                {
+                  cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                            all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
+                                                            io_size, dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_int16]++;
+                  break;
+                }
+              case NPY_UINT8:
+                {
+                  cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                            all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
+                                                            io_size, dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_uint8]++;
+                  break;
+                }
+              case NPY_INT8:
+                {
+                  cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                           all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
+                                                           io_size, dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_int8]++;
+                  break;
+                }
+              case NPY_FLOAT:
+                {
+                  cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                                                          all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
+                                                          io_size, dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_float]++;
+                  break;
+                }
+              default:
+                throw runtime_error("Unsupported attribute type");
+                break;
+              }
+          }
+
+      }
+    
     assert(MPI_Barrier(data_comm) == MPI_SUCCESS);;
     assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+    
+    assert(MPI_Barrier(comm) == MPI_SUCCESS);;
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
     Py_INCREF(Py_None);
@@ -3706,8 +3712,10 @@ extern "C"
     int size, rank;
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
-
+    
+    mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
     printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u local_count = %u max_local_count = %u py_ntrg->state->it_idx == end = %d\n", rank, py_ntrg->state->pos, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->count, py_ntrg->state->local_count, py_ntrg->state->max_local_count, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
+    mpi::MPE_Seq_end( *py_ntrg->state->comm_ptr, 1 );
 
     switch (py_ntrg->state->pos)
       {
@@ -3735,7 +3743,9 @@ extern "C"
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
             }
 
-          printf("cell_attr_gen_next: rank %u: py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend() = %d\n", rank, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
+          mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
+          printf("cell_attr_gen_next: rank %u: py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend() = %d py_ntrg->state->attr_map.index_set.size= %u\n", rank, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend(), py_ntrg->state->attr_map.index_set.size());
+          mpi::MPE_Seq_end( *py_ntrg->state->comm_ptr, 1 );
 
           if (py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend())
             {
