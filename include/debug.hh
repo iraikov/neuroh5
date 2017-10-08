@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdio>
 #include <iostream>
+#include <mpi.h>
 
 namespace neuroh5
 {

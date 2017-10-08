@@ -10,6 +10,7 @@
 #include <hdf5.h>
 #include <mpi.h>
 
+#include "mpe_seq.hh"
 #include "neuroh5_types.hh"
 #include "infer_datatype.hh"
 #include "infer_mpi_datatype.hh"
@@ -218,6 +219,11 @@ namespace neuroh5
       rank = srank;
       size = ssize;
 
+      mpi::MPE_Seq_begin( comm, 1 );
+      printf("rank %lu: entering append_cell_attribute_map\n",
+	     rank);
+      mpi::MPE_Seq_end( comm, 1 );
+      
       if (size < io_size)
 	{
 	  io_size_value = size;
@@ -244,6 +250,11 @@ namespace neuroh5
             }
         }
 
+      mpi::MPE_Seq_begin( comm, 1 );
+      printf("rank %lu: append_cell_attribute_map determining number of values for each rank\n",
+	     rank);
+      mpi::MPE_Seq_end( comm, 1 );
+
       // Determine number of values for each rank
       vector<uint32_t> sendbuf_num_values(size, value_map.size());
       vector<uint32_t> recvbuf_num_values(size);
@@ -265,6 +276,11 @@ namespace neuroh5
                            &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
              == MPI_SUCCESS);
       sendbuf_size_values.clear();
+
+      mpi::MPE_Seq_begin( comm, 1 );
+      printf("rank %lu: append_cell_attribute_map completed allgather\n",
+	     rank);
+      mpi::MPE_Seq_end( comm, 1 );
     
       // Create gid, attr_ptr, value arrays
       vector<ATTR_PTR_T>  attr_ptr;
@@ -323,6 +339,11 @@ namespace neuroh5
                            &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
                            comm) >= 0);
       value_vector.clear();
+
+      mpi::MPE_Seq_begin( comm, 1 );
+      printf("rank %lu: append_cell_attribute_map completed alltoallv\n",
+	     rank);
+      mpi::MPE_Seq_end( comm, 1 );
     
       vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
       ptr_sendcounts[io_dests[rank]] = attr_ptr.size();
@@ -366,6 +387,10 @@ namespace neuroh5
               attr_ptr_recvbuf[i] -= attr_ptr_recvbuf_base;
             }
         }
+      mpi::MPE_Seq_begin( comm, 1 );
+      printf("rank %lu: append_cell_attribute_map completed alltoallv (ptr)\n",
+	     rank);
+      mpi::MPE_Seq_end( comm, 1 );
     
       attr_ptr.clear();
       ptr_sendcounts.clear();
@@ -408,6 +433,10 @@ namespace neuroh5
       idx_recvcounts.clear();
       idx_rdispls.clear();
 
+      mpi::MPE_Seq_begin( comm, 1 );
+      printf("rank %lu: append_cell_attribute_map completed alltoallv (idx)\n",
+	     rank);
+      mpi::MPE_Seq_end( comm, 1 );
     
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
@@ -426,6 +455,11 @@ namespace neuroh5
       MPI_Comm_split(comm,color,rank,&io_comm);
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
+      mpi::MPE_Seq_begin( comm, 1 );
+      printf("rank %lu: append_cell_attribute_map after split\n",
+	     rank);
+      mpi::MPE_Seq_end( comm, 1 );
+
       if (rank < io_size_value)
         {
           append_cell_attribute<T>(io_comm, file_name,
@@ -434,7 +468,10 @@ namespace neuroh5
                                    data_type, index_type, ptr_type, 
                                    chunk_size, value_chunk_size, cache_size);
         }
+      
+      assert(MPI_Barrier(io_comm) == MPI_SUCCESS);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      assert(MPI_Barrier(comm) == MPI_SUCCESS);
     }
 
 

@@ -4,7 +4,7 @@
 */
 
 #include <mpi.h>
-
+#include <cstdlib>
 namespace neuroh5
 {
   namespace mpi

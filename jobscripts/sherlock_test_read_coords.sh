@@ -23,5 +23,5 @@ set -x
 mpirun -np 32 python ./tests/test_read_coords.py \
        --coords-path=$SCRATCH/dentate/dentate_Full_Scale_Control_coords_20171005.h5 \
        --coords-namespace=Coordinates \
-       --io-size=3
+       --io-size=4
 

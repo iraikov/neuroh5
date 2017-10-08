@@ -113,6 +113,7 @@ setup(
                       'src/graph/append_graph.cc',
                       'src/graph/append_projection.cc',
                       'src/mpi/rank_range.cc',
+                      'src/mpi/mpe_seq.cc',
                       'src/hdf5/num_projection_blocks.cc',
                       'src/hdf5/dataset_num_elements.cc',
                       'src/hdf5/read_link_names.cc',

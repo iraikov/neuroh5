@@ -3728,7 +3728,7 @@ extern "C"
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
     
     mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
-    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u local_count = %u max_local_count = %u py_ntrg->state->it_idx == end = %d\n", rank, py_ntrg->state->pos, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->count, py_ntrg->state->local_count, py_ntrg->state->max_local_count, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
+    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u local_count = %u max_local_count = %u py_ntrg->state->local_cache_index = %u py_ntrg->state->it_idx == end = %d\n", rank, py_ntrg->state->pos, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->count, py_ntrg->state->local_count, py_ntrg->state->max_local_count, py_ntrg->state->local_cache_index, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
     mpi::MPE_Seq_end( *py_ntrg->state->comm_ptr, 1 );
 
     switch (py_ntrg->state->pos)
@@ -3762,7 +3762,7 @@ extern "C"
             }
 
           mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
-          printf("cell_attr_gen_next: rank %u: py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend() = %d py_ntrg->state->attr_map.index_set.size= %u\n", rank, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend(), py_ntrg->state->attr_map.index_set.size());
+          printf("cell_attr_gen_next: rank %u: py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend() = %d  py_ntrg->state->local_cache_index = %u py_ntrg->state->attr_map.index_set.size= %u\n", rank, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend(),  py_ntrg->state->local_cache_index, py_ntrg->state->attr_map.index_set.size());
           mpi::MPE_Seq_end( *py_ntrg->state->comm_ptr, 1 );
 
           if (py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend())
@@ -3771,7 +3771,7 @@ extern "C"
                 {
                   py_ntrg->state->pos = seq_last;
                 }
-              else
+              else if (py_ntrg->state->seq_index < py_ntrg->state->max_local_count)
                 {
                   py_ntrg->state->seq_index++;
                 }

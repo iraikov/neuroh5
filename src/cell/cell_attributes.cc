@@ -20,6 +20,7 @@
 #include "bcast_template.hh"
 #include "serialize_data.hh"
 #include "serialize_cell_attributes.hh"
+#include "mpe_seq.hh"
 
 #include <hdf5.h>
 #include <mpi.h>
@@ -574,10 +575,8 @@ namespace neuroh5
 
       vector< pair<string,hid_t> > attr_info;
 
-      printf("read_cell_attributes: rank %u before get_cell_attributes\n", rank);
       status = get_cell_attributes (file_name, name_space,
                                     pop_name, attr_info);
-      printf("read_cell_attributes: rank %u after get_cell_attributes\n", rank);
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -594,8 +593,6 @@ namespace neuroh5
           hid_t attr_h5type = attr_info[i].second;
           size_t attr_size  = H5Tget_size(attr_h5type);
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
-
-          printf("read_cell_attributes: rank %u reading attribute %u\n", rank, i);
 
           switch (H5Tget_class(attr_h5type))
             {
@@ -700,8 +697,6 @@ namespace neuroh5
               throw runtime_error("Unsupported attribute type");
               break;
             }
-          printf("read_cell_attributes: rank %u done reading attribute %u\n", rank, i);
-
         }
 
       status = H5Fclose(file);
@@ -750,23 +745,25 @@ namespace neuroh5
       vector<char> sendbuf; 
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
-      printf("rank %u: entering scatter_read_cell_attributes: io_size = %d\n", rank, io_size);
-      
       if (srank < io_size)
         {
-          printf("rank %u: scatter_read_cell_attributes: before comm split\n", rank);
+          mpi::MPE_Seq_begin( all_comm, 1 );
+          printf("scatter_read_cell_attributes: rank %u: before I/O node split\n", rank);
+          mpi::MPE_Seq_end( all_comm, 1 );
+
           // Am I an I/O rank?
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
-          printf("rank %u: scatter_read_cell_attributes: after comm split\n", rank);
+
+          mpi::MPE_Seq_begin( all_comm, 1 );
+          printf("scatter_read_cell_attributes: rank %u: after I/O node split\n", rank);
+          mpi::MPE_Seq_end( all_comm, 1 );
 
           map <rank_t, data::AttrMap > rank_attr_map;
           {
             data::NamedAttrMap  attr_values;
-            printf("rank %u: scatter_read_cell_attributes: before read_cell_attributes\n", rank);
             read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
                                  attr_values, offset, numitems);
-            printf("rank %u: scatter_read_cell_attributes: after read_cell_attributes\n", rank);
             append_rank_attr_map(node_rank_map, attr_values, rank_attr_map);
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
@@ -776,10 +773,17 @@ namespace neuroh5
         }
       else
         {
-          printf("rank %u: scatter_read_cell_attributes: before comm split\n", rank);
+          mpi::MPE_Seq_begin( all_comm, 1 );
+          printf("scatter_read_cell_attributes: rank %u: before non-I/O node split\n", rank);
+          mpi::MPE_Seq_end( all_comm, 1 );
+
           MPI_Comm_split(all_comm,0,rank,&io_comm);
-          printf("rank %u: scatter_read_cell_attributes: after comm split\n", rank);
+
+          mpi::MPE_Seq_begin( all_comm, 1 );
+          printf("scatter_read_cell_attributes: rank %u: after non-I/O node split\n", rank);
+          mpi::MPE_Seq_end( all_comm, 1 );
         }
+      MPI_Barrier(io_comm);
       MPI_Barrier(all_comm);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
     
