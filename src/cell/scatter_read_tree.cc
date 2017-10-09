@@ -142,7 +142,7 @@ namespace neuroh5
 
             read_cell_attributes (io_comm, file_name, hdf5::TREES,
                                   pop_name, pop_start, attr_values,
-                                  offset, numitems);
+                                  offset, numitems * size);
 
             
             data::append_rank_tree_map(attr_values, node_rank_map, rank_tree_map);
@@ -172,7 +172,8 @@ namespace neuroh5
           data::NamedAttrMap attr_map;
           scatter_read_cell_attributes(all_comm, file_name, io_size,
                                        attr_name_space, node_rank_map,
-                                       pop_name, pop_start, attr_map);
+                                       pop_name, pop_start, attr_map,
+                                       offset, numitems);
           attr_maps.insert(make_pair(attr_name_space, attr_map));
         }
 

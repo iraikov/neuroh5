@@ -63,9 +63,6 @@ namespace neuroh5
         {
           read_size = dset_size;
         }
-      mpi::MPE_Seq_begin( comm, 1 );
-      printf("read_cell_attribute: rank %u: read_size = %u\n", rank, read_size);
-      mpi::MPE_Seq_end( comm, 1 );
       if (read_size > 0)
         {
           // determine which blocks of block_ptr are read by which rank
