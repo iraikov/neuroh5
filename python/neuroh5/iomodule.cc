@@ -3172,9 +3172,8 @@ extern "C"
    *
    */
   typedef struct {
-    Py_ssize_t seq_index, max_seq_index, cache_index, cache_size,
-      max_local_cache_index, max_local_cache_count,
-      io_size, comm_size, max_local_count, count;
+    Py_ssize_t seq_index, cache_index, cache_size,
+      io_size, comm_size, local_count, max_local_count, count;
      
     seq_pos pos;
     string pop_name;
@@ -3559,48 +3558,38 @@ extern "C"
 
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
-    rank_t r=0; size_t local_count=0; size_t max_local_count = 0;
+    rank_t r=0; size_t local_count=0; 
     for (size_t i = 0; i < cell_index.size(); i++)
       {
         if ((unsigned int)rank == r) local_count++;
         py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
         if ((unsigned int)size <= r) r=0;
       }
-    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
-                           MPI_SIZE_T, MPI_MAX, *comm_ptr);
-    assert(status == MPI_SUCCESS);
     
-    size_t local_cache_count=0; size_t max_local_cache_count = 0;
-    for (size_t i = 0, r=0; i < cache_size; i++)
-      {
-        if ((unsigned int)rank == r) local_cache_count++; r++;
-        if ((unsigned int)size <= r) r=0;
-      }
-    status = MPI_Allreduce(&(local_cache_count), &max_local_cache_count, 1,
-                           MPI_SIZE_T, MPI_MAX, *comm_ptr);
-    assert(status == MPI_SUCCESS);
-
     py_ntrg->state->comm_ptr = new MPI_Comm[1];
     status = MPI_Comm_dup(*comm_ptr, py_ntrg->state->comm_ptr);
     assert(status == MPI_SUCCESS);
 
+    size_t max_local_count=0;
+    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
+                           MPI_SIZE_T, MPI_MAX, *comm_ptr);
+    assert(status == MPI_SUCCESS);
+
     
-    py_ntrg->state->pos                   = seq_next;
-    py_ntrg->state->count                 = count;
-    py_ntrg->state->max_local_count       = max_local_count;
-    py_ntrg->state->max_local_cache_count = max_local_cache_count;
-    py_ntrg->state->max_local_cache_index = 0;
-    py_ntrg->state->seq_index             = 0;
-    py_ntrg->state->max_seq_index         = 0;
-    py_ntrg->state->cache_index           = 0;
-    py_ntrg->state->file_name  = string(file_name);
-    py_ntrg->state->pop_name   = string(pop_name);
-    py_ntrg->state->pop_idx    = pop_idx;
-    py_ntrg->state->pop_vector = pop_vector;
-    py_ntrg->state->io_size    = io_size;
-    py_ntrg->state->comm_size  = size;
-    py_ntrg->state->cache_size = cache_size;
-    py_ntrg->state->attr_namespace  = string(attr_namespace);
+    py_ntrg->state->pos            = seq_next;
+    py_ntrg->state->count          = count;
+    py_ntrg->state->local_count    = local_count;
+    py_ntrg->state->max_local_count    = max_local_count;
+    py_ntrg->state->seq_index      = 0;
+    py_ntrg->state->cache_index    = 0;
+    py_ntrg->state->file_name      = string(file_name);
+    py_ntrg->state->pop_name       = string(pop_name);
+    py_ntrg->state->pop_idx        = pop_idx;
+    py_ntrg->state->pop_vector     = pop_vector;
+    py_ntrg->state->io_size        = io_size;
+    py_ntrg->state->comm_size      = size;
+    py_ntrg->state->cache_size     = cache_size;
+    py_ntrg->state->attr_namespace = string(attr_namespace);
 
     NamedAttrMap attr_map;
     py_ntrg->state->attr_map  = attr_map;
@@ -3728,7 +3717,14 @@ extern "C"
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
     
     mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
-    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u max_seq_index = %u count = %u max_local_count = %u max_local_cache_index = %u py_ntrg->state->it_idx == end = %d\n", rank, py_ntrg->state->pos, py_ntrg->state->cache_index, py_ntrg->state->seq_index, py_ntrg->state->max_seq_index, py_ntrg->state->count, py_ntrg->state->max_local_count, py_ntrg->state->max_local_cache_index, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
+    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u max_local_count = %u py_ntrg->state->it_idx == end = %d\n",
+           rank,
+           py_ntrg->state->pos,
+           py_ntrg->state->cache_index,
+           py_ntrg->state->seq_index,
+           py_ntrg->state->count,
+           py_ntrg->state->max_local_count,
+           py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
     mpi::MPE_Seq_end( *py_ntrg->state->comm_ptr, 1 );
 
     switch (py_ntrg->state->pos)
@@ -3738,7 +3734,6 @@ extern "C"
           
 
           if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
-              (py_ntrg->state->max_seq_index == py_ntrg->state->max_local_cache_index) &&
               (py_ntrg->state->cache_index < py_ntrg->state->count))
             {
               // If the end of the current cache block has been reached,
@@ -3751,31 +3746,32 @@ extern "C"
                                                            py_ntrg->state->node_rank_map, py_ntrg->state->pop_name,
                                                            py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
                                                            py_ntrg->state->attr_map,
-                                                           py_ntrg->state->cache_index, py_ntrg->state->cache_size);
+                                                           py_ntrg->state->cache_index,
+                                                           py_ntrg->state->cache_size);
               assert (status >= 0);
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
-              py_ntrg->state->cache_index += py_ntrg->state->io_size * py_ntrg->state->cache_size;
-              py_ntrg->state->max_local_cache_index += py_ntrg->state->max_local_cache_count;
-              if (py_ntrg->state->max_local_count < py_ntrg->state->max_local_cache_index)
-                py_ntrg->state->max_local_cache_index = py_ntrg->state->max_local_count;
+              py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
               assert(status == MPI_SUCCESS);
 
             }
 
           mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
-          printf("cell_attr_gen_next: rank %u: py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend() = %d  py_ntrg->state->attr_map.index_set.size= %u\n", rank, py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend(),  py_ntrg->state->attr_map.index_set.size());
+          printf("cell_attr_gen_next: rank %u: py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend() = %d  py_ntrg->state->attr_map.index_set.size= %u\n",
+                 rank,
+                 py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend(),
+                 py_ntrg->state->attr_map.index_set.size());
           mpi::MPE_Seq_end( *py_ntrg->state->comm_ptr, 1 );
 
           if (py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend())
             {
-              if (py_ntrg->state->max_seq_index == py_ntrg->state->max_local_count)
+              if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
                   py_ntrg->state->pos = seq_last;
                 }
-              else if (py_ntrg->state->max_seq_index < py_ntrg->state->max_local_cache_index)
+              else
                 {
-                  py_ntrg->state->max_seq_index++;
+                  py_ntrg->state->seq_index++;
                 }
               result = PyTuple_Pack(2,
                                     (Py_INCREF(Py_None), Py_None),
@@ -3791,8 +3787,6 @@ extern "C"
               assert(elem != NULL);
               py_ntrg->state->it_idx++;
               py_ntrg->state->seq_index++;
-              if (py_ntrg->state->max_seq_index < py_ntrg->state->seq_index)
-                py_ntrg->state->max_seq_index++;
               result = Py_BuildValue("lO", key, elem);
             }
 
@@ -3800,13 +3794,13 @@ extern "C"
         }
       case seq_empty:
         {
-          if (py_ntrg->state->max_seq_index == py_ntrg->state->max_local_count)
+          if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
               py_ntrg->state->pos = seq_last;
             }
           else
             {
-              py_ntrg->state->max_seq_index++;
+              py_ntrg->state->seq_index++;
             }
 
           result = PyTuple_Pack(2,
