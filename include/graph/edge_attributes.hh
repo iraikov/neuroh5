@@ -5,6 +5,7 @@
 
 #include "infer_datatype.hh"
 #include "attr_val.hh"
+#include "hdf5_edge_attributes.hh"
 
 #include "hdf5.h"
 #include "mpi.h"
@@ -147,8 +148,6 @@ namespace neuroh5
       hid_t file = H5Iget_file_id(loc);
       assert(file >= 0);
 
-      printf("write_edge_attribute: path = %s value.size() = %u\n", path.c_str(), value.size());
-      
       MPI_Comm comm;
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
@@ -199,7 +198,6 @@ namespace neuroh5
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
-      printf("write_edge_attribute: before create %s\n", path.c_str());
       hid_t dset = H5Dcreate(loc, path.c_str(), ftype, fspace,
                              lcpl, H5P_DEFAULT, H5P_DEFAULT);
       assert(dset >= 0);
@@ -213,6 +211,81 @@ namespace neuroh5
       assert(H5Pclose(lcpl) >= 0);
 
       return 0;
+    }
+    
+    template <typename T>
+    herr_t append_edge_attribute
+    (
+     hid_t                    loc,
+     const string&            src_pop_name,
+     const string&            dst_pop_name,
+     const std::string&       attr_namespace,
+     const std::string&       attr_name,
+     const std::vector<T>&    value,
+     const size_t chunk_size = 4000
+     )
+    {
+      // get a file handle and retrieve the MPI info
+      hid_t file = H5Iget_file_id(loc);
+      assert(file >= 0);
+
+      MPI_Comm comm;
+      MPI_Info info;
+      hid_t fapl = H5Fget_access_plist(file);
+      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+
+      int ssize, srank;
+      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      size_t size, rank;
+      size = (size_t)ssize;
+      rank = (size_t)srank;
+
+      T dummy;
+      hid_t ftype = infer_datatype(dummy);
+      assert(ftype >= 0);
+      hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
+      assert(mtype >= 0);
+
+      string attr_prefix = hdf5::edge_attribute_prefix(src_pop_name,
+                                                       dst_pop_name,
+                                                       attr_namespace);
+      string attr_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
+                                                   attr_namespace, attr_name);
+      
+      if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0) ||
+          !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
+        {
+          hdf5::create_edge_attribute_datasets(file, src_pop_name, dst_pop_name,
+                                               attr_namespace, attr_name,
+                                               ftype, chunk_size);
+        }
+
+      hdf5::append_edge_attribute<T>(file, src_pop_name, dst_pop_name,
+                                     attr_namespace, attr_name,
+                                     value);
+
+      return 0;
+    }
+
+    template <class T>
+    void append_edge_attribute_map (hid_t file,
+                                    const string &src_pop_name,
+                                    const string &dst_pop_name,
+                                    const map <string, data::NamedAttrVal>& edge_attr_map,
+                                    const map <string, vector < vector <string> > >& edge_attr_names)
+    {
+      for (auto const& iter : edge_attr_map)
+        {
+          const string& attr_namespace = iter.first;
+          const data::NamedAttrVal& edge_attr_values = iter.second;
+          
+          for (size_t i=0; i<edge_attr_values.size_attr_vec<T>(); i++)
+            {
+              const string& attr_name = edge_attr_names.at(attr_namespace)[data::AttrVal::attr_type_index<T>()][i];
+              graph::append_edge_attribute<T>(file, src_pop_name, dst_pop_name, attr_namespace, attr_name, edge_attr_values.attr_vec<T>(i));
+            }
+        }
     }
 
   }

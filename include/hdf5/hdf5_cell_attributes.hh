@@ -156,7 +156,7 @@ namespace neuroh5
      std::vector<T> &          values
      )
     {
-      herr_t status;
+      herr_t status = 0;
       std::vector<ATTR_PTR_T> ptr;
       std::vector<CELL_IDX_T> index;
       

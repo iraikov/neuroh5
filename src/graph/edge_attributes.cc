@@ -18,6 +18,107 @@ using namespace std;
 
 namespace neuroh5
 {
+  namespace hdf5
+  {
+
+    void size_edge_attributes
+    (
+     hid_t          loc,
+     const string&  src_pop_name,
+     const string&  dst_pop_name,
+     const string&  attr_namespace,
+     const string&  attr_name,
+     hsize_t&       value_size
+     )
+    {
+      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
+                                              attr_namespace, attr_name);
+      value_size = hdf5::dataset_num_elements(loc, path);
+    }
+
+    
+    void create_projection_groups
+    (
+     const hid_t&   file,
+     const string&  src_pop_name,
+     const string&  dst_pop_name
+     )
+    {
+      herr_t status=0;
+    
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+
+      string path = "/" + hdf5::PROJECTIONS;
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          hdf5::create_group(file, path.c_str());
+        }
+      
+      path = "/" + hdf5::PROJECTIONS + "/" + dst_pop_name;
+            
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          hdf5::create_group(file, path.c_str());
+        }
+
+      path = hdf5::projection_prefix(src_pop_name, dst_pop_name);
+
+      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+        {
+          hdf5::create_group(file, path.c_str());
+        }
+    
+      assert(H5Pclose(lcpl) >= 0);
+    
+    }
+
+    void create_edge_attribute_datasets
+    (
+     const hid_t&   file,
+     const string&  src_pop_name,
+     const string&  dst_pop_name,
+     const string&  attr_namespace,
+     const string&  attr_name,
+     const hid_t&   ftype,
+     const size_t   chunk_size
+     )
+    {
+      herr_t status;
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hsize_t cdims[1]   = {chunk_size}; /* chunking dimensions */		
+      hsize_t initial_size = 0;
+    
+      hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
+      status = H5Pset_chunk(plist, 1, cdims);
+      assert(status == 0);
+
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+
+      create_projection_groups(file, src_pop_name, dst_pop_name);
+
+      string attr_path = hdf5::edge_attribute_path(src_pop_name,
+                                                   dst_pop_name,
+                                                   attr_namespace,
+                                                   attr_name);
+      
+      hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
+      hid_t dset = H5Dcreate2(file, attr_path.c_str(), ftype, mspace,
+                              lcpl, plist, H5P_DEFAULT);
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+    
+      assert(H5Pclose(lcpl) >= 0);
+    
+      status = H5Pclose(plist);
+      assert(status == 0);
+    
+    }
+  }
+
   namespace graph
   {
     //////////////////////////////////////////////////////////////////////////

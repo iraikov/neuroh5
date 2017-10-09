@@ -20,27 +20,6 @@ namespace neuroh5
   namespace graph
   {
 
-    template <class T>
-    void append_edge_attribute_map (hid_t file,
-                                    const string &src_pop_name,
-                                    const string &dst_pop_name,
-                                    const map <string, data::NamedAttrVal>& edge_attr_map,
-                                    const map <string, vector < vector <string> > >& edge_attr_names)
-    {
-      for (auto const& iter : edge_attr_map)
-        {
-          const string& attr_namespace = iter.first;
-          const data::NamedAttrVal& edge_attr_values = iter.second;
-          
-          for (size_t i=0; i<edge_attr_values.size_attr_vec<T>(); i++)
-            {
-              const string& attr_name = edge_attr_names.at(attr_namespace)[data::AttrVal::attr_type_index<T>()][i];
-              string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
-              graph::write_edge_attribute<T>(file, path, edge_attr_values.attr_vec<T>(i));
-            }
-        }
-    }
-
 
     void append_projection
     (
@@ -184,35 +163,9 @@ namespace neuroh5
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
 
-      string path = "/" + hdf5::PROJECTIONS;
-            
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
-        {
-          hdf5::create_group(file, path.c_str());
-        }
-
-      path = "/" + hdf5::PROJECTIONS + "/" + dst_pop_name;
-            
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
-        {
-          hdf5::create_group(file, path.c_str());
-        }
-
-      path = hdf5::projection_prefix(src_pop_name, dst_pop_name);
-
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
-        {
-          hdf5::create_group(file, path.c_str());
-        }
+      hdf5::create_projection_groups(file, src_pop_name, dst_pop_name);
       
-      path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, hdf5::EDGES);
-            
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
-        {
-          hdf5::create_group(file, path.c_str());
-        }
-      
-      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
+      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
       hsize_t dst_blk_idx_dims = total_num_blocks, one=1;
 
       hid_t dset; hid_t fspace;
