@@ -19,6 +19,7 @@
 #include "path_names.hh"
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
+#include "mpe_seq.hh"
 
 #include <vector>
 #include <map>
@@ -102,15 +103,14 @@ namespace neuroh5
         {
           io_size = io_size_arg > 0 ? io_size_arg : 1;
         }
+      mpi::MPE_Seq_begin( all_comm, 1 );
       DEBUG("Task ",rank,": ","append_graph: src_pop_name = ", src_pop_name,
             " dst_pop_name = ",dst_pop_name,"\n");
-      DEBUG("Task ",rank,": ","append_graph: prior to reading population ranges\n");
+      mpi::MPE_Seq_end( all_comm, 1 );
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
                                           pop_ranges, pop_vector, total_num_nodes) >= 0);
-      DEBUG("Task ",rank,": ","append_graph: prior to reading population labels\n");
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
-      DEBUG("Task ",rank,": ","append_graph: read population labels\n");
       
       for (size_t i=0; i< pop_labels.size(); i++)
         {
@@ -132,9 +132,11 @@ namespace neuroh5
       src_start = pop_vector[src_pop_idx].start;
       src_end   = src_start + pop_vector[src_pop_idx].count;
       
+      mpi::MPE_Seq_begin( all_comm, 1 );
       DEBUG("Task ",rank,": ","append_graph: dst_start = ", dst_start, " dst_end = ", dst_end, "\n");
       DEBUG("Task ",rank,": ","append_graph: src_start = ", src_start, " src_end = ", src_end, "\n");
       DEBUG("Task ",rank,": ","append_graph: total_num_nodes = ", total_num_nodes, "\n");
+      mpi::MPE_Seq_end( all_comm, 1 );
 
       // Create an I/O communicator
       MPI_Comm  io_comm;
@@ -252,7 +254,9 @@ namespace neuroh5
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
+      mpi::MPE_Seq_begin( all_comm, 1 );
       DEBUG("Task ",rank,": ","append_graph: num_packed_edges = ", num_packed_edges, "\n");
+      mpi::MPE_Seq_end( all_comm, 1 );
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
@@ -288,8 +292,9 @@ namespace neuroh5
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes, num_unpacked_edges);
         }
+      mpi::MPE_Seq_begin( all_comm, 1 );
       DEBUG("Task ",rank,": ","append_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
-
+      mpi::MPE_Seq_end( all_comm, 1 );
 
       if (rank < io_size)
         {
@@ -299,6 +304,10 @@ namespace neuroh5
 
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           assert(file >= 0);
+
+          mpi::MPE_Seq_begin( all_comm, 1 );
+          DEBUG("Task ",rank,": ","append_graph: calling append_projection\n");
+          mpi::MPE_Seq_end( all_comm, 1 );
           
           append_projection (file, src_pop_name, dst_pop_name,
                              src_start, src_end, dst_start, dst_end,

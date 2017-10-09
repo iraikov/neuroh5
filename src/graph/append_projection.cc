@@ -7,6 +7,7 @@
 #include "append_projection.hh"
 #include "write_template.hh"
 #include "edge_attributes.hh"
+#include "mpe_seq.hh"
 
 #include <algorithm>
 #include <cassert>
@@ -79,6 +80,10 @@ namespace neuroh5
         
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
+
+      mpi::MPE_Seq_begin( comm, 1 );
+      DEBUG("Task ",rank,": ","append_projection: proj_edge_map.size() = ",prj_edge_map.size(),"\n");
+      mpi::MPE_Seq_end( comm, 1 );
         
       // create relative destination pointers and source index
       vector<DST_BLK_PTR_T> dst_blk_ptr; 
@@ -322,7 +327,8 @@ namespace neuroh5
 
       if (rank == last_rank)
         {
-          block = num_blocks+1;
+	  if (num_blocks > 0)
+	    block = num_blocks+1;
         }
       else
         {
@@ -338,6 +344,10 @@ namespace neuroh5
         {
           start += recvbuf_num_blocks[p];
         }
+
+      mpi::MPE_Seq_begin( comm, 1 );
+      DEBUG("Task ",rank,": ","append_projection: writing dst_blk_ptr: block = ",block,"\n");
+      mpi::MPE_Seq_end( comm, 1 );
 
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -431,6 +441,10 @@ namespace neuroh5
       mspace = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
+
+      mpi::MPE_Seq_begin( comm, 1 );
+      DEBUG("Task ",rank,": ","append_projection: writing dst_ptr: block = ",block,"\n");
+      mpi::MPE_Seq_end( comm, 1 );
       
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -506,6 +520,10 @@ namespace neuroh5
       mspace = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
+
+      mpi::MPE_Seq_begin( comm, 1 );
+      DEBUG("Task ",rank,": ","append_projection: writing src_idx: block = ",block,"\n");
+      mpi::MPE_Seq_end( comm, 1 );
       
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -567,6 +585,9 @@ namespace neuroh5
                 }
             }
 	}
+      mpi::MPE_Seq_begin( comm, 1 );
+      DEBUG("Task ",rank,": ","append_projection: appending attributes\n");
+      mpi::MPE_Seq_end( comm, 1 );
 
       append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
                                        edge_attr_map, edge_attr_names);
@@ -583,6 +604,9 @@ namespace neuroh5
       append_edge_attribute_map<int32_t>(file, src_pop_name, dst_pop_name,
                                          edge_attr_map, edge_attr_names);
         
+      mpi::MPE_Seq_begin( comm, 1 );
+      DEBUG("Task ",rank,": ","append_projection: completed\n");
+      mpi::MPE_Seq_end( comm, 1 );
         
       // clean-up
       assert(H5Pclose(lcpl) >= 0);
