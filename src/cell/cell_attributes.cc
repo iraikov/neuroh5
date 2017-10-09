@@ -747,23 +747,15 @@ namespace neuroh5
 
       if (srank < io_size)
         {
-          mpi::MPE_Seq_begin( all_comm, 1 );
-          printf("scatter_read_cell_attributes: rank %u: before I/O node split\n", rank);
-          mpi::MPE_Seq_end( all_comm, 1 );
-
           // Am I an I/O rank?
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
-
-          mpi::MPE_Seq_begin( all_comm, 1 );
-          printf("scatter_read_cell_attributes: rank %u: after I/O node split\n", rank);
-          mpi::MPE_Seq_end( all_comm, 1 );
 
           map <rank_t, data::AttrMap > rank_attr_map;
           {
             data::NamedAttrMap  attr_values;
             read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
-                                 attr_values, offset, numitems);
+                                 attr_values, offset, numitems * size);
             append_rank_attr_map(node_rank_map, attr_values, rank_attr_map);
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
@@ -773,15 +765,8 @@ namespace neuroh5
         }
       else
         {
-          mpi::MPE_Seq_begin( all_comm, 1 );
-          printf("scatter_read_cell_attributes: rank %u: before non-I/O node split\n", rank);
-          mpi::MPE_Seq_end( all_comm, 1 );
 
           MPI_Comm_split(all_comm,0,rank,&io_comm);
-
-          mpi::MPE_Seq_begin( all_comm, 1 );
-          printf("scatter_read_cell_attributes: rank %u: after non-I/O node split\n", rank);
-          mpi::MPE_Seq_end( all_comm, 1 );
         }
       MPI_Barrier(io_comm);
       MPI_Barrier(all_comm);

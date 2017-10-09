@@ -56,7 +56,7 @@ namespace neuroh5
         {
           if (offset < dset_size)
             {
-              read_size = min((hsize_t)numitems*size, dset_size-offset);
+              read_size = min((hsize_t)numitems, dset_size-offset);
             }
         }
       else
