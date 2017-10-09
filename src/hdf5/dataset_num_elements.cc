@@ -17,13 +17,16 @@ namespace neuroh5
     {
       hsize_t result = 0;
 
-      hid_t dset = H5Dopen2(loc, path.c_str(), H5P_DEFAULT);
-      assert(dset >= 0);
-      hid_t fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
-      result = (hsize_t) H5Sget_simple_extent_npoints(fspace);
-      assert(H5Sclose(fspace) >= 0);
-      assert(H5Dclose(dset) >= 0);
+      if (H5Lexists (loc, path.c_str(), H5P_DEFAULT) > 0)
+        {
+          hid_t dset = H5Dopen2(loc, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+          hid_t fspace = H5Dget_space(dset);
+          assert(fspace >= 0);
+          result = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+          assert(H5Sclose(fspace) >= 0);
+          assert(H5Dclose(dset) >= 0);
+        }
       
       return result;
     }

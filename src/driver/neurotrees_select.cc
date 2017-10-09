@@ -32,6 +32,7 @@
 #include "serialize_tree.hh"
 #include "alltoallv_template.hh"
 #include "sort_permutation.hh"
+#include "attr_map.hh"
 #include "tokenize.hh"
 
 #include "dataset_num_elements.hh"

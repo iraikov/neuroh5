@@ -60,6 +60,8 @@ namespace neuroh5
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
 
+      
+
       mpi::MPE_Seq_begin( comm, 1 );
       DEBUG("Task ",rank,": ","append_projection: proj_edge_map.size() = ",prj_edge_map.size(),"\n");
       mpi::MPE_Seq_end( comm, 1 );
@@ -101,6 +103,29 @@ namespace neuroh5
       dst_ptr.push_back(num_prj_edges);
       assert(num_edges == src_idx.size());
 
+      hdf5::create_projection_groups(file, src_pop_name, dst_pop_name);
+
+      hsize_t dst_blk_idx_size = 0, dst_ptr_size = 0, src_idx_size = 0;
+      
+      hdf5::size_edge_attributes(file,
+                                 src_pop_name,
+                                 dst_pop_name,
+                                 hdf5::EDGES,
+                                 hdf5::DST_BLK_IDX,
+                                 dst_blk_idx_size);
+      hdf5::size_edge_attributes(file,
+                                 src_pop_name,
+                                 dst_pop_name,
+                                 hdf5::EDGES,
+                                 hdf5::DST_PTR,
+                                 dst_ptr_size);
+      hdf5::size_edge_attributes(file,
+                                 src_pop_name,
+                                 dst_pop_name,
+                                 hdf5::EDGES,
+                                 hdf5::SRC_IDX,
+                                 src_idx_size);
+      
       // exchange allocation data
 
       vector<size_t> sendbuf_num_blocks(size, num_blocks);
@@ -163,7 +188,6 @@ namespace neuroh5
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
 
-      hdf5::create_projection_groups(file, src_pop_name, dst_pop_name);
       
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
       hsize_t dst_blk_idx_dims = total_num_blocks, one=1;
@@ -194,9 +218,10 @@ namespace neuroh5
           fspace = H5Dget_space(dset);
           assert(fspace >= 0);
         }
-      
-      hsize_t dst_blk_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
-      hsize_t dst_blk_idx_newsize = dst_blk_start + dst_blk_idx_dims;
+
+                                                            
+      hsize_t dst_blk_idx_start = dst_blk_idx_size;
+      hsize_t dst_blk_idx_newsize = dst_blk_idx_start + dst_blk_idx_dims;
       if (dst_blk_idx_newsize > 0)
         {
           herr_t ierr = H5Dset_extent (dset, &dst_blk_idx_newsize);
@@ -208,7 +233,7 @@ namespace neuroh5
       hid_t mspace  = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
-      hsize_t start = dst_blk_start;
+      hsize_t start = dst_blk_idx_start;
       for (size_t p = 0; p < rank; ++p)
         {
           start += recvbuf_num_blocks[p];
@@ -229,6 +254,10 @@ namespace neuroh5
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
       */
 
+      if (dst_ptr_size > 0)
+        {
+          dst_blk_ptr[0] += dst_ptr_size-1;
+        }
       if (block > 0)
         {
           for (size_t p = 0; p < rank; ++p)
@@ -271,7 +300,7 @@ namespace neuroh5
           assert(dset >= 0);
         }
 
-      hsize_t dst_blk_ptr_newsize = dst_blk_start + dst_blk_ptr_dims;
+      hsize_t dst_blk_ptr_newsize = dst_blk_idx_start + dst_blk_ptr_dims;
       if (dst_blk_ptr_newsize > 0)
         {
           herr_t ierr = H5Dset_extent (dset, &dst_blk_ptr_newsize);
@@ -292,7 +321,7 @@ namespace neuroh5
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
 
-      start = dst_blk_start;
+      start = dst_blk_idx_start;
       for (size_t p = 0; p < rank; ++p)
         {
           start += recvbuf_num_blocks[p];
@@ -340,7 +369,7 @@ namespace neuroh5
 
       for (size_t idst = 0; idst < dst_ptr.size(); ++idst)
         {
-          dst_ptr[idst] += s;
+          dst_ptr[idst] += s + src_idx_size;
         }
 
       if (rank != last_rank) // only the last rank writes an additional element
@@ -379,8 +408,9 @@ namespace neuroh5
 
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
-      hsize_t dst_ptr_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
-      if (dst_ptr_start > 0) dst_ptr_start--;
+      hsize_t dst_ptr_start = dst_ptr_size;
+      if (dst_ptr_start > 0)
+        dst_ptr_start--;
       assert(H5Sclose(fspace) >= 0);
 
       hsize_t dst_ptr_newsize = dst_ptr_start + dst_ptr_dims;
@@ -396,14 +426,19 @@ namespace neuroh5
       assert(H5Sselect_all(mspace) >= 0);
 
       mpi::MPE_Seq_begin( comm, 1 );
-      DEBUG("Task ",rank,": ","append_projection: writing dst_ptr: block = ",block,"\n");
+      DEBUG("Task ",rank,": ","append_projection: writing dst_ptr: block = ",block," newsize = ",dst_ptr_newsize,"\n");
       mpi::MPE_Seq_end( comm, 1 );
       
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
       if (block > 0)
         {
-          start = (hsize_t)dst_blk_ptr[0] + dst_ptr_start;
+          start = dst_ptr_start;
+          for (size_t p = 0; p < rank; ++p)
+            {
+              start += recvbuf_num_edge[p];
+            }
+
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
@@ -459,7 +494,7 @@ namespace neuroh5
           assert(fspace >= 0);
         }
 
-      hsize_t src_idx_start = (hsize_t) H5Sget_simple_extent_npoints(fspace);
+      hsize_t src_idx_start = src_idx_size;
       assert(H5Sclose(fspace) >= 0);
 
       hsize_t src_idx_newsize = src_idx_start + src_idx_dims;
@@ -482,7 +517,11 @@ namespace neuroh5
       assert(fspace >= 0);
       if (block > 0)
         {
-          start = (hsize_t)dst_ptr[0] + src_idx_start;
+          start = src_idx_start;
+          for (size_t p = 0; p < rank; ++p)
+            {
+              start += recvbuf_num_edge[p];
+            }
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
