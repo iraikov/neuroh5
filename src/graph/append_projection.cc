@@ -60,8 +60,6 @@ namespace neuroh5
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
 
-      
-
       mpi::MPE_Seq_begin( comm, 1 );
       DEBUG("Task ",rank,": ","append_projection: proj_edge_map.size() = ",prj_edge_map.size(),"\n");
       mpi::MPE_Seq_end( comm, 1 );
@@ -254,12 +252,12 @@ namespace neuroh5
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
       */
 
-      if (dst_ptr_size > 0)
-        {
-          dst_blk_ptr[0] += dst_ptr_size-1;
-        }
       if (block > 0)
         {
+          if (dst_ptr_size > 0)
+            {
+              dst_blk_ptr[0] += dst_ptr_size-1;
+            }
           for (size_t p = 0; p < rank; ++p)
             {
               dst_blk_ptr[0] += recvbuf_num_dest[p];
