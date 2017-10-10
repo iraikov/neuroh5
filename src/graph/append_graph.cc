@@ -136,6 +136,7 @@ namespace neuroh5
       DEBUG("Task ",rank,": ","append_graph: dst_start = ", dst_start, " dst_end = ", dst_end, "\n");
       DEBUG("Task ",rank,": ","append_graph: src_start = ", src_start, " src_end = ", src_end, "\n");
       DEBUG("Task ",rank,": ","append_graph: total_num_nodes = ", total_num_nodes, "\n");
+      DEBUG("Task ",rank,": ","append_graph: input_edge_map size = ", input_edge_map.size(), "\n");
       mpi::MPE_Seq_end( all_comm, 1 );
 
       // Create an I/O communicator
@@ -217,7 +218,7 @@ namespace neuroh5
                   apply_permutation_in_place(a.int32_values[i], p);
                 }
             }
-          auto it = node_rank_map.find(dst);
+          auto it = node_rank_map.find(dst - dst_start);
           assert(it != node_rank_map.end());
           size_t dst_rank = it->second;
           edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
