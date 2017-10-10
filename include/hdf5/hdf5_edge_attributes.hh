@@ -127,9 +127,6 @@ namespace neuroh5
                          global_value_size, local_value_start, local_value_size,
                          mtype, value, wapl);
 
-      status = H5Fclose (file);
-      assert(status >= 0);
-
       assert(H5Tclose(mtype) >= 0);
       assert(H5Pclose(wapl) >= 0);
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
@@ -139,6 +136,9 @@ namespace neuroh5
           assert(status == MPI_SUCCESS);
         
         }
+
+      status = H5Fclose (file);
+      assert(status >= 0);
     }
 
   }

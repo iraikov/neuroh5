@@ -211,6 +211,10 @@ namespace neuroh5
       assert(H5Pclose(lcpl) >= 0);
 
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+      if (info != MPI_INFO_NULL)
+        {
+          assert(MPI_Info_free(&info) == MPI_SUCCESS);
+        }
 
       return 0;
     }
@@ -271,6 +275,8 @@ namespace neuroh5
         {
           assert(MPI_Info_free(&info) == MPI_SUCCESS);
         }
+
+      assert(H5Fclose (file) >= 0);
 
       return 0;
     }
