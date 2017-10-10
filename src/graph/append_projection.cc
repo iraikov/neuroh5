@@ -607,8 +607,6 @@ namespace neuroh5
         {
           assert(MPI_Info_free(&info) == MPI_SUCCESS);
         }
-
-      assert(H5Fclose (file) >= 0);
     }
   }
 }
