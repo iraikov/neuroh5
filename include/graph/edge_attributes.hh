@@ -267,6 +267,11 @@ namespace neuroh5
                                      attr_namespace, attr_name,
                                      value);
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+      if (info != MPI_INFO_NULL)
+        {
+          assert(MPI_Info_free(&info) == MPI_SUCCESS);
+        }
+
       return 0;
     }
 
