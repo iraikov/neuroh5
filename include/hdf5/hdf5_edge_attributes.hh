@@ -113,28 +113,32 @@ namespace neuroh5
           global_value_size += (hsize_t) all_counts[p];
         }
 
-      /* Create property list for collective dataset write. */
-      hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-      if (size > 1)
+      if (global_value_size - current_value_size > 0)
         {
-          status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+          /* Create property list for collective dataset write. */
+          hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
+          if (size > 1)
+            {
+              status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+            }
+          
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
+                                                  attr_namespace, attr_name);
+          
+          status = write<T> (file, path,
+                             global_value_size, local_value_start, local_value_size,
+                             mtype, value, wapl);
+          
+          assert(H5Pclose(wapl) >= 0);
         }
 
-      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
-                                              attr_namespace, attr_name);
-
-      status = write<T> (file, path,
-                         global_value_size, local_value_start, local_value_size,
-                         mtype, value, wapl);
-
       assert(H5Tclose(mtype) >= 0);
-      assert(H5Pclose(wapl) >= 0);
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
       if (info != MPI_INFO_NULL)
         {
           status = MPI_Info_free(&info);
           assert(status == MPI_SUCCESS);
-        
+          
         }
 
       status = H5Fclose (file);

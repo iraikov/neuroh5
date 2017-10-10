@@ -1828,7 +1828,7 @@ extern "C"
             const string & dst_pop_name = dst_edge_map_item.first;
 
             mpi::MPE_Seq_begin( data_comm, 1 );
-            DEBUG("Task ",rank,": ","append_graph: dst_edge_map_item.second.size = %u\n",
+            DEBUG("Task ",rank,": ","append_graph: dst_edge_map_item.second.size = ",
                   dst_edge_map_item.second.size());
             mpi::MPE_Seq_end( data_comm, 1 );
             
