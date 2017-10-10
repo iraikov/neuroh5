@@ -155,7 +155,7 @@ namespace neuroh5
       
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
-      compute_node_rank_map(io_size, total_num_nodes, node_rank_map);
+      compute_node_rank_map(io_size, input_edge_map.size(), node_rank_map);
 
 
       // construct a map where each set of edges are arranged by destination I/O rank
