@@ -251,7 +251,7 @@ namespace neuroh5
       // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
 
-      data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
+      data::serialize_rank_edge_map (io_size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
       mpi::MPE_Seq_begin( all_comm, 1 );
@@ -289,7 +289,7 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       if (recvbuf_size > 0)
         {
-          data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
+          data::deserialize_rank_edge_map (io_size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes, num_unpacked_edges);
         }
       mpi::MPE_Seq_begin( all_comm, 1 );
