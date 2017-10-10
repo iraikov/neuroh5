@@ -423,9 +423,6 @@ namespace neuroh5
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
 
-      mpi::MPE_Seq_begin( comm, 1 );
-      DEBUG("Task ",rank,": ","append_projection: writing dst_ptr: block = ",block," newsize = ",dst_ptr_newsize,"\n");
-      mpi::MPE_Seq_end( comm, 1 );
       
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
@@ -434,7 +431,7 @@ namespace neuroh5
           start = dst_ptr_start;
           for (size_t p = 0; p < rank; ++p)
             {
-              start += recvbuf_num_edge[p];
+              start += recvbuf_num_dest[p];
             }
 
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
@@ -444,6 +441,9 @@ namespace neuroh5
         {
           assert(H5Sselect_none(fspace) >= 0);
         }
+      mpi::MPE_Seq_begin( comm, 1 );
+      DEBUG("Task ",rank,": ","append_projection: writing dst_ptr: block = ",block," start = ",start," newsize = ",dst_ptr_newsize,"\n");
+      mpi::MPE_Seq_end( comm, 1 );
 
       assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
                       H5P_DEFAULT, &dst_ptr[0]) >= 0);
