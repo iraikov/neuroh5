@@ -141,6 +141,8 @@ namespace neuroh5
           
         }
 
+      status = H5Pclose (fapl);
+      assert(status >= 0);
       status = H5Fclose (file);
       assert(status >= 0);
     }
