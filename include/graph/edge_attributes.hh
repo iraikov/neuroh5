@@ -210,6 +210,8 @@ namespace neuroh5
       assert(H5Sclose(mspace) >= 0);
       assert(H5Pclose(lcpl) >= 0);
 
+      assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+
       return 0;
     }
     
