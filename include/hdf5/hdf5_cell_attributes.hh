@@ -398,9 +398,6 @@ namespace neuroh5
                          global_value_size, local_value_start, local_value_size,
                          mtype, value, wapl);
 
-      // clean house
-      //status = H5Fflush (file, H5F_SCOPE_GLOBAL);
-      //assert(status >= 0);
       status = H5Fclose (file);
       assert(status >= 0);
     

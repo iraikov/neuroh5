@@ -205,7 +205,6 @@ namespace neuroh5
           auto it = node_rank_map.find(dst);
           assert(it != node_rank_map.end());
           size_t dst_rank = it->second;
-          printf("dst = %u: dst_rank = %u\n", dst, dst_rank);
           edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
@@ -300,8 +299,6 @@ namespace neuroh5
                              num_unpacked_edges, prj_edge_map,
                              edge_attr_names);
 
-          assert(H5Fflush (file, H5F_SCOPE_GLOBAL) >= 0);
-          
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);
         }
@@ -309,6 +306,10 @@ namespace neuroh5
       MPI_Barrier(io_comm);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
       MPI_Barrier(all_comm);
+
+      mpi::MPE_Seq_begin( all_comm, 1 );
+      DEBUG("Task ",rank,": ","append_graph: completed\n");
+      mpi::MPE_Seq_end( all_comm, 1 );
 
       return 0;
     }

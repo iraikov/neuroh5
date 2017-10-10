@@ -886,11 +886,9 @@ namespace neuroh5
       herr_t status; 
 
     
-      fflush(stdout);
       unsigned int rank, size;
       assert(MPI_Comm_size(comm, (int*)&size) >= 0);
       assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
-      fflush(stdout);
 
       vector<char> sendrecvbuf; 
       vector< pair<string,hid_t> > attr_info;

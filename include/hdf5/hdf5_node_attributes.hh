@@ -267,8 +267,6 @@ namespace neuroh5
                          mtype, value, wapl);
 
       // clean house
-      //status = H5Fflush (file, H5F_SCOPE_GLOBAL);
-      //assert(status >= 0);
       status = H5Fclose (file);
       assert(status >= 0);
     

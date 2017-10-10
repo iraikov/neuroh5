@@ -1799,23 +1799,53 @@ extern "C"
       }
     
     string file_name = string(file_name_arg);
-    
-    map <string, map <string, pair <map <string, vector<vector<string> > >, edge_map_t> > > edge_maps;
-    
-    build_edge_maps (py_edge_dict, edge_maps);
 
-    for (auto const& dst_edge_map_item : edge_maps)
+    Py_ssize_t dict_size = PyDict_Size(py_edge_dict);
+    int data_color = 2;
+
+    MPI_Comm data_comm;
+    // In cases where some ranks do not have any data to write, split
+    // the communicator, so that collective operations can be executed
+    // only on the ranks that do have data.
+    if (dict_size > 0)
       {
-        const string & dst_pop_name = dst_edge_map_item.first;
-        for (auto const& edge_map_item : dst_edge_map_item.second)
-          {
-            const string & src_pop_name = edge_map_item.first;
-            const map <string, vector<vector<string> > > & edge_attr_names = edge_map_item.second.first; 
-            const edge_map_t & edge_map = edge_map_item.second.second; 
-            assert(graph::append_graph(*comm_ptr, io_size, file_name, src_pop_name, dst_pop_name,
-                                       edge_attr_names, edge_map) >= 0);
-          }
+        MPI_Comm_split(*comm_ptr,data_color,0,&data_comm);
       }
+    else
+      {
+        MPI_Comm_split(*comm_ptr,0,0,&data_comm);
+      }
+    MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
+
+    if (dict_size > 0)
+      {
+        map <string, map <string, pair <map <string, vector<vector<string> > >, edge_map_t> > > edge_maps;
+        
+        build_edge_maps (py_edge_dict, edge_maps);
+
+        for (auto const& dst_edge_map_item : edge_maps)
+          {
+            const string & dst_pop_name = dst_edge_map_item.first;
+
+            mpi::MPE_Seq_begin( data_comm, 1 );
+            DEBUG("Task ",rank,": ","append_graph: dst_edge_map_item.second.size = %u\n",
+                  dst_edge_map_item.second.size());
+            mpi::MPE_Seq_end( data_comm, 1 );
+            
+            for (auto const& edge_map_item : dst_edge_map_item.second)
+              {
+                const string & src_pop_name = edge_map_item.first;
+                const map <string, vector<vector<string> > > & edge_attr_names = edge_map_item.second.first; 
+                const edge_map_t & edge_map = edge_map_item.second.second; 
+                assert(graph::append_graph(data_comm, io_size, file_name, src_pop_name, dst_pop_name,
+                                           edge_attr_names, edge_map) >= 0);
+              }
+          }
+
+      }
+    
+    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
+    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     
     Py_INCREF(Py_None);
     return Py_None;
