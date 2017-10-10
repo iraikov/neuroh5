@@ -264,7 +264,7 @@ namespace neuroh5
       hdf5::append_edge_attribute<T>(file, src_pop_name, dst_pop_name,
                                      attr_namespace, attr_name,
                                      value);
-
+      assert(MPI_Comm_free(&comm) >= 0);
       return 0;
     }
 
