@@ -305,9 +305,9 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           assert(file >= 0);
 
-          mpi::MPE_Seq_begin( all_comm, 1 );
+          mpi::MPE_Seq_begin( io_comm, 1 );
           DEBUG("Task ",rank,": ","append_graph: calling append_projection\n");
-          mpi::MPE_Seq_end( all_comm, 1 );
+          mpi::MPE_Seq_end( io_comm, 1 );
           
           append_projection (file, src_pop_name, dst_pop_name,
                              src_start, src_end, dst_start, dst_end,
@@ -320,7 +320,9 @@ namespace neuroh5
           assert(H5Pclose(fapl) >= 0);
         }
 
+      MPI_Barrier(io_comm);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      MPI_Barrier(all_comm);
 
       return 0;
     }

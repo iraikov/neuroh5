@@ -1655,6 +1655,7 @@ extern "C"
               }
             PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
             PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
+            Py_DECREF(py_ns_key);
             Py_DECREF(py_prj_ns_attr_info);
 
           }
@@ -1662,6 +1663,7 @@ extern "C"
         PyTuple_SetItem(py_prj_key, 0, PyBytes_FromString(prj_names[p].first.c_str()));
         PyTuple_SetItem(py_prj_key, 1, PyBytes_FromString(prj_names[p].second.c_str()));
         PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
+        Py_DECREF(py_prj_key);
         Py_DECREF(py_prj_attr_info);
       }
 
@@ -1681,6 +1683,7 @@ extern "C"
 
                 PyObject *key = PyLong_FromLong(key_node);
                 PyDict_SetItem(py_edge_dict, key, py_edge_tuple_value);
+                Py_DECREF(key);
                 Py_DECREF(py_edge_tuple_value);
 
               }
@@ -2375,7 +2378,7 @@ extern "C"
                                            attr_values.attr_maps<int32_t>(),
                                            NPY_INT32,
                                            py_attr_dict);
-
+        
         PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
         Py_DECREF(py_attr_dict);
 
@@ -2630,7 +2633,9 @@ extern "C"
                                            NPY_INT32,
                                            py_attr_dict);
 
-        PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
+        PyObject *key = PyLong_FromUnsignedLong(idx);
+        PyDict_SetItem(py_idx_dict, key, py_attr_dict);
+        Py_DECREF(key);
         Py_DECREF(py_attr_dict);
 
       }
@@ -3669,7 +3674,7 @@ extern "C"
             /* Exceptions from PySequence_GetItem are propagated to the caller
              * (elem will be NULL so we also return NULL).
              */
-            PyObject *result = Py_BuildValue("lO", key, elem);
+            PyObject *result = Py_BuildValue("lN", key, elem);
             py_ntrg->state->it_tree++;
             py_ntrg->state->seq_index++;
             return result;
@@ -3789,7 +3794,7 @@ extern "C"
               assert(elem != NULL);
               py_ntrg->state->it_idx++;
               py_ntrg->state->seq_index++;
-              result = Py_BuildValue("lO", key, elem);
+              result = Py_BuildValue("lN", key, elem);
             }
 
           break;
