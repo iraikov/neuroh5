@@ -1767,8 +1767,8 @@ extern "C"
 
   static PyObject *py_append_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    PyObject *py_edge_dict = NULL;
-    PyObject *py_comm  = NULL;
+    PyObject *py_edge_dict;
+    PyObject *py_comm;
     MPI_Comm *comm_ptr = NULL;
     char *file_name_arg;
     unsigned long io_size = 0;
@@ -4197,7 +4197,7 @@ extern "C"
       "Reads graph connectivity in Destination Block Sparse format." },
     { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS,
       "Writes graph connectivity in Destination Block Sparse format." },
-    { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS,
+    { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,
       "Appends graph connectivity in Destination Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };
