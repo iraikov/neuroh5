@@ -3390,10 +3390,10 @@ extern "C"
 
     assert(size > 0);
     
-    if ((size > 0) && (io_size < (unsigned int)size))
+    if ((size > 0) && (io_size > (unsigned int)size))
       io_size = size;
     
-    if ((size > 0) && (cache_size < (unsigned int)size))
+    if ((size > 0) && (cache_size > (unsigned int)size))
       cache_size = size;
 
     // Create C++ vector of namespace strings:
@@ -3658,6 +3658,7 @@ extern "C"
   static PyObject *
   neuroh5_tree_gen_next(PyNeuroH5TreeGenState *py_ntrg)
   {
+    PyObject *result = NULL; 
     int size, rank;
     assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
@@ -3666,84 +3667,102 @@ extern "C"
      * Returning NULL in this case is enough. The next() builtin will raise the
      * StopIteration error for us.
     */
-    if (py_ntrg->state->pos != seq_done)
+    switch (py_ntrg->state->pos)
       {
-        
-        // If the end of the current cache block has been reached,
-        // and the iterator has not exceed its locally assigned elements,
-        // read the next block
-        if ((py_ntrg->state->it_tree == py_ntrg->state->tree_map.cend()) &&
-            (py_ntrg->state->seq_index < py_ntrg->state->count))
-          {
-            int status;
-            py_ntrg->state->tree_map.clear();
-            py_ntrg->state->attr_maps.clear();
-            status = cell::scatter_read_trees (*py_ntrg->state->comm_ptr,
-                                               py_ntrg->state->file_name,
-                                               py_ntrg->state->io_size,
-                                               py_ntrg->state->attr_namespaces,
-                                               py_ntrg->state->node_rank_map,
-                                               py_ntrg->state->pop_name,
-                                               py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
-                                               py_ntrg->state->tree_map,
-                                               py_ntrg->state->attr_maps,
-                                               py_ntrg->state->cache_index,
-                                               py_ntrg->state->cache_size);
-            assert (status >= 0);
+      case seq_next:
+        {
+          // If the end of the current cache block has been reached,
+          // and the iterator has not exceed its locally assigned elements,
+          // read the next block
+          if ((py_ntrg->state->it_tree == py_ntrg->state->tree_map.cend()) &&
+              (py_ntrg->state->cache_index < py_ntrg->state->count))
+            {
+              int status;
+              py_ntrg->state->tree_map.clear();
+              py_ntrg->state->attr_maps.clear();
+              status = cell::scatter_read_trees (*py_ntrg->state->comm_ptr,
+                                                 py_ntrg->state->file_name,
+                                                 py_ntrg->state->io_size,
+                                                 py_ntrg->state->attr_namespaces,
+                                                 py_ntrg->state->node_rank_map,
+                                                 py_ntrg->state->pop_name,
+                                                 py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
+                                                 py_ntrg->state->tree_map,
+                                                 py_ntrg->state->attr_maps,
+                                                 py_ntrg->state->cache_index,
+                                                 py_ntrg->state->cache_size);
+              assert (status >= 0);
+              
+              py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
+              py_ntrg->state->it_tree = py_ntrg->state->tree_map.cbegin();
+            }
 
-            py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
-            py_ntrg->state->it_tree = py_ntrg->state->tree_map.cbegin();
-          }
-
-        if (py_ntrg->state->it_tree != py_ntrg->state->tree_map.cend())
-          {
-            CELL_IDX_T key = py_ntrg->state->it_tree->first;
-            const neurotree_t &tree = py_ntrg->state->it_tree->second;
-            PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps);
-            assert(elem != NULL);
-        
-            /* Exceptions from PySequence_GetItem are propagated to the caller
-             * (elem will be NULL so we also return NULL).
-             */
-            PyObject *result = Py_BuildValue("lN", key, elem);
-            py_ntrg->state->it_tree++;
-            py_ntrg->state->seq_index++;
-            return result;
-          }
-        else
-          {
-            PyObject *result = NULL;
-            switch (py_ntrg->state->pos)
-              {
-              case seq_next:
+          if (py_ntrg->state->it_tree == py_ntrg->state->tree_map.cend())
+            {
+              if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
                   py_ntrg->state->pos = seq_last;
-                  result = PyTuple_Pack(2, (Py_INCREF(Py_None), Py_None),
-                                        (Py_INCREF(Py_None), Py_None));
-                  break;
                 }
-              case seq_last:
+              else
                 {
-                  py_ntrg->state->pos = seq_done;
-                  result = NULL;
-                  break;
+                  py_ntrg->state->seq_index++;
                 }
-              case seq_done:
-                {
-                  result = NULL;
-                  break;
-                }
-              case seq_empty:
-                {
-                  result = NULL;
-                  break;
-                }
-              }
-            return result;
-          }
-      }
+              result = PyTuple_Pack(2,
+                                    (Py_INCREF(Py_None), Py_None),
+                                    (Py_INCREF(Py_None), Py_None));
 
-    return NULL;
+              break;
+            }
+          else
+            {
+              CELL_IDX_T key = py_ntrg->state->it_tree->first;
+              const neurotree_t &tree = py_ntrg->state->it_tree->second;
+              PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps);
+              assert(elem != NULL);
+              
+              /* Exceptions from PySequence_GetItem are propagated to the caller
+               * (elem will be NULL so we also return NULL).
+               */
+              result = Py_BuildValue("lN", key, elem);
+              py_ntrg->state->it_tree++;
+              py_ntrg->state->seq_index++;
+            }
+          break;
+        }
+      case seq_empty:
+        {
+          if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
+            {
+              py_ntrg->state->pos = seq_last;
+            }
+          else
+            {
+              py_ntrg->state->seq_index++;
+            }
+          
+          result = PyTuple_Pack(2,
+                                (Py_INCREF(Py_None), Py_None),
+                                (Py_INCREF(Py_None), Py_None));
+          break;
+        }
+      case seq_last:
+        {
+          int status = MPI_Barrier(*py_ntrg->state->comm_ptr);
+          assert(status == MPI_SUCCESS);
+          py_ntrg->state->pos = seq_done;
+          result = NULL;
+          break;
+        }
+      case seq_done:
+        {
+          result = NULL;
+          break;
+        }
+      }
+    /* Exceptions from PySequence_GetItem are propagated to the caller
+     * (elem will be NULL so we also return NULL).
+     */
+    return result;
   }
 
   
