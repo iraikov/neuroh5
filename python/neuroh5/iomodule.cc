@@ -1767,6 +1767,7 @@ extern "C"
 
   static PyObject *py_append_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
+    int status;
     PyObject *py_edge_dict;
     PyObject *py_comm;
     MPI_Comm *comm_ptr = NULL;
@@ -1789,15 +1790,15 @@ extern "C"
     assert(comm_ptr != NULL);
     assert(*comm_ptr != MPI_COMM_NULL);
 
-    int rank, size;
-    assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
-    assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
+    MPI_Comm comm;
+    status = MPI_Comm_dup(*comm_ptr, &comm);
+    assert(status == MPI_SUCCESS);
     
     string file_name = string(file_name_arg);
 
     Py_ssize_t dict_size = PyDict_Size(py_edge_dict);
     int data_color = 2;
-
+    
     MPI_Comm data_comm;
     // In cases where some ranks do not have any data to write, split
     // the communicator, so that collective operations can be executed
@@ -1812,14 +1813,17 @@ extern "C"
       }
     MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
-    if (io_size == 0)
-      {
-        assert(MPI_Comm_size(data_comm, &size) >= 0);
-        io_size = size;
-      }
-
     if (dict_size > 0)
       {
+        int rank, size;
+        assert(MPI_Comm_size(data_comm, &size) >= 0);
+        assert(MPI_Comm_rank(data_comm, &rank) >= 0);
+
+        if (io_size == 0)
+          {
+            io_size = size;
+          }
+        
         map <string, map <string, pair <map <string, vector<vector<string> > >, edge_map_t> > > edge_maps;
         
         build_edge_maps (py_edge_dict, edge_maps);
@@ -1842,6 +1846,9 @@ extern "C"
     
     assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
     assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+
+    assert(MPI_Barrier(comm) == MPI_SUCCESS);;
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
     Py_INCREF(Py_None);
     return Py_None;
