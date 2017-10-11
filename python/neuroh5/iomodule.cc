@@ -1792,11 +1792,6 @@ extern "C"
     int rank, size;
     assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
     assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
-
-    if (io_size == 0)
-      {
-        io_size = size;
-      }
     
     string file_name = string(file_name_arg);
 
@@ -1816,6 +1811,11 @@ extern "C"
         MPI_Comm_split(*comm_ptr,0,0,&data_comm);
       }
     MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
+
+    if (io_size == 0)
+      {
+        assert(MPI_Comm_size(data_comm, &io_size) >= 0);
+      }
 
     if (dict_size > 0)
       {
@@ -2853,11 +2853,11 @@ extern "C"
     // only on the ranks that do have data.
     if (dict_size > 0)
       {
-        MPI_Comm_split(*comm_ptr,data_color,0,&data_comm);
+        MPI_Comm_split(comm,data_color,0,&data_comm);
       }
     else
       {
-        MPI_Comm_split(*comm_ptr,0,0,&data_comm);
+        MPI_Comm_split(comm,0,0,&data_comm);
       }
     MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
