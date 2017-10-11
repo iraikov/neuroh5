@@ -1814,7 +1814,8 @@ extern "C"
 
     if (io_size == 0)
       {
-        assert(MPI_Comm_size(data_comm, &io_size) >= 0);
+        assert(MPI_Comm_size(data_comm, &size) >= 0);
+        io_size = size;
       }
 
     if (dict_size > 0)
