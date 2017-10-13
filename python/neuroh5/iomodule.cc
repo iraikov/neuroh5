@@ -3635,6 +3635,8 @@ extern "C"
   static void
   neuroh5_tree_gen_dealloc(PyNeuroH5TreeGenState *py_ntrg)
   {
+    int status = MPI_Comm_free(py_ntrg->state->comm_ptr);
+    assert(status == MPI_SUCCESS);
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }

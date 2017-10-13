@@ -92,6 +92,12 @@ namespace neuroh5
           assert(file >= 0);
           dset_size = hdf5::dataset_num_elements(file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
 
+          status = H5Fclose(file);
+          assert(status == 0);
+
+          status = H5Pclose(fapl);
+          assert(status == 0);
+          
           if (numitems > 0)
             {
               if (offset < dset_size)
@@ -151,6 +157,8 @@ namespace neuroh5
           data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
         }
 
+      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+
       vector<int> recvcounts, rdispls;
       vector<char> recvbuf;
 
@@ -165,7 +173,6 @@ namespace neuroh5
         }
       recvbuf.clear();
 
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       for (string attr_name_space : attr_name_spaces)
         {
