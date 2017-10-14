@@ -3137,7 +3137,7 @@ extern "C"
     Py_ssize_t edge_index, edge_count, block_index, block_count, cache_index, cache_size, io_size, comm_size;
 
     string file_name;
-    MPI_Comm *comm_ptr;
+    MPI_Comm comm;
 
     seq_pos pos;
     EdgeMapType edge_map_type;
@@ -3182,7 +3182,7 @@ extern "C"
     string pop_name;
     size_t pop_idx;
     string file_name;
-    MPI_Comm *comm_ptr;
+    MPI_Comm comm;
     vector<pop_range_t> pop_vector;
     map<CELL_IDX_T, neurotree_t> tree_map;
     vector<string> attr_namespaces;
@@ -3219,7 +3219,7 @@ extern "C"
     size_t pop_idx;
     string file_name;
     string att_namespace;
-    MPI_Comm* comm_ptr;
+    MPI_Comm comm;
     vector<pop_range_t> pop_vector;
     string attr_namespace;
     NamedAttrMap attr_map;
@@ -3326,6 +3326,7 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
     
+    assert(MPI_Comm_dup(*comm_ptr, &(py_ngg->state->comm)) == MPI_SUCCESS);
 
     py_ngg->state->pos             = seq_next;
     py_ngg->state->edge_index      = 0;
@@ -3334,7 +3335,6 @@ extern "C"
     py_ngg->state->block_count     = num_blocks;
     py_ngg->state->cache_size      = cache_size;
     py_ngg->state->io_size         = io_size;
-    py_ngg->state->comm_ptr        = comm_ptr;
     py_ngg->state->file_name       = string(file_name);
     py_ngg->state->src_pop_name    = string(src_pop_name);
     py_ngg->state->dst_pop_name    = string(dst_pop_name);
@@ -3469,18 +3469,14 @@ extern "C"
                            MPI_SIZE_T, MPI_MAX, *comm_ptr);
     assert(status == MPI_SUCCESS);
 
-    py_ntrg->state->comm_ptr = new MPI_Comm[1];
-    status = MPI_Comm_dup(*comm_ptr, py_ntrg->state->comm_ptr);
-    assert(status == MPI_SUCCESS);
+    assert(MPI_Comm_dup(*comm_ptr, &(py_ntrg->state->comm)) == MPI_SUCCESS);
 
-    
     py_ntrg->state->pos             = seq_next;
     py_ntrg->state->count           = count;
     py_ntrg->state->local_count     = local_count;
     py_ntrg->state->max_local_count = max_local_count;
     py_ntrg->state->seq_index       = 0;
     py_ntrg->state->cache_index     = 0;
-    py_ntrg->state->comm_ptr   = comm_ptr;
     py_ntrg->state->file_name  = string(file_name);
     py_ntrg->state->pop_name   = string(pop_name);
     py_ntrg->state->pop_idx    = pop_idx;
@@ -3600,9 +3596,7 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
     
-    py_ntrg->state->comm_ptr = new MPI_Comm[1];
-    status = MPI_Comm_dup(*comm_ptr, py_ntrg->state->comm_ptr);
-    assert(status == MPI_SUCCESS);
+    assert(MPI_Comm_dup(*comm_ptr, &(py_ntrg->state->comm)) == MPI_SUCCESS);
 
     size_t max_local_count=0;
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
@@ -3635,7 +3629,7 @@ extern "C"
   static void
   neuroh5_tree_gen_dealloc(PyNeuroH5TreeGenState *py_ntrg)
   {
-    int status = MPI_Comm_free(py_ntrg->state->comm_ptr);
+    int status = MPI_Comm_free(&(py_ntrg->state->comm));
     assert(status == MPI_SUCCESS);
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
@@ -3644,8 +3638,8 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
-    MPI_Comm_free(py_ntrg->state->comm_ptr);
-    delete py_ntrg->state->comm_ptr;
+    int status = MPI_Comm_free(&(py_ntrg->state->comm));
+    assert(status == MPI_SUCCESS);
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
@@ -3653,6 +3647,8 @@ extern "C"
   static void
   neuroh5_prj_gen_dealloc(PyNeuroH5ProjectionGenState *py_ngg)
   {
+    int status = MPI_Comm_free(&(py_ngg->state->comm));
+    assert(status == MPI_SUCCESS);
     delete py_ngg->state;
     Py_TYPE(py_ngg)->tp_free(py_ngg);
   }
@@ -3662,8 +3658,8 @@ extern "C"
   {
     PyObject *result = NULL; 
     int size, rank;
-    assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
+    assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
 
     /* 
      * Returning NULL in this case is enough. The next() builtin will raise the
@@ -3682,7 +3678,7 @@ extern "C"
               int status;
               py_ntrg->state->tree_map.clear();
               py_ntrg->state->attr_maps.clear();
-              status = cell::scatter_read_trees (*py_ntrg->state->comm_ptr,
+              status = cell::scatter_read_trees (py_ntrg->state->comm,
                                                  py_ntrg->state->file_name,
                                                  py_ntrg->state->io_size,
                                                  py_ntrg->state->attr_namespaces,
@@ -3749,7 +3745,7 @@ extern "C"
         }
       case seq_last:
         {
-          int status = MPI_Barrier(*py_ntrg->state->comm_ptr);
+          int status = MPI_Barrier(py_ntrg->state->comm);
           assert(status == MPI_SUCCESS);
           py_ntrg->state->pos = seq_done;
           result = NULL;
@@ -3773,21 +3769,8 @@ extern "C"
   {
     PyObject *result = NULL; 
     int size, rank;
-    assert(MPI_Comm_size(*py_ntrg->state->comm_ptr, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(*py_ntrg->state->comm_ptr, &rank) == MPI_SUCCESS);
-
-    /*
-    mpi::MPE_Seq_begin( *py_ntrg->state->comm_ptr, 1 );
-    printf("cell_attr_gen_next: rank %u: pos = %u cache_index = %u seq_index = %u count = %u max_local_count = %u py_ntrg->state->it_idx == end = %d\n",
-           rank,
-           py_ntrg->state->pos,
-           py_ntrg->state->cache_index,
-           py_ntrg->state->seq_index,
-           py_ntrg->state->count,
-           py_ntrg->state->max_local_count,
-           py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend());
-    mpi::MPE_Seq_end( *py_ntrg->state->comm_ptr, 1 );
-    */
+    assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
     
     switch (py_ntrg->state->pos)
       {
@@ -3803,7 +3786,7 @@ extern "C"
               py_ntrg->state->attr_map.clear();
               
               int status;
-              status = cell::scatter_read_cell_attributes (*py_ntrg->state->comm_ptr,
+              status = cell::scatter_read_cell_attributes (py_ntrg->state->comm,
                                                            py_ntrg->state->file_name,
                                                            py_ntrg->state->io_size,
                                                            py_ntrg->state->attr_namespace,
@@ -3869,7 +3852,7 @@ extern "C"
         }
       case seq_last:
         {
-          int status = MPI_Barrier(*py_ntrg->state->comm_ptr);
+          int status = MPI_Barrier(py_ntrg->state->comm);
           assert(status == MPI_SUCCESS);
           py_ntrg->state->pos = seq_done;
           result = NULL;
@@ -3892,8 +3875,8 @@ extern "C"
   {
     int status = 0;
     int size, rank;
-    assert(MPI_Comm_size(*py_ngg->state->comm_ptr, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(*py_ngg->state->comm_ptr, &rank) == MPI_SUCCESS);
+    assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
     
     // If the end of the current edge map has been reached,
     // read the next block
@@ -3903,7 +3886,7 @@ extern "C"
     vector <edge_map_t> prj_vector;
     size_t max_local_num_edges=0;
     
-    status = graph::scatter_read_projection(*py_ngg->state->comm_ptr,
+    status = graph::scatter_read_projection(py_ngg->state->comm,
                                             py_ngg->state->io_size,
                                             py_ngg->state->edge_map_type, 
                                             py_ngg->state->file_name,
@@ -3935,7 +3918,7 @@ extern "C"
     
     py_ngg->state->block_index += py_ngg->state->io_size * py_ngg->state->cache_size;
     status = MPI_Allreduce(&(py_ngg->state->local_num_edges), &max_local_num_edges, 1,
-                           MPI_SIZE_T, MPI_MAX, *py_ngg->state->comm_ptr);
+                           MPI_SIZE_T, MPI_MAX, py_ngg->state->comm);
     assert(status == MPI_SUCCESS);
     py_ngg->state->edge_count += max_local_num_edges;
 
@@ -3948,8 +3931,8 @@ extern "C"
   {
     PyObject *result = NULL; 
     int size, rank;
-    assert(MPI_Comm_size(*py_ngg->state->comm_ptr, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(*py_ngg->state->comm_ptr, &rank) == MPI_SUCCESS);
+    assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
 
     switch (py_ngg->state->pos)
       {
