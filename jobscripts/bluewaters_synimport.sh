@@ -26,7 +26,7 @@ prefix=/projects/sciteam/baef/Full_Scale_Control
 export prefix
 
 forest_connectivity_path=$prefix/DGC_forest_connectivity_20170508.h5
-connectivity_output_path=$prefix/dentate_Full_Scale_GC_20170726.h5
+connectivity_output_path=$prefix/dentate_Full_Scale_GC_20170902.h5
 
 for post in GC; do
 

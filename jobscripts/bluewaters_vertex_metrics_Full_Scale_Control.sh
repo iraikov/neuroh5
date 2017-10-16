@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ### set the number of nodes and the number of PEs per node
-#PBS -l nodes=16:ppn=16:xe
+#PBS -l nodes=32:ppn=16:xe
 ### which queue to use
 #PBS -q debug
 ### set the wallclock time
 #PBS -l walltime=0:30:00
 ### set the job name
-#PBS -N vertex_metrics_Full_Scale_Control
+#PBS -N vertex_metrics_GC
 ### set the job stdout and stderr
 #PBS -e ./results/$PBS_JOBID.err
 #PBS -o ./results/$PBS_JOBID.out
@@ -23,15 +23,9 @@ set -x
 
 cd $PBS_O_WORKDIR
 
-results_path=./results/Full_Scale_Control_$PBS_JOBID
-export results_path
+export input_file="/projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_GC_20170902.h5"
 
-mkdir -p $results_path
-
-aprun -n 256 ./build/vertex_metrics \
-      /u/sciteam/raikov/scratch/dentate/dentate_Full_Scale_Control_PP.h5 \
-      -i 64
-
+aprun -n 512 ./build/vertex_metrics -i 128 $input_file
 
 
 

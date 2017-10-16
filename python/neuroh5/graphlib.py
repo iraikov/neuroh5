@@ -66,7 +66,7 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
     
     neighbors_dict = defaultdict(neighbors_default)
 
-    graph = scatter_read_graph (comm, filepath, io_size=iosize, map_type=0, 
+    (graph, _) = scatter_read_graph (comm, filepath, io_size=iosize, map_type=0, 
                                 node_rank_map=node_ranks)
     
     ## determine neighbors of vertex based on incoming edges
@@ -78,7 +78,7 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
                 neighbors_dict[n]['src'].extend(edges[0])
                 
     ## obtain outgoing edges
-    graph = scatter_read_graph (comm, filepath, io_size=iosize, map_type=1, 
+    (graph, _) = scatter_read_graph (comm, filepath, io_size=iosize, map_type=1, 
                                 node_rank_map=node_ranks)
 
     ## determine neighbors of vertex based on outgoing edges

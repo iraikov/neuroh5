@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### set the number of nodes and the number of PEs per node
-#PBS -l nodes=256:ppn=16:xe
+#PBS -l nodes=128:ppn=16:xe
 ### which queue to use
 #PBS -q debug
 ### set the wallclock time
@@ -15,8 +15,6 @@
 ##PBS -m bea
 ### Set umask so users in my group can read job stdout and stderr files
 #PBS -W umask=0027
-### Get darsan profile data
-#PBS -lgres=darshan
 
 module load cray-hdf5-parallel
 module load bwpy bwpy-mpi
@@ -25,8 +23,10 @@ set -x
 
 cd $PBS_O_WORKDIR
 
+export PYTHONPATH=/projects/sciteam/baef/site-packages:$PYTHONPATH
 
-aprun -n 4096 python ./tests/bw_scatter_test.py
+
+aprun -n 2048 python ./tests/test_scatter_graph_bw.py
 
 
 

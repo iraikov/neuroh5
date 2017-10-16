@@ -22,6 +22,8 @@ module load cray-hdf5-parallel
 
 set -x
 
+export PYTHONPATH=/projects/sciteam/baef/site-packages:$PYTHONPATH
+
 cd $PBS_O_WORKDIR
 
 aprun -n 512 ./neurotrees_scatter_read -i 64  \
