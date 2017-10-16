@@ -66,8 +66,9 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        importdbs=neuroh5.importdbs:cli
         initrange=neuroh5.initrange:cli
+        initprj=neuroh5.initprj:cli
+        importdbs=neuroh5.importdbs:cli
         importcoords=neuroh5.importcoords:cli
     ''',
     ext_modules = [
