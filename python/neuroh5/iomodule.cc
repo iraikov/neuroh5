@@ -1844,7 +1844,7 @@ extern "C"
 
       }
     
-    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
+    assert(MPI_Barrier(comm) == MPI_SUCCESS);
     assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     

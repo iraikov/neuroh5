@@ -136,7 +136,6 @@ namespace neuroh5
         {
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      MPI_Barrier(all_comm);
       
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
@@ -305,7 +304,6 @@ namespace neuroh5
 
       MPI_Barrier(io_comm);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-      MPI_Barrier(all_comm);
 
       mpi::MPE_Seq_begin( all_comm, 1 );
       DEBUG("Task ",rank,": ","append_graph: completed\n");
