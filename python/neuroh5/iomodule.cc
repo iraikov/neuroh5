@@ -1805,11 +1805,11 @@ extern "C"
     // only on the ranks that do have data.
     if (dict_size > 0)
       {
-        MPI_Comm_split(*comm_ptr,data_color,0,&data_comm);
+        MPI_Comm_split(comm,data_color,0,&data_comm);
       }
     else
       {
-        MPI_Comm_split(*comm_ptr,0,0,&data_comm);
+        MPI_Comm_split(comm,0,0,&data_comm);
       }
     MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
