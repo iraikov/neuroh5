@@ -127,7 +127,7 @@ namespace neuroh5
       MPI_Comm  io_comm;
       // MPI group color value used for I/O ranks
       int io_color = 1;
-      if (rank < io_size)
+      if ((rank_t)rank < io_size)
         {
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
@@ -154,15 +154,15 @@ namespace neuroh5
       rank_edge_map_t rank_edge_map;
       for (auto iter: input_edge_map)
         {
-          NODE_IDX_T dst = iter.first;
+          NODE_IDX_T dst          = iter.first;
           // all source/destination node IDs must be in range
           assert(dst_start <= dst && dst < dst_end);
           edge_tuple_t& et        = iter.second;
-          vector<NODE_IDX_T>& v   = get<0>(et);
+          const vector<NODE_IDX_T>& v   = get<0>(et);
           vector <AttrVal>& va    = get<1>(et);
 
           vector<NODE_IDX_T> adj_vector;
-          for (auto & src: v)
+          for (const auto & src: v)
             {
               if (!(src_start <= src && src <= src_end))
                 {
@@ -300,7 +300,7 @@ namespace neuroh5
       DEBUG("Task ",rank,": ","append_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
       mpi::MPE_Seq_end( all_comm, 1 );
 
-      if (rank < io_size)
+      if ((rank_t)rank < io_size)
         {
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
           assert(fapl >= 0);
