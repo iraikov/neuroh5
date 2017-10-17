@@ -161,37 +161,87 @@ namespace neuroh5
           const vector<NODE_IDX_T>& v   = get<0>(et);
           vector <AttrVal>& va    = get<1>(et);
 
-          vector<NODE_IDX_T> adj_vector;
-          for (const auto & src: v)
+          if (v.size() > 0)
             {
-              if (!(src_start <= src && src <= src_end))
+              vector<NODE_IDX_T> adj_vector;
+              for (const auto & src: v)
                 {
-                  printf("src = %u src_start = %lu src_end = %lu\n", src, src_start, src_end);
+                  if (!(src_start <= src && src <= src_end))
+                    {
+                      printf("src = %u src_start = %lu src_end = %lu\n", src, src_start, src_end);
+                    }
+                  assert(src_start <= src && src <= src_end);
+                  adj_vector.push_back(src - src_start);
+                  num_edges++;
                 }
               assert(src_start <= src && src <= src_end);
               adj_vector.push_back(src - src_start);
               num_edges++;
-            }
+            
+              mpi::MPE_Seq_begin( all_comm, 1 );
+              DEBUG("Task ",rank,": ","append_graph: before sort_permutation: adj_vector.size = ",
+                    adj_vector.size());
+              mpi::MPE_Seq_end( all_comm, 1 );
 
-          mpi::MPE_Seq_begin( all_comm, 1 );
-          DEBUG("Task ",rank,": ","append_graph: before sort_permutation: adj_vector.size = ",
-                adj_vector.size());
-          mpi::MPE_Seq_end( all_comm, 1 );
-
-          vector<size_t> p = sort_permutation(adj_vector, compare_nodes);
-
-          apply_permutation_in_place(adj_vector, p);
-
-          for (auto & a : va)
-            {
-              for (size_t i=0; i<a.float_values.size(); i++)
+              vector<size_t> p = sort_permutation(adj_vector, compare_nodes);
+              
+              apply_permutation_in_place(adj_vector, p);
+              
+              for (auto & a : va)
                 {
-                  apply_permutation_in_place(a.float_values[i], p);
+                  for (size_t i=0; i<a.float_values.size(); i++)
+                    {
+                      apply_permutation_in_place(a.float_values[i], p);
+                    }
+                  for (size_t i=0; i<a.uint8_values.size(); i++)
+                    {
+                      apply_permutation_in_place(a.uint8_values[i], p);
+                    }
+                  for (size_t i=0; i<a.uint16_values.size(); i++)
+                    {
+                      apply_permutation_in_place(a.uint16_values[i], p);
+                    }
+                  for (size_t i=0; i<a.uint32_values.size(); i++)
+                    {
+                      apply_permutation_in_place(a.uint32_values[i], p);
+                    }
+                  for (size_t i=0; i<a.int8_values.size(); i++)
+                    {
+                      apply_permutation_in_place(a.int8_values[i], p);
+                    }
+                  for (size_t i=0; i<a.int16_values.size(); i++)
+                    {
+                      apply_permutation_in_place(a.int16_values[i], p);
+                    }
+                  for (size_t i=0; i<a.int32_values.size(); i++)
+                    {
+                      apply_permutation_in_place(a.int32_values[i], p);
+                    }
                 }
-              for (size_t i=0; i<a.uint8_values.size(); i++)
+              auto it = node_rank_map.find(dst);
+              assert(it != node_rank_map.end());
+              size_t dst_rank = it->second;
+              edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
+              vector<NODE_IDX_T> &src_vec = get<0>(et1);
+              src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
+              vector <AttrVal> &edge_attr_vec = get<1>(et1);
+              edge_attr_vec.resize(va.size());
+              
+              size_t i=0;
+              for (auto & edge_attr : edge_attr_vec)
                 {
-                  apply_permutation_in_place(a.uint8_values[i], p);
+                  AttrVal& a = va[i];
+                  edge_attr.float_values.resize(a.float_values.size());
+                  edge_attr.uint8_values.resize(a.uint8_values.size());
+                  edge_attr.uint16_values.resize(a.uint16_values.size());
+                  edge_attr.uint32_values.resize(a.uint32_values.size());
+                  edge_attr.int8_values.resize(a.int8_values.size());
+                  edge_attr.int16_values.resize(a.int16_values.size());
+                  edge_attr.int32_values.resize(a.int32_values.size());
+                  edge_attr.append(a);
+                  i++;
                 }
+
               for (size_t i=0; i<a.uint16_values.size(); i++)
                 {
                   apply_permutation_in_place(a.uint16_values[i], p);
@@ -240,6 +290,8 @@ namespace neuroh5
               edge_attr.int32_values.resize(a.int32_values.size());
               edge_attr.append(a);
               i++;
+=======
+>>>>>>> 860cba03de6965bc138e6817a9d8df6e617c3862
             }
         }
 

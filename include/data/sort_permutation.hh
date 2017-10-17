@@ -29,9 +29,12 @@ namespace neuroh5
                                               Compare& compare)
     {
       std::vector<std::size_t> p(vec.size());
-      std::iota(p.begin(), p.end(), 0);
-      std::sort(p.begin(), p.end(),
-                [&](std::size_t i, std::size_t j){ return compare(vec[i], vec[j]); });
+      if (vec.size() > 0)
+        {
+          std::iota(p.begin(), p.end(), 0);
+          std::sort(p.begin(), p.end(),
+                    [&](std::size_t i, std::size_t j){ return compare(vec[i], vec[j]); });
+        }
       return p;
     }
 
@@ -43,8 +46,11 @@ namespace neuroh5
                                      const std::vector<std::size_t>& p)
     {
       std::vector<T> sorted_vec(vec.size());
-      std::transform(p.begin(), p.end(), sorted_vec.begin(),
-                     [&](std::size_t i){ return vec[i]; });
+      if (vec.size() > 0)
+        {
+          std::transform(p.begin(), p.end(), sorted_vec.begin(),
+                         [&](std::size_t i){ return vec[i]; });
+        }
       return sorted_vec;
     }
 
