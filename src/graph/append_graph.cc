@@ -118,9 +118,9 @@ namespace neuroh5
       src_end   = src_start + pop_vector[src_pop_idx].count;
       
       mpi::MPE_Seq_begin( all_comm, 1 );
-      DEBUG("Task ",rank,": ","append_graph: dst_start = ", dst_start, " dst_end = ", dst_end, "\n");
-      DEBUG("Task ",rank,": ","append_graph: src_start = ", src_start, " src_end = ", src_end, "\n");
-      DEBUG("Task ",rank,": ","append_graph: total_num_nodes = ", total_num_nodes, "\n");
+      DEBUG("Task ",rank,": ","append_graph: dst_start = ", dst_start, " dst_end = ", dst_end);
+      DEBUG("Task ",rank,": ","append_graph: src_start = ", src_start, " src_end = ", src_end);
+      DEBUG("Task ",rank,": ","append_graph: size = ",size, "io_size = ", io_size);
       mpi::MPE_Seq_end( all_comm, 1 );
 
       // Create an I/O communicator
@@ -137,10 +137,17 @@ namespace neuroh5
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
       
+      mpi::MPE_Seq_begin( all_comm, 1 );
+      DEBUG("Task ",rank,": ","append_graph: after comm split");
+      mpi::MPE_Seq_end( all_comm, 1 );
+
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
       compute_node_rank_map(io_size, total_num_nodes, node_rank_map);
 
+      mpi::MPE_Seq_begin( all_comm, 1 );
+      DEBUG("Task ",rank,": ","append_graph: node_rank_map constructed");
+      mpi::MPE_Seq_end( all_comm, 1 );
 
       // construct a map where each set of edges are arranged by destination I/O rank
       auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
@@ -227,6 +234,9 @@ namespace neuroh5
         }
 
 
+      mpi::MPE_Seq_begin( all_comm, 1 );
+      DEBUG("Task ",rank,": ","append_graph: rank_edge_map constructed");
+      mpi::MPE_Seq_end( all_comm, 1 );
 
       // send buffer and structures for MPI Alltoall operation
       vector<char> sendbuf;
