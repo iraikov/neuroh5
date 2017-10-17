@@ -172,7 +172,7 @@ namespace neuroh5
       uint32_t sendbuf_size = sendbuf.size();
       assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
       sendbuf.resize(sendbuf_size);
-      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_PACKED, 0, all_comm) == MPI_SUCCESS);
+      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
           
       size_t num_unpacked_edges = 0, num_unpacked_nodes = 0; 
       if (rank > 0)

@@ -174,9 +174,6 @@ namespace neuroh5
                   adj_vector.push_back(src - src_start);
                   num_edges++;
                 }
-              assert(src_start <= src && src <= src_end);
-              adj_vector.push_back(src - src_start);
-              num_edges++;
             
               mpi::MPE_Seq_begin( all_comm, 1 );
               DEBUG("Task ",rank,": ","append_graph: before sort_permutation: adj_vector.size = ",
@@ -241,57 +238,6 @@ namespace neuroh5
                   edge_attr.append(a);
                   i++;
                 }
-
-              for (size_t i=0; i<a.uint16_values.size(); i++)
-                {
-                  apply_permutation_in_place(a.uint16_values[i], p);
-                }
-              for (size_t i=0; i<a.uint32_values.size(); i++)
-                {
-                  apply_permutation_in_place(a.uint32_values[i], p);
-                }
-              for (size_t i=0; i<a.int8_values.size(); i++)
-                {
-                  apply_permutation_in_place(a.int8_values[i], p);
-                }
-              for (size_t i=0; i<a.int16_values.size(); i++)
-                {
-                  apply_permutation_in_place(a.int16_values[i], p);
-                }
-              for (size_t i=0; i<a.int32_values.size(); i++)
-                {
-                  apply_permutation_in_place(a.int32_values[i], p);
-                }
-            }
-          auto it = node_rank_map.find(dst);
-          assert(it != node_rank_map.end());
-          size_t dst_rank = it->second;
-          edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
-          vector<NODE_IDX_T> &src_vec = get<0>(et1);
-          src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
-          vector <AttrVal> &edge_attr_vec = get<1>(et1);
-          edge_attr_vec.resize(va.size());
-
-          mpi::MPE_Seq_begin( all_comm, 1 );
-          DEBUG("Task ",rank,": ","append_graph: before edge_attr.append: va.size = ",
-                va.size());
-          mpi::MPE_Seq_end( all_comm, 1 );
-          
-          size_t i=0;
-          for (auto & edge_attr : edge_attr_vec)
-            {
-              AttrVal& a = va[i];
-              edge_attr.float_values.resize(a.float_values.size());
-              edge_attr.uint8_values.resize(a.uint8_values.size());
-              edge_attr.uint16_values.resize(a.uint16_values.size());
-              edge_attr.uint32_values.resize(a.uint32_values.size());
-              edge_attr.int8_values.resize(a.int8_values.size());
-              edge_attr.int16_values.resize(a.int16_values.size());
-              edge_attr.int32_values.resize(a.int32_values.size());
-              edge_attr.append(a);
-              i++;
-=======
->>>>>>> 860cba03de6965bc138e6817a9d8df6e617c3862
             }
         }
 
@@ -304,7 +250,7 @@ namespace neuroh5
       vector<char> sendbuf;
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
-      // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
+      // Create serialized object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
 
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
@@ -334,8 +280,8 @@ namespace neuroh5
       recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
+      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
+                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
                            all_comm) == MPI_SUCCESS);
       sendbuf.clear();
       sendcounts.clear();

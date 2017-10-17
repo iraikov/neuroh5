@@ -235,7 +235,7 @@ namespace neuroh5
       vector<char> sendbuf;
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
-      // Create MPI_PACKED object with the edges of vertices for the respective I/O rank
+      // Create serialized object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
 
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
@@ -263,8 +263,8 @@ namespace neuroh5
       recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_PACKED,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_PACKED,
+      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
+                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
                            all_comm) == MPI_SUCCESS);
       sendbuf.clear();
       sendcounts.clear();
