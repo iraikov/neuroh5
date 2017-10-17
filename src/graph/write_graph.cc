@@ -122,7 +122,7 @@ namespace neuroh5
       MPI_Comm  io_comm;
       // MPI group color value used for I/O ranks
       int io_color = 1;
-      if (rank < io_size)
+      if ((rank_t)rank < io_size)
         {
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
@@ -282,7 +282,7 @@ namespace neuroh5
       DEBUG("Task ",rank,": ","write_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
 
 
-      if (rank < io_size)
+      if ((rank_t)rank < io_size)
         {
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
           assert(fapl >= 0);
