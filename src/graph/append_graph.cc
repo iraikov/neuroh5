@@ -173,6 +173,11 @@ namespace neuroh5
               num_edges++;
             }
 
+          mpi::MPE_Seq_begin( all_comm, 1 );
+          DEBUG("Task ",rank,": ","append_graph: before sort_permutation: adj_vector.size = ",
+                adj_vector.size());
+          mpi::MPE_Seq_end( all_comm, 1 );
+
           vector<size_t> p = sort_permutation(adj_vector, compare_nodes);
 
           apply_permutation_in_place(adj_vector, p);
@@ -216,6 +221,11 @@ namespace neuroh5
           src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
           vector <AttrVal> &edge_attr_vec = get<1>(et1);
           edge_attr_vec.resize(va.size());
+
+          mpi::MPE_Seq_begin( all_comm, 1 );
+          DEBUG("Task ",rank,": ","append_graph: before edge_attr.append: va.size = ",
+                va.size());
+          mpi::MPE_Seq_end( all_comm, 1 );
           
           size_t i=0;
           for (auto & edge_attr : edge_attr_vec)
