@@ -120,7 +120,7 @@ namespace neuroh5
       mpi::MPE_Seq_begin( all_comm, 1 );
       DEBUG("Task ",rank,": ","append_graph: dst_start = ", dst_start, " dst_end = ", dst_end);
       DEBUG("Task ",rank,": ","append_graph: src_start = ", src_start, " src_end = ", src_end);
-      DEBUG("Task ",rank,": ","append_graph: size = ",size, "io_size = ", io_size);
+      DEBUG("Task ",rank,": ","append_graph: size = ",size, " io_size = ", io_size);
       mpi::MPE_Seq_end( all_comm, 1 );
 
       // Create an I/O communicator
@@ -275,6 +275,9 @@ namespace neuroh5
           rdispls[p] = rdispls[p-1] + recvcounts[p-1];
           recvbuf_size += recvcounts[p];
         }
+      mpi::MPE_Seq_begin( all_comm, 1 );
+      DEBUG("Task ",rank,": ","append_graph: recvbuf_size = ", recvbuf_size);
+      mpi::MPE_Seq_end( all_comm, 1 );
 
       vector<char> recvbuf;
       recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);

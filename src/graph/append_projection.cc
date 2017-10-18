@@ -235,8 +235,15 @@ namespace neuroh5
         
       fspace = H5Dget_space(dset);
       assert(fspace >= 0);
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &one, &block) >= 0);
+      if (block > 0)
+	{
+	  assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+				     &one, &block) >= 0);
+	}
+      else
+	{
+          assert(H5Sselect_none(fspace) >= 0);
+	}
       assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
                       &dst_blk_idx[0]) >= 0);
       assert(H5Dclose(dset) >= 0);
