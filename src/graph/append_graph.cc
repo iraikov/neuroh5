@@ -175,11 +175,6 @@ namespace neuroh5
                   num_edges++;
                 }
             
-              mpi::MPE_Seq_begin( all_comm, 1 );
-              DEBUG("Task ",rank,": ","append_graph: before sort_permutation: adj_vector.size = ",
-                    adj_vector.size());
-              mpi::MPE_Seq_end( all_comm, 1 );
-
               vector<size_t> p = sort_permutation(adj_vector, compare_nodes);
               
               apply_permutation_in_place(adj_vector, p);
@@ -243,7 +238,8 @@ namespace neuroh5
 
 
       mpi::MPE_Seq_begin( all_comm, 1 );
-      DEBUG("Task ",rank,": ","append_graph: rank_edge_map constructed");
+      DEBUG("Task ",rank,": ","append_graph: rank_edge_map constructed (size ",
+            rank_edge_map.size(),")");
       mpi::MPE_Seq_end( all_comm, 1 );
 
       // send buffer and structures for MPI Alltoall operation
@@ -252,6 +248,10 @@ namespace neuroh5
 
       // Create serialized object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
+
+      mpi::MPE_Seq_begin( all_comm, 1 );
+      DEBUG("Task ",rank,": ","append_graph: before serialize_rank_edge_map");
+      mpi::MPE_Seq_end( all_comm, 1 );
 
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
