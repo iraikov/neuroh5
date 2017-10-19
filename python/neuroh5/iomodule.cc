@@ -2604,7 +2604,7 @@ extern "C"
                                    "namespace",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO|s", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss|Os", (char **)kwlist,
                                      &py_comm, &file_name,
                                      &pop_name, &py_selection,
                                      &attr_namespace))
@@ -2634,6 +2634,14 @@ extern "C"
         throw_err("Population not found");
       }
 
+    size_t n_nodes;
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    assert(cell::read_population_ranges(*comm_ptr,
+                                        string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
+
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
       {
@@ -2644,15 +2652,16 @@ extern "C"
             selection.push_back(n);
           }
       }
-
-    size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(*comm_ptr,
-                                        string(file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
-
+    else
+      {
+        size_t population_n = pop_vector[pop_idx].count;
+        size_t population_start = pop_vector[pop_idx].start;
+        for (size_t i = 0; (Py_ssize_t)i < population_n; i++)
+          {
+            selection.push_back(i + population_start);
+          }
+        
+      }
 
     NamedAttrMap attr_values;
     cell::read_cell_attribute_selection (string(file_name), string(attr_namespace),
