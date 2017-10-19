@@ -98,7 +98,7 @@ namespace neuroh5
               vector<NODE_IDX_T> &v = get<0>(et);
               
               // creates new block if non-contiguous dst indices
-              if (((dst-1) > last_idx) || (num_block_edges > block_size))
+              if (((dst > 0) && ((dst-1) > last_idx)) || (num_block_edges > block_size))
                 {
                   dst_blk_idx.push_back(dst - dst_start);
                   dst_blk_ptr.push_back(dst_ptr.size());
