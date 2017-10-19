@@ -3921,8 +3921,6 @@ extern "C"
         }
       case seq_last:
         {
-          int status = MPI_Barrier(py_ntrg->state->comm);
-          assert(status == MPI_SUCCESS);
           py_ntrg->state->pos = seq_done;
           result = NULL;
           break;
@@ -4028,8 +4026,6 @@ extern "C"
         }
       case seq_last:
         {
-          int status = MPI_Barrier(py_ntrg->state->comm);
-          assert(status == MPI_SUCCESS);
           py_ntrg->state->pos = seq_done;
           result = NULL;
           break;
