@@ -2353,7 +2353,10 @@ extern "C"
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
             char *str = PyBytes_AsString (pyval);
-            attr_name_spaces.push_back(string(str));
+            if (str != NULL)
+              {
+                attr_name_spaces.push_back(string(str));
+              }
           }
       }
 
