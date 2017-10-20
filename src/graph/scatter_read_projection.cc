@@ -154,9 +154,8 @@ namespace neuroh5
                                                          edge_attr_map[attr_namespace]) >= 0);
                   
                   edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
-                  edge_attr_names_vector.push_back(edge_attr_names);
                 }
-
+              edge_attr_names_vector.push_back(edge_attr_names);
               DEBUG("Task ",rank," scatter: creating rank edge map for ", src_pop_name, " -> ", dst_pop_name);
 
               // append to the edge map

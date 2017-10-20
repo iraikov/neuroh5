@@ -1497,8 +1497,6 @@ extern "C"
           {
             PyObject *py_prj_ns_attr_info  = PyDict_New();
             int attr_index=0;
-            printf("attr_namespace is %s\n", attr_namespace.c_str());
-            printf("edge_attr_name_vector[%u] is of size %u\n", p, edge_attr_name_vector[p].size());
             const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
             for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
               {
@@ -1516,6 +1514,8 @@ extern "C"
               }
             PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
             PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
+            Py_DECREF(py_ns_key);
+            Py_DECREF(py_prj_ns_attr_info);
           }
         PyObject *py_prj_key = PyTuple_New(2);
         PyTuple_SetItem(py_prj_key, 0, PyBytes_FromString(prj_names[p].first.c_str()));
