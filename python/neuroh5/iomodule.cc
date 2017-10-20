@@ -1497,6 +1497,8 @@ extern "C"
           {
             PyObject *py_prj_ns_attr_info  = PyDict_New();
             int attr_index=0;
+            printf("attr_namespace is %s\n", attr_namespace.c_str());
+            printf("edge_attr_name_vector[%u] is of size %u\n", p, edge_attr_name_vector[p].size());
             const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
             for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
               {
