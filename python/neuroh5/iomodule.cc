@@ -1518,16 +1518,16 @@ extern "C"
             Py_DECREF(py_prj_ns_attr_info);
           }
 
-        PyObject *py_prj_attr_info_dict = PyDict_GetItemString(py_attribute_info, prj_names[p].first.c_str());
+        PyObject *py_prj_attr_info_dict = PyDict_GetItemString(py_attribute_info, prj_names[p].second.c_str());
         if (py_prj_attr_info_dict == NULL)
           {
             py_prj_attr_info_dict = PyDict_New();
-            PyDict_SetItemString(py_attribute_info, prj_names[p].first.c_str(),
+            PyDict_SetItemString(py_attribute_info, prj_names[p].second.c_str(),
                                  py_prj_attr_info_dict);
             Py_DECREF(py_prj_attr_info_dict);
           }
         PyDict_SetItemString(py_prj_attr_info_dict,
-                             prj_names[p].second.c_str(),
+                             prj_names[p].first.c_str(),
                              py_prj_attr_info);
         Py_DECREF(py_prj_attr_info);
       }

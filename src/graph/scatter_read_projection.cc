@@ -155,7 +155,8 @@ namespace neuroh5
                   
                   edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
                 }
-              edge_attr_names_vector.push_back(edge_attr_names);
+
+              
               DEBUG("Task ",rank," scatter: creating rank edge map for ", src_pop_name, " -> ", dst_pop_name);
 
               // append to the edge map
@@ -191,7 +192,30 @@ namespace neuroh5
             data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                              prj_edge_map, local_num_nodes, local_num_edges);
           }
+
+        if (!attr_namespaces.empty())
+          {
+            vector<char> sendbuf; uint32_t sendbuf_size=0;
+            if (rank == 0)
+              {
+                data::serialize_data(edge_attr_names, sendbuf);
+                sendbuf_size = sendbuf.size();
+              }
+            
+            assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+            sendbuf.resize(sendbuf_size);
+            assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
+            
+            if (rank != 0)
+              {
+                data::deserialize_data(sendbuf, edge_attr_names);
+              }
+            edge_attr_names_vector.push_back(edge_attr_names);
+            
+            DEBUG("scatter: finished broadcasting attribute names for projection ", src_pop_name, " -> ", dst_pop_name);
+          }
       }
+
       
       DEBUG("scatter: rank ", rank, " unpacked ", local_num_edges, " edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
