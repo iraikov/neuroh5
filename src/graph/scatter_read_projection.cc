@@ -143,7 +143,7 @@ namespace neuroh5
           
               edge_count = src_idx.size();
               DEBUG("Task ",rank," scatter: reading attributes for ", src_pop_name, " -> ", dst_pop_name);
-              for (string attr_namespace : attr_namespaces) 
+              for (const string& attr_namespace : attr_namespaces) 
                 {
                   vector< pair<string,hid_t> > edge_attr_info;
                   assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name,
@@ -161,7 +161,7 @@ namespace neuroh5
 
               // append to the edge map
               assert(data::append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
+                                                attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
                                                 edge_map_type) >= 0);
               
               DEBUG("scatter: read ", num_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
