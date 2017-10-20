@@ -84,29 +84,25 @@ namespace neuroh5
                                 edge_attr_vec.resize(edge_attr_map.size());
                                 {
                                   size_t ni=0;
-                                  for (const string& attr_namespace : attr_namespaces) 
+                                  for (auto const & iter : edge_attr_map) 
                                     {
-                                      map<string, NamedAttrVal>::const_iterator edge_attr_iter = edge_attr_map.find(attr_namespace);
-                                      if (edge_attr_iter != edge_attr_map.cend())
-                                        {
-                                          const NamedAttrVal& edge_attr_values = edge_attr_iter->second;
-                                          
-                                          edge_attr_vec[ni].resize<float>
-                                            (edge_attr_values.size_attr_vec<float>());
-                                          edge_attr_vec[ni].resize<uint8_t>
-                                            (edge_attr_values.size_attr_vec<uint8_t>());
-                                          edge_attr_vec[ni].resize<uint16_t>
-                                            (edge_attr_values.size_attr_vec<uint16_t>());
-                                          edge_attr_vec[ni].resize<uint32_t>
-                                            (edge_attr_values.size_attr_vec<uint32_t>());
-                                          edge_attr_vec[ni].resize<int8_t>
-                                            (edge_attr_values.size_attr_vec<int8_t>());
-                                          edge_attr_vec[ni].resize<int16_t>
-                                            (edge_attr_values.size_attr_vec<int16_t>());
-                                          edge_attr_vec[ni].resize<int32_t>
-                                            (edge_attr_values.size_attr_vec<int32_t>());
-                                          ni++;
-                                        }
+                                      const NamedAttrVal& edge_attr_values = iter.second;
+                                      
+                                      edge_attr_vec[ni].resize<float>
+                                        (edge_attr_values.size_attr_vec<float>());
+                                      edge_attr_vec[ni].resize<uint8_t>
+                                        (edge_attr_values.size_attr_vec<uint8_t>());
+                                      edge_attr_vec[ni].resize<uint16_t>
+                                        (edge_attr_values.size_attr_vec<uint16_t>());
+                                      edge_attr_vec[ni].resize<uint32_t>
+                                        (edge_attr_values.size_attr_vec<uint32_t>());
+                                      edge_attr_vec[ni].resize<int8_t>
+                                        (edge_attr_values.size_attr_vec<int8_t>());
+                                      edge_attr_vec[ni].resize<int16_t>
+                                        (edge_attr_values.size_attr_vec<int16_t>());
+                                      edge_attr_vec[ni].resize<int32_t>
+                                        (edge_attr_values.size_attr_vec<int32_t>());
+                                      ni++;
                                     }
                                 }
                                 
@@ -142,29 +138,25 @@ namespace neuroh5
                                     edge_attr_vec.resize(edge_attr_map.size());
                                     {
                                       size_t ni=0;
-                                      for (const string& attr_namespace : attr_namespaces) 
+                                      for (auto const & iter : edge_attr_map) 
                                         {
-                                          map<string, NamedAttrVal>::const_iterator edge_attr_iter = edge_attr_map.find(attr_namespace);
-                                          if (edge_attr_iter != edge_attr_map.cend())
-                                            {
-                                              const NamedAttrVal& edge_attr_values = edge_attr_iter->second;
-
-                                              edge_attr_vec[ni].resize<float>
-                                                (edge_attr_values.size_attr_vec<float>());
-                                              edge_attr_vec[ni].resize<uint8_t>
-                                                (edge_attr_values.size_attr_vec<uint8_t>());
-                                              edge_attr_vec[ni].resize<uint16_t>
-                                                (edge_attr_values.size_attr_vec<uint16_t>());
-                                              edge_attr_vec[ni].resize<uint32_t>
-                                                (edge_attr_values.size_attr_vec<uint32_t>());
-                                              edge_attr_vec[ni].resize<int8_t>
-                                                (edge_attr_values.size_attr_vec<int8_t>());
-                                              edge_attr_vec[ni].resize<int16_t>
-                                                (edge_attr_values.size_attr_vec<int16_t>());
-                                              edge_attr_vec[ni].resize<int32_t>
-                                                (edge_attr_values.size_attr_vec<int32_t>());
-                                              ni++;
-                                            }
+                                          const NamedAttrVal& edge_attr_values = iter.second;
+                                          
+                                          edge_attr_vec[ni].resize<float>
+                                            (edge_attr_values.size_attr_vec<float>());
+                                          edge_attr_vec[ni].resize<uint8_t>
+                                            (edge_attr_values.size_attr_vec<uint8_t>());
+                                          edge_attr_vec[ni].resize<uint16_t>
+                                            (edge_attr_values.size_attr_vec<uint16_t>());
+                                          edge_attr_vec[ni].resize<uint32_t>
+                                            (edge_attr_values.size_attr_vec<uint32_t>());
+                                          edge_attr_vec[ni].resize<int8_t>
+                                            (edge_attr_values.size_attr_vec<int8_t>());
+                                          edge_attr_vec[ni].resize<int16_t>
+                                            (edge_attr_values.size_attr_vec<int16_t>());
+                                          edge_attr_vec[ni].resize<int32_t>
+                                            (edge_attr_values.size_attr_vec<int32_t>());
+                                          ni++;
                                         }
                                     }
                                     my_dsts.push_back(dst);

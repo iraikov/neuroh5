@@ -1462,6 +1462,7 @@ extern "C"
             char *str = PyBytes_AsString (pyval);
             edge_attr_name_spaces.push_back(string(str));
           }
+        sort(edge_attr_name_spaces.begin(), edge_attr_name_spaces.end());
       }
     
     assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
