@@ -294,7 +294,6 @@ namespace neuroh5
           assert(H5Pclose(fapl) >= 0);
         }
 
-      MPI_Barrier(io_comm);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       mpi::MPI_DEBUG(all_comm, "append_graph: completed");

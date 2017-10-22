@@ -33,6 +33,7 @@
 #include <hdf5.h>
 #include <mpi.h>
 #include <algorithm>
+#include <iterator>
 
 #undef NDEBUG
 #include <cassert>
@@ -96,9 +97,6 @@ void build_node_rank_map (PyObject *py_node_rank_map,
       node_rank_map.insert(make_pair(idx,rank));
     }
 }
-
-
-
 
 template<class T>
 void py_array_to_vector (PyObject *pyval,
@@ -516,9 +514,8 @@ void build_edge_maps (PyObject *py_edge_dict,
 }
 
 
-
 PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
-                              map <string, NamedAttrMap>& attr_maps)
+                              const map <string, NamedAttrMap>& attr_maps)
 {
   const CELL_IDX_T idx = get<0>(tree);
   assert(idx == key);
@@ -780,6 +777,150 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   return py_treeval;
 }
 
+/* NeuroH5TreeIterState - in-memory tree iterator instance.
+ *
+ * seq_index: index of the next id in the sequence to yield
+ *
+ */
+typedef struct {
+  Py_ssize_t seq_index, count;
+  
+  vector <neurotree_t> tree_vector;
+  vector<string> attr_name_spaces;
+  map <string, NamedAttrMap> attr_maps;
+  vector<neurotree_t>::const_iterator it_tree;
+  
+} NeuroH5TreeIterState;
+
+typedef struct {
+  PyObject_HEAD
+  NeuroH5TreeIterState *state;
+} PyNeuroH5TreeIterState;
+
+
+PyObject* NeuroH5TreeIter_iter(PyObject *self)
+{
+  Py_INCREF(self);
+  return self;
+}
+
+static void NeuroH5TreeIter_dealloc(PyNeuroH5TreeIterState *py_state)
+{
+  delete py_state->state;
+  Py_TYPE(py_state)->tp_free(py_state);
+}
+
+
+PyObject* NeuroH5TreeIter_iternext(PyObject *self)
+{
+  PyNeuroH5TreeIterState *py_state = (PyNeuroH5TreeIterState *)self;
+  if (py_state->state->it_tree != py_state->state->tree_vector.cend())
+    {
+      const neurotree_t &tree = *(py_state->state->it_tree);
+      const CELL_IDX_T key = get<0>(tree);
+      const map <string, NamedAttrMap>& attr_maps = py_state->state->attr_maps;
+
+      PyObject *treeval = py_build_tree_value(key, tree, attr_maps);
+      assert(treeval != NULL);
+      py_state->state->it_tree++;
+      py_state->state->seq_index++;
+      
+      return treeval;
+    }
+  else
+    {
+      /* Raising of standard StopIteration exception with empty value. */
+      PyErr_SetNone(PyExc_StopIteration);
+      return NULL;
+    }
+}
+
+
+static PyTypeObject PyNeuroH5TreeIter_Type = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "NeuroH5TreeIter",         /*tp_name*/
+    sizeof(PyNeuroH5TreeIterState), /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)NeuroH5TreeIter_dealloc, /* tp_dealloc */
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+      /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+         use tp_iter and tp_iternext fields. */
+    "In-memory tree iterator instance.",           /* tp_doc */
+    0,  /* tp_traverse */
+    0,  /* tp_clear */
+    0,  /* tp_richcompare */
+    0,  /* tp_weaklistoffset */
+    NeuroH5TreeIter_iter,  /* tp_iter: __iter__() method */
+    NeuroH5TreeIter_iternext  /* tp_iternext: next() method */
+};
+
+
+
+static PyObject *
+NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
+                           const vector<string>& attr_name_spaces,
+                           const map <string, NamedAttrMap>& attr_maps)
+{
+
+  PyNeuroH5TreeIterState *p = PyObject_New(PyNeuroH5TreeIterState, &PyNeuroH5TreeIter_Type);
+  if (!p) return NULL;
+
+  if (!PyObject_Init((PyObject *)p, &PyNeuroH5TreeIter_Type))
+    {
+      Py_DECREF(p);
+      return NULL;
+    }
+
+  p->state = new NeuroH5TreeIterState();
+
+  p->state->seq_index     = 0;
+  p->state->count         = tree_vector.size();
+  p->state->tree_vector   = tree_vector;
+  p->state->attr_name_spaces = attr_name_spaces;
+  p->state->attr_maps  = attr_maps;
+  p->state->it_tree    = p->state->tree_vector.cbegin();
+
+  
+  return (PyObject *)p;
+}
+
+
+
+static PyObject *
+NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
+                        const vector<string>& attr_name_spaces,
+                        const map <string, NamedAttrMap>& attr_maps)
+
+{
+  vector <neurotree_t> tree_vector;
+  
+  std::transform (tree_map.begin(), tree_map.end(),
+                  std::back_inserter(tree_vector),
+                  [] (const map<CELL_IDX_T, neurotree_t>::value_type& kv)
+                  { return kv.second; });
+
+  
+  return (PyObject *)NeuroH5TreeIter_FromVector(tree_vector,
+                                                attr_name_spaces,
+                                                attr_maps);
+}
+
+
 
 template<class T>
 PyObject *py_build_cell_attr_value (const CELL_IDX_T idx,
@@ -814,12 +955,11 @@ PyObject *py_build_cell_attr_value (const CELL_IDX_T idx,
   return attr_dict;
 }
 
+
 PyObject* py_build_cell_attr_values(const CELL_IDX_T key, 
                                     const NamedAttrMap& attr_map,
-                                    const string& attr_namespace,
                                     const vector <vector<string> >& attr_names)
 {
-  PyObject *py_result = PyDict_New();
   PyObject *py_attrval = PyDict_New();
   npy_intp dims[1];
   npy_intp ind = 0;
@@ -938,14 +1078,135 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
 
     }
 
-  PyDict_SetItemString(py_result,
-                       attr_namespace.c_str(),
-                       py_attrval);
-  Py_DECREF(py_attrval);
 
-
-  return py_result;
+  return py_attrval;
 }
+
+
+/* NeuroH5CellAttrIterState - in-memory cell attribute iterator instance.
+ *
+ * seq_index: index of the next id in the sequence to yield
+ *
+ */
+typedef struct {
+  Py_ssize_t seq_index, count;
+  
+  string attr_namespace;
+  vector< vector <string> > attr_names;
+  NamedAttrMap attr_map;
+  set<CELL_IDX_T>::const_iterator it_idx;
+  
+} NeuroH5CellAttrIterState;
+
+typedef struct {
+  PyObject_HEAD
+  NeuroH5CellAttrIterState *state;
+} PyNeuroH5CellAttrIterState;
+
+
+PyObject* NeuroH5CellAttrIter_iter(PyObject *self)
+{
+  Py_INCREF(self);
+  return self;
+}
+
+static void NeuroH5CellAttrIter_dealloc(PyNeuroH5CellAttrIterState *py_state)
+{
+  delete py_state->state;
+  Py_TYPE(py_state)->tp_free(py_state);
+}
+
+
+PyObject* NeuroH5CellAttrIter_iternext(PyObject *self)
+{
+  PyNeuroH5CellAttrIterState *py_state = (PyNeuroH5CellAttrIterState *)self;
+  if (py_state->state->it_idx != py_state->state->attr_map.index_set.cend())
+    {
+      const CELL_IDX_T key = *(py_state->state->it_idx);
+
+      PyObject *attrval = py_build_cell_attr_values(key, py_state->state->attr_map,
+                                                    py_state->state->attr_names);
+      assert(attrval != NULL);
+
+      PyObject *result = Py_BuildValue("lN", key, attrval);
+
+      py_state->state->it_idx++;
+      py_state->state->seq_index++;
+      
+      return result;
+    }
+  else
+    {
+      /* Raising of standard StopIteration exception with empty value. */
+      PyErr_SetNone(PyExc_StopIteration);
+      return NULL;
+    }
+}
+
+
+static PyTypeObject PyNeuroH5CellAttrIter_Type = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "NeuroH5CellAttrIter",         /*tp_name*/
+    sizeof(PyNeuroH5CellAttrIterState), /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)NeuroH5CellAttrIter_dealloc, /* tp_dealloc */
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+      /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+         use tp_iter and tp_iternext fields. */
+    "In-memory cell attribute iterator instance.",           /* tp_doc */
+    0,  /* tp_traverse */
+    0,  /* tp_clear */
+    0,  /* tp_richcompare */
+    0,  /* tp_weaklistoffset */
+    NeuroH5CellAttrIter_iter,  /* tp_iter: __iter__() method */
+    NeuroH5CellAttrIter_iternext  /* tp_iternext: next() method */
+};
+
+
+
+static PyObject *
+NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
+                            const vector< vector <string> >& attr_names,
+                            const NamedAttrMap& attr_map)
+
+{
+
+  PyNeuroH5CellAttrIterState *p = PyObject_New(PyNeuroH5CellAttrIterState, &PyNeuroH5CellAttrIter_Type);
+  if (!p) return NULL;
+
+  if (!PyObject_Init((PyObject *)p, &PyNeuroH5CellAttrIter_Type))
+    {
+      Py_DECREF(p);
+      return NULL;
+    }
+
+  p->state = new NeuroH5CellAttrIterState();
+
+  p->state->seq_index     = 0;
+  p->state->count         = attr_map.index_set.size();
+  p->state->attr_map      = attr_map;
+  p->state->attr_namespace = attr_namespace;
+  p->state->attr_names    = attr_names;
+  p->state->it_idx        = p->state->attr_map.index_set.cbegin();
+  
+  return (PyObject *)p;
+}
+
 
 
 template <class T>
@@ -1991,7 +2252,6 @@ extern "C"
   static PyObject *py_read_trees (PyObject *self, PyObject *args)
   {
     int status; size_t start=0, end=0;
-    PyObject *py_cell_dict = PyDict_New();
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
@@ -2046,11 +2306,11 @@ extern "C"
                                         n_nodes) >= 0);
 
 
-    vector<neurotree_t> tree_list;
+    vector<neurotree_t> tree_vector;
 
     status = cell::read_trees (*comm_ptr, string(file_name),
                                string(pop_name), pop_vector[pop_idx].start,
-                               tree_list, start, end);
+                               tree_vector, start, end);
     assert (status >= 0);
     map <string, NamedAttrMap> attr_maps;
     
@@ -2063,20 +2323,12 @@ extern "C"
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
 
-    for (size_t i = 0; i < tree_list.size(); i++)
-      {
-        const CELL_IDX_T idx = get<0>(tree_list[i]);
-        const neurotree_t &tree = tree_list[i];
-          
-        PyObject *py_treeval = py_build_tree_value(idx, tree, attr_maps);
-
-        PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);
-        Py_DECREF(py_treeval);
-
-      }
+    PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
+                                                        attr_name_spaces,
+                                                        attr_maps);
 
     PyObject *py_result_tuple = PyTuple_New(2);
-    PyTuple_SetItem(py_result_tuple, 0, py_cell_dict);
+    PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
     PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
 
     return py_result_tuple;
@@ -2087,7 +2339,6 @@ extern "C"
   static PyObject *py_scatter_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status;
-    PyObject *py_cell_dict = PyDict_New();
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size = 0;
@@ -2126,7 +2377,6 @@ extern "C"
     vector <string> attr_name_spaces;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    vector< vector <string> > attr_names;
     size_t n_nodes;
     
     // Read population info
@@ -2188,19 +2438,12 @@ extern "C"
                                        tree_map, attr_maps);
     assert (status >= 0);
 
-    for (auto const& element : tree_map)
-      {
-        const CELL_IDX_T key = element.first;
-        const neurotree_t &tree = element.second;
-
-        PyObject *py_treeval = py_build_tree_value(key, tree, attr_maps);
-        PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(key), py_treeval);
-        Py_DECREF(py_treeval);
-
-      }
+    PyObject* py_tree_iter = NeuroH5TreeIter_FromMap(tree_map,
+                                                     attr_name_spaces,
+                                                     attr_maps);
 
     PyObject *py_result_tuple = PyTuple_New(2);
-    PyTuple_SetItem(py_result_tuple, 0, py_cell_dict);
+    PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
     PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
 
     return py_result_tuple;
@@ -2209,7 +2452,6 @@ extern "C"
   static PyObject *py_read_tree_selection (PyObject *self, PyObject *args)
   {
     int status; 
-    PyObject *py_cell_dict = PyDict_New();
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
@@ -2278,11 +2520,11 @@ extern "C"
                                         n_nodes) >= 0);
 
 
-    vector<neurotree_t> tree_list;
+    vector<neurotree_t> tree_vector;
 
     status = cell::read_tree_selection (string(file_name),
                                         string(pop_name), pop_vector[pop_idx].start,
-                                        tree_list, selection);
+                                        tree_vector, selection);
     assert (status >= 0);
     map <string, NamedAttrMap> attr_maps;
     
@@ -2296,20 +2538,12 @@ extern "C"
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
 
-    for (size_t i = 0; i < tree_list.size(); i++)
-      {
-        const CELL_IDX_T idx = get<0>(tree_list[i]);
-        const neurotree_t &tree = tree_list[i];
-
-        PyObject *py_treeval = py_build_tree_value(idx, tree, attr_maps);
-
-        PyDict_SetItem(py_cell_dict, PyLong_FromUnsignedLong(idx), py_treeval);
-        Py_DECREF(py_treeval);
-
-      }
+    PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
+                                                        attr_name_spaces,
+                                                        attr_maps);
 
     PyObject *py_result_tuple = PyTuple_New(2);
-    PyTuple_SetItem(py_result_tuple, 0, py_cell_dict);
+    PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
     PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
 
     return py_result_tuple;
@@ -2430,56 +2664,12 @@ extern "C"
         vector<vector<string>> attr_names;
         attr_map.attr_names(attr_names);
 
-        PyObject *py_idx_dict = PyDict_New();
+        PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_name_space,
+                                                            attr_names,
+                                                            attr_map);
         
-        for (auto it = attr_map.index_set.begin(); it != attr_map.index_set.end(); ++it)
-          {
-            CELL_IDX_T idx = *it;
-            
-            PyObject *py_attr_dict = PyDict_New();
-            
-            py_build_cell_attr_value<float> (idx,
-                                             attr_names[AttrMap::attr_index_float],
-                                             attr_map.attr_maps<float>(),
-                                             NPY_FLOAT,
-                                             py_attr_dict);
-            py_build_cell_attr_value<uint8_t> (idx,
-                                               attr_names[AttrMap::attr_index_uint8],
-                                               attr_map.attr_maps<uint8_t>(),
-                                               NPY_UINT8,
-                                               py_attr_dict);
-            py_build_cell_attr_value<int8_t> (idx,
-                                              attr_names[AttrMap::attr_index_int8],
-                                              attr_map.attr_maps<int8_t>(),
-                                              NPY_INT8,
-                                              py_attr_dict);
-            py_build_cell_attr_value<uint16_t> (idx,
-                                                attr_names[AttrMap::attr_index_uint16],
-                                                attr_map.attr_maps<uint16_t>(),
-                                                NPY_UINT16,
-                                                py_attr_dict);
-            py_build_cell_attr_value<int16_t> (idx,
-                                               attr_names[AttrMap::attr_index_int16],
-                                               attr_map.attr_maps<int16_t>(),
-                                               NPY_INT16,
-                                               py_attr_dict);
-            py_build_cell_attr_value<uint32_t> (idx,
-                                                attr_names[AttrMap::attr_index_uint32],
-                                                attr_map.attr_maps<uint32_t>(),
-                                                NPY_UINT32,
-                                                py_attr_dict);
-            py_build_cell_attr_value<int32_t> (idx,
-                                               attr_names[AttrMap::attr_index_int32],
-                                               attr_map.attr_maps<int32_t>(),
-                                               NPY_INT32,
-                                               py_attr_dict);
-            
-            PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
-            Py_DECREF(py_attr_dict);
-          }
-
-        PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_idx_dict);
-        Py_DECREF(py_idx_dict);
+        PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_idx_iter);
+        Py_DECREF(py_idx_iter);
       }
     
     return py_namespace_dict;
@@ -2546,57 +2736,12 @@ extern "C"
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
-    
-    PyObject *py_idx_dict = PyDict_New();
-    for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
-      {
-        CELL_IDX_T idx = *it;
-
-        PyObject *py_attr_dict = PyDict_New();
-
-        py_build_cell_attr_value<float> (idx,
-                                         attr_names[AttrMap::attr_index_float],
-                                          attr_values.attr_maps<float>(),
-                                          NPY_FLOAT,
-                                          py_attr_dict);
-        py_build_cell_attr_value<uint8_t> (idx,
-                                           attr_names[AttrMap::attr_index_uint8],
-                                           attr_values.attr_maps<uint8_t>(),
-                                           NPY_UINT8,
-                                           py_attr_dict);
-        py_build_cell_attr_value<int8_t> (idx,
-                                          attr_names[AttrMap::attr_index_int8],
-                                          attr_values.attr_maps<int8_t>(),
-                                          NPY_INT8,
-                                          py_attr_dict);
-        py_build_cell_attr_value<uint16_t> (idx,
-                                            attr_names[AttrMap::attr_index_uint16],
-                                            attr_values.attr_maps<uint16_t>(),
-                                            NPY_UINT16,
-                                            py_attr_dict);
-        py_build_cell_attr_value<int16_t> (idx,
-                                           attr_names[AttrMap::attr_index_int16],
-                                           attr_values.attr_maps<int16_t>(),
-                                           NPY_INT16,
-                                           py_attr_dict);
-        py_build_cell_attr_value<uint32_t> (idx,
-                                            attr_names[AttrMap::attr_index_uint32],
-                                            attr_values.attr_maps<uint32_t>(),
-                                            NPY_UINT32,
-                                            py_attr_dict);
-        py_build_cell_attr_value<int32_t> (idx,
-                                           attr_names[AttrMap::attr_index_int32],
-                                           attr_values.attr_maps<int32_t>(),
-                                           NPY_INT32,
-                                           py_attr_dict);
+    PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                        attr_names,
+                                                        attr_values);
         
-        PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
-        Py_DECREF(py_attr_dict);
-
-
-      }
     
-    return py_idx_dict;
+    return py_idx_iter;
   }
 
   
@@ -2683,57 +2828,12 @@ extern "C"
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
+    PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                        attr_names,
+                                                        attr_values);
+        
     
-    PyObject *py_idx_dict = PyDict_New();
-    for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
-      {
-        CELL_IDX_T idx = *it;
-
-        PyObject *py_attr_dict = PyDict_New();
-
-        py_build_cell_attr_value<float> (idx,
-                                         attr_names[AttrMap::attr_index_float],
-                                         attr_values.attr_maps<float>(),
-                                         NPY_FLOAT,
-                                         py_attr_dict);
-        py_build_cell_attr_value<uint8_t> (idx,
-                                            attr_names[AttrMap::attr_index_uint8],
-                                            attr_values.attr_maps<uint8_t>(),
-                                            NPY_UINT8,
-                                            py_attr_dict);
-        py_build_cell_attr_value<int8_t> (idx,
-                                          attr_names[AttrMap::attr_index_int8],
-                                          attr_values.attr_maps<int8_t>(),
-                                          NPY_INT8,
-                                          py_attr_dict);
-        py_build_cell_attr_value<uint16_t> (idx,
-                                            attr_names[AttrMap::attr_index_uint16],
-                                            attr_values.attr_maps<uint16_t>(),
-                                            NPY_UINT16,
-                                            py_attr_dict);
-        py_build_cell_attr_value<int16_t> (idx,
-                                           attr_names[AttrMap::attr_index_int16],
-                                           attr_values.attr_maps<int16_t>(),
-                                           NPY_INT16,
-                                           py_attr_dict);
-        py_build_cell_attr_value<uint32_t> (idx,
-                                            attr_names[AttrMap::attr_index_uint32],
-                                            attr_values.attr_maps<uint32_t>(),
-                                            NPY_UINT32,
-                                            py_attr_dict);
-        py_build_cell_attr_value<int32_t> (idx,
-                                           attr_names[AttrMap::attr_index_int32],
-                                           attr_values.attr_maps<int32_t>(),
-                                           NPY_INT32,
-                                           py_attr_dict);
-
-        PyDict_SetItem(py_idx_dict, PyLong_FromUnsignedLong(idx), py_attr_dict);
-        Py_DECREF(py_attr_dict);
-
-
-      }
-    
-    return py_idx_dict;
+    return py_idx_iter;
   }
 
   
@@ -2799,70 +2899,19 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
-    MPI_Barrier(*comm_ptr);
     cell::bcast_cell_attributes (*comm_ptr, (int)root,
                                  string(file_name), string(attr_namespace),
                                  string(pop_name), pop_vector[pop_idx].start,
                                  attr_values);
-    MPI_Barrier(*comm_ptr);
 
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
-    
-    PyObject *py_idx_dict = PyDict_New();
-    for (auto it = attr_values.index_set.begin(); it != attr_values.index_set.end(); ++it)
-      {
-        CELL_IDX_T idx = *it;
-
-        PyObject *py_attr_dict = PyDict_New();
-
-        py_build_cell_attr_value<float> (idx,
-                                         attr_names[AttrMap::attr_index_float],
-                                         attr_values.attr_maps<float>(),
-                                         NPY_FLOAT,
-                                         py_attr_dict);
-        py_build_cell_attr_value<uint8_t> (idx,
-                                           attr_names[AttrMap::attr_index_uint8],
-                                           attr_values.attr_maps<uint8_t>(),
-                                           NPY_UINT8,
-                                           py_attr_dict);
-        py_build_cell_attr_value<int8_t> (idx,
-                                          attr_names[AttrMap::attr_index_int8],
-                                          attr_values.attr_maps<int8_t>(),
-                                          NPY_INT8,
-                                          py_attr_dict);
-        py_build_cell_attr_value<uint16_t> (idx,
-                                            attr_names[AttrMap::attr_index_uint16],
-                                            attr_values.attr_maps<uint16_t>(),
-                                            NPY_UINT16,
-                                            py_attr_dict);
-        py_build_cell_attr_value<int16_t> (idx,
-                                           attr_names[AttrMap::attr_index_int16],
-                                           attr_values.attr_maps<int16_t>(),
-                                           NPY_INT16,
-                                           py_attr_dict);
-        py_build_cell_attr_value<uint32_t> (idx,
-                                            attr_names[AttrMap::attr_index_uint32],
-                                            attr_values.attr_maps<uint32_t>(),
-                                            NPY_UINT32,
-                                            py_attr_dict);
-        py_build_cell_attr_value<int32_t> (idx,
-                                           attr_names[AttrMap::attr_index_int32],
-                                           attr_values.attr_maps<int32_t>(),
-                                           NPY_INT32,
-                                           py_attr_dict);
-
-        PyObject *key = PyLong_FromUnsignedLong(idx);
-        PyDict_SetItem(py_idx_dict, key, py_attr_dict);
-        Py_DECREF(key);
-        Py_DECREF(py_attr_dict);
-
-      }
-    
-    MPI_Barrier(*comm_ptr);
-
-    return py_idx_dict;
+    PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                        attr_names,
+                                                        attr_values);
+        
+    return py_idx_iter;
   }
 
   
@@ -3286,7 +3335,7 @@ extern "C"
     vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
     vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
 
-    vector<neurotree_t> tree_list;
+    vector<neurotree_t> tree_vector;
     
     build_cell_attr_value_maps(idx_values,
                                attr_names,
@@ -3299,7 +3348,7 @@ extern "C"
                                all_attr_values_int8,
                                all_attr_values_float);
 
-    assert(cell::append_trees (data_comm, file_name, pop_name, tree_list) >= 0);
+    assert(cell::append_trees (data_comm, file_name, pop_name, tree_vector) >= 0);
     assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
     
     assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
@@ -3386,6 +3435,7 @@ extern "C"
     PyObject_HEAD
     NeuroH5TreeGenState *state;
   } PyNeuroH5TreeGenState;
+  
 
   
   /* NeuroH5CellAttrGenState - cell attribute generator instance.
@@ -4009,7 +4059,6 @@ extern "C"
             {
               const CELL_IDX_T key = *(py_ntrg->state->it_idx);
               PyObject *elem = py_build_cell_attr_values(key, py_ntrg->state->attr_map,
-                                                         py_ntrg->state->attr_namespace,
                                                          py_ntrg->state->attr_names);
               assert(elem != NULL);
               py_ntrg->state->it_idx++;
@@ -4234,8 +4283,10 @@ extern "C"
     return result;
   }
 
+
   
-  // NeuroH5 read iterator
+  
+  // NeuroH5 tree read generator
   PyTypeObject PyNeuroH5TreeGen_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "NeuroH5TreeGen",                 /* tp_name */
@@ -4278,7 +4329,7 @@ extern "C"
   };
 
   
-  // NeuroH5 attribute read iterator
+  // NeuroH5 attribute read generator
   PyTypeObject PyNeuroH5CellAttrGen_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "NeuroH5CellAttrGen",                 /* tp_name */
@@ -4477,7 +4528,35 @@ initio(void)
 
   Py_INCREF((PyObject *)&PyNeuroH5ProjectionGen_Type);
   PyModule_AddObject(module, "NeuroH5ProjectionGen", (PyObject *)&PyNeuroH5ProjectionGen_Type);
+
+
+  if (PyType_Ready(&PyNeuroH5TreeIter_Type) < 0)
+    {
+      printf("NeuroH5TreeIter type cannot be added\n");
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else      
+      return;
+#endif
+    }
+
+  Py_INCREF((PyObject *)&PyNeuroH5TreeIter_Type);
+  PyModule_AddObject(module, "NeuroH5TreeIter", (PyObject *)&PyNeuroH5TreeIter_Type);
+
   
+  if (PyType_Ready(&PyNeuroH5CellAttrIter_Type) < 0)
+    {
+      printf("NeuroH5CellAttrIter type cannot be added\n");
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else      
+      return;
+#endif
+    }
+
+  Py_INCREF((PyObject *)&PyNeuroH5CellAttrIter_Type);
+  PyModule_AddObject(module, "NeuroH5CellAttrIter", (PyObject *)&PyNeuroH5CellAttrIter_Type);
+
 #if PY_MAJOR_VERSION >= 3
   return module;
 #else

@@ -139,17 +139,6 @@ namespace neuroh5
 
       // determine last rank that has data
       size_t last_rank = size-1;
-      if (size > 1)
-        {
-          for (size_t p=1; p<size; p++)
-            {
-              if (recvbuf_num_blocks[p] == 0)
-                {
-                  last_rank = p-1;
-                  break;
-                }
-            }
-        }
       
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
       assert(lcpl >= 0);
