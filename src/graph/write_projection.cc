@@ -291,11 +291,6 @@ namespace neuroh5
       assert(H5Sclose(fspace) >= 0);
 
       /*
-	if (rank == 0)
-        {
-        DEBUG("writing dst_blk_ptr\n");
-        }
-
         write(file, path, DST_BLK_PTR_H5_FILE_T, dbp);
       */
         
@@ -358,10 +353,6 @@ namespace neuroh5
       assert(H5Sclose(fspace) >= 0);
 
       /*
-	if (rank == 0)
-        {
-        DEBUG("writing dst_ptr\n");
-        }
         write(file, path, DST_PTR_H5_FILE_T, dst_ptr);
       */
 

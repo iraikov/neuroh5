@@ -15,6 +15,7 @@
 #include "read_projection.hh"
 #include "cell_populations.hh"
 #include "read_graph.hh"
+#include "mpi_debug.hh"
 
 #undef NDEBUG
 #include <cassert>
@@ -81,16 +82,13 @@ namespace neuroh5
             }
           assert(dst_pop_set && src_pop_set);
       
-          DEBUG("reader: after reading destination and source population");
-
           NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
           NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
 
-          DEBUG(" src_pop_name = ", src_pop_name,
-                " dst_pop_name = ", dst_pop_name,
-                " dst_start = ", dst_start,
-                " src_start = ", src_start,
-                "\n");
+          mpi::MPI_DEBUG(comm, "read_graph: src_pop_name = ", src_pop_name,
+                         " dst_pop_name = ", dst_pop_name,
+                         " dst_start = ", dst_start,
+                         " src_start = ", src_start);
 
           assert(graph::read_projection
                  (comm, file_name, pop_ranges, pop_pairs,
@@ -99,8 +97,8 @@ namespace neuroh5
                   prj_vector, edge_attr_names_vector,
                   local_prj_num_edges, total_prj_num_edges) >= 0);
 
-          DEBUG("reader: projection ", i, " has a total of ", total_prj_num_edges, " edges");
-
+          mpi::MPI_DEBUG(comm, "read_graph: projection ", i, " has a total of ", total_prj_num_edges, " edges");
+          
           total_num_edges = total_num_edges + total_prj_num_edges;
           local_num_edges = local_num_edges + local_prj_num_edges;
         }
@@ -177,22 +175,14 @@ namespace neuroh5
             }
           assert(dst_pop_set && src_pop_set);
       
-          DEBUG("reader: after reading destination and source population");
-
           dst_start = pop_vector[dst_pop_idx].start;
           src_start = pop_vector[src_pop_idx].start;
-
-          DEBUG(" dst_start = ", dst_start,
-                " src_start = ", src_start,
-                "\n");
 
           assert(graph::read_projection_serial
                  (file_name, pop_ranges, pop_pairs,
                   src_pop_name, dst_pop_name, dst_start, src_start,
                   edge_attr_name_spaces, prj_vector, edge_attr_names_vector,
                   total_prj_num_edges) >= 0);
-
-          DEBUG("reader: projection ", i, " has a total of ", total_prj_num_edges, " edges");
 
           total_num_edges = total_num_edges + total_prj_num_edges;
         }

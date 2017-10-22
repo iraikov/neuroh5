@@ -14,6 +14,7 @@
 #include "cell_populations.hh"
 #include "scatter_read_projection.hh"
 #include "scatter_read_graph.hh"
+#include "mpi_debug.hh"
 
 #include <cstdio>
 #include <iostream>

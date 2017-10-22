@@ -85,14 +85,10 @@ namespace neuroh5
         {
           io_size = io_size_arg > 0 ? io_size_arg : 1;
         }
-      DEBUG("Task ",rank,": ","write_graph: io_size = ",io_size,"\n");
-      DEBUG("Task ",rank,": ","write_graph: prior to reading population ranges\n");
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
                                           pop_ranges, pop_vector, total_num_nodes) >= 0);
-      DEBUG("Task ",rank,": ","write_graph: prior to reading population labels\n");
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
-      DEBUG("Task ",rank,": ","write_graph: read population labels\n");
       
       for (size_t i=0; i< pop_labels.size(); i++)
         {
@@ -114,10 +110,6 @@ namespace neuroh5
       src_start = pop_vector[src_pop_idx].start;
       src_end   = src_start + pop_vector[src_pop_idx].count;
       
-      DEBUG("Task ",rank,": ","write_graph: dst_start = ", dst_start, " dst_end = ", dst_end, "\n");
-      DEBUG("Task ",rank,": ","write_graph: src_start = ", src_start, " src_end = ", src_end, "\n");
-      DEBUG("Task ",rank,": ","write_graph: total_num_nodes = ", total_num_nodes, "\n");
-
       // Create an I/O communicator
       MPI_Comm  io_comm;
       // MPI group color value used for I/O ranks
@@ -241,7 +233,6 @@ namespace neuroh5
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
-      DEBUG("Task ",rank,": ","write_graph: num_packed_edges = ", num_packed_edges, "\n");
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
@@ -279,8 +270,6 @@ namespace neuroh5
                                            num_unpacked_edges);
         }
       MPI_Barrier(all_comm);
-      DEBUG("Task ",rank,": ","write_graph: num_unpacked_edges = ", num_unpacked_edges, "\n");
-
 
       if ((rank_t)rank < io_size)
         {

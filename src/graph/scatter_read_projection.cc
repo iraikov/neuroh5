@@ -21,6 +21,7 @@
 #include "serialize_edge.hh"
 #include "serialize_data.hh"
 #include "append_rank_edge_map.hh"
+#include "mpi_debug.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -95,7 +96,7 @@ namespace neuroh5
           vector<char> sendbuf; 
           vector<int> sendcounts(size,0), sdispls(size,0);
 
-          DEBUG("projection ", src_pop_name, " -> ", dst_pop_name, "\n");
+          mpi::MPI_DEBUG(all_comm, "scatter_read_projection: ", src_pop_name, " -> ", dst_pop_name, "\n");
 
           if (rank < (int)io_size)
             {
@@ -129,20 +130,20 @@ namespace neuroh5
               dst_start = pop_vector[dst_pop_idx].start;
               src_start = pop_vector[src_pop_idx].start;
 
-              DEBUG("Task ",rank," scatter: reading projection ", src_pop_name, " -> ", dst_pop_name);
+              mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading projection ", src_pop_name, " -> ", dst_pop_name);
               assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
                                                     dst_start, src_start, block_base, edge_base,
                                                     dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                     total_num_edges, offset, numitems) >= 0);
           
-              DEBUG("Task ",rank," scatter: validating projection ", src_pop_name, " -> ", dst_pop_name);
+              mpi::MPI_DEBUG(io_comm, "scatter_read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges
               assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                         pop_ranges, pop_pairs) == true);
           
           
               edge_count = src_idx.size();
-              DEBUG("Task ",rank," scatter: reading attributes for ", src_pop_name, " -> ", dst_pop_name);
+              mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading attributes for ", src_pop_name, " -> ", dst_pop_name);
               for (const string& attr_namespace : attr_namespaces) 
                 {
                   vector< pair<string,hid_t> > edge_attr_info;
@@ -157,27 +158,26 @@ namespace neuroh5
                 }
 
               
-              DEBUG("Task ",rank," scatter: creating rank edge map for ", src_pop_name, " -> ", dst_pop_name);
-
               // append to the edge map
               assert(data::append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                 attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
                                                 edge_map_type) >= 0);
               
-              DEBUG("scatter: read ", num_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
+              mpi::MPI_DEBUG(io_comm, "scatter_read_projection: read ", num_edges,
+                        " edges from projection ", src_pop_name, " -> ", dst_pop_name);
           
               // ensure that all edges in the projection have been read and appended to edge_list
               assert(num_edges == src_idx.size());
           
               size_t num_packed_edges = 0;
-              DEBUG("scatter: packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
           
               data::serialize_rank_edge_map (size, rank, prj_rank_edge_map, 
                                              num_packed_edges, sendcounts, sendbuf, sdispls);
 
               // ensure the correct number of edges is being packed
               assert(num_packed_edges == num_edges);
-              DEBUG("scatter: packed ", num_packed_edges, " edges from projection ", src_pop_name, " -> ", dst_pop_name);
+              mpi::MPI_DEBUG(io_comm, "scatter_read_projection: packed ", num_packed_edges,
+                        " edges from projection ", src_pop_name, " -> ", dst_pop_name);
 
             } // rank < io_size
 
@@ -212,12 +212,12 @@ namespace neuroh5
               }
             edge_attr_names_vector.push_back(edge_attr_names);
             
-            DEBUG("scatter: finished broadcasting attribute names for projection ", src_pop_name, " -> ", dst_pop_name);
           }
       }
 
       
-      DEBUG("scatter: rank ", rank, " unpacked ", local_num_edges, " edges for projection ", src_pop_name, " -> ", dst_pop_name);
+      mpi::MPI_DEBUG(io_comm, "scatter_read_projection: unpacked ", local_num_edges,
+                     " edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
       prj_vector.push_back(prj_edge_map);
 

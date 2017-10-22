@@ -16,6 +16,7 @@
 #include "path_names.hh"
 #include "rank_range.hh"
 #include "read_projection_datasets.hh"
+#include "mpi_debug.hh"
 
 #include <iostream>
 #include <sstream>
@@ -117,8 +118,8 @@ namespace neuroh5
           else
             block = 0;
 
-          DEBUG("Task ",rank,": ","num_blocks = ", num_blocks, " read_blocks = ", read_blocks, 
-                " start = ", start, " stop = ", stop, ", block = ", block, "\n");
+          mpi::MPI_DEBUG(comm, "read_projection_datasets: ","num_blocks = ", num_blocks, " read_blocks = ", read_blocks, 
+                    " start = ", start, " stop = ", stop, ", block = ", block);
 
           DST_BLK_PTR_T block_rebase = 0;
 
@@ -139,20 +140,18 @@ namespace neuroh5
              );
           assert(ierr >= 0);
           
-          DEBUG("Task ",rank,": ", "dst_blk_ptr.size() = ", dst_blk_ptr.size(), "\n");
-          if (dst_blk_ptr.size() > 0)
-            {
-              DEBUG("Task ",rank,": ", "dst_blk_ptr.front() = ", dst_blk_ptr.front(), 
-                    " dst_blk_ptr.back() = ", dst_blk_ptr.back(), "\n");
-            }
-      
           // rebase the block_ptr array to local offsets
           // REBASE is going to be the start offset for the hyperslab
+          
+          if (dst_blk_ptr.size() > 0)
+            {
+              DEBUG("Task ",rank,": ", "dst_blk_ptr.front() = ", dst_blk_ptr.front(),
+                    " dst_blk_ptr.back() = ", dst_blk_ptr.back());
+            }
       
           if (block > 0)
             {
               block_rebase = dst_blk_ptr[0];
-              DEBUG("Task ",rank,": ","block_rebase = ", block_rebase, "\n");
           
               for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
                 {
@@ -164,6 +163,8 @@ namespace neuroh5
               block_rebase = 0;
             }
 
+          mpi::MPI_DEBUG(comm, "read_projection_datasets: ","block_rebase = ", block_rebase);
+
           // read destination block indices
           hsize_t dst_idx_block;
           
@@ -173,8 +174,8 @@ namespace neuroh5
             dst_idx_block = 0;
           dst_idx.resize(dst_idx_block, 0);
           
-          DEBUG("Task ",rank,": ", "dst_idx: block = ", dst_idx_block, 
-                " dst_idx: start = ", start, "\n");
+          mpi::MPI_DEBUG(comm, "read_projection_datasets: ", "dst_idx: block = ", dst_idx_block, 
+                    " dst_idx: start = ", start);
           
           ierr = hdf5::read<NODE_IDX_T>
             (
@@ -206,8 +207,8 @@ namespace neuroh5
             }
           dst_ptr.resize(dst_ptr_block, 0);
           
-          DEBUG("Task ",rank,": ", "dst_ptr: start = ", dst_ptr_start, 
-                " dst_ptr: block = ", dst_ptr_block, "\n");
+          mpi::MPI_DEBUG(comm, "read_projection_datasets: dst_ptr: start = ", dst_ptr_start, 
+                " dst_ptr: block = ", dst_ptr_block);
           
           ierr = hdf5::read<DST_PTR_T>
             (
@@ -223,8 +224,8 @@ namespace neuroh5
           
           if (dst_ptr.size() > 0)
             {
-              DEBUG("Task ",rank,": ", "dst_ptr.front() = ", dst_ptr.front(),
-                    " dst_ptr.back() = ", dst_ptr.back(), "\n");
+              DEBUG("read_projection_datasets: rank ", rank, ": ", "dst_ptr.front() = ", dst_ptr.front(),
+                    " dst_ptr.back() = ", dst_ptr.back());
             }
 
           DST_PTR_T dst_rebase = 0;
@@ -234,7 +235,6 @@ namespace neuroh5
             {
               dst_rebase = dst_ptr[0];
               edge_base = dst_rebase;
-              DEBUG("Task ",rank,": ", "dst_ptr: dst_rebase = ", dst_rebase, "\n");
               for (size_t i = 0; i < dst_ptr.size(); ++i)
                 {
                   dst_ptr[i] -= dst_rebase;
@@ -243,8 +243,6 @@ namespace neuroh5
               // read source indices
               src_idx_start = dst_rebase;
               src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
-
-              DEBUG("Task ",rank,": ", "src_idx: start = ", src_idx_start, " block = ", src_idx_block, "\n");
 
               // allocate buffer and memory dataspace
               src_idx.resize(src_idx_block, 0);
@@ -262,14 +260,12 @@ namespace neuroh5
              );
           assert(ierr >= 0);
               
-          DEBUG("Task ",rank,": ", "src_idx: done\n");
-          
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);
           ierr = H5Pclose(rapl);
           assert(ierr == 0);
           
-          DEBUG("Task ",rank,": ", "read_dbs_projection done\n");
+          mpi::MPI_DEBUG(comm, "read_projection_datasets done");
         }
 
 

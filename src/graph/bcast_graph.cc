@@ -69,7 +69,6 @@ namespace neuroh5
       vector< pair<pop_t, string> > pop_labels;
       size_t num_edges = 0, total_prj_num_edges = 0;
       
-      DEBUG("projection ", src_pop_name, " -> ", dst_pop_name, "\n");
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
 
 
@@ -106,13 +105,11 @@ namespace neuroh5
           dst_start = pop_vector[dst_pop_idx].start;
           src_start = pop_vector[src_pop_idx].start;
 
-          DEBUG("bcast: reading projection ", src_pop_name, " -> ", dst_pop_name);
           assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
                                                 dst_start, src_start, block_base, edge_base,
                                                 dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                 total_prj_num_edges) >= 0);
           
-          DEBUG("bcast: validating projection ", src_pop_name, " -> ", dst_pop_name);
           // validate the edges
           assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                     pop_ranges, pop_pairs) == true);
@@ -141,12 +138,10 @@ namespace neuroh5
           assert(num_edges == src_idx.size());
           
           size_t num_packed_edges = 0; 
-          DEBUG("bcast: packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
           data::serialize_edge_map (prj_edge_map, num_packed_edges, sendbuf);
 
           // ensure the correct number of edges is being packed
           assert(num_packed_edges == num_edges);
-          DEBUG("bcast: finished packing edge data from projection ", src_pop_name, " -> ", dst_pop_name);
 
         } // rank == 0
     
@@ -180,7 +175,6 @@ namespace neuroh5
           data::deserialize_edge_map (sendbuf, prj_edge_map,
                                       num_unpacked_nodes, num_unpacked_edges);
       
-          DEBUG("bcast: finished unpacking edges for projection ", src_pop_name, " -> ", dst_pop_name);
         }
       
       prj_vector.push_back(prj_edge_map);
@@ -243,7 +237,6 @@ namespace neuroh5
       MPI_Barrier(all_comm);
 
       assert(MPI_Bcast(&prj_size, 1, MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
-      DEBUG("rank ", rank, ": bcast: after bcast: prj_size = ", prj_size);
 
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_size; i++)

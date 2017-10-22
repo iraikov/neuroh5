@@ -173,12 +173,9 @@ namespace neuroh5
                      local_num_edges,
                      total_num_edges);
       
-      DEBUG("rank ", rank, ": parts: after scatter");
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
       merge_edge_map (prj_vector, edge_map);
-
-      DEBUG("rank ", rank, ": parts: after merge");
 
       prj_vector.clear();
 
@@ -201,7 +198,6 @@ namespace neuroh5
           vertex_indegree_fractions[v] = fraction;
         }
       // global_max_indegree, global_min_indegree
-      DEBUG("rank ", rank, ": parts: after vertex_degree: sum_indegree = ", sum_indegree);
       
       // Needed by parmetis
       vector<idx_t> vtxdist;
@@ -224,7 +220,6 @@ namespace neuroh5
       // Common for every rank:
       // determines which graph nodes are assigned to which MPI rank
       compute_vtxdist(size, total_num_nodes, vtxdist);
-      DEBUG("rank ", rank, ": parts: after compute_vtxdist");
 
       // Specific to each rank:
       //
@@ -247,7 +242,6 @@ namespace neuroh5
           vwgts.push_back(vertex_indegrees[i]);
         }
       xadj.push_back(adjncy_offset);
-      DEBUG("rank ", rank, ": parts: after xadj");
       edge_map.clear();
 
       tpwgts.resize(ncon*Nparts,0.0); // fraction of vertex weight that should be distributed to each partition
@@ -266,9 +260,7 @@ namespace neuroh5
             }
         }
     
-      DEBUG("rank ", rank, ": parts: before parts.resize");
       parts.resize (vtxdist[rank+1]-vtxdist[rank]); // resize to number of locally stored vertices
-      DEBUG("rank ", rank, ": calling parmetis");
       status = ParMETIS_V3_PartKway (&vtxdist[0],&xadj[0],&adjncy[0],
                                      &vwgts[0],adjwgts,&wgtflag,&numflag,&ncon,&nparts,
                                      &tpwgts[0],ubvec,options,&edgecut,&parts[0],

@@ -67,7 +67,6 @@ namespace neuroh5
         }
 
       assert(MPI_Bcast(&num_links, 1, MPI_UINT64_T, 0, comm) == MPI_SUCCESS);
-      DEBUG("num_links = ",num_links,"\n");
 
       vector<uint64_t> link_name_lengths(num_links);
 
@@ -77,7 +76,6 @@ namespace neuroh5
         {
           for (size_t i = 0; i < names.size(); ++i)
             {
-              DEBUG("Link ",i," is named ",names[i],"\n");
               size_t len = names[i].size();
               link_name_lengths[i] = len;
               link_names_total_length += len;
@@ -88,7 +86,6 @@ namespace neuroh5
           names.resize(num_links);
         }
 
-      DEBUG("link_names_total_length = ",link_names_total_length,"\n");
       // Broadcast link name lengths
       assert(MPI_Bcast(&link_names_total_length, 1, MPI_UINT64_T, 0, comm)
              == MPI_SUCCESS);

@@ -16,6 +16,7 @@
 #include "read_projection_datasets.hh"
 #include "validate_edge_list.hh"
 #include "append_prj_vector.hh"
+#include "mpi_debug.hh"
 
 #include <iostream>
 #include <sstream>
@@ -70,19 +71,18 @@ namespace neuroh5
       vector<NODE_IDX_T> src_idx;
       map<string, data::NamedAttrVal> edge_attr_map;
 
-      DEBUG("reading projection ", src_pop_name, " -> ", dst_pop_name);
+      mpi::MPI_DEBUG(comm, "read_projection: ", src_pop_name, " -> ", dst_pop_name);
       assert(hdf5::read_projection_datasets(comm, file_name, src_pop_name, dst_pop_name,
                                             dst_start, src_start, block_base, edge_base,
                                             dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                             total_num_edges, offset, numitems) >= 0);
       
-      DEBUG("read: validating projection ", src_pop_name, " -> ", dst_pop_name);
+      mpi::MPI_DEBUG(comm, "read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
       
       // validate the edges
       assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx,
                                 dst_ptr, src_idx, pop_ranges, pop_pairs) ==
              true);
-      DEBUG("read: validation of ", src_pop_name, " -> ", dst_pop_name, " finished");
       
       edge_count = src_idx.size();
       local_num_edges = edge_count;
@@ -153,13 +153,10 @@ namespace neuroh5
                                                      dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                      total_num_edges, offset, numitems) >= 0);
 
-        DEBUG("validating projection ", src_pop_name, " -> ", dst_pop_name);
-        
         // validate the edges
         assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx,
                                   dst_ptr, src_idx, pop_ranges, pop_pairs) ==
                true);
-        DEBUG("reader: validation of ", src_pop_name, " -> ", dst_pop_name, " finished");
 
         total_num_edges = src_idx.size();
         

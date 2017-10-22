@@ -151,12 +151,9 @@ namespace neuroh5
                           local_num_edges,
                           total_num_edges);
       
-      DEBUG("rank ", rank, ": parts: after scatter");
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
       merge_edge_map (prj_vector, edge_map);
-
-      DEBUG("rank ", rank, ": parts: after merge");
 
       prj_vector.clear();
 
