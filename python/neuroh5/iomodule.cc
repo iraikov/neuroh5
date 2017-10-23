@@ -824,8 +824,10 @@ PyObject* NeuroH5TreeIter_iternext(PyObject *self)
       assert(treeval != NULL);
       py_state->state->it_tree++;
       py_state->state->seq_index++;
+
+      PyObject *result = Py_BuildValue("lN", key, treeval);
       
-      return treeval;
+      return result;
     }
   else
     {
