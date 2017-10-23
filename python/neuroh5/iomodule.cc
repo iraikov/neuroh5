@@ -3971,6 +3971,8 @@ extern "C"
   static void
   neuroh5_tree_gen_dealloc(PyNeuroH5TreeGenState *py_ntrg)
   {
+    int status = MPI_Comm_free(&(py_ntrg->state->comm));
+    assert(status == MPI_SUCCESS);
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
@@ -3978,6 +3980,8 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
+    int status = MPI_Comm_free(&(py_ntrg->state->comm));
+    assert(status == MPI_SUCCESS);
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
@@ -3985,6 +3989,8 @@ extern "C"
   static void
   neuroh5_prj_gen_dealloc(PyNeuroH5ProjectionGenState *py_ngg)
   {
+    int status = MPI_Comm_free(&(py_ngg->state->comm));
+    assert(status == MPI_SUCCESS);
     delete py_ngg->state;
     Py_TYPE(py_ngg)->tp_free(py_ngg);
   }
@@ -4035,8 +4041,6 @@ extern "C"
             {
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
-                  int status = MPI_Comm_free(&(py_ntrg->state->comm));
-                  assert(status == MPI_SUCCESS);
                   py_ntrg->state->pos = seq_last;
                 }
               else
@@ -4145,8 +4149,6 @@ extern "C"
             {
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
-                  int status = MPI_Comm_free(&(py_ntrg->state->comm));
-                  assert(status == MPI_SUCCESS);
                   py_ntrg->state->pos = seq_last;
                 }
               else
@@ -4265,9 +4267,6 @@ extern "C"
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
     PyObject *result = NULL; 
-    int size, rank;
-    assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
 
     switch (py_ngg->state->pos)
       {
@@ -4326,15 +4325,11 @@ extern "C"
                 {
                   if (py_ngg->state->edge_index == py_ngg->state->edge_count)
                     {
-                      int status = MPI_Comm_free(&(py_ngg->state->comm));
-                      assert(status == MPI_SUCCESS);
                       py_ngg->state->pos = seq_last;
                     }
                   else
                     if (py_ngg->state->block_index >= py_ngg->state->block_count)
                       {
-                        int status = MPI_Comm_free(&(py_ngg->state->comm));
-                        assert(status == MPI_SUCCESS);
                         py_ngg->state->pos = seq_empty;
                       }
                   result = PyTuple_Pack(3,
