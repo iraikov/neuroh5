@@ -1494,7 +1494,125 @@ PyObject* py_build_edge_tuple_value (const edge_tuple_t& et,
 
 }
 
+/* NeuroH5EdgeIterState - in-memory edge iterator instance.
+ *
+ * seq_index: index of the next id in the sequence to yield
+ *
+ */
+typedef struct {
+  Py_ssize_t seq_index, count;
+  
+  edge_map_t edge_map;
+  vector<string> edge_attr_name_spaces;
+  
+  edge_map_iter_t it_edge;
+  
+} NeuroH5EdgeIterState;
 
+typedef struct {
+  PyObject_HEAD
+  NeuroH5EdgeIterState *state;
+} PyNeuroH5EdgeIterState;
+
+
+PyObject* NeuroH5EdgeIter_iter(PyObject *self)
+{
+  Py_INCREF(self);
+  return self;
+}
+
+static void NeuroH5EdgeIter_dealloc(PyNeuroH5EdgeIterState *py_state)
+{
+  delete py_state->state;
+  Py_TYPE(py_state)->tp_free(py_state);
+}
+
+
+PyObject* NeuroH5EdgeIter_iternext(PyObject *self)
+{
+  PyNeuroH5EdgeIterState *py_state = (PyNeuroH5EdgeIterState *)self;
+  if (py_state->state->it_edge != py_state->state->edge_map.cend())
+    {
+      const NODE_IDX_T key      = py_state->state->it_edge->first;
+      const edge_tuple_t& et    = py_state->state->it_edge->second;
+
+      PyObject* py_edge_tuple_value = py_build_edge_tuple_value (et, py_state->state->edge_attr_name_spaces);
+      assert(py_edge_tuple_value != NULL);
+      
+      py_state->state->it_edge++;
+      py_state->state->seq_index++;
+
+      PyObject *result = Py_BuildValue("lN", key, py_edge_tuple_value);
+      return result;
+    }
+  else
+    {
+      /* Raising of standard StopIteration exception with empty value. */
+      PyErr_SetNone(PyExc_StopIteration);
+      return NULL;
+    }
+}
+
+
+static PyTypeObject PyNeuroH5EdgeIter_Type = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "NeuroH5EdgeIter",         /*tp_name*/
+    sizeof(PyNeuroH5EdgeIterState), /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)NeuroH5EdgeIter_dealloc, /* tp_dealloc */
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+      /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+         use tp_iter and tp_iternext fields. */
+    "In-memory edge iterator instance.",           /* tp_doc */
+    0,  /* tp_traverse */
+    0,  /* tp_clear */
+    0,  /* tp_richcompare */
+    0,  /* tp_weaklistoffset */
+    NeuroH5EdgeIter_iter,  /* tp_iter: __iter__() method */
+    NeuroH5EdgeIter_iternext  /* tp_iternext: next() method */
+};
+
+
+static PyObject *
+NeuroH5EdgeIter_FromMap(const edge_map_t& prj_edge_map,
+                        const vector <string>& edge_attr_name_spaces)
+{
+
+  PyNeuroH5EdgeIterState *p = PyObject_New(PyNeuroH5EdgeIterState,
+                                           &PyNeuroH5EdgeIter_Type);
+  if (!p) return NULL;
+
+  if (!PyObject_Init((PyObject *)p, &PyNeuroH5EdgeIter_Type))
+    {
+      Py_DECREF(p);
+      return NULL;
+    }
+
+  p->state = new NeuroH5EdgeIterState();
+
+  p->state->seq_index     = 0;
+  p->state->count         = prj_edge_map.size();
+  p->state->edge_map      = prj_edge_map;
+  p->state->edge_attr_name_spaces = edge_attr_name_spaces;
+  p->state->it_edge       = p->state->edge_map.cbegin();
+  
+  return (PyObject *)p;
+}
 
 extern "C"
 {
@@ -1797,39 +1915,24 @@ extern "C"
     
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
-        PyObject *py_edge_dict = PyDict_New();
         edge_map_t prj_edge_map = prj_vector[i];
-        
-        if (prj_edge_map.size() > 0)
+
+        PyObject *py_edge_iter = NeuroH5EdgeIter_FromMap(prj_edge_map, edge_attr_name_spaces);
+
+        PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
+        if (py_src_dict == NULL)
           {
-            for (auto const& it : prj_edge_map)
-              {
-                const NODE_IDX_T key_node = it.first;
-                const edge_tuple_t& et    = it.second;
-
-                PyObject* py_edge_tuple_value = py_build_edge_tuple_value (et, edge_attr_name_spaces);
-
-                PyObject *key = PyLong_FromLong(key_node);
-                PyDict_SetItem(py_edge_dict, key, py_edge_tuple_value);
-                Py_DECREF(key);
-                Py_DECREF(py_edge_tuple_value);
-              }
+            py_src_dict = PyDict_New();
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+            PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+            Py_DECREF(py_edge_iter);
+            Py_DECREF(py_src_dict);
           }
-        
-         PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
-         if (py_src_dict == NULL)
-           {
-             py_src_dict = PyDict_New();
-             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
-             PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
-             Py_DECREF(py_edge_dict);
-             Py_DECREF(py_src_dict);
-           }
-         else
-           {
-             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_dict);
-             Py_DECREF(py_edge_dict);
-           }
+        else
+          {
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+             Py_DECREF(py_edge_iter);
+          }
         
       }
 
@@ -4556,6 +4659,20 @@ initio(void)
 
   Py_INCREF((PyObject *)&PyNeuroH5CellAttrIter_Type);
   PyModule_AddObject(module, "NeuroH5CellAttrIter", (PyObject *)&PyNeuroH5CellAttrIter_Type);
+
+
+  if (PyType_Ready(&PyNeuroH5EdgeIter_Type) < 0)
+    {
+      printf("NeuroH5EdgeIter type cannot be added\n");
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else      
+      return;
+#endif
+    }
+
+  Py_INCREF((PyObject *)&PyNeuroH5EdgeIter_Type);
+  PyModule_AddObject(module, "NeuroH5EdgeIter", (PyObject *)&PyNeuroH5EdgeIter_Type);
 
 #if PY_MAJOR_VERSION >= 3
   return module;
