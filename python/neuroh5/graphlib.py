@@ -70,9 +70,8 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
                                 node_rank_map=node_ranks)
     
     ## determine neighbors of vertex based on incoming edges
-    for post in graph.keys():
-        for pre in graph[post].keys():
-            edge_iter = graph[post][pre]
+    for post, prj in graph.iteritems():
+        for pre, edge_iter in prj.iteritems():
             for (n, edges) in edge_iter:
                 neighbors_dict[n]['src'].extend(edges[0])
                 
@@ -81,9 +80,8 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
                                      node_rank_map=node_ranks)
 
     ## determine neighbors of vertex based on outgoing edges
-    for pre in graph.keys():
-        for post in graph[pre].keys():
-            edge_iter = graph[pre][post]
+    for pre, prj in graph.iteritems():
+        for post, edge_iter in prj.iteritems():
             for (n, edges) in edge_iter:
                 neighbors_dict[n]['dst'].extend(edges[0])
             
