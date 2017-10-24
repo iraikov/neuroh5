@@ -24,9 +24,9 @@ cd $PBS_O_WORKDIR
 
 aprun -n 1024 ./build/neurotrees_select -p GC -i 256 --reindex \
       --cachesize=$((4 * 1024 * 1024)) \
-      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_extended_compressed_20170925.h5 \
+      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_extended_20171019_compressed.h5 \
       /projects/sciteam/baef/Full_Scale_Control/DGC_forest_reindex_20170615.dat \
-      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_20170925.h5 
+      /projects/sciteam/baef/Full_Scale_Control/DGC_forest_20171019.h5 
 
 
 

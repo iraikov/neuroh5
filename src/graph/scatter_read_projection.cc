@@ -216,7 +216,7 @@ namespace neuroh5
       }
 
       
-      mpi::MPI_DEBUG(io_comm, "scatter_read_projection: unpacked ", local_num_edges,
+      mpi::MPI_DEBUG(all_comm, "scatter_read_projection: unpacked ", local_num_edges,
                      " edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
       prj_vector.push_back(prj_edge_map);
