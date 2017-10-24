@@ -8,7 +8,7 @@ from collections import defaultdict
 from array import array
 import numpy as np
 from mpi4py import MPI 
-from neuroh5.io import read_population_ranges, scatter_read_graph, bcast_graph, read_graph
+from neuroh5.io import read_population_ranges, scatter_read_graph, read_graph
 
 #from networkit import *
 #from _NetworKit import GraphEvent, GraphUpdater
@@ -72,21 +72,19 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
     ## determine neighbors of vertex based on incoming edges
     for post in graph.keys():
         for pre in graph[post].keys():
-            prj = graph[post][pre]
-            for n in prj.keys():
-                edges = prj[n]
+            edge_iter = graph[post][pre]
+            for (n, edges) in edge_iter:
                 neighbors_dict[n]['src'].extend(edges[0])
                 
     ## obtain outgoing edges
     (graph, _) = scatter_read_graph (comm, filepath, io_size=iosize, map_type=1, 
-                                node_rank_map=node_ranks)
+                                     node_rank_map=node_ranks)
 
     ## determine neighbors of vertex based on outgoing edges
     for pre in graph.keys():
         for post in graph[pre].keys():
-            prj = graph[pre][post]
-            for n in prj.keys():
-                edges = prj[n]
+            edge_iter = graph[pre][post]
+            for (n, edges) in edge_iter:
                 neighbors_dict[n]['dst'].extend(edges[0])
             
     return neighbors_dict
