@@ -256,10 +256,6 @@ namespace neuroh5
               dst_blk_ptr.push_back(dst_blk_ptr[0] + recvbuf_num_dest[rank] + 1);
             }
         }
-      else
-        {
-          dst_blk_ptr[0] += dst_ptr_size;
-        }
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
       hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
