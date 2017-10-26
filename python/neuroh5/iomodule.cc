@@ -1742,6 +1742,7 @@ extern "C"
     // A vector that maps nodes to compute ranks
     PyObject *py_node_rank_map=NULL;
     PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_prj_names=NULL;
     map<NODE_IDX_T, rank_t> node_rank_map;
     vector < edge_map_t > prj_vector;
     vector < map <string, vector < vector<string> > > > edge_attr_name_vector;
@@ -1759,14 +1760,16 @@ extern "C"
     static const char *kwlist[] = {"comm",
                                    "file_name",
                                    "node_rank_map",
+                                   "projections",
                                    "namespaces",
                                    "map_type",
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|OOik", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Os|OOOik", (char **)kwlist,
                                      &py_comm, &input_file_name, 
-                                     &py_node_rank_map, &py_attr_name_spaces,
+                                     &py_node_rank_map, &py_prj_names,
+                                     &py_attr_name_spaces,
                                      &opt_edge_map_type, &io_size))
       return NULL;
 
@@ -1787,6 +1790,24 @@ extern "C"
         io_size = size;
       }
 
+    // Create C++ vector of projections to read
+    if (py_prj_names != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_prj_names); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_prj_names, (Py_ssize_t)i);
+            PyObject *p1    = PyTuple_GetItem(pyval, 0);
+            PyObject *p2    = PyTuple_GetItem(pyval, 1);
+            char *s1        = PyBytes_AsString (p1);
+            char *s2        = PyBytes_AsString (p2);
+            prj_names.push_back(make_pair(string(s1), string(s2)));
+          }
+      }
+    else
+      {
+        assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
+      }
+    
     vector <string> edge_attr_name_spaces;
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
@@ -1800,7 +1821,6 @@ extern "C"
         sort(edge_attr_name_spaces.begin(), edge_attr_name_spaces.end());
       }
     
-    assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
     assert(cell::read_population_ranges(*comm_ptr, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
