@@ -1451,43 +1451,43 @@ PyObject* py_build_edge_tuple_value (const edge_tuple_t& et,
         {
           status = PyList_Append(py_attrval, py_float_edge_attrs[j]);
           assert(status == 0);
-          Py_DECREF(py_float_edge_attrs[j]);
+          //Py_DECREF(py_float_edge_attrs[j]);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
         {
           status = PyList_Append(py_attrval, py_uint8_edge_attrs[j]);
           assert(status == 0);
-          Py_DECREF(py_uint8_edge_attrs[j]);
+          //Py_DECREF(py_uint8_edge_attrs[j]);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
         {
           status = PyList_Append(py_attrval, py_uint16_edge_attrs[j]);
           assert(status == 0);
-          Py_DECREF(py_uint16_edge_attrs[j]);
+          //Py_DECREF(py_uint16_edge_attrs[j]);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
         {
           status = PyList_Append(py_attrval, py_uint32_edge_attrs[j]);
           assert(status == 0);
-          Py_DECREF(py_uint32_edge_attrs[j]);
+          //Py_DECREF(py_uint32_edge_attrs[j]);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<int8_t>(); j++)
         {
           status = PyList_Append(py_attrval, py_int8_edge_attrs[j]);
           assert(status == 0);
-          Py_DECREF(py_int8_edge_attrs[j]);
+          //Py_DECREF(py_int8_edge_attrs[j]);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<int16_t>(); j++)
         {
           status = PyList_Append(py_attrval, py_int16_edge_attrs[j]);
           assert(status == 0);
-          Py_DECREF(py_int16_edge_attrs[j]);
+          //Py_DECREF(py_int16_edge_attrs[j]);
         }
       for (size_t j = 0; j < edge_attr_values.size_attr_vec<int32_t>(); j++)
         {
           status = PyList_Append(py_attrval, py_int32_edge_attrs[j]);
           assert(status == 0);
-          Py_DECREF(py_int32_edge_attrs[j]);
+          //Py_DECREF(py_int32_edge_attrs[j]);
         }
           
       PyDict_SetItemString(py_attrmap, edge_attr_name_spaces[namespace_index].c_str(), py_attrval);
