@@ -1349,145 +1349,89 @@ PyObject* py_build_edge_tuple_value (const edge_tuple_t& et,
     {
       PyObject *py_attrval  = PyList_New(0);
           
-      vector <PyObject*> py_float_edge_attrs;
-      vector <PyObject*> py_uint8_edge_attrs;
-      vector <PyObject*> py_uint16_edge_attrs;
-      vector <PyObject*> py_uint32_edge_attrs;
-      vector <PyObject*> py_int8_edge_attrs;
-      vector <PyObject*> py_int16_edge_attrs;
-      vector <PyObject*> py_int32_edge_attrs;
-          
-      vector <float*>    py_float_edge_attrs_ptr;
-      vector <uint8_t*>  py_uint8_edge_attrs_ptr;
-      vector <uint16_t*> py_uint16_edge_attrs_ptr;
-      vector <uint32_t*> py_uint32_edge_attrs_ptr;
-      vector <int8_t*>   py_int8_edge_attrs_ptr;
-      vector <int16_t*>  py_int16_edge_attrs_ptr;
-      vector <int32_t*>  py_int32_edge_attrs_ptr;
-          
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<float>(); i++)
         {
-          PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-          float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-          py_float_edge_attrs.push_back(arr);
-          py_float_edge_attrs_ptr.push_back(ptr);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-        {
-          PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-          uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-          py_uint8_edge_attrs.push_back(arr);
-          py_uint8_edge_attrs_ptr.push_back(ptr);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-        {
-          PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-          uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-          py_uint16_edge_attrs.push_back(arr);
-          py_uint16_edge_attrs_ptr.push_back(ptr);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-        {
-          PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-          uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-          py_uint32_edge_attrs.push_back(arr);
-          py_uint32_edge_attrs_ptr.push_back(ptr);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<int8_t>(); j++)
-        {
-          PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-          int8_t *ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-          py_int8_edge_attrs.push_back(arr);
-          py_int8_edge_attrs_ptr.push_back(ptr);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<int16_t>(); j++)
-        {
-          PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
-          int16_t *ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-          py_int16_edge_attrs.push_back(arr);
-          py_int16_edge_attrs_ptr.push_back(ptr);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<int32_t>(); j++)
-        {
-          PyObject *arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-          int32_t *ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)arr, &ind);
-          py_int32_edge_attrs.push_back(arr);
-          py_int32_edge_attrs_ptr.push_back(ptr);
-        }
-          
-      for (size_t j = 0; j < adj_vector.size(); j++)
-        {
-          for (size_t k = 0; k < edge_attr_values.size_attr_vec<float>(); k++)
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+          float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
             {
-              py_float_edge_attrs_ptr[k][j] = edge_attr_values.at<float>(k,j); 
+              ptr[j] = edge_attr_values.at<float>(i,j); 
             }
-          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint8_t>(); k++)
+          status = PyList_Append(py_attrval, py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint8_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
+          uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
             {
-              py_uint8_edge_attrs_ptr[k][j] = edge_attr_values.at<uint8_t>(k,j); 
+              ptr[j] = edge_attr_values.at<uint8_t>(i,j); 
             }
-          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint16_t>(); k++)
+          status = PyList_Append(py_attrval, py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint16_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+          uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
             {
-              py_uint16_edge_attrs_ptr[k][j] = edge_attr_values.at<uint16_t>(k,j); 
+              ptr[j] = edge_attr_values.at<uint16_t>(i,j); 
             }
-          for (size_t k = 0; k < edge_attr_values.size_attr_vec<uint32_t>(); k++)
+          status = PyList_Append(py_attrval, py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint32_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
+          uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
             {
-              py_uint32_edge_attrs_ptr[k][j] = edge_attr_values.at<uint32_t>(k,j); 
+              ptr[j] = edge_attr_values.at<uint32_t>(i,j); 
             }
-          for (size_t k = 0; k < edge_attr_values.size_attr_vec<int8_t>(); k++)
+          status = PyList_Append(py_attrval, py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<int8_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
+          int8_t *ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
             {
-              py_int8_edge_attrs_ptr[k][j] = edge_attr_values.at<int8_t>(k,j); 
+              ptr[j] = edge_attr_values.at<int8_t>(i,j); 
             }
-          for (size_t k = 0; k < edge_attr_values.size_attr_vec<int16_t>(); k++)
+          status = PyList_Append(py_attrval, py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<int16_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
+          int16_t *ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
             {
-              py_int16_edge_attrs_ptr[k][j] = edge_attr_values.at<int16_t>(k,j); 
+              ptr[j] = edge_attr_values.at<int16_t>(i,j); 
             }
-          for (size_t k = 0; k < edge_attr_values.size_attr_vec<int32_t>(); k++)
+          status = PyList_Append(py_attrval, py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<int32_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
+          int32_t *ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
             {
-              py_int32_edge_attrs_ptr[k][j] = edge_attr_values.at<int32_t>(k,j); 
+              ptr[j] = edge_attr_values.at<int32_t>(i,j); 
             }
-        }
-          
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-        {
-          status = PyList_Append(py_attrval, py_float_edge_attrs[j]);
+          status = PyList_Append(py_attrval, py_arr);
           assert(status == 0);
-          Py_DECREF(py_float_edge_attrs[j]);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-        {
-          status = PyList_Append(py_attrval, py_uint8_edge_attrs[j]);
-          assert(status == 0);
-          Py_DECREF(py_uint8_edge_attrs[j]);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-        {
-          status = PyList_Append(py_attrval, py_uint16_edge_attrs[j]);
-          assert(status == 0);
-          Py_DECREF(py_uint16_edge_attrs[j]);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-        {
-          status = PyList_Append(py_attrval, py_uint32_edge_attrs[j]);
-          assert(status == 0);
-          Py_DECREF(py_uint32_edge_attrs[j]);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<int8_t>(); j++)
-        {
-          status = PyList_Append(py_attrval, py_int8_edge_attrs[j]);
-          assert(status == 0);
-          Py_DECREF(py_int8_edge_attrs[j]);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<int16_t>(); j++)
-        {
-          status = PyList_Append(py_attrval, py_int16_edge_attrs[j]);
-          assert(status == 0);
-          Py_DECREF(py_int16_edge_attrs[j]);
-        }
-      for (size_t j = 0; j < edge_attr_values.size_attr_vec<int32_t>(); j++)
-        {
-          status = PyList_Append(py_attrval, py_int32_edge_attrs[j]);
-          assert(status == 0);
-          Py_DECREF(py_int32_edge_attrs[j]);
+          Py_DECREF(py_arr);
         }
           
       PyDict_SetItemString(py_attrmap, edge_attr_name_spaces[namespace_index].c_str(), py_attrval);
