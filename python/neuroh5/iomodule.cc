@@ -3216,7 +3216,7 @@ extern "C"
               {
               case NPY_UINT32:
                 {
-                  cell::write_cell_attribute_map<uint32_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, 
                                                             attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
                                                             dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint32]++;
@@ -3224,7 +3224,7 @@ extern "C"
                 }
               case NPY_UINT16:
                 {
-                  cell::write_cell_attribute_map<uint16_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, 
                                                             attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
                                                             dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint16]++;
@@ -3232,7 +3232,7 @@ extern "C"
                 }
               case NPY_UINT8:
                 {
-                  cell::write_cell_attribute_map<uint8_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, 
                                                            attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
                                                            dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint8]++;
@@ -3240,7 +3240,7 @@ extern "C"
                 }
               case NPY_INT32:
                 {
-                  cell::write_cell_attribute_map<int32_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, 
                                                            attr_name, all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
                                                            dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int32]++;
@@ -3248,7 +3248,7 @@ extern "C"
                 }
               case NPY_INT16:
                 {
-                  cell::write_cell_attribute_map<int16_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, 
                                                            attr_name, all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
                                                            dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int16]++;
@@ -3256,7 +3256,7 @@ extern "C"
                 }
               case NPY_INT8:
                 {
-                  cell::write_cell_attribute_map<int8_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, 
                                                           attr_name, all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
                                                           dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int8]++;
@@ -3264,7 +3264,7 @@ extern "C"
                 }
               case NPY_FLOAT:
                 {
-                  cell::write_cell_attribute_map<float> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, 
                                                          attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
                                                          dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_float]++;
