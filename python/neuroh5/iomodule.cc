@@ -1325,7 +1325,8 @@ PyObject* py_build_edge_value(const NODE_IDX_T key,
 }
 
 
-PyObject* py_build_edge_tuple_value (const edge_tuple_t& et,
+PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
+                                     const edge_tuple_t& et,
                                      const vector<string>& edge_attr_name_spaces)
 {
   int status;
@@ -1490,7 +1491,7 @@ PyObject* NeuroH5EdgeIter_iternext(PyObject *self)
       const NODE_IDX_T key      = py_state->state->it_edge->first;
       const edge_tuple_t& et    = py_state->state->it_edge->second;
 
-      PyObject* py_edge_tuple_value = py_build_edge_tuple_value (et, py_state->state->edge_attr_name_spaces);
+      PyObject* py_edge_tuple_value = py_build_edge_tuple_value (key, et, py_state->state->edge_attr_name_spaces);
       assert(py_edge_tuple_value != NULL);
       
       py_state->state->it_edge++;
@@ -2029,7 +2030,7 @@ extern "C"
                 const NODE_IDX_T key_node = it.first;
                 const edge_tuple_t& et    = it.second;
 
-                PyObject* py_edge_tuple_value = py_build_edge_tuple_value (et, edge_attr_name_spaces);
+                PyObject* py_edge_tuple_value = py_build_edge_tuple_value (key_node, et, edge_attr_name_spaces);
 
                 PyObject *key = PyLong_FromLong(key_node);
                 PyDict_SetItem(py_edge_dict, key, py_edge_tuple_value);
@@ -3132,6 +3133,7 @@ extern "C"
     MPI_Comm *comm_ptr  = NULL;
     const string default_namespace = "Attributes";
     char *file_name_arg, *pop_name_arg, *namespace_arg = (char *)default_namespace.c_str();
+    herr_t status;
     
     static const char *kwlist[] = {"comm",
                                    "file_name",
@@ -3145,110 +3147,139 @@ extern "C"
                                      &namespace_arg))
       return NULL;
 
+    string file_name = string(file_name_arg);
+    string pop_name = string(pop_name_arg);
+    string attr_namespace = string(namespace_arg);
+
     assert(py_comm != NULL);
     comm_ptr = PyMPIComm_Get(py_comm);
     assert(comm_ptr != NULL);
     assert(*comm_ptr != MPI_COMM_NULL);
 
-    string file_name = string(file_name_arg);
-    string pop_name = string(pop_name_arg);
-    string attr_namespace = string(namespace_arg);
-    
-    int npy_type=0;
-    
-    vector<string> attr_names;
-    vector<int> attr_types;
-        
-    vector < map <CELL_IDX_T, vector<uint32_t> > > all_attr_values_uint32;
-    vector < map <CELL_IDX_T, vector<int32_t> > >  all_attr_values_int32;
-    vector < map <CELL_IDX_T, vector<uint16_t> > > all_attr_values_uint16;
-    vector < map <CELL_IDX_T, vector<int16_t> > >  all_attr_values_int16;
-    vector < map <CELL_IDX_T, vector<uint8_t> > >  all_attr_values_uint8;
-    vector < map <CELL_IDX_T, vector<int8_t> > >   all_attr_values_int8;
-    vector < map <CELL_IDX_T, vector<float> > >    all_attr_values_float;
+    MPI_Comm comm;
+    status = MPI_Comm_dup(*comm_ptr, &comm);
+    assert(status == MPI_SUCCESS);
 
-    build_cell_attr_value_maps(idx_values,
-                               attr_names,
-                               attr_types,
-                               all_attr_values_uint32,
-                               all_attr_values_uint16,
-                               all_attr_values_uint8,
-                               all_attr_values_int32,
-                               all_attr_values_int16,
-                               all_attr_values_int8,
-                               all_attr_values_float);
+    Py_ssize_t dict_size = PyDict_Size(idx_values);
+    int data_color = 2;
     
-    const data::optional_hid dflt_data_type;
-    size_t attr_idx=0;
-    vector<size_t> attr_type_idx(AttrMap::num_attr_types);
-    for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
+    MPI_Comm data_comm;
+    // In cases where some ranks do not have any data to write, split
+    // the communicator, so that collective operations can be executed
+    // only on the ranks that do have data.
+    if (dict_size > 0)
       {
-        const string attr_name = *it;
-        npy_type=attr_types[attr_idx];
+        MPI_Comm_split(comm,data_color,0,&data_comm);
+      }
+    else
+      {
+        MPI_Comm_split(comm,0,0,&data_comm);
+      }
+    MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
-        switch (npy_type)
+    if (dict_size > 0)
+      {
+    
+        int npy_type=0;
+        
+        vector<string> attr_names;
+        vector<int> attr_types;
+        
+        vector < map <CELL_IDX_T, vector<uint32_t> > > all_attr_values_uint32;
+        vector < map <CELL_IDX_T, vector<int32_t> > >  all_attr_values_int32;
+        vector < map <CELL_IDX_T, vector<uint16_t> > > all_attr_values_uint16;
+        vector < map <CELL_IDX_T, vector<int16_t> > >  all_attr_values_int16;
+        vector < map <CELL_IDX_T, vector<uint8_t> > >  all_attr_values_uint8;
+        vector < map <CELL_IDX_T, vector<int8_t> > >   all_attr_values_int8;
+        vector < map <CELL_IDX_T, vector<float> > >    all_attr_values_float;
+        
+        build_cell_attr_value_maps(idx_values,
+                                   attr_names,
+                                   attr_types,
+                                   all_attr_values_uint32,
+                                   all_attr_values_uint16,
+                                   all_attr_values_uint8,
+                                   all_attr_values_int32,
+                                   all_attr_values_int16,
+                                   all_attr_values_int8,
+                                   all_attr_values_float);
+        
+        const data::optional_hid dflt_data_type;
+        size_t attr_idx=0;
+        vector<size_t> attr_type_idx(AttrMap::num_attr_types);
+        for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
           {
-          case NPY_UINT32:
-            {
-              cell::write_cell_attribute_map<uint32_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
-                                                        attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
-                                                        dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_uint32]++;
-              break;
-            }
-          case NPY_UINT16:
-            {
-              cell::write_cell_attribute_map<uint16_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
-                                                        attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
-                                                        dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_uint16]++;
-              break;
-            }
-          case NPY_UINT8:
-            {
-              cell::write_cell_attribute_map<uint8_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
-                                                       attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
-                                                       dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_uint8]++;
-              break;
-            }
-          case NPY_INT32:
-            {
-              cell::write_cell_attribute_map<int32_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
-                                                       attr_name, all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
-                                                       dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_int32]++;
-              break;
-            }
-          case NPY_INT16:
-            {
-              cell::write_cell_attribute_map<int16_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
-                                                       attr_name, all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
-                                                       dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_int16]++;
-              break;
-            }
-          case NPY_INT8:
-            {
-              cell::write_cell_attribute_map<int8_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
-                                                      attr_name, all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
-                                                      dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_int8]++;
-              break;
-            }
-          case NPY_FLOAT:
-            {
-              cell::write_cell_attribute_map<float> (*comm_ptr, file_name, attr_namespace, pop_name, 
-                                                     attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
-                                                     dflt_data_type);
-              attr_type_idx[AttrMap::attr_index_float]++;
-              break;
-            }
-          default:
-            throw runtime_error("Unsupported attribute type");
-            break;
+            const string attr_name = *it;
+            npy_type=attr_types[attr_idx];
+            
+            switch (npy_type)
+              {
+              case NPY_UINT32:
+                {
+                  cell::write_cell_attribute_map<uint32_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                                                            attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
+                                                            dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_uint32]++;
+                  break;
+                }
+              case NPY_UINT16:
+                {
+                  cell::write_cell_attribute_map<uint16_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                                                            attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
+                                                            dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_uint16]++;
+                  break;
+                }
+              case NPY_UINT8:
+                {
+                  cell::write_cell_attribute_map<uint8_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                                                           attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
+                                                           dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_uint8]++;
+                  break;
+                }
+              case NPY_INT32:
+                {
+                  cell::write_cell_attribute_map<int32_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                                                           attr_name, all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
+                                                           dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_int32]++;
+                  break;
+                }
+              case NPY_INT16:
+                {
+                  cell::write_cell_attribute_map<int16_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                                                           attr_name, all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
+                                                           dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_int16]++;
+                  break;
+                }
+              case NPY_INT8:
+                {
+                  cell::write_cell_attribute_map<int8_t> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                                                          attr_name, all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
+                                                          dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_int8]++;
+                  break;
+                }
+              case NPY_FLOAT:
+                {
+                  cell::write_cell_attribute_map<float> (*comm_ptr, file_name, attr_namespace, pop_name, 
+                                                         attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
+                                                         dflt_data_type);
+                  attr_type_idx[AttrMap::attr_index_float]++;
+                  break;
+                }
+              default:
+                throw runtime_error("Unsupported attribute type");
+                break;
+              }
           }
       }
+    
+    assert(MPI_Barrier(comm) == MPI_SUCCESS);
+    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
     Py_INCREF(Py_None);
     return Py_None;
@@ -4405,7 +4436,8 @@ extern "C"
           const vector<NODE_IDX_T>& adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
           if (py_ngg->state->edge_iter != adj_vector.cend())
             {
-              result = py_build_edge_tuple_value(py_ngg->state->edge_map_iter->second,
+              result = py_build_edge_tuple_value(py_ngg->state->edge_map_iter->first,
+                                                 py_ngg->state->edge_map_iter->second,
                                                  py_ngg->state->edge_attr_name_spaces);
               py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
             }
@@ -4424,7 +4456,8 @@ extern "C"
                   assert(py_ngg->state->edge_iter != adj_vector1.cend());
                   const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
                   const NODE_IDX_T adj = *(py_ngg->state->edge_iter);
-                  result = py_build_edge_tuple_value(py_ngg->state->edge_map_iter->second,
+                  result = py_build_edge_tuple_value(py_ngg->state->edge_map_iter->first,
+                                                     py_ngg->state->edge_map_iter->second,
                                                      py_ngg->state->edge_attr_name_spaces);
                   py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
                 }

@@ -315,6 +315,7 @@ namespace neuroh5
           i++;
         }
     }
+    
 
     template <class T>
     void set_attr_vec (const std::map< std::string, NamedAttrVal>& edge_attr_map,

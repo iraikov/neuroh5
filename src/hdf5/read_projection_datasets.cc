@@ -71,8 +71,9 @@ namespace neuroh5
 
       // determine number of blocks in projection
       hsize_t num_blocks = hdf5::dataset_num_elements
-         (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR)) - 1;
-
+         (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR));
+      if (num_blocks > 0)
+        num_blocks--;
       
       // determine number of edges in projection
       total_num_edges = hdf5::dataset_num_elements
