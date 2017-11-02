@@ -34,7 +34,8 @@ namespace neuroh5
      const edge_map_t&         prj_edge_map,
      const map<string, vector < vector<string> > >& edge_attr_names,
      const hsize_t             chunk_size,
-     const hsize_t             block_size
+     const hsize_t             block_size,
+     const bool collective
      )
     {
       // do a sanity check on the input
@@ -171,6 +172,14 @@ namespace neuroh5
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
 
+      hid_t wapl = H5P_DEFAULT;
+      if (collective)
+	{
+	  wapl = H5Pcreate(H5P_DATASET_XFER);
+	  assert(wapl >= 0);
+	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	}
+
       
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
       hsize_t dst_blk_idx_dims = total_num_blocks, one=1;
@@ -226,8 +235,8 @@ namespace neuroh5
 	{
           assert(H5Sselect_none(fspace) >= 0);
 	}
-      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace, H5P_DEFAULT,
-                      &dst_blk_idx[0]) >= 0);
+      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
+		      wapl, &dst_blk_idx[0]) >= 0);
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
       assert(H5Sclose(fspace) >= 0);
@@ -315,7 +324,7 @@ namespace neuroh5
           assert(H5Sselect_none(fspace) >= 0);
         }
       assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
-                      H5P_DEFAULT, &dst_blk_ptr[0]) >= 0);
+                      wapl, &dst_blk_ptr[0]) >= 0);
 
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
@@ -406,7 +415,7 @@ namespace neuroh5
         }
 
       assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
-                      H5P_DEFAULT, &dst_ptr[0]) >= 0);
+                      wapl, &dst_ptr[0]) >= 0);
 
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
@@ -473,7 +482,7 @@ namespace neuroh5
           assert(H5Sselect_none(fspace) >= 0);
         }
       assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
-                      H5P_DEFAULT, &src_idx[0]) >= 0);
+                      wapl, &src_idx[0]) >= 0);
 
       assert(H5Dclose(dset) >= 0);
       assert(H5Sclose(mspace) >= 0);
@@ -538,6 +547,7 @@ namespace neuroh5
       // clean-up
       assert(H5Pclose(lcpl) >= 0);
       assert(H5Pclose(dcpl) >= 0);
+      assert(H5Pclose(wapl) >= 0);
 
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
       if (info != MPI_INFO_NULL)

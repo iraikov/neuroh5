@@ -360,6 +360,13 @@ namespace neuroh5
           local_attr_ptr[i] = attr_ptr[i] + local_value_start;
         }
 
+      /* Create property list for collective dataset write. */
+      hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
+      if (size > 1)
+        {
+          status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+        }
+
       T dummy;
       hid_t ftype = infer_datatype(dummy);
       assert(ftype >= 0);
@@ -373,19 +380,21 @@ namespace neuroh5
           status = write<NODE_IDX_T> (loc, path + "/" + NODE_INDEX,
                                       global_index_size, local_index_start, local_index_size,
                                       NODE_IDX_H5_NATIVE_T,
-                                      index);
+                                      index, wapl);
         
           status = write<ATTR_PTR_T> (loc, path + "/" + ATTR_PTR,
                                       global_ptr_size, local_ptr_start, local_ptr_size,
                                       ATTR_PTR_H5_NATIVE_T,
-                                      local_attr_ptr);
+                                      local_attr_ptr, wapl);
         
           status = write<T> (loc, path + "/" + ATTR_VAL,
                              global_value_size, local_value_start, local_value_size,
-                             mtype, value);
+                             mtype, value, wapl);
         }
 
       assert(H5Tclose(mtype)  >= 0);
+      status = H5Pclose(wapl);
+      assert(status == 0);
     }
 
   }

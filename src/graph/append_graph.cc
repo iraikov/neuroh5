@@ -88,8 +88,6 @@ namespace neuroh5
         {
           io_size = io_size_arg > 0 ? io_size_arg : 1;
         }
-      mpi::MPI_DEBUG(all_comm, "append_graph: src_pop_name = ", src_pop_name,
-                     " dst_pop_name = ", dst_pop_name);
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
                                           pop_ranges, pop_vector, total_num_nodes) >= 0);
@@ -222,9 +220,6 @@ namespace neuroh5
         }
 
 
-      mpi::MPI_DEBUG(all_comm, "append_graph: rank_edge_map constructed (size ",
-                     rank_edge_map.size(), ")");
-
       // send buffer and structures for MPI Alltoall operation
       vector<char> sendbuf;
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
@@ -236,8 +231,6 @@ namespace neuroh5
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
-      
-      mpi::MPI_DEBUG(all_comm, "append_graph: num_packed_edges = ", num_packed_edges);
       
       // 1. Each ALL_COMM rank sends an edge vector size to
       //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
@@ -274,8 +267,6 @@ namespace neuroh5
                                            prj_edge_map, num_unpacked_nodes, num_unpacked_edges);
         }
 
-      mpi::MPI_DEBUG(all_comm, "append_graph: num_packed_edges = ", num_packed_edges);
-
       if ((rank_t)rank < io_size)
         {
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -295,8 +286,6 @@ namespace neuroh5
         }
 
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-
-      mpi::MPI_DEBUG(all_comm, "append_graph: completed");
 
       return 0;
     }

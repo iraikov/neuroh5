@@ -23,7 +23,7 @@ namespace neuroh5
        const hsize_t&     len,
        const hid_t&       ntype,
        const std::vector<T>&    v,
-       const bool do_coll_io = true
+       const hid_t        wapl
        )
       {
 
@@ -60,15 +60,7 @@ namespace neuroh5
             assert(ierr >= 0);
           }
 
-        hid_t dxpl = H5P_DEFAULT;
-        if (do_coll_io)
-          {
-            dxpl = H5Pcreate(H5P_DATASET_XFER);
-            assert(dxpl >= 0);
-            assert(H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE) >= 0);
-          }
-
-        ierr = H5Dwrite(dset, ntype, mspace, fspace, dxpl, &v[0]);
+        ierr = H5Dwrite(dset, ntype, mspace, fspace, wapl, &v[0]);
         assert(ierr >= 0);
 
         assert(H5Dclose(dset) >= 0);

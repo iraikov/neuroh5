@@ -141,7 +141,8 @@ namespace neuroh5
     (
      hid_t                    loc,
      const std::string&       path,
-     const std::vector<T>&    value
+     const std::vector<T>&    value,
+     const bool collective = true
      )
     {
       // get a file handle and retrieve the MPI info
@@ -152,6 +153,14 @@ namespace neuroh5
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
       assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+
+      hid_t wapl = H5P_DEFAULT;
+      if (collective)
+	{
+	  wapl = H5Pcreate(H5P_DATASET_XFER);
+	  assert(wapl >= 0);
+	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	}
 
       int ssize, srank;
       assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
@@ -201,7 +210,7 @@ namespace neuroh5
       hid_t dset = H5Dcreate(loc, path.c_str(), ftype, fspace,
                              lcpl, H5P_DEFAULT, H5P_DEFAULT);
       assert(dset >= 0);
-      assert(H5Dwrite(dset, mtype, mspace, fspace, H5P_DEFAULT, &value[0])
+      assert(H5Dwrite(dset, mtype, mspace, fspace, wapl, &value[0])
              >= 0);
 
       assert(H5Dclose(dset) >= 0);
@@ -209,6 +218,7 @@ namespace neuroh5
       assert(H5Sclose(fspace) >= 0);
       assert(H5Sclose(mspace) >= 0);
       assert(H5Pclose(lcpl) >= 0);
+      assert(H5Pclose(wapl) >= 0);
 
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
       if (info != MPI_INFO_NULL)
@@ -231,7 +241,8 @@ namespace neuroh5
      const std::string&       attr_namespace,
      const std::string&       attr_name,
      const std::vector<T>&    value,
-     const size_t chunk_size = 4000
+     const size_t chunk_size = 4000,
+     const bool collective = true
      )
     {
       // get a file handle and retrieve the MPI info
@@ -273,6 +284,7 @@ namespace neuroh5
       hdf5::append_edge_attribute<T>(file, src_pop_name, dst_pop_name,
                                      attr_namespace, attr_name,
                                      value);
+      
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
       if (info != MPI_INFO_NULL)
         {
