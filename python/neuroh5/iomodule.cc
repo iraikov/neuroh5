@@ -359,7 +359,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint32];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint32][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
                       }
                                              
                     py_array_to_vector<uint32_t>(py_attr_values, attr_values_uint32);
@@ -376,7 +376,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint16];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint16][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
                       }
                                              
                     py_array_to_vector<uint16_t>(py_attr_values, attr_values_uint16);
@@ -393,7 +393,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint8];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint8][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
                       }
                                              
                     py_array_to_vector<uint8_t>(py_attr_values, attr_values_uint8);
@@ -410,7 +410,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int32];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_int32][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                        assert(attr_names[attr_namespace][AttrMap::attr_index_int32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
                       }
                                              
                     py_array_to_vector<int32_t>(py_attr_values, attr_values_int32);
@@ -427,7 +427,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int16];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_int16][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                        assert(attr_names[attr_namespace][AttrMap::attr_index_int16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
                       }
                                              
                     py_array_to_vector<int16_t>(py_attr_values, attr_values_int16);
@@ -444,7 +444,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int8];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_int8][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                        assert(attr_names[attr_namespace][AttrMap::attr_index_int8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
                       }
                                              
                     py_array_to_vector<int8_t>(py_attr_values, attr_values_int8);
@@ -461,7 +461,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_float];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_float][idx].compare(string(PyBytes_AsString(py_attr_key))) != 0);
+                        assert(attr_names[attr_namespace][AttrMap::attr_index_float][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
                       }
                                              
                     py_array_to_vector<float>(py_attr_values, attr_values_float);
