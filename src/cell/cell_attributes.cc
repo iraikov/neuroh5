@@ -192,14 +192,17 @@ namespace neuroh5
     
       string path = hdf5::cell_attribute_prefix(name_space, pop_name);
 
-      hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-      assert(grp >= 0);
-      
-      hsize_t idx = 0;
-      ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                        &cell_attribute_cb, (void*) &out_attributes);
-      
-      assert(H5Gclose(grp) >= 0);
+      if (H5Lexists (in_file, path.c_str(), H5P_DEFAULT) > 0)
+        {
+          hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+          assert(grp >= 0);
+          
+          hsize_t idx = 0;
+          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &cell_attribute_cb, (void*) &out_attributes);
+          
+          assert(H5Gclose(grp) >= 0);
+        }
       ierr = H5Fclose(in_file);
 
       return ierr;
