@@ -10,8 +10,12 @@ if rank == 0:
     print '%i ranks have been allocated' % comm.size
 sys.stdout.flush()
 
-for (src,dst) in read_projection_names(comm, 'data/dentate_test.h5'):
-    g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', src, dst)
+path = './data/dentate_test_connectivity.h5'
+path = '/home/igr/src/model/dentate/datasets/DG_test_connections_20171022.h5'
+
+for (src,dst) in read_projection_names(comm, path):
+    print 'Projection %s -> %s' % (src, dst)
+    g = NeuroH5ProjectionGen (comm, path, src, dst, namespaces=['Synapses'])
     print g
     for (i,rest) in g:
         if i is not None:
