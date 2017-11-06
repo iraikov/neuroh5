@@ -13,9 +13,10 @@ sys.stdout.flush()
 for (src,dst) in read_projection_names(comm, 'data/dentate_test.h5'):
     g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', src, dst)
     print g
-    for (i,adj) in g:
+    for (i,rest) in g:
         if i is not None:
-            print i, adj
+            (adj,attr) = rest
+            print i, adj, attr
 
 #g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', 'BC', 'MC')
 #for (i,j,attr) in g:

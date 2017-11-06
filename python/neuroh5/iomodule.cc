@@ -4435,9 +4435,13 @@ extern "C"
           const vector<NODE_IDX_T>& adj_vector = get<0>(py_ngg->state->edge_map_iter->second);
           if (py_ngg->state->edge_iter != adj_vector.cend())
             {
-              result = py_build_edge_tuple_value(py_ngg->state->edge_map_iter->first,
-                                                 py_ngg->state->edge_map_iter->second,
-                                                 py_ngg->state->edge_attr_name_spaces);
+              const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
+              PyObject *py_edge = py_build_edge_tuple_value(key,
+                                                            py_ngg->state->edge_map_iter->second,
+                                                            py_ngg->state->edge_attr_name_spaces);
+              PyObject *py_key = PyLong_FromLong(key);
+              result = PyTuple_Pack(2, py_key, py_edge);
+
               py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
             }
           else
