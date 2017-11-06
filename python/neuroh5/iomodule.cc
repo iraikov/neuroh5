@@ -4426,8 +4426,7 @@ extern "C"
                 {
                   py_ngg->state->edge_index++;
                 }
-              result = PyTuple_Pack(3,
-                                    (Py_INCREF(Py_None), Py_None),
+              result = PyTuple_Pack(2,
                                     (Py_INCREF(Py_None), Py_None),
                                     (Py_INCREF(Py_None), Py_None));
               break;
@@ -4456,9 +4455,12 @@ extern "C"
                   assert(py_ngg->state->edge_iter != adj_vector1.cend());
                   const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
                   const NODE_IDX_T adj = *(py_ngg->state->edge_iter);
-                  result = py_build_edge_tuple_value(py_ngg->state->edge_map_iter->first,
-                                                     py_ngg->state->edge_map_iter->second,
-                                                     py_ngg->state->edge_attr_name_spaces);
+                  PyObject *py_edge = py_build_edge_tuple_value(py_ngg->state->edge_map_iter->first,
+                                                                py_ngg->state->edge_map_iter->second,
+                                                                py_ngg->state->edge_attr_name_spaces);
+                  PyObject *py_key = PyLong_FromLong(key);
+                  result = PyTuple_Pack(2, py_key, py_edge);
+
                   py_ngg->state->edge_iter = next(py_ngg->state->edge_iter);
                 }
               else
@@ -4472,8 +4474,7 @@ extern "C"
                       {
                         py_ngg->state->pos = seq_empty;
                       }
-                  result = PyTuple_Pack(3,
-                                        (Py_INCREF(Py_None), Py_None),
+                  result = PyTuple_Pack(2,
                                         (Py_INCREF(Py_None), Py_None),
                                         (Py_INCREF(Py_None), Py_None));
                 }
@@ -4494,8 +4495,7 @@ extern "C"
             {
               py_ngg->state->edge_index++;
             }
-          result = PyTuple_Pack(3,
-                                (Py_INCREF(Py_None), Py_None),
+          result = PyTuple_Pack(2,
                                 (Py_INCREF(Py_None), Py_None),
                                 (Py_INCREF(Py_None), Py_None));
           break;
