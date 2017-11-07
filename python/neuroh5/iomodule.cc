@@ -4418,7 +4418,8 @@ extern "C"
       {
       case seq_next:
         {
-          if ((py_ngg->state->edge_map_iter == py_ngg->state->edge_map.cend()))
+          if ((py_ngg->state->edge_map_iter == py_ngg->state->edge_map.cend()) &&
+              (py_ngg->state->node_index == py_ngg->state->node_count))
             {
               if (py_ngg->state->block_index < py_ngg->state->block_count)
                 {
