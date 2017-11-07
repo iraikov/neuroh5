@@ -3761,9 +3761,14 @@ extern "C"
     assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
     assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
 
-    if (io_size == 0)
+    if (io_size <= 0)
       {
         io_size = size;
+      }
+
+    if (cache_size <= 0)
+      {
+        cache_size = 1;
       }
 
     vector <string> attr_name_spaces;
@@ -4352,6 +4357,9 @@ extern "C"
     assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
     
+    if (!(py_ngg->state->block_index < py_ngg->state->block_count))
+      return 0;
+
     // If the end of the current edge map has been reached,
     // read the next block
     py_ngg->state->edge_map.clear();
@@ -4404,6 +4412,7 @@ extern "C"
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
     PyObject *result = NULL; 
+    assert(py_ngg->state->node_index <= py_ngg->state->node_count);
 
     switch (py_ngg->state->pos)
       {
@@ -4433,15 +4442,33 @@ extern "C"
                 }
             }
 
-          const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
-          PyObject *py_edge = py_build_edge_tuple_value(key,
-                                                        py_ngg->state->edge_map_iter->second,
-                                                        py_ngg->state->edge_attr_name_spaces);
-          PyObject *py_key = PyLong_FromLong(key);
-          result = PyTuple_Pack(2, py_key, py_edge);
-          
-          py_ngg->state->edge_map_iter = next(py_ngg->state->edge_map_iter);
-          py_ngg->state->node_index++;
+
+          if ((py_ngg->state->edge_map_iter != py_ngg->state->edge_map.cend()))
+            {
+              const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
+              PyObject *py_edge = py_build_edge_tuple_value(key,
+                                                            py_ngg->state->edge_map_iter->second,
+                                                            py_ngg->state->edge_attr_name_spaces);
+              PyObject *py_key = PyLong_FromLong(key);
+              result = PyTuple_Pack(2, py_key, py_edge);
+              
+              py_ngg->state->edge_map_iter = next(py_ngg->state->edge_map_iter);
+            }
+          else
+            {
+              result = PyTuple_Pack(2,
+                                    (Py_INCREF(Py_None), Py_None),
+                                    (Py_INCREF(Py_None), Py_None));
+            }
+
+          if (py_ngg->state->node_index == py_ngg->state->node_count)
+            {
+              py_ngg->state->pos = seq_last;
+            }
+          else
+            {
+              py_ngg->state->node_index++;
+            }
 
           break;
         }

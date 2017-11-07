@@ -12,15 +12,16 @@ sys.stdout.flush()
 
 path = './data/dentate_test_connectivity.h5'
 path = '/home/igr/src/model/dentate/datasets/DG_test_connections_20171022.h5'
+path = '/home/igr/src/model/dentate/datasets/Test_GC_1000/DGC_test_connections_20171019.h5'
 
 for (src,dst) in read_projection_names(comm, path):
     print 'Projection %s -> %s' % (src, dst)
-    g = NeuroH5ProjectionGen (comm, path, src, dst, namespaces=['Synapses'])
-    print g
+    g = NeuroH5ProjectionGen (comm, path, src, dst, namespaces=['Synapses'], io_size=comm.size, cache_size=1)
     for (i,rest) in g:
         if i is not None:
             (adj,attr) = rest
-            print i, adj, attr
+            print i
+
 
 #g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', 'BC', 'MC')
 #for (i,j,attr) in g:

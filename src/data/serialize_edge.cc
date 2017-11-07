@@ -159,10 +159,10 @@ namespace neuroh5
                   const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
                   const vector<data::AttrVal>&    edge_attr_values = get<1>(it->second);
                   num_unpacked_edges += adj_vector.size();
-                  num_unpacked_nodes ++;
                   
                   if (prj_edge_map.find(key_node) == prj_edge_map.end())
                     {
+                      num_unpacked_nodes ++;
                       prj_edge_map.insert(make_pair(key_node,make_tuple(adj_vector, edge_attr_values)));
                     }
                   else
