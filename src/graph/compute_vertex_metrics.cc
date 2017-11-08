@@ -145,8 +145,14 @@ namespace neuroh5
                   node_id.push_back(it->first);
                   attr_ptr.push_back(attr_ptr.back() + 1);
                   const auto it_indegree_value = vertex_indegree_map.find(it->first);
-                  assert(it_indegree_value != vertex_indegree_map.cend());
-                  vertex_indegree_value.push_back(it_indegree_value->second);
+                  if (it_indegree_value != vertex_indegree_map.cend())
+                    {
+                      vertex_indegree_value.push_back(it_indegree_value->second);
+                    }
+                  else
+                    {
+                      vertex_indegree_value.push_back(0);
+                    }
                   vertex_norm_indegree_value.push_back(vertex_norm_indegrees[it->first]);
                 }
             }
@@ -258,9 +264,14 @@ namespace neuroh5
                   attr_ptr.push_back(attr_ptr.back() + 1);
 
                   const auto it_outdegree_value = vertex_outdegree_map.find(it->first);
-                  assert(it_outdegree_value != vertex_outdegree_map.cend());
-                  
-                  vertex_outdegree_value.push_back(it_outdegree_value->second);
+                  if (it_outdegree_value != vertex_outdegree_map.cend())
+                    {
+                      vertex_outdegree_value.push_back(it_outdegree_value->second);
+                    }
+                  else
+                    {
+                      vertex_outdegree_value.push_back(0);
+                    }
                   vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[it->first]);
                 }
             }
