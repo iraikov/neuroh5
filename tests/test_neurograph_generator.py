@@ -17,17 +17,9 @@ path = '/home/igr/src/model/dentate/datasets/Test_GC_1000/DGC_test_connections_2
 
 gs = []
 for (src,dst) in [('MC','GC'),('MPP','GC'),('LPP','GC')]:
-    print 'Projection %s -> %s' % (src, dst)
     g = NeuroH5ProjectionGen (comm, path, src, dst, namespaces=['Synapses'], io_size=comm.size, cache_size=50)
-    gs.append(g)
-
-count = 0    
-for gz in itertools.izip_longest(*gs):
-    for (i,rest) in gz:
-        if count > 1000:
-            print 'i = ', i
-        else:
-            break
+    for (i,rest) in g:
+        print 'i = ', i
 
 
 #g = NeuroH5ProjectionGen (comm, 'data/dentate_test.h5', 'BC', 'MC')

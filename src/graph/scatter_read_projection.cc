@@ -159,7 +159,7 @@ namespace neuroh5
 
               
               // append to the edge map
-              assert(data::append_rank_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+              assert(data::append_rank_edge_map(size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                 attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
                                                 edge_map_type) >= 0);
               
