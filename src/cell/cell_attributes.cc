@@ -436,11 +436,15 @@ namespace neuroh5
       hsize_t initial_size = 0;
     
       hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
+      status = H5Pset_layout(plist, H5D_CHUNKED);
+      assert(status == 0);
       status = H5Pset_chunk(plist, 1, cdims);
       assert(status == 0);
 
       hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
+      status = H5Pset_layout(value_plist, H5D_CHUNKED);
+      assert(status == 0);
       status = H5Pset_chunk(value_plist, 1, value_cdims);
       assert(status == 0);
       status = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
