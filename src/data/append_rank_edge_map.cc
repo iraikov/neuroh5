@@ -29,6 +29,7 @@ namespace neuroh5
      **************************************************************************/
     int append_rank_edge_map
     (
+     const size_t                     num_ranks,
      const NODE_IDX_T&                dst_start,
      const NODE_IDX_T&                src_start,
      const vector<DST_BLK_PTR_T>&     dst_blk_ptr,
@@ -48,6 +49,7 @@ namespace neuroh5
       if (dst_blk_ptr.size() > 0)
         {
           dst_ptr_size = dst_ptr.size();
+          size_t num_dst = 0;
           for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
             {
               size_t low_dst_ptr = dst_blk_ptr[b],
@@ -67,14 +69,10 @@ namespace neuroh5
                             case EdgeMapDst:
                               {
                                 auto it = node_rank_map.find(dst);
-                                if (it == node_rank_map.end())
-                                  {
-                                    printf("gid %d not found in rank map\n", dst);
-                                  }
                                 //assert(it != node_rank_map.end());
-                                rank_t myrank;
+                                rank_t myrank=0;
                                 if (it == node_rank_map.end())
-                                  { myrank = 0; }
+                                  { myrank = num_dst % num_ranks; }
                                 else
                                   { myrank = it->second; }
                                 edge_tuple_t& et = rank_edge_map[myrank][dst];
@@ -123,13 +121,19 @@ namespace neuroh5
                               break;
                             case EdgeMapSrc:
                               {
-                                for (size_t j = low; j < high; ++j)
+                                for (size_t j = low, jj=0; j < high; ++j, ++jj)
                                   {
                                     NODE_IDX_T src = src_idx[j] + src_start;
-
+                                    rank_t myrank = 0;
                                     auto it = node_rank_map.find(src);
-                                    assert(it != node_rank_map.end());
-                                    rank_t myrank = it->second;
+                                    if (it == node_rank_map.end())
+                                      {
+                                        myrank = num_dst % num_ranks;
+                                      }
+                                    else
+                                      {
+                                         it->second;
+                                      }
                                     edge_tuple_t& et = rank_edge_map[myrank][src];
 
                                     vector<NODE_IDX_T> &my_dsts = get<0>(et);
@@ -176,6 +180,7 @@ namespace neuroh5
                             }
                         }
                     }
+                  num_dst++;
                 }
             }
         }

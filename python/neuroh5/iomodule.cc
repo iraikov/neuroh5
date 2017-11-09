@@ -3801,15 +3801,6 @@ extern "C"
     py_ngg->state = new NeuroH5ProjectionGenState();
 
     map<CELL_IDX_T, rank_t> node_rank_map;
-    // Create C++ map for node_rank_map:
-    // round-robin node to rank assignment from file
-    rank_t r=0; 
-    for (size_t i = 0; i < total_num_nodes; i++)
-      {
-        py_ngg->state->node_rank_map.insert(make_pair(i, r++));
-        if ((unsigned int)size <= r) r=0;
-      }
-    
     assert(MPI_Comm_dup(*comm_ptr, &(py_ngg->state->comm)) == MPI_SUCCESS);
 
     py_ngg->state->pos             = seq_next;
@@ -4411,7 +4402,13 @@ extern "C"
   static PyObject *
   neuroh5_prj_gen_next(PyNeuroH5ProjectionGenState *py_ngg)
   {
-    PyObject *result = NULL; 
+    PyObject *result = NULL;
+
+    int status = 0;
+    int size, rank;
+    assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
+
     assert(py_ngg->state->node_index <= py_ngg->state->node_count);
 
     switch (py_ngg->state->pos)
@@ -4443,6 +4440,7 @@ extern "C"
                 }
             }
 
+          
 
           if ((py_ngg->state->edge_map_iter != py_ngg->state->edge_map.cend()))
             {
