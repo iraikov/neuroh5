@@ -424,7 +424,6 @@ namespace neuroh5
     template <typename T>
     void write_cell_attribute
     (
-     MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
      const std::vector<CELL_IDX_T>&  index,
@@ -438,6 +437,15 @@ namespace neuroh5
       assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
+      hid_t file = H5Iget_file_id(loc);
+      assert(file >= 0);
+
+      // get the I/O communicator
+      MPI_Comm comm;
+      MPI_Info info;
+      hid_t fapl = H5Fget_access_plist(file);
+      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+      
       int ssize, srank; size_t size, rank;
       assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
@@ -515,7 +523,7 @@ namespace neuroh5
           switch (index_type)
             {
             case IndexOwner:
-              status = write<CELL_IDX_T> (loc, path + "/" + CELL_INDEX,
+              status = write<CELL_IDX_T> (file, path + "/" + CELL_INDEX,
                                           global_index_size, local_index_start, local_index_size,
                                           CELL_IDX_H5_NATIVE_T,
                                           index, wapl);
@@ -530,7 +538,7 @@ namespace neuroh5
           switch (ptr_type.type)
             {
             case PtrOwner:
-              status = write<ATTR_PTR_T> (loc, path + "/" + ATTR_PTR,
+              status = write<ATTR_PTR_T> (file, path + "/" + ATTR_PTR,
                                           global_ptr_size, local_ptr_start, local_ptr_size,
                                           ATTR_PTR_H5_NATIVE_T,
                                           local_attr_ptr, wapl);
@@ -542,7 +550,7 @@ namespace neuroh5
               break;
             }
         
-          status = write<T> (loc, path + "/" + ATTR_VAL,
+          status = write<T> (file, path + "/" + ATTR_VAL,
                              global_value_size, local_value_start, local_value_size,
                              mtype, value, wapl);
         }
@@ -550,6 +558,18 @@ namespace neuroh5
       assert(H5Tclose(mtype)  >= 0);
       status = H5Pclose(wapl);
       assert(status == 0);
+
+      status = H5Pclose(fapl);
+      assert(status == 0);
+
+      status = MPI_Comm_free(&comm);
+      assert(status == MPI_SUCCESS);
+      if (info != MPI_INFO_NULL)
+        {
+          status = MPI_Info_free(&info);
+          assert(status == MPI_SUCCESS);
+        
+        }
     }
 
   }

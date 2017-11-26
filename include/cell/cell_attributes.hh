@@ -499,7 +499,7 @@ namespace neuroh5
                                      ftype, index_type, ptr_type,
                                      chunk_size, value_chunk_size);
     
-      hdf5::write_cell_attribute<T> (comm, file, attr_path,
+      hdf5::write_cell_attribute<T> (file, attr_path,
                                      index, attr_ptr, value,
                                      index_type, ptr_type);
 
