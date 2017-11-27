@@ -555,6 +555,9 @@ namespace neuroh5
                              mtype, value, wapl);
         }
 
+      status = H5Fclose (file);
+      assert(status >= 0);
+
       assert(H5Tclose(mtype)  >= 0);
       status = H5Pclose(wapl);
       assert(status == 0);
