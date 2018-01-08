@@ -125,15 +125,7 @@ namespace neuroh5
                                   {
                                     NODE_IDX_T src = src_idx[j] + src_start;
                                     rank_t myrank = 0;
-                                    auto it = node_rank_map.find(src);
-                                    if (it == node_rank_map.end())
-                                      {
-                                        myrank = num_dst % num_ranks;
-                                      }
-                                    else
-                                      {
-                                         it->second;
-                                      }
+                                    myrank = src % num_ranks;
                                     edge_tuple_t& et = rank_edge_map[myrank][src];
 
                                     vector<NODE_IDX_T> &my_dsts = get<0>(et);
