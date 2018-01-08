@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Run the reader to generated *.edges files per projection and per rank
-mpirun -n 4 ./build/scatter -a -i 2 -o ./data/dentate_test ./data/dentate_test.h5
+mpirun -n 4 ./build/neurograph_scatter -a -i 2 -o ./data/dentate_test ./data/dentate_test.h5
 
 ## Concatenate all results into one file per projection and remove first column 
 cat data/dentate_test.0.[0-9]*.edges | cut -d' ' -f1,2 | sort -s -k 2n > data/dentate_test.0.test.edges
