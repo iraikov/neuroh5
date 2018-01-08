@@ -80,12 +80,18 @@ int main(int argc, char** argv)
   // parse arguments
   int optflag_iosize = 0;
   int optflag_output = 0;
-  bool opt_iosize = false,
-    opt_output = false;
+  int optflag_indegree = 0;
+  int optflag_outdegree = 0;
+  bool opt_iosize    = false,
+    opt_indegree     = false,
+    opt_outdegree    = false,
+    opt_output       = false;
 
   static struct option long_options[] = {
     {"output",    required_argument, &optflag_output,  1 },
     {"iosize",    required_argument, &optflag_iosize,  1 },
+    {"indegree",  no_argument, &optflag_indegree,  1 },
+    {"outdegree", no_argument, &optflag_outdegree,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
@@ -106,6 +112,12 @@ int main(int argc, char** argv)
             opt_output = true;
             output = string(optarg);
           }
+          if (optflag_indegree == 1) {
+            opt_indegree = true;
+          }
+          if (optflag_outdegree == 1) {
+            opt_outdegree = true;
+          }
           break;
         case 'o':
           opt_output = true;
@@ -125,6 +137,11 @@ int main(int argc, char** argv)
         }
     }
 
+  if ((!opt_indegree) && (!opt_outdegree))
+    {
+      opt_indegree = true;
+    }
+  
   if (optind < argc)
     {
       input_file_name = std::string(argv[optind]);
@@ -144,22 +161,28 @@ int main(int argc, char** argv)
   
   std::vector<NODE_IDX_T> parts;
   std::vector<double> part_weights;
-  
-  graph::compute_vertex_indegree
-  (
-   MPI_COMM_WORLD,
-   input_file_name,
-   prj_names,
-   iosize
-   );
-  
-  graph::compute_vertex_outdegree
-  (
-   MPI_COMM_WORLD,
-   input_file_name,
-   prj_names,
-   iosize
-   );
+
+  if (opt_indegree)
+    {
+      graph::compute_vertex_indegree
+        (
+         MPI_COMM_WORLD,
+         input_file_name,
+         prj_names,
+         iosize
+         );
+    }
+
+  if (opt_outdegree)
+    {
+      graph::compute_vertex_outdegree
+        (
+         MPI_COMM_WORLD,
+         input_file_name,
+         prj_names,
+         iosize
+         );
+    }
 
   
   MPI_Finalize();
