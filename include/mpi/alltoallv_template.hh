@@ -76,30 +76,6 @@ namespace neuroh5
 
       //assert(recvbuf_size > 0);
       recvbuf.resize(recvbuf_size, 0);
-
-      {
-        std::stringstream ss_sendcounts;
-        for(size_t i = 0; i < sendcounts.size(); ++i)
-          {
-            if(i != 0)
-              ss_sendcounts << ",";
-            ss_sendcounts << sendcounts[i];
-          }
-        std::string s_sendcounts = ss_sendcounts.str();
-
-        std::stringstream ss_recvcounts;
-        for(size_t i = 0; i < recvcounts.size(); ++i)
-          {
-            if(i != 0)
-              ss_recvcounts << ",";
-            ss_recvcounts << recvcounts[i];
-          }
-        std::string s_recvcounts = ss_recvcounts.str();
-        
-        mpi::MPI_DEBUG(comm, "alltoallv_vector: recvbuf_size = ", recvbuf_size,
-                       " sendcounts = ", s_sendcounts, " recvcounts = ", s_recvcounts);
-      }
-
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,

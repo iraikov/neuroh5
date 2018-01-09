@@ -225,11 +225,11 @@ namespace neuroh5
       // Combine the edges from all projections into a single edge map
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
 
-      prj_vector.clear();
-
       uint64_t sum_outdegree=0, nz_outdegree=0;
       vector < std::map<NODE_IDX_T, uint32_t> > vertex_outdegree_maps;
       vertex_degree (comm, total_num_nodes, prj_vector, vertex_outdegree_maps);
+
+      prj_vector.clear();
 
       size_t prj_index=0;
       for (const map< NODE_IDX_T, uint32_t>& vertex_outdegree_map : vertex_outdegree_maps)
@@ -277,7 +277,7 @@ namespace neuroh5
             }
           string src_pop_name = prj_names[prj_index].first;
           string dst_pop_name = prj_names[prj_index].second;
-          
+
           graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex outdegree " +
                                         src_pop_name + " -> " + dst_pop_name,
                                         node_id, attr_ptr, vertex_outdegree_value);
