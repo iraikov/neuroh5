@@ -161,6 +161,7 @@ namespace neuroh5
                                         }
                                     }
                                     my_dsts.push_back(dst);
+
                                     set_attr_vec<float>(edge_attr_map, edge_attr_vec, j);
                                     set_attr_vec<uint8_t>(edge_attr_map, edge_attr_vec, j);
                                     set_attr_vec<uint16_t>(edge_attr_map, edge_attr_vec, j);
@@ -168,7 +169,7 @@ namespace neuroh5
                                     set_attr_vec<int8_t>(edge_attr_map, edge_attr_vec, j);
                                     set_attr_vec<int16_t>(edge_attr_map, edge_attr_vec, j);
                                     set_attr_vec<int32_t>(edge_attr_map, edge_attr_vec, j);
-                                      
+
                                     num_edges++;
                                   }
 

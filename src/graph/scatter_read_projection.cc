@@ -183,6 +183,8 @@ namespace neuroh5
 
           MPI_Comm_free(&io_comm);
 
+          MPI_Barrier(all_comm);
+          mpi::MPI_DEBUG(all_comm, "scatter_read_projection: before alltoallv_vector");
           assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                              recvcounts, rdispls, recvbuf) >= 0);
         }
