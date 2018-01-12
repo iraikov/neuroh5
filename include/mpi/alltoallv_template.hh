@@ -63,6 +63,7 @@ namespace neuroh5
 
       assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
                           &recvcounts[0], 1, MPI_INT, comm) >= 0);
+
     
       // 2. Each rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
@@ -76,7 +77,15 @@ namespace neuroh5
 
       //assert(recvbuf_size > 0);
       recvbuf.resize(recvbuf_size, 0);
+
+      size_t global_recvbuf_size=0;
+      assert(MPI_Allreduce(&recvbuf_size, &global_recvbuf_size, 1, MPI_SIZE_T, MPI_SUM,
+                           comm) >= 0);
+      assert(global_recvbuf_size > 0);
       
+      mpi::MPI_DEBUG(comm, "alltoallv_vector: global recvbuf size = ", global_recvbuf_size,
+                     " sendbuf size = ", sendbuf.size(),
+                     " recvbuf size = ", recvbuf.size());
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,

@@ -48,19 +48,13 @@ namespace neuroh5
      map< NODE_IDX_T, rank_t > &node_rank_map
      )
     {
-      hsize_t remainder=0, offset=0, buckets=0;
-      
-      for (size_t i=0; i<num_ranks; i++)
+      // round-robin node to rank assignment from file
+      for (size_t i = 0; i < num_nodes; i++)
         {
-          remainder  = num_nodes - offset;
-          buckets    = num_ranks - i;
-          for (size_t j = 0; j < remainder / buckets; j++)
-            {
-              node_rank_map.insert(make_pair(offset+j, i));
-            }
-          offset    += remainder / buckets;
+            node_rank_map.insert(make_pair(i, i%num_ranks));
         }
     }
+
     
     int compute_vertex_indegree
     (
