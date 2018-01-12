@@ -65,7 +65,7 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s [treefile] [options] INPUT_FILE SELECTION_FILE OUTPUT_FILE\n\n", argv[0]);
+  printf("Usage: %s [treefile] [options] INPUT_FILE SELECTION_NAMESPACE OUTPUT_FILE\n\n", argv[0]);
   printf("Options:\n");
   printf("\t--verbose:\n");
   printf("\t\tPrint verbose diagnostic information\n");
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 {
   herr_t status;
   MPI_Comm all_comm;
-  string pop_name, input_file_name, output_file_name, selection_file_name, rank_file_name;
+  string pop_name, input_file_name, output_file_name, selection_namespace, rank_file_name;
   vector<string> attr_name_spaces;
   size_t n_nodes;
   map<CELL_IDX_T, rank_t> node_rank_map;
@@ -242,7 +242,7 @@ int main(int argc, char** argv)
   if (optind <= argc-3)
     {
       input_file_name = string(argv[optind]);
-      selection_file_name = string(argv[optind+1]);
+      selection_namespace = string(argv[optind+1]);
       output_file_name = string(argv[optind+2]);
     }
   else
@@ -276,36 +276,27 @@ int main(int argc, char** argv)
     {
       throw_err("Population not found");
     }
-  
+
+  size_t pop_start = pop_vector[pop_idx].start;
 
   // Read in selection indices
   set<CELL_IDX_T> tree_selection;
   map<CELL_IDX_T, CELL_IDX_T> selection_map;
 
   {
-    ifstream infile(selection_file_name.c_str());
-    string line;
-    // reads index per line
-    while (getline(infile, line))
-      {
-        istringstream iss(line);
-        CELL_IDX_T n;
-        assert (iss >> n);
-        tree_selection.insert(n);
-        if (opt_reindex)
-          {
-            CELL_IDX_T n1;
-            assert (iss >> n1);
-            selection_map.insert(make_pair(n, n1));
-            if (rank == 0) printf("selection_map: %u -> %u\n", n, n1);
-          }
-        else
-          {
-            selection_map.insert(make_pair(n, n));
-          }
-      }
-    
-    infile.close();
+    data::NamedAttrMap selection_attr_map;
+    cell::bcast_cell_attributes (all_comm, 0, input_file_name, selection_namespace, pop_name,
+                                 pop_start, selection_attr_map);
+
+    auto name_map = selection_attr_map.attr_name_map<uint32_t>();
+    auto const& name_it = name_map.find("New gid");
+    assert(name_it != name_map.end());
+    size_t newgid_attr_index = name_it->second;
+    auto attr_map = selection_attr_map.attr_map<uint32_t>(newgid_attr_index);
+    for (auto const& attr_it : attr_map)
+       {
+         selection_map.insert(make_pair(attr_it.first, attr_it.second[0]));
+       }
   }
 
   // Determine which nodes are assigned to which compute ranks
