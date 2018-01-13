@@ -558,8 +558,36 @@ int main(int argc, char** argv)
       assert(status == 0);
       status = H5Fclose (output_file);
       assert(status == 0);
+
+      map<CELL_IDX_T, pair<uint32_t,pop_t> > output_pop_ranges;
+      vector<pop_range_t> output_pop_vector;
+
+      // Read population info to determine n_nodes
+      assert(cell::read_population_ranges(all_comm, output_file_name,
+                                          output_pop_ranges, output_pop_vector,
+                                          n_nodes) >= 0);
+      vector<pair <pop_t, string> > output_pop_labels;
+      status = cell::read_population_labels(all_comm, output_file_name, output_pop_labels);
+      assert (status >= 0);
       
-      status = cell::append_trees(all_comm, output_file_name, pop_name, tree_subset);
+      // Determine index of population to be read
+      size_t output_pop_idx=0; bool output_pop_idx_set=false;
+      for (size_t i=0; i<output_pop_labels.size(); i++)
+        {
+          if (get<1>(output_pop_labels[i]) == pop_name)
+            {
+              output_pop_idx = get<0>(output_pop_labels[i]);
+              output_pop_idx_set = true;
+            }
+        }
+      if (!output_pop_idx_set)
+        {
+          throw_err("Population not found");
+        }
+      
+      size_t output_pop_start = output_pop_vector[output_pop_idx].start;
+
+      status = cell::append_trees(all_comm, output_file_name, pop_name, output_pop_start, tree_subset);
       
       assert(status == 0);
 
@@ -588,7 +616,7 @@ int main(int argc, char** argv)
               cell::write_cell_attribute_map<float>(all_comm,
                                                     output_file_name,
                                                     attr_name_space,
-                                                    pop_name,
+                                                    pop_name, pop_start,
                                                     attr_names[data::AttrMap::attr_index_float][i],
                                                     subset_float_values[i],
                                                     dflt_data_type,
@@ -603,7 +631,7 @@ int main(int argc, char** argv)
               cell::write_cell_attribute_map<uint8_t>(all_comm,
                                                       output_file_name,
                                                       attr_name_space,
-                                                      pop_name,
+                                                      pop_name, pop_start,
                                                       attr_names[data::AttrMap::attr_index_uint8][i],
                                                       subset_uint8_values[i],
                                                       dflt_data_type,
@@ -618,7 +646,7 @@ int main(int argc, char** argv)
               cell::write_cell_attribute_map<int8_t>(all_comm,
                                                      output_file_name,
                                                      attr_name_space,
-                                                     pop_name,
+                                                     pop_name, pop_start,
                                                      attr_names[data::AttrMap::attr_index_int8][i],
                                                      subset_int8_values[i],
                                                      dflt_data_type,
@@ -633,7 +661,7 @@ int main(int argc, char** argv)
               cell::write_cell_attribute_map<uint16_t>(all_comm,
                                                        output_file_name,
                                                        attr_name_space,
-                                                       pop_name,
+                                                       pop_name, pop_start,
                                                        attr_names[data::AttrMap::attr_index_uint16][i],
                                                        subset_uint16_values[i],
                                                        dflt_data_type,
@@ -648,7 +676,7 @@ int main(int argc, char** argv)
               cell::write_cell_attribute_map<uint32_t>(all_comm,
                                                        output_file_name,
                                                        attr_name_space,
-                                                       pop_name,
+                                                       pop_name, pop_start,
                                                        attr_names[data::AttrMap::attr_index_uint32][i],
                                                        subset_uint32_values[i],
                                                        dflt_data_type,
@@ -664,7 +692,7 @@ int main(int argc, char** argv)
               cell::write_cell_attribute_map<int32_t>(all_comm,
                                                       output_file_name,
                                                       attr_name_space,
-                                                      pop_name,
+                                                      pop_name, pop_start,
                                                       attr_names[data::AttrMap::attr_index_int32][i],
                                                       subset_int32_values[i],
                                                       dflt_data_type,

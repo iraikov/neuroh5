@@ -64,7 +64,7 @@ namespace neuroh5
      MPI_Comm comm,
      const std::string& file_name,
      const std::string& pop_name,
-     const CELL_IDX_T pop_start,
+     const CELL_IDX_T& pop_start,
      std::vector<neurotree_t> &tree_list,
      size_t offset = 0,
      size_t numitems = 0,
@@ -94,7 +94,7 @@ namespace neuroh5
     (
      const std::string& file_name,
      const std::string& pop_name,
-     const CELL_IDX_T pop_start,
+     const CELL_IDX_T& pop_start,
      std::vector<neurotree_t> &tree_list,
      const std::vector<CELL_IDX_T>&  selection
      )

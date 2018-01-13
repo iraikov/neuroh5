@@ -281,6 +281,7 @@ namespace neuroh5
      MPI_Comm comm,
      const std::string& file_name,
      const std::string& pop_name,
+     const CELL_IDX_T& pop_start,
      std::vector<neurotree_t> &tree_list,
      CellPtr ptr_type = CellPtr(PtrOwner)
      )
@@ -340,45 +341,45 @@ namespace neuroh5
       string attr_ptr_owner_path = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD) + "/" + hdf5::ATTR_PTR;
       string sec_ptr_owner_path  = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC) + "/" + hdf5::SEC_PTR;
       
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::X_COORD,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::X_COORD,
                              all_index_vector, attr_ptr, all_xcoords,
                              coord_data_type, IndexShared,
                              CellPtr (PtrOwner, hdf5::ATTR_PTR));
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::Y_COORD,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::Y_COORD,
                              all_index_vector, attr_ptr, all_ycoords,
                              coord_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::Z_COORD,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::Z_COORD,
                              all_index_vector, attr_ptr, all_zcoords,
                              coord_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::RADIUS,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::RADIUS,
                              all_index_vector, attr_ptr, all_radiuses,
                              dflt_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::LAYER,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::LAYER,
                              all_index_vector, attr_ptr, all_layers,
                              layer_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::PARENT,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::PARENT,
                              all_index_vector, attr_ptr, all_parents,
                              parent_node_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
 
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SWCTYPE,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::SWCTYPE,
                              all_index_vector, attr_ptr, all_swc_types,
                              swc_data_type, IndexShared,
                              CellPtr (PtrShared, attr_ptr_owner_path));
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SRCSEC,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::SRCSEC,
                              all_index_vector, topo_ptr, all_src_vector,
                              section_data_type, IndexShared,
                              CellPtr (PtrOwner, hdf5::SEC_PTR));
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::DSTSEC,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::DSTSEC,
                              all_index_vector, topo_ptr, all_dst_vector,
                              section_data_type, IndexShared,
                              CellPtr (PtrShared, sec_ptr_owner_path));
 
-      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, hdf5::SECTION,
+      append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::SECTION,
                              all_index_vector, sec_ptr, all_sections,
                              section_data_type, IndexShared,
                              CellPtr (PtrOwner, hdf5::SEC_PTR));

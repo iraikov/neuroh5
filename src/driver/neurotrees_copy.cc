@@ -198,9 +198,11 @@ int main(int argc, char** argv)
     {
       throw_err("Population not found");
     }
+
+  CELL_IDX_T pop_start = pop_vector[pop_idx].start;
   
   status = cell::read_trees (all_comm, input_filename,
-                             pop_name, pop_vector[pop_idx].start,
+                             pop_name, pop_start,
                              input_tree_list, source_gid, source_gid, true);
   assert (status >= 0);
   
@@ -301,7 +303,7 @@ int main(int argc, char** argv)
 
   MPI_Barrier(all_comm);
 
-  status = cell::append_trees(all_comm, output_filename, pop_name, output_tree_list);
+  status = cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list);
   assert(status == 0);
 
   MPI_Comm_free(&all_comm);

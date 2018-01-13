@@ -4,6 +4,7 @@ import mpi4py
 import numpy as np
 from distutils.core import setup, Extension
 
+
 if sys.platform == 'darwin':
     HDF5_INCDIR = os.environ.get("HDF5_INCDIR", "/usr/local/hdf5/include")
     HDF5_LIBDIR = os.environ.get("HDF5_LIBDIR", "/usr/local/hdf5/lib")

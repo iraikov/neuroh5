@@ -3179,6 +3179,36 @@ extern "C"
 
     if (dict_size > 0)
       {
+
+        vector<pair <pop_t, string> > pop_labels;
+        status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
+        assert (status >= 0);
+    
+        // Determine index of population to be read
+        size_t pop_idx=0; bool pop_idx_set=false;
+        for (size_t i=0; i<pop_labels.size(); i++)
+          {
+            if (get<1>(pop_labels[i]) == pop_name)
+              {
+                pop_idx = get<0>(pop_labels[i]);
+                pop_idx_set = true;
+              }
+          }
+        if (!pop_idx_set)
+          {
+            throw_err("Population not found");
+          }
+        
+        map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+        vector<pop_range_t> pop_vector;
+        size_t n_nodes;
+        
+        // Read population info
+        assert(cell::read_population_ranges(data_comm, string(file_name),
+                                            pop_ranges, pop_vector,
+                                            n_nodes) >= 0);
+
+        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
     
         int npy_type=0;
         
@@ -3216,7 +3246,7 @@ extern "C"
               {
               case NPY_UINT32:
                 {
-                  cell::write_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
                                                             attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
                                                             dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint32]++;
@@ -3224,7 +3254,7 @@ extern "C"
                 }
               case NPY_UINT16:
                 {
-                  cell::write_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
                                                             attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
                                                             dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint16]++;
@@ -3232,7 +3262,7 @@ extern "C"
                 }
               case NPY_UINT8:
                 {
-                  cell::write_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
                                                            attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
                                                            dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint8]++;
@@ -3240,7 +3270,7 @@ extern "C"
                 }
               case NPY_INT32:
                 {
-                  cell::write_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
                                                            attr_name, all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
                                                            dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int32]++;
@@ -3248,7 +3278,7 @@ extern "C"
                 }
               case NPY_INT16:
                 {
-                  cell::write_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
                                                            attr_name, all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
                                                            dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int16]++;
@@ -3256,7 +3286,7 @@ extern "C"
                 }
               case NPY_INT8:
                 {
-                  cell::write_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
                                                           attr_name, all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
                                                           dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int8]++;
@@ -3264,7 +3294,7 @@ extern "C"
                 }
               case NPY_FLOAT:
                 {
-                  cell::write_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, 
+                  cell::write_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
                                                          attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
                                                          dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_float]++;
@@ -3366,6 +3396,37 @@ extern "C"
         string file_name      = string(file_name_arg);
         string pop_name       = string(pop_name_arg);
         string attr_namespace = string(namespace_arg);
+
+        vector<pair <pop_t, string> > pop_labels;
+        status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
+        assert (status >= 0);
+    
+        // Determine index of population to be read
+        size_t pop_idx=0; bool pop_idx_set=false;
+        for (size_t i=0; i<pop_labels.size(); i++)
+          {
+            if (get<1>(pop_labels[i]) == pop_name)
+              {
+                pop_idx = get<0>(pop_labels[i]);
+                pop_idx_set = true;
+              }
+          }
+        if (!pop_idx_set)
+          {
+            throw_err("Population not found");
+          }
+        
+        map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+        vector<pop_range_t> pop_vector;
+        size_t n_nodes;
+        
+        // Read population info
+        assert(cell::read_population_ranges(data_comm, string(file_name),
+                                            pop_ranges, pop_vector,
+                                            n_nodes) >= 0);
+
+        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+    
     
         int npy_type=0;
     
@@ -3416,7 +3477,7 @@ extern "C"
               {
               case NPY_UINT32:
                 {
-                  cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                  cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
                                                              all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
                                                              io_size, dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint32]++;
@@ -3424,7 +3485,7 @@ extern "C"
                 }
               case NPY_INT32:
                 {
-                  cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                  cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
                                                             all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
                                                             io_size, dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int32]++;
@@ -3432,7 +3493,7 @@ extern "C"
                 }
               case NPY_UINT16:
                 {
-                  cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                  cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
                                                              all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
                                                              io_size, dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint16]++;
@@ -3440,7 +3501,7 @@ extern "C"
                 }
               case NPY_INT16:
                 {
-                  cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                  cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
                                                             all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
                                                             io_size, dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int16]++;
@@ -3448,7 +3509,7 @@ extern "C"
                 }
               case NPY_UINT8:
                 {
-                  cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                  cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
                                                             all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
                                                             io_size, dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_uint8]++;
@@ -3456,7 +3517,7 @@ extern "C"
                 }
               case NPY_INT8:
                 {
-                  cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                  cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
                                                            all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
                                                            io_size, dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_int8]++;
@@ -3464,7 +3525,7 @@ extern "C"
                 }
               case NPY_FLOAT:
                 {
-                  cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, attr_name,
+                  cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
                                                           all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
                                                           io_size, dflt_data_type);
                   attr_type_idx[AttrMap::attr_index_float]++;
@@ -3566,6 +3627,35 @@ extern "C"
     
     string file_name      = string(file_name_arg);
     string pop_name       = string(pop_name_arg);
+
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
+    assert (status >= 0);
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err("Population not found");
+      }
+
+    
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    size_t n_nodes;
+    
+    // Read population info
+    assert(cell::read_population_ranges(data_comm, string(file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
     
     vector<string> attr_names;
     vector<int> attr_types;
@@ -3591,7 +3681,10 @@ extern "C"
                                all_attr_values_int8,
                                all_attr_values_float);
 
-    assert(cell::append_trees (data_comm, file_name, pop_name, tree_vector) >= 0);
+    
+    CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+    
+    assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0);
     assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
     
     assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);

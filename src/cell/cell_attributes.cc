@@ -570,7 +570,7 @@ namespace neuroh5
      const string& file_name,
      const string& name_space,
      const string& pop_name,
-     const CELL_IDX_T pop_start,
+     const CELL_IDX_T& pop_start,
      data::NamedAttrMap& attr_values,
      size_t offset = 0,
      size_t numitems = 0
@@ -725,7 +725,7 @@ namespace neuroh5
      // A vector that maps nodes to compute ranks
      const map<CELL_IDX_T, rank_t> &node_rank_map,
      const string                 &pop_name,
-     const CELL_IDX_T              pop_start,
+     const CELL_IDX_T             &pop_start,
      data::NamedAttrMap           &attr_map,
      // if positive, these arguments specify offset and number of entries to read
      // from the entries available to the current rank
@@ -886,7 +886,7 @@ namespace neuroh5
      const string& file_name,
      const string& name_space,
      const string& pop_name,
-     const CELL_IDX_T pop_start,
+     const CELL_IDX_T& pop_start,
      data::NamedAttrMap& attr_map,
      size_t offset = 0,
      size_t numitems = 0
@@ -1138,7 +1138,7 @@ namespace neuroh5
      const string& file_name,
      const string& name_space,
      const string& pop_name,
-     const CELL_IDX_T pop_start,
+     const CELL_IDX_T& pop_start,
      const std::vector<CELL_IDX_T>&  selection,
      data::NamedAttrMap& attr_values
      )

@@ -20,6 +20,7 @@ namespace neuroh5
      MPI_Comm comm,
      const std::string& file_name,
      const std::string& pop_name,
+     const CELL_IDX_T& pop_start,
      std::vector<neurotree_t> &tree_list,
      CellPtr ptr_type = CellPtr(PtrOwner)
      );

@@ -63,7 +63,7 @@ namespace neuroh5
      const string&    file_name,
      const string&    name_space,
      const string&    pop_name,
-     const CELL_IDX_T pop_start,
+     const CELL_IDX_T& pop_start,
      data::NamedAttrMap&    attr_values,
      size_t offset = 0,
      size_t numitems = 0
@@ -74,7 +74,7 @@ namespace neuroh5
      const string& file_name,
      const string& name_space,
      const string& pop_name,
-     const CELL_IDX_T pop_start,
+     const CELL_IDX_T& pop_start,
      const std::vector<CELL_IDX_T>&  selection,
      data::NamedAttrMap& attr_values
      );
@@ -88,7 +88,7 @@ namespace neuroh5
      // A vector that maps nodes to compute ranks
      const map<CELL_IDX_T, rank_t> &node_rank_map,
      const string                 &pop_name,
-     const CELL_IDX_T              pop_start,
+     const CELL_IDX_T             &pop_start,
      data::NamedAttrMap           &attr_map,
      // if positive, these arguments specify offset and number of entries to read
      // from the entries available to the current rank
@@ -104,7 +104,7 @@ namespace neuroh5
      const string&          file_name,
      const string&          name_space,
      const string&          pop_name,
-     const CELL_IDX_T       pop_start,
+     const CELL_IDX_T&       pop_start,
      data::NamedAttrMap&    attr_values,
      size_t offset = 0,
      size_t numitems = 0
@@ -118,6 +118,7 @@ namespace neuroh5
      const std::string&                    file_name,
      const std::string&                    attr_namespace,
      const std::string&                    pop_name,
+     const CELL_IDX_T&                     pop_start,
      const std::string&                    attr_name,
      const std::vector<CELL_IDX_T>&        index,
      const std::vector<ATTR_PTR_T>         attr_ptr,
@@ -180,7 +181,14 @@ namespace neuroh5
                                          );
         }
 
-      hdf5::append_cell_attribute<T>(file, attr_path, index, attr_ptr, values,
+      vector<CELL_IDX_T> rindex;
+
+      for (const CELL_IDX_T& gid: index)
+        {
+          rindex.push_back(gid - pop_start);
+        }
+      
+      hdf5::append_cell_attribute<T>(file, attr_path, rindex, attr_ptr, values,
                                      data_type, index_type, ptr_type);
     
       status = H5Fclose(file);
@@ -197,6 +205,7 @@ namespace neuroh5
      const std::string&              file_name,
      const std::string&              attr_namespace,
      const std::string&              pop_name,
+     const CELL_IDX_T&               pop_start,
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, vector<T>>& value_map,
      const size_t io_size,
@@ -430,7 +439,7 @@ namespace neuroh5
       if (rank < io_size_value)
         {
           append_cell_attribute<T>(io_comm, file_name,
-                                   attr_namespace, pop_name, attr_name,
+                                   attr_namespace, pop_name, pop_start, attr_name,
                                    gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
                                    data_type, index_type, ptr_type, 
                                    chunk_size, value_chunk_size, cache_size);
@@ -450,6 +459,7 @@ namespace neuroh5
      const std::string&              file_name,
      const std::string&              attr_namespace,
      const std::string&              pop_name,
+     const CELL_IDX_T&               pop_start,
      const std::string&              attr_name,
      const std::vector<CELL_IDX_T>&  index,
      const std::vector<ATTR_PTR_T>&  attr_ptr,
@@ -498,9 +508,16 @@ namespace neuroh5
       create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
                                      ftype, index_type, ptr_type,
                                      chunk_size, value_chunk_size);
+
+      vector<CELL_IDX_T> rindex;
+
+      for (const CELL_IDX_T& gid: index)
+        {
+          rindex.push_back(gid - pop_start);
+        }
     
       hdf5::write_cell_attribute<T> (file, attr_path,
-                                     index, attr_ptr, value,
+                                     rindex, attr_ptr, value,
                                      index_type, ptr_type);
 
       status = H5Fclose(file);
@@ -517,6 +534,7 @@ namespace neuroh5
      const std::string&              file_name,
      const std::string&              attr_namespace,
      const std::string&              pop_name,
+     const CELL_IDX_T&               pop_start,
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, vector<T>>& value_map,
      const data::optional_hid        data_type,
@@ -545,7 +563,7 @@ namespace neuroh5
       attr_ptr.push_back(value_offset);
     
       write_cell_attribute<T>(comm, file_name,
-                              attr_namespace, pop_name, attr_name,
+                              attr_namespace, pop_name, pop_start, attr_name,
                               index_vector, attr_ptr, value_vector,
                               data_type, index_type, ptr_type,
                               chunk_size, value_chunk_size, cache_size);
