@@ -296,15 +296,19 @@ namespace neuroh5
     
     template <class T>
     void fill_attr_vec (const std::map< std::string, NamedAttrVal>& edge_attr_map,
+                        const std::vector<std::string>& edge_attr_namespaces,
                         std::vector<AttrVal>& edge_attr_vec,
                         size_t start, size_t end)
     {
       size_t i=0;
-      for (auto const& iter : edge_attr_map) 
+      for (const std::string& ns : edge_attr_namespaces) 
         {
-          const NamedAttrVal& edge_attr_values = iter.second;
+          const auto& iter = edge_attr_map.find(ns);
+          assert(iter != edge_attr_map.cend());
+          const NamedAttrVal& edge_attr_values = iter->second;
           for (size_t j = start; j < end; ++j)
             {
+              edge_attr_vec[i].resize<T>(edge_attr_values.size_attr_vec<T>());
               for (size_t k = 0;
                    k < edge_attr_vec[i].size_attr_vec<T>(); k++)
                 {
@@ -319,13 +323,17 @@ namespace neuroh5
 
     template <class T>
     void set_attr_vec (const std::map< std::string, NamedAttrVal>& edge_attr_map,
+                       const std::vector<std::string>& edge_attr_namespaces,
                        std::vector<AttrVal>& edge_attr_vec,
                        size_t j)
     {
       size_t i=0;
-      for (auto const& iter : edge_attr_map) 
+      for (const std::string& ns : edge_attr_namespaces) 
         {
-          const NamedAttrVal& edge_attr_values = iter.second;
+          const auto& iter = edge_attr_map.find(ns);
+          assert(iter != edge_attr_map.cend());
+          const NamedAttrVal& edge_attr_values = iter->second;
+          edge_attr_vec[i].resize<T>(edge_attr_values.size_attr_vec<T>());
           for (size_t k = 0;
                k < edge_attr_vec[i].size_attr_vec<T>(); k++)
             {

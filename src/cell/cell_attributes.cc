@@ -292,131 +292,6 @@ namespace neuroh5
     }
 
 
-    void append_rank_attr_map
-    (
-     const map<CELL_IDX_T, rank_t> &node_rank_map,
-     const data::NamedAttrMap   &attr_values,
-     map <rank_t, data::AttrMap> &rank_attr_map)
-    {
-      const vector<map< CELL_IDX_T, vector<float> > > &all_float_values     = attr_values.attr_maps<float>();
-      const vector<map< CELL_IDX_T, vector<int8_t> > > &all_int8_values     = attr_values.attr_maps<int8_t>();
-      const vector<map< CELL_IDX_T, vector<uint8_t> > > &all_uint8_values   = attr_values.attr_maps<uint8_t>();
-      const vector<map< CELL_IDX_T, vector<uint16_t> > > &all_uint16_values = attr_values.attr_maps<uint16_t>();
-      const vector<map< CELL_IDX_T, vector<int16_t> > > &all_int16_values   = attr_values.attr_maps<int16_t>();
-      const vector<map< CELL_IDX_T, vector<uint32_t> > > &all_uint32_values = attr_values.attr_maps<uint32_t>();
-      const vector<map< CELL_IDX_T, vector<int32_t> > > &all_int32_values   = attr_values.attr_maps<int32_t>();
-    
-      for (size_t i=0; i<all_float_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<float> > &float_values = all_float_values[i];
-          for (auto const& element : float_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<float> &v = element.second;
-              auto it = node_rank_map.find(index);
-              if(it == node_rank_map.end())
-                {
-                  printf("index %u not in node rank map\n", index);
-                }
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_uint8_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<uint8_t> > &uint8_values = all_uint8_values[i];
-          for (auto const& element : uint8_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<uint8_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_int8_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<int8_t> > &int8_values = all_int8_values[i];
-          for (auto const& element : int8_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<int8_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_uint16_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<uint16_t> > &uint16_values = all_uint16_values[i];
-          for (auto const& element : uint16_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<uint16_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_int16_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<int16_t> > &int16_values = all_int16_values[i];
-          for (auto const& element : int16_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<int16_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_uint32_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<uint32_t> > &uint32_values = all_uint32_values[i];
-          for (auto const& element : uint32_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<uint32_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-      for (size_t i=0; i<all_int32_values.size(); i++)
-        {
-          const map< CELL_IDX_T, vector<int32_t> > &int32_values = all_int32_values[i];
-          for (auto const& element : int32_values)
-            {
-              const CELL_IDX_T index = element.first;
-              const vector<int32_t> &v = element.second;
-              auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              data::AttrMap &attr_map = rank_attr_map[dst_rank];
-              attr_map.insert(i, index, v);
-            }
-        }
-
-    }
-
     void create_cell_attribute_datasets
     (
      const hid_t&     file,
@@ -765,7 +640,7 @@ namespace neuroh5
             data::NamedAttrMap  attr_values;
             read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
                                  attr_values, offset, numitems * size);
-            append_rank_attr_map(node_rank_map, attr_values, rank_attr_map);
+            append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
           }

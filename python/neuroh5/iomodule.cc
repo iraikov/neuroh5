@@ -171,10 +171,11 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                                  
       while (PyDict_Next(idx_value, &attr_pos, &attr_key, &attr_values))
         {
-          assert(attr_key != Py_None);
-          assert(attr_values != Py_None);
+          if (!PyArray_Check(attr_values))
+            {
+              continue;
+            }
 
-          npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
           if (attr_names.size() < (size_t)attr_idx+1)
             {
               string attr_name = string(PyBytes_AsString(attr_key));
@@ -186,6 +187,8 @@ void build_cell_attr_value_maps (PyObject *idx_values,
               assert(attr_names[attr_idx] == string(PyBytes_AsString(attr_key)));
               assert(attr_types[attr_idx] == npy_type);
             }
+
+          npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
                                      
           switch (npy_type)
             {
@@ -3683,7 +3686,8 @@ extern "C"
 
     
     CELL_IDX_T pop_start = pop_vector[pop_idx].start;
-    
+
+    printf("tree_vector.size() = %u\n", tree_vector.size());
     assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0);
     assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
     

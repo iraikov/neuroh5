@@ -80,29 +80,6 @@ namespace neuroh5
 
                                 vector <AttrVal> &edge_attr_vec = get<1>(et);
                                 edge_attr_vec.resize(edge_attr_map.size());
-                                {
-                                  size_t ni=0;
-                                  for (auto const & iter : edge_attr_map) 
-                                    {
-                                      const NamedAttrVal& edge_attr_values = iter.second;
-                                      
-                                      edge_attr_vec[ni].resize<float>
-                                        (edge_attr_values.size_attr_vec<float>());
-                                      edge_attr_vec[ni].resize<uint8_t>
-                                        (edge_attr_values.size_attr_vec<uint8_t>());
-                                      edge_attr_vec[ni].resize<uint16_t>
-                                        (edge_attr_values.size_attr_vec<uint16_t>());
-                                      edge_attr_vec[ni].resize<uint32_t>
-                                        (edge_attr_values.size_attr_vec<uint32_t>());
-                                      edge_attr_vec[ni].resize<int8_t>
-                                        (edge_attr_values.size_attr_vec<int8_t>());
-                                      edge_attr_vec[ni].resize<int16_t>
-                                        (edge_attr_values.size_attr_vec<int16_t>());
-                                      edge_attr_vec[ni].resize<int32_t>
-                                        (edge_attr_values.size_attr_vec<int32_t>());
-                                      ni++;
-                                    }
-                                }
                                 
                                 for (size_t j = low; j < high; ++j)
                                   {
@@ -110,13 +87,13 @@ namespace neuroh5
                                     my_srcs.push_back (src);
                                     num_edges++;
                                   }
-                                fill_attr_vec<float>(edge_attr_map, edge_attr_vec, low, high);
-                                fill_attr_vec<uint8_t>(edge_attr_map, edge_attr_vec, low, high);
-                                fill_attr_vec<uint16_t>(edge_attr_map, edge_attr_vec, low, high);
-                                fill_attr_vec<uint32_t>(edge_attr_map, edge_attr_vec, low, high);
-                                fill_attr_vec<int8_t>(edge_attr_map, edge_attr_vec, low, high);
-                                fill_attr_vec<int16_t>(edge_attr_map, edge_attr_vec, low, high);
-                                fill_attr_vec<int32_t>(edge_attr_map, edge_attr_vec, low, high);
+                                fill_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                fill_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                fill_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                fill_attr_vec<uint32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                fill_attr_vec<int8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                fill_attr_vec<int16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                fill_attr_vec<int32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
                               }
                               break;
                             case EdgeMapSrc:
@@ -137,38 +114,15 @@ namespace neuroh5
 
                                     vector <AttrVal> &edge_attr_vec = get<1>(et);
                                     edge_attr_vec.resize(edge_attr_map.size());
-                                    {
-                                      size_t ni=0;
-                                      for (auto const & iter : edge_attr_map) 
-                                        {
-                                          const NamedAttrVal& edge_attr_values = iter.second;
-                                          
-                                          edge_attr_vec[ni].resize<float>
-                                            (edge_attr_values.size_attr_vec<float>());
-                                          edge_attr_vec[ni].resize<uint8_t>
-                                            (edge_attr_values.size_attr_vec<uint8_t>());
-                                          edge_attr_vec[ni].resize<uint16_t>
-                                            (edge_attr_values.size_attr_vec<uint16_t>());
-                                          edge_attr_vec[ni].resize<uint32_t>
-                                            (edge_attr_values.size_attr_vec<uint32_t>());
-                                          edge_attr_vec[ni].resize<int8_t>
-                                            (edge_attr_values.size_attr_vec<int8_t>());
-                                          edge_attr_vec[ni].resize<int16_t>
-                                            (edge_attr_values.size_attr_vec<int16_t>());
-                                          edge_attr_vec[ni].resize<int32_t>
-                                            (edge_attr_values.size_attr_vec<int32_t>());
-                                          ni++;
-                                        }
-                                    }
                                     my_dsts.push_back(dst);
 
-                                    set_attr_vec<float>(edge_attr_map, edge_attr_vec, j);
-                                    set_attr_vec<uint8_t>(edge_attr_map, edge_attr_vec, j);
-                                    set_attr_vec<uint16_t>(edge_attr_map, edge_attr_vec, j);
-                                    set_attr_vec<uint32_t>(edge_attr_map, edge_attr_vec, j);
-                                    set_attr_vec<int8_t>(edge_attr_map, edge_attr_vec, j);
-                                    set_attr_vec<int16_t>(edge_attr_map, edge_attr_vec, j);
-                                    set_attr_vec<int32_t>(edge_attr_map, edge_attr_vec, j);
+                                    set_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                    set_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                    set_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                    set_attr_vec<uint32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                    set_attr_vec<int8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                    set_attr_vec<int16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                    set_attr_vec<int32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
 
                                     num_edges++;
                                   }

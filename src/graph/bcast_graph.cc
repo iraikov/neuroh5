@@ -132,7 +132,7 @@ namespace neuroh5
           // append to the edge map
           
           assert(data::append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                       edge_attr_map, num_edges, prj_edge_map, edge_map_type) >= 0);
+                                       attr_namespaces, edge_attr_map, num_edges, prj_edge_map, edge_map_type) >= 0);
           
           // ensure that all edges in the projection have been read and appended to edge_list
           assert(num_edges == src_idx.size());
