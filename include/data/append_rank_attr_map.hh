@@ -12,6 +12,7 @@
 #include <map>
 
 #include "neuroh5_types.hh"
+#include "attr_map.hh"
 
 namespace neuroh5
 {

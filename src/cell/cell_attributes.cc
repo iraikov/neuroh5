@@ -14,6 +14,7 @@
 #include "hdf5_cell_attributes.hh"
 #include "dataset_num_elements.hh"
 #include "create_group.hh"
+#include "append_rank_attr_map.hh"
 #include "attr_map.hh"
 #include "infer_datatype.hh"
 #include "alltoallv_template.hh"

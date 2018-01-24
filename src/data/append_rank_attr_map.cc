@@ -14,6 +14,7 @@
 
 #include "neuroh5_types.hh"
 #include "attr_val.hh"
+#include "attr_map.hh"
 #include "rank_range.hh"
 
 using namespace std;
