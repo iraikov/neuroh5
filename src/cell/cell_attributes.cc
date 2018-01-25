@@ -641,7 +641,7 @@ namespace neuroh5
             data::NamedAttrMap  attr_values;
             read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
                                  attr_values, offset, numitems * size);
-            append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
+            data::append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
           }

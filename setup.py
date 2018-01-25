@@ -91,6 +91,7 @@ setup(
                       'src/data/append_rank_edge_map.cc',
                       'src/data/append_edge_map.cc',
                       'src/data/append_prj_vector.cc',
+                      'src/data/append_rank_attr_map.cc',
                       'src/cell/read_tree.cc',
                       'src/cell/cell_populations.cc',
                       'src/cell/validate_tree.cc',

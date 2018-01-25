@@ -13,6 +13,7 @@
 
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
+#include "attr_val.hh"
 
 namespace neuroh5
 {
@@ -20,11 +21,12 @@ namespace neuroh5
   namespace data
   {
   
-    void append_rank_attr_map
-    (const NamedAttrMap   &attr_values,
-     const map<CELL_IDX_T, rank_t> &node_rank_map,
-     map <rank_t, AttrMap> &rank_attr_map);
 
+    void append_rank_attr_map
+    (
+     const data::NamedAttrMap   &attr_values,
+     const map<CELL_IDX_T, rank_t> &node_rank_map,
+     map <rank_t, data::AttrMap> &rank_attr_map);
   }
   
 }
