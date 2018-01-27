@@ -176,6 +176,8 @@ void build_cell_attr_value_maps (PyObject *idx_values,
               continue;
             }
 
+          npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
+
           if (attr_names.size() < (size_t)attr_idx+1)
             {
               string attr_name = string(PyBytes_AsString(attr_key));
@@ -185,10 +187,14 @@ void build_cell_attr_value_maps (PyObject *idx_values,
           else
             {
               assert(attr_names[attr_idx] == string(PyBytes_AsString(attr_key)));
+              if (attr_types[attr_idx] != npy_type)
+                {
+                  printf("type mismatch for attribute %s: attr_types[%d] = %d npy_type = %d\n",
+                         attr_names[attr_idx].c_str(), attr_idx, attr_types[attr_idx], npy_type);
+                }
               assert(attr_types[attr_idx] == npy_type);
             }
 
-          npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
                                      
           switch (npy_type)
             {
