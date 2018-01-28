@@ -187,11 +187,6 @@ void build_cell_attr_value_maps (PyObject *idx_values,
           else
             {
               assert(attr_names[attr_idx] == string(PyBytes_AsString(attr_key)));
-              if (attr_types[attr_idx] != npy_type)
-                {
-                  printf("type mismatch for attribute %s: attr_types[%d] = %d npy_type = %d\n",
-                         attr_names[attr_idx].c_str(), attr_idx, attr_types[attr_idx], npy_type);
-                }
               assert(attr_types[attr_idx] == npy_type);
             }
 
@@ -1582,8 +1577,9 @@ extern "C"
 {
 
   
-  static PyObject *py_read_graph (PyObject *self, PyObject *args)
+  static PyObject *py_read_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
+    int status;
     vector < map <string, vector < vector <string> > > > edge_attr_name_vector;
     vector<prj_tuple_t> prj_vector;
     vector< pair<string,string> > prj_names;
@@ -1593,7 +1589,16 @@ extern "C"
     MPI_Comm *comm_ptr  = NULL;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
 
-    if (!PyArg_ParseTuple(args, "s|OO", &input_file_name, &py_comm, &py_attr_name_spaces))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "namespaces",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|OO", (char **)kwlist,
+                                     &input_file_name,
+                                     &py_attr_name_spaces,
+                                     &py_comm))
       return NULL;
 
     PyObject *py_prj_dict = PyDict_New();
@@ -1609,7 +1614,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -1680,7 +1685,7 @@ extern "C"
   }
 
   
-  static PyObject *py_read_graph_serial (PyObject *self, PyObject *args)
+  static PyObject *py_read_graph_serial (PyObject *self, PyObject *args, PyObject *kwds)
   {
     vector < map <string, vector < vector <string> > > > edge_attr_name_vector;
     vector<prj_tuple_t> prj_vector;
@@ -1690,7 +1695,15 @@ extern "C"
     char *input_file_name;
     size_t total_num_nodes, total_num_edges = 0;
 
-    if (!PyArg_ParseTuple(args, "s|O", &input_file_name, &py_attr_name_spaces))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "namespaces",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", (char **)kwlist,
+                                     &input_file_name, 
+                                     &py_attr_name_spaces))
+
       return NULL;
 
     vector <string> attr_name_spaces;
@@ -1759,6 +1772,7 @@ extern "C"
   
   static PyObject *py_scatter_read_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
+    int status;
     int opt_edge_map_type=0;
     EdgeMapType edge_map_type = EdgeMapDst;
     // A vector that maps nodes to compute ranks
@@ -1808,7 +1822,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
     
@@ -1958,6 +1972,7 @@ extern "C"
   
   static PyObject *py_bcast_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
+    int status;
     int opt_edge_map_type=0;
     EdgeMapType edge_map_type = EdgeMapDst;
     vector < edge_map_t > prj_vector;
@@ -1997,7 +2012,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2114,6 +2129,7 @@ extern "C"
 
   static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
+    int status;
     PyObject *edge_values = NULL;
     PyObject *py_comm  = NULL;
     MPI_Comm *comm_ptr = NULL;
@@ -2145,7 +2161,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2207,7 +2223,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
     
@@ -2270,14 +2286,20 @@ extern "C"
   }
   
   
-  static PyObject *py_read_population_names (PyObject *self, PyObject *args)
+  static PyObject *py_read_population_names (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
     char *input_file_name;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
 
-    if (!PyArg_ParseTuple(args, "s|O", &input_file_name, &py_comm))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", (char **)kwlist,
+                                     &input_file_name, &py_comm))
       return NULL;
 
     MPI_Comm comm;
@@ -2292,7 +2314,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2319,16 +2341,24 @@ extern "C"
   }
 
   
-  static PyObject *py_read_cell_attribute_info (PyObject *self, PyObject *args)
+  static PyObject *py_read_cell_attribute_info (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
     char *input_file_name;
     PyObject *py_comm = NULL, *py_pop_names = NULL;
     MPI_Comm *comm_ptr  = NULL;
 
-    if (!PyArg_ParseTuple(args, "sO|O", &input_file_name, &py_pop_names, &py_comm))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "populations",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|O", (char **)kwlist,
+                                     &input_file_name, &py_pop_names, &py_comm))
       return NULL;
 
+    
     MPI_Comm comm;
 
     if (py_comm != NULL)
@@ -2341,7 +2371,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2444,7 +2474,7 @@ extern "C"
   }
 
   
-  static PyObject *py_read_population_ranges (PyObject *self, PyObject *args)
+  static PyObject *py_read_population_ranges (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
     vector< pair<pop_t, string> > pop_labels;
@@ -2453,7 +2483,13 @@ extern "C"
     
     char *input_file_name;
 
-    if (!PyArg_ParseTuple(args, "s|O", &input_file_name, &py_comm))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", (char **)kwlist,
+                                     &input_file_name, &py_comm))
       return NULL;
 
     MPI_Comm comm;
@@ -2468,7 +2504,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2510,7 +2546,7 @@ extern "C"
   }
 
   
-  static PyObject *py_read_projection_names (PyObject *self, PyObject *args)
+  static PyObject *py_read_projection_names (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status;
     vector< pair<string,string> > prj_names;
@@ -2518,7 +2554,13 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
 
-    if (!PyArg_ParseTuple(args, "s|O", &input_file_name, &py_comm))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", (char **)kwlist,
+                                     &input_file_name, &py_comm))
       return NULL;
 
     MPI_Comm comm;
@@ -2533,7 +2575,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2580,7 +2622,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2692,7 +2734,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2783,7 +2825,7 @@ extern "C"
   }
   
 
-  static PyObject *py_read_tree_selection (PyObject *self, PyObject *args)
+  static PyObject *py_read_tree_selection (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
     PyObject *py_comm = NULL;
@@ -2793,8 +2835,18 @@ extern "C"
     PyObject *py_selection=NULL;
     vector <CELL_IDX_T> selection;
 
-    if (!PyArg_ParseTuple(args, "ss|OO", &file_name,  &pop_name,
-                          &py_selection, &py_comm, &py_attr_name_spaces))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "pop_name",
+                                   "selection",
+                                   "comm",
+                                   "namespaces",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OO", (char **)kwlist,
+                                     &file_name, &pop_name,
+                                     &py_selection, &py_comm, 
+                                     &py_attr_name_spaces))
       return NULL;
 
     MPI_Comm comm;
@@ -2809,7 +2861,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -2936,7 +2988,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -3069,7 +3121,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -3154,7 +3206,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
     
@@ -3257,7 +3309,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -3351,7 +3403,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -3559,7 +3611,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -3798,7 +3850,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -4022,6 +4074,7 @@ extern "C"
   static PyObject *
   neuroh5_prj_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
+    int status;
     int opt_edge_map_type=0;
     EdgeMapType edge_map_type = EdgeMapDst;
     PyObject *py_comm = NULL;
@@ -4065,7 +4118,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -4186,7 +4239,7 @@ extern "C"
       }
     else
       {
-        status = MPI_Comm_dup(COMM_WORLD, &comm);
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         assert(status == MPI_SUCCESS);
       }
 
@@ -4320,19 +4373,30 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oss|ksi", (char **)kwlist,
-                                     &py_comm, &file_name, &pop_name, 
-                                     &io_size, &attr_namespace, &cache_size))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOki", (char **)kwlist,
+                                     &file_name, &pop_name, &attr_namespace,
+                                     &py_comm, &io_size, &cache_size))
       return NULL;
 
-    assert(py_comm != NULL);
-    comm_ptr = PyMPIComm_Get(py_comm);
-    assert(comm_ptr != NULL);
-    assert(*comm_ptr != MPI_COMM_NULL);
+    MPI_Comm comm;
+
+    if (py_comm != NULL)
+      {
+        comm_ptr = PyMPIComm_Get(py_comm);
+        assert(comm_ptr != NULL);
+        assert(*comm_ptr != MPI_COMM_NULL);
+        status = MPI_Comm_dup(*comm_ptr, &comm);
+        assert(status == MPI_SUCCESS);
+      }
+    else
+      {
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+        assert(status == MPI_SUCCESS);
+      }
 
     int rank, size;
-    assert(MPI_Comm_size(*comm_ptr, &size) >= 0);
-    assert(MPI_Comm_rank(*comm_ptr, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) >= 0);
+    assert(MPI_Comm_rank(comm, &rank) >= 0);
 
     assert(size > 0);
     
@@ -4343,7 +4407,7 @@ extern "C"
       cache_size = size;
 
     vector<pair <pop_t, string> > pop_labels;
-    status = cell::read_population_labels(*comm_ptr, string(file_name), pop_labels);
+    status = cell::read_population_labels(comm, string(file_name), pop_labels);
     assert (status >= 0);
 
     // Determine index of population to be read
@@ -4364,7 +4428,7 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(*comm_ptr,
+    assert(cell::read_population_ranges(comm,
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
@@ -4374,7 +4438,7 @@ extern "C"
                                       get<1>(pop_labels[pop_idx]), attr_info) >= 0);
     
     vector<CELL_IDX_T> cell_index;
-    assert(cell::read_cell_index(*comm_ptr,
+    assert(cell::read_cell_index(comm,
                                  string(file_name),
                                  get<1>(pop_labels[pop_idx]),
                                  string(attr_namespace) + "/" + attr_info[0].first,
@@ -4404,11 +4468,11 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
     
-    assert(MPI_Comm_dup(*comm_ptr, &(py_ntrg->state->comm)) == MPI_SUCCESS);
+    assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS);
 
     size_t max_local_count=0;
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
-                           MPI_SIZE_T, MPI_MAX, *comm_ptr);
+                           MPI_SIZE_T, MPI_MAX, comm);
     assert(status == MPI_SUCCESS);
 
     
