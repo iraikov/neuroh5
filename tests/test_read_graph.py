@@ -5,6 +5,6 @@ comm = MPI.COMM_WORLD
 print "rank = ", comm.Get_rank()
 print "size = ", comm.Get_size()
 
-g = read_graph(comm, "data/dentate_test.h5")
+g = read_graph("data/dentate_test.h5")
 print (g)
 

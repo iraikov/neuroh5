@@ -27,7 +27,7 @@ def main(coords_path, coords_namespace, io_size):
 
     print 'Allocated %i ranks' % size
 
-    population_ranges = read_population_ranges(comm, coords_path)[0]
+    population_ranges = read_population_ranges(coords_path)[0]
 
     print population_ranges
     
@@ -35,7 +35,7 @@ def main(coords_path, coords_namespace, io_size):
     for population in population_ranges.keys():
         (population_start, _) = population_ranges[population]
 
-        for cell_gid, attr_dict in NeuroH5CellAttrGen(comm, coords_path, population, io_size=io_size,
+        for cell_gid, attr_dict in NeuroH5CellAttrGen(coords_path, population, io_size=io_size,
                                                        namespace=coords_namespace):
 
             if cell_gid is None:

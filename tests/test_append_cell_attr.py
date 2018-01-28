@@ -6,7 +6,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 print "rank = ", rank
 
-(g,_) = read_trees(comm, "data/DGC_forest_test_20170614.h5", "GC")
+(g,_) = read_trees("data/DGC_forest_test_20170614.h5", "GC")
 datasize=3000
 a = np.arange(rank*10,(rank+1)*10).astype('uint32')
 b = np.arange(rank*20,(rank+1)*20).astype('float32')
@@ -24,5 +24,5 @@ ranksize=5
 #d = {n:{'a': a+n, 'b': b, 'c': c, 'd': d+n, 'e': e+n} for n in g.keys()}
 d = {n:{'a': a+n, 'b': b+n} for n in range(rank*ranksize,(rank+1)*ranksize)}
 
-append_cell_attributes(comm, "data/DGC_forest_attr_test_20170614.h5", "GC", d, io_size=2)
-append_cell_attributes(comm, "data/DGC_forest_attr_test_20170614.h5", "GC", d, io_size=2)
+append_cell_attributes("data/DGC_forest_attr_test_20170614.h5", "GC", d, io_size=2)
+append_cell_attributes("data/DGC_forest_attr_test_20170614.h5", "GC", d, io_size=2)

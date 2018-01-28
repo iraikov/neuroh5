@@ -17,7 +17,7 @@ path = '/home/igr/src/model/dentate/datasets/Test_GC_1000/DGC_test_connections_2
 
 gs = []
 for (src,dst) in [('MC','GC'),('MPP','GC'),('LPP','GC')]:
-    g = NeuroH5ProjectionGen (comm, path, src, dst, namespaces=['Synapses'], io_size=comm.size, cache_size=50)
+    g = NeuroH5ProjectionGen (path, src, dst, namespaces=['Synapses'], io_size=comm.size, cache_size=50)
     for (i,rest) in g:
         print 'i = ', i
 

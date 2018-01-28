@@ -7,7 +7,7 @@ print "rank = ", rank
 
 path = 'data/DGC_forest_test_20170623.h5'
 
-g = NeurotreeGen(comm, path, "GC", io_size=2)
+g = NeurotreeGen(path, "GC", io_size=2)
 count = 0
 for (i, e) in g:
     print 'Rank %i: gid = ' % rank, i

@@ -5,8 +5,8 @@ import numpy as np
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
-va = read_cell_attributes(comm, 
-                          "/home/igr/src/model/dentate/datasets/Full_Scale_Control/dentate_Full_Scale_Control_coords_20170614.h5", "MEC",
+va = read_cell_attributes("/home/igr/src/model/dentate/datasets/Full_Scale_Control/dentate_Full_Scale_Control_coords_20170614.h5",
+                          "MEC",
                           namespace="Sampled Coordinates")
 
 ks = va.keys()

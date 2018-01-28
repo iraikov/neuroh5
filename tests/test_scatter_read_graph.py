@@ -9,7 +9,7 @@ input_file='/home/igr/src/model/dentate/datasets/Test_GC_1000/DGC_test_connectio
 
 #(g,a) = scatter_read_graph(comm, input_file, io_size=1, namespaces=["Attributes"])
 
-(graph, a) = scatter_read_graph(comm,input_file,io_size=1,
+(graph, a) = scatter_read_graph(input_file,io_size=1,
                                 projections=[('BC', 'MC')],
                                 namespaces=['Synapses','Connections'])
 

@@ -29,7 +29,7 @@ coords_dir = 'data/'
 coords_file = 'dentate_Full_Scale_Control_coords_compressed.h5'
 
 
-g = NeuroH5CellAttrGen(comm, neurotrees_dir+test_file, 'GC', io_size=comm.size,
+g = NeuroH5CellAttrGen(neurotrees_dir+test_file, 'GC', io_size=comm.size,
                      namespace='Synapse_Attributes')
 global_count = 0
 count = 0
@@ -40,4 +40,4 @@ global_count = comm.gather(count, root=0)
 if rank == 0:
     print 'Total: %i' % np.sum(global_count)
 
-test = bcast_cell_attributes(comm, 0, coords_dir+coords_file, 'GC', namespace='Coordinates')
+test = bcast_cell_attributes(0, coords_dir+coords_file, 'GC', namespace='Coordinates')

@@ -7,8 +7,7 @@ print "rank = ", comm.Get_rank()
 print "size = ", comm.Get_size()
 
 
-(g, a) = bcast_graph(comm, 
-                  "/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_gapjunctions.h5", 
+(g, a) = bcast_graph("/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_gapjunctions.h5", 
                   attributes=True)
 
 if comm.Get_rank() == 0:

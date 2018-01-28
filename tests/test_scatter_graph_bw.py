@@ -16,6 +16,5 @@ else:
 
 
 
-g = scatter_read_graph(comm, 
-                  "/projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5", 
+g = scatter_read_graph("/projects/sciteam/baef/Full_Scale_Control/dentate_Full_Scale_Control_MPP.h5", 
                   128, node_rank_vector)

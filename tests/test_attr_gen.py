@@ -7,8 +7,8 @@ print "rank = ", rank
 
 
 if rank == 0:
-    print read_population_ranges(comm, "data/dentate_Sampled_Soma_Locations.h5")
-g = NeuroH5CellAttrGen(comm, "data/dentate_Sampled_Soma_Locations.h5", "MOPP", io_size=comm.size, namespace='Coordinates')
+    print read_population_ranges("data/dentate_Sampled_Soma_Locations.h5")
+g = NeuroH5CellAttrGen("data/dentate_Sampled_Soma_Locations.h5", "MOPP", io_size=comm.size, namespace='Coordinates')
 
 for (i, e) in g:
     print i, e

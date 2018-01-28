@@ -50,7 +50,7 @@ def make_node_rank_map (comm, filepath, iosize):
 
     size = comm.Get_size()
     
-    (_, n_nodes) = read_population_ranges(comm,filepath)
+    (_, n_nodes) = read_population_ranges(filepath, comm=comm)
 
     node_rank_map = {}
     for i in xrange(0, n_nodes):
@@ -66,8 +66,8 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
     
     neighbors_dict = defaultdict(neighbors_default)
 
-    (graph, _) = scatter_read_graph (comm, filepath, io_size=iosize, map_type=0, 
-                                node_rank_map=node_ranks)
+    (graph, _) = scatter_read_graph (filepath, io_size=iosize, map_type=0, 
+                                     node_rank_map=node_ranks, comm=comm)
     
     ## determine neighbors of vertex based on incoming edges
     for post, prj in graph.iteritems():
@@ -76,8 +76,8 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
                 neighbors_dict[n]['src'].extend(edges[0])
                 
     ## obtain outgoing edges
-    (graph, _) = scatter_read_graph (comm, filepath, io_size=iosize, map_type=1, 
-                                     node_rank_map=node_ranks)
+    (graph, _) = scatter_read_graph (filepath, io_size=iosize, map_type=1, 
+                                     node_rank_map=node_ranks, comm=comm)
 
     ## determine neighbors of vertex based on outgoing edges
     for pre, prj in graph.iteritems():
@@ -297,8 +297,8 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
 
 def load_graph_networkit(comm, input_file):
 
-    (_, n_nodes) = read_population_ranges(comm, input_file)
-    nhg = read_graph(comm, input_file)
+    (_, n_nodes) = read_population_ranges(input_file, comm=comm)
+    nhg = read_graph(input_file, comm=comm)
     g = Graph(n_nodes, False, True)
 
     for (presyn, prjs) in nhg.items():
