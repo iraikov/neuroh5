@@ -1581,7 +1581,7 @@ extern "C"
   {
     int status;
     vector < map <string, vector < vector <string> > > > edge_attr_name_vector;
-    vector<prj_tuple_t> prj_vector;
+    vector<edge_map_t> prj_vector;
     vector< pair<string,string> > prj_names;
     char *input_file_name;
     PyObject *py_attr_name_spaces=NULL;
@@ -1618,7 +1618,7 @@ extern "C"
         assert(status == MPI_SUCCESS);
       }
 
-    vector <string> attr_name_spaces;
+    vector <string> edge_attr_name_spaces;
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
       {
@@ -1626,148 +1626,92 @@ extern "C"
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
             char *str = PyBytes_AsString (pyval);
-            attr_name_spaces.push_back(string(str));
+            edge_attr_name_spaces.push_back(string(str));
           }
       }
 
     assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
 
-    graph::read_graph(comm, std::string(input_file_name), attr_name_spaces,
+    graph::read_graph(comm, std::string(input_file_name), edge_attr_name_spaces,
                       prj_names, prj_vector, edge_attr_name_vector,
                       total_num_nodes, local_num_edges, total_num_edges);
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    
+    PyObject *py_attribute_info = PyDict_New();
+    for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
+      {
+        PyObject *py_prj_attr_info  = PyDict_New();
+        for (string& attr_namespace : edge_attr_name_spaces) 
+          {
+            PyObject *py_prj_ns_attr_info  = PyDict_New();
+            int attr_index=0;
+            const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
+            for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
+              {
+                for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
+                  {
+                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
+                    PyObject *py_attr_index = PyLong_FromLong(attr_index);
+                    
+                    PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
+                    Py_DECREF(py_attr_key);
+                    Py_DECREF(py_attr_index);
+
+                    attr_index++;
+                  }
+              }
+            PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
+            PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
+            Py_DECREF(py_ns_key);
+            Py_DECREF(py_prj_ns_attr_info);
+          }
+
+        PyObject *py_prj_attr_info_dict = PyDict_GetItemString(py_attribute_info, prj_names[p].second.c_str());
+        if (py_prj_attr_info_dict == NULL)
+          {
+            py_prj_attr_info_dict = PyDict_New();
+            PyDict_SetItemString(py_attribute_info, prj_names[p].second.c_str(),
+                                 py_prj_attr_info_dict);
+            Py_DECREF(py_prj_attr_info_dict);
+          }
+        PyDict_SetItemString(py_prj_attr_info_dict,
+                             prj_names[p].first.c_str(),
+                             py_prj_attr_info);
+        Py_DECREF(py_prj_attr_info);
+      }
+
     
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
-        const prj_tuple_t& prj = prj_vector[i];
-        const map <string, vector < vector<string> > >& edge_attr_names = edge_attr_name_vector[i];
-        
-        const vector<NODE_IDX_T>& src_vector = get<0>(prj);
-        const vector<NODE_IDX_T>& dst_vector = get<1>(prj);
-        const map <string, NamedAttrVal>&  edge_attr_map = get<2>(prj);
+        edge_map_t prj_edge_map = prj_vector[i];
 
-        PyObject *py_prjval = PyList_New(0);
-        
-        for (size_t j = 0; j < src_vector.size(); j++)
-          {
-            NODE_IDX_T src = src_vector[i];
-            NODE_IDX_T dst = dst_vector[i];
-            
-            PyObject* py_edge_val =  py_build_edge_value(src, dst, j, edge_attr_map, edge_attr_names);
-
-            PyList_Append(py_prjval, py_edge_val);
-            Py_DECREF(py_edge_val);
-          }
-
+        PyObject *py_edge_iter = NeuroH5EdgeIter_FromMap(prj_edge_map, edge_attr_name_spaces);
 
         PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
         if (py_src_dict == NULL)
           {
             py_src_dict = PyDict_New();
-            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
-            Py_DECREF(py_prjval);
-
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
             PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+            Py_DECREF(py_edge_iter);
             Py_DECREF(py_src_dict);
-
           }
         else
           {
-            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
-            Py_DECREF(py_prjval);
-
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+            Py_DECREF(py_edge_iter);
           }
         
       }
-    
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
-    return py_prj_dict;
+    PyObject *py_prj_tuple = PyTuple_New(2);
+    PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
+    PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+
+    return py_prj_tuple;
   }
 
   
-  static PyObject *py_read_graph_serial (PyObject *self, PyObject *args, PyObject *kwds)
-  {
-    vector < map <string, vector < vector <string> > > > edge_attr_name_vector;
-    vector<prj_tuple_t> prj_vector;
-    vector< pair<string,string> > prj_names;
-    PyObject *py_prj_dict = PyDict_New();
-    PyObject *py_attr_name_spaces=NULL;
-    char *input_file_name;
-    size_t total_num_nodes, total_num_edges = 0;
-
-    static const char *kwlist[] = {
-                                   "file_name",
-                                   "namespaces",
-                                   NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", (char **)kwlist,
-                                     &input_file_name, 
-                                     &py_attr_name_spaces))
-
-      return NULL;
-
-    vector <string> attr_name_spaces;
-    // Create C++ vector of namespace strings:
-    if (py_attr_name_spaces != NULL)
-      {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
-          {
-            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
-            attr_name_spaces.push_back(string(str));
-          }
-      }
-
-    assert(graph::read_projection_names_serial(input_file_name, prj_names) >= 0);
-
-    graph::read_graph_serial(std::string(input_file_name), attr_name_spaces,
-                             prj_names, prj_vector, edge_attr_name_vector,
-                             total_num_nodes, total_num_edges);
-    
-    for (size_t i = 0; i < prj_vector.size(); i++)
-      {
-        const prj_tuple_t& prj = prj_vector[i];
-        const map <string, vector < vector<string> > >& edge_attr_names = edge_attr_name_vector[i];
-        
-        const vector<NODE_IDX_T>& src_vector       = get<0>(prj);
-        const vector<NODE_IDX_T>& dst_vector       = get<1>(prj);
-        const map<string, NamedAttrVal>&  edge_attr_map = get<2>(prj);
-
-        PyObject *py_prjval = PyList_New(0);
-        
-        for (size_t j = 0; j < src_vector.size(); j++)
-          {
-            NODE_IDX_T src = src_vector[i];
-            NODE_IDX_T dst = dst_vector[i];
-            
-            PyObject* py_edge_val =  py_build_edge_value(src, dst, j, edge_attr_map, edge_attr_names);
-
-            PyList_Append(py_prjval, py_edge_val);
-            Py_DECREF(py_edge_val);
-          }
-
-
-        PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
-        if (py_src_dict == NULL)
-          {
-            py_src_dict = PyDict_New();
-            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
-            Py_DECREF(py_prjval);
-
-            PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
-            Py_DECREF(py_src_dict);
-
-          }
-        else
-          {
-            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_prjval);
-            Py_DECREF(py_prjval);
-
-          }
-      }
-
-    return py_prj_dict;
-  }
 
   
   static PyObject *py_scatter_read_graph (PyObject *self, PyObject *args, PyObject *kwds)
@@ -5072,8 +5016,6 @@ extern "C"
       "Reads and scatters graph connectivity in Destination Block Sparse format." },
     { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
-    { "read_graph_serial", (PyCFunction)py_read_graph_serial, METH_VARARGS,
-      "Reads graph connectivity in Destination Block Sparse format." },
     { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS,
       "Writes graph connectivity in Destination Block Sparse format." },
     { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,

@@ -15,7 +15,7 @@
 #include "edge_attributes.hh"
 #include "read_projection_datasets.hh"
 #include "validate_edge_list.hh"
-#include "append_prj_vector.hh"
+#include "append_edge_map.hh"
 #include "mpi_debug.hh"
 
 #include <iostream>
@@ -47,7 +47,7 @@ namespace neuroh5
      const NODE_IDX_T&          dst_start,
      const NODE_IDX_T&          src_start,
      const vector<string>&      attr_namespaces,
-     vector<prj_tuple_t>&       prj_vector,
+     vector<edge_map_t>&       prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&                    local_num_edges,
      size_t&                    total_num_edges,
@@ -104,17 +104,19 @@ namespace neuroh5
         }
       
       size_t local_prj_num_edges=0;
-      
+
+      edge_map_t prj_edge_map;
       // append to the vectors representing a projection (sources,
       // destinations, edge attributes)
-      assert(data::append_prj_vector(src_start, dst_start, dst_blk_ptr, dst_idx,
-                                     dst_ptr, src_idx, edge_attr_map,
-                                     local_prj_num_edges, prj_vector) >= 0);
+      assert(data::append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx,
+                                   dst_ptr, src_idx, attr_namespaces, edge_attr_map,
+                                   local_prj_num_edges, prj_edge_map, EdgeMapDst) >= 0);
       
       // ensure that all edges in the projection have been read and
       // appended to edge_list
       assert(local_prj_num_edges == edge_count);
 
+      prj_vector.push_back(prj_edge_map);
       edge_attr_names_vector.push_back (edge_attr_names);
       
       
@@ -132,7 +134,7 @@ namespace neuroh5
      const NODE_IDX_T&          dst_start,
      const NODE_IDX_T&          src_start,
      const vector<string>&      attr_namespaces,
-     vector<prj_tuple_t>&       prj_vector,
+     vector<edge_map_t>&       prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&                    total_num_edges,
      size_t                     offset,

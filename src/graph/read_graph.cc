@@ -33,7 +33,7 @@ namespace neuroh5
      const std::string&    file_name,
      const vector<string>& edge_attr_name_spaces,
      const vector< pair<string, string> >& prj_names,
-     vector<prj_tuple_t>& prj_vector,
+     std::vector<edge_map_t>& prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&              total_num_nodes,
      size_t&              local_num_edges,
@@ -128,7 +128,7 @@ namespace neuroh5
      const std::string&   file_name,
      const vector<string>& edge_attr_name_spaces,
      const vector< pair<string, string> >& prj_names,
-     vector<prj_tuple_t>& prj_vector,
+     vector<edge_map_t>& prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&              total_num_nodes,
      size_t&              total_num_edges

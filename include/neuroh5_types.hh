@@ -172,11 +172,6 @@ namespace neuroh5
   
   typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
   
-  typedef std::tuple< std::vector<NODE_IDX_T>, // source vector
-                      std::vector<NODE_IDX_T>, // destination vector
-                      std::map<std::string, data::NamedAttrVal>  // edge attribute map
-                      > prj_tuple_t;
-
 // In-memory HDF5 datatype of attribute pointers
 #define ATTR_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
 

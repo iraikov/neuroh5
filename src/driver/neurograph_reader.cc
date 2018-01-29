@@ -62,42 +62,50 @@ void print_usage_full(char** argv)
  *****************************************************************************/
 
 void output_projection(string outfilename,
-                       const prj_tuple_t& projection)
+                       const edge_map_t& projection)
 {
   DEBUG("output_projection: outfilename is ",outfilename,"\n");
 
-  const vector<NODE_IDX_T>& src_list = get<0>(projection);
-  const vector<NODE_IDX_T>& dst_list = get<1>(projection);
-  const map <string, data::NamedAttrVal>&  edge_attr_map  = get<2>(projection);
 
   ofstream outfile;
   outfile.open(outfilename.c_str());
 
-  for (size_t i = 0; i < src_list.size(); i++)
+  for (edge_map_iter_t iter = projection.cbegin(); iter != projection.cend(); iter++)
     {
-      outfile << i << " " << src_list[i] << " " << dst_list[i];
-      for (auto iter : edge_attr_map)
-        {
-          const data::NamedAttrVal& edge_attr_values = iter.second;
-          for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
-            {
-              outfile << " " << setprecision(9) << edge_attr_values.at<float>(j,i);
-            }
-          for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
-            {
-              outfile << " " << (uint32_t)edge_attr_values.at<uint8_t>(j,i);
-            }
-          for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
-            {
-              outfile << " " << edge_attr_values.at<uint16_t>(j,i);
-            }
-          for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
-            {
-              outfile << " " << edge_attr_values.at<uint32_t>(j,i);
-            }
-        }
+      const NODE_IDX_T& dst = iter->first;
+      const edge_tuple_t& tup = iter->second;
+      
+      const vector<NODE_IDX_T>& src_vector = get<0>(tup);
+      const vector <data::AttrVal>&  edge_attr_val  = get<1>(tup);
 
-      outfile << endl;
+      size_t i = 0;
+      for (auto src : src_vector)
+        {
+          outfile << " " << src << " " << dst;
+      
+          for (const data::AttrVal& edge_attr_values : edge_attr_val)
+            {
+              
+              for (size_t j = 0; j < edge_attr_values.size_attr_vec<float>(); j++)
+                {
+                  outfile << " " << setprecision(9) << edge_attr_values.at<float>(j,i);
+                }
+              for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint8_t>(); j++)
+                {
+                  outfile << " " << (uint32_t)edge_attr_values.at<uint8_t>(j,i);
+                }
+              for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint16_t>(); j++)
+                {
+                  outfile << " " << edge_attr_values.at<uint16_t>(j,i);
+                }
+              for (size_t j = 0; j < edge_attr_values.size_attr_vec<uint32_t>(); j++)
+                {
+                  outfile << " " << edge_attr_values.at<uint32_t>(j,i);
+                }
+            }
+          i++;
+          outfile << endl;
+        }
     }
 
   outfile.close();
@@ -179,7 +187,7 @@ int main(int argc, char** argv)
   assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name,
                                       prj_names) >= 0);
 
-  vector<prj_tuple_t> prj_vector;
+  vector<edge_map_t> prj_vector;
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;
 
   vector < map <string, vector < vector<string> > > >  edge_attr_names_vector;
