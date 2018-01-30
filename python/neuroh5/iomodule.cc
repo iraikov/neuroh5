@@ -2138,7 +2138,7 @@ extern "C"
   {
     int status;
     PyObject *py_edge_dict;
-    PyObject *py_comm;
+    PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr = NULL;
     char *file_name_arg;
     unsigned long io_size = 0;
@@ -2422,7 +2422,7 @@ extern "C"
   {
     int status; 
     vector< pair<pop_t, string> > pop_labels;
-    PyObject *py_comm;
+    PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     
     char *input_file_name;
