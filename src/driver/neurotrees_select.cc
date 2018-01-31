@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 {
   herr_t status;
   MPI_Comm all_comm;
-  string pop_name, input_file_name, output_file_name, selection_namespace, rank_file_name;
+  string pop_name, input_file_name, output_file_name, selection_namespace, selection_attr, rank_file_name;
   vector<string> attr_name_spaces;
   size_t n_nodes;
   map<CELL_IDX_T, rank_t> node_rank_map;
@@ -242,7 +242,18 @@ int main(int argc, char** argv)
   if (optind <= argc-3)
     {
       input_file_name = string(argv[optind]);
-      selection_namespace = string(argv[optind+1]);
+      string selection_delimiter = "/";
+      vector <string> selection_spec;
+      tokenize(string(argv[optind+1]), selection_delimiter, selection_spec);
+      selection_namespace = selection_spec[0];
+      if (selection_spec.size() > 1)
+        {
+          selection_attr = selection_spec[1];
+        }
+      else
+        {
+          selection_attr = "New Cell Index";
+        }
       output_file_name = string(argv[optind+2]);
     }
   else
@@ -289,7 +300,7 @@ int main(int argc, char** argv)
                                  pop_start, selection_attr_map);
 
     auto name_map = selection_attr_map.attr_name_map<uint32_t>();
-    auto const& name_it = name_map.find("New gid");
+    auto const& name_it = name_map.find(selection_attr);
     assert(name_it != name_map.end());
     size_t newgid_attr_index = name_it->second;
     auto attr_map = selection_attr_map.attr_map<uint32_t>(newgid_attr_index);
