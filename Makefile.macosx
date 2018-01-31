@@ -9,7 +9,8 @@ HDF5_INCDIR 	:= $(HDF5_DIR)/include/hdf5/mpich
 HDF5_LIBDIR 	:= $(HDF5_DIR)/lib/x86_64-linux-gnu/
 HDF5_LIB        = hdf5
 
-CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR) -I../include
+CFLAGS		= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR) -I../include -stdlib=libc++
+CXXFLAGS	= -Wall -I$(HDF5_INCDIR) -I$(MPI_INCDIR) -I../include -stdlib=libc++
 LDFLAGS		= -L$(HDF5_LIBDIR) 
 
 MPI_DIR		:= /usr
