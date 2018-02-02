@@ -520,7 +520,8 @@ void build_edge_maps (PyObject *py_edge_dict,
 
 
 PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
-                              const map <string, NamedAttrMap>& attr_maps)
+                              const map <string, NamedAttrMap>& attr_maps,
+                              const bool topology)
 {
   const CELL_IDX_T idx = get<0>(tree);
   assert(idx == key);
@@ -537,71 +538,98 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   const vector<SWC_TYPE_T> & swc_types=get<10>(tree);
                            
   size_t num_nodes = xcoords.size();
-                                 
-  PyObject *py_section_topology = PyDict_New();
-  npy_intp ind = 0;
   npy_intp dims[1];
   dims[0] = xcoords.size();
-  PyObject *py_section_vector = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-  SECTION_IDX_T *section_vector_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_vector, &ind);
-  size_t sections_ptr=0;
-  SECTION_IDX_T section_idx = 0;
-  PyObject *py_section_node_map = PyDict_New();
-  PyObject *py_section_key; PyObject *py_section_nodes;
-  set<NODE_IDX_T> marked_nodes;
-  size_t num_sections = sections[sections_ptr];
-  sections_ptr++;
-  while (sections_ptr < sections.size())
-    {
-      vector<NODE_IDX_T> section_nodes;
-      size_t num_section_nodes = sections[sections_ptr];
-      npy_intp nodes_dims[1], nodes_ind = 0;
-      nodes_dims[0]    = num_section_nodes;
-      py_section_key   = PyLong_FromLong((long)section_idx);
-      py_section_nodes = (PyObject *)PyArray_SimpleNew(1, nodes_dims, NPY_UINT32);
-      NODE_IDX_T *section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
-      sections_ptr++;
-      for (size_t p = 0; p < num_section_nodes; p++)
-        {
-          NODE_IDX_T node_idx = sections[sections_ptr];
-          assert(node_idx <= num_nodes);
-          section_nodes_ptr[p] = node_idx;
-          if (marked_nodes.find(node_idx) == marked_nodes.end())
-            {
-              section_vector_ptr[node_idx] = section_idx;
-              marked_nodes.insert(node_idx);
-            }
-          sections_ptr++;
-        }
-      PyDict_SetItem(py_section_node_map, py_section_key, py_section_nodes);
-      Py_DECREF(py_section_nodes);
-      Py_DECREF(py_section_key);
-      section_idx++;
-    }
-  assert(section_idx == num_sections);
-                           
-  dims[0] = src_vector.size();
-  PyObject *py_section_src = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-  SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
-  PyObject *py_section_dst = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-  SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
-  for (size_t s = 0; s < src_vector.size(); s++)
-    {
-      section_src_ptr[s] = src_vector[s];
-      section_dst_ptr[s] = dst_vector[s];
-    }
+  npy_intp ind = 0;
 
-  PyObject *py_num_sections = PyLong_FromUnsignedLong(num_sections);
-  PyDict_SetItemString(py_section_topology, "num_sections", py_num_sections);
-  Py_DECREF(py_num_sections);
-  PyDict_SetItemString(py_section_topology, "nodes", py_section_node_map);
-  Py_DECREF(py_section_node_map);
-  PyDict_SetItemString(py_section_topology, "src", py_section_src);
-  Py_DECREF(py_section_src);
-  PyDict_SetItemString(py_section_topology, "dst", py_section_dst);
-  Py_DECREF(py_section_dst);
-                           
-  dims[0] = xcoords.size();
+  PyObject *py_section_topology = NULL;
+  PyObject *py_section_vector = NULL;
+  PyObject *py_section_src = NULL;
+  PyObject *py_section_dst = NULL;
+  PyObject *py_sections = NULL;
+  
+  if (topology)
+    {
+      py_section_topology = PyDict_New();
+      py_section_vector = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      SECTION_IDX_T *section_vector_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_vector, &ind);
+      size_t sections_ptr=0;
+      SECTION_IDX_T section_idx = 0;
+      PyObject *py_section_node_map = PyDict_New();
+      PyObject *py_section_key; PyObject *py_section_nodes;
+      set<NODE_IDX_T> marked_nodes;
+      size_t num_sections = sections[sections_ptr];
+      sections_ptr++;
+      while (sections_ptr < sections.size())
+        {
+          vector<NODE_IDX_T> section_nodes;
+          size_t num_section_nodes = sections[sections_ptr];
+          npy_intp nodes_dims[1], nodes_ind = 0;
+          nodes_dims[0]    = num_section_nodes;
+          py_section_key   = PyLong_FromLong((long)section_idx);
+          py_section_nodes = (PyObject *)PyArray_SimpleNew(1, nodes_dims, NPY_UINT32);
+          NODE_IDX_T *section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
+          sections_ptr++;
+          for (size_t p = 0; p < num_section_nodes; p++)
+            {
+              NODE_IDX_T node_idx = sections[sections_ptr];
+              assert(node_idx <= num_nodes);
+              section_nodes_ptr[p] = node_idx;
+              if (marked_nodes.find(node_idx) == marked_nodes.end())
+                {
+                  section_vector_ptr[node_idx] = section_idx;
+                  marked_nodes.insert(node_idx);
+                }
+              sections_ptr++;
+            }
+          PyDict_SetItem(py_section_node_map, py_section_key, py_section_nodes);
+          Py_DECREF(py_section_nodes);
+          Py_DECREF(py_section_key);
+          section_idx++;
+        }
+      assert(section_idx == num_sections);
+      
+      dims[0] = src_vector.size();
+      py_section_src = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
+      py_section_dst = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
+      for (size_t s = 0; s < src_vector.size(); s++)
+        {
+          section_src_ptr[s] = src_vector[s];
+          section_dst_ptr[s] = dst_vector[s];
+        }
+
+      PyObject *py_num_sections = PyLong_FromUnsignedLong(num_sections);
+      PyDict_SetItemString(py_section_topology, "num_sections", py_num_sections);
+      Py_DECREF(py_num_sections);
+      PyDict_SetItemString(py_section_topology, "nodes", py_section_node_map);
+      Py_DECREF(py_section_node_map);
+      PyDict_SetItemString(py_section_topology, "src", py_section_src);
+      Py_DECREF(py_section_src);
+      PyDict_SetItemString(py_section_topology, "dst", py_section_dst);
+      Py_DECREF(py_section_dst);
+    }
+  else
+    {
+      py_section_src = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
+      py_section_dst = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
+      for (size_t s = 0; s < src_vector.size(); s++)
+        {
+          section_src_ptr[s] = src_vector[s];
+          section_dst_ptr[s] = dst_vector[s];
+        }
+
+      py_sections = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      SECTION_IDX_T *sections_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_sections, &ind);
+      for (size_t p = 0; p < sections.size(); p++)
+        {
+          sections_ptr[p] = sections[p];
+        }
+    }
+  
                            
   PyObject *py_xcoords = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
   float *xcoords_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_xcoords, &ind);
@@ -650,12 +678,24 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   PyDict_SetItemString(py_treeval, "swc_type", py_swc_types);
   Py_DECREF(py_swc_types);
 
-  PyDict_SetItemString(py_treeval, "section", py_section_vector);
-  Py_DECREF(py_section_vector);
+  
+  if (topology)
+    {
+      PyDict_SetItemString(py_treeval, "section", py_section_vector);
+      Py_DECREF(py_section_vector);
 
-  PyDict_SetItemString(py_treeval, "section_topology", py_section_topology);
-  Py_DECREF(py_section_topology);
-
+      PyDict_SetItemString(py_treeval, "section_topology", py_section_topology);
+      Py_DECREF(py_section_topology);
+    }
+  else
+    {
+      PyDict_SetItemString(py_treeval, "sections", py_sections);
+      Py_DECREF(py_sections);
+      PyDict_SetItemString(py_treeval, "src", py_section_src);
+      Py_DECREF(py_section_src);
+      PyDict_SetItemString(py_treeval, "dst", py_section_dst);
+      Py_DECREF(py_section_dst);
+    }
                            
   for (auto const& attr_map_entry : attr_maps)
     {
@@ -794,7 +834,8 @@ typedef struct {
   vector<string> attr_name_spaces;
   map <string, NamedAttrMap> attr_maps;
   vector<neurotree_t>::const_iterator it_tree;
-                           
+  bool topology_flag;
+  
 } NeuroH5TreeIterState;
 
 typedef struct {
@@ -825,7 +866,7 @@ PyObject* NeuroH5TreeIter_iternext(PyObject *self)
       const CELL_IDX_T key = get<0>(tree);
       const map <string, NamedAttrMap>& attr_maps = py_state->state->attr_maps;
 
-      PyObject *treeval = py_build_tree_value(key, tree, attr_maps);
+      PyObject *treeval = py_build_tree_value(key, tree, attr_maps, py_state->state->topology_flag);
       assert(treeval != NULL);
       py_state->state->it_tree++;
       py_state->state->seq_index++;
@@ -881,7 +922,8 @@ static PyTypeObject PyNeuroH5TreeIter_Type = {
 static PyObject *
 NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
                            const vector<string>& attr_name_spaces,
-                           const map <string, NamedAttrMap>& attr_maps)
+                           const map <string, NamedAttrMap>& attr_maps,
+                           const bool topology_flag)
 {
 
   PyNeuroH5TreeIterState *p = PyObject_New(PyNeuroH5TreeIterState, &PyNeuroH5TreeIter_Type);
@@ -901,6 +943,7 @@ NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
   p->state->attr_name_spaces = attr_name_spaces;
   p->state->attr_maps  = attr_maps;
   p->state->it_tree    = p->state->tree_vector.cbegin();
+  p->state->topology_flag = p->state->topology_flag;
 
                            
   return (PyObject *)p;
@@ -911,7 +954,8 @@ NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
 static PyObject *
 NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
                         const vector<string>& attr_name_spaces,
-                        const map <string, NamedAttrMap>& attr_maps)
+                        const map <string, NamedAttrMap>& attr_maps,
+                        const bool topology_flag)
 
 {
   vector <neurotree_t> tree_vector;
@@ -924,7 +968,8 @@ NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
                            
   return (PyObject *)NeuroH5TreeIter_FromVector(tree_vector,
                                                 attr_name_spaces,
-                                                attr_maps);
+                                                attr_maps,
+                                                topology_flag);
 }
 
 
@@ -2545,13 +2590,14 @@ extern "C"
   
   static PyObject *py_read_trees (PyObject *self, PyObject *args)
   {
-    int status; size_t start=0, end=0;
+    int status; int topology_flag=1; size_t start=0, end=0;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
     PyObject *py_attr_name_spaces=NULL;
-
-    if (!PyArg_ParseTuple(args, "ss|OO", &file_name, &pop_name, &py_comm, &py_attr_name_spaces))
+    
+    
+    if (!PyArg_ParseTuple(args, "ss|OOi", &file_name, &pop_name, &py_attr_name_spaces, &py_comm, &topology_flag))
       return NULL;
 
     MPI_Comm comm;
@@ -2631,7 +2677,8 @@ extern "C"
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
                                                         attr_name_spaces,
-                                                        attr_maps);
+                                                        attr_maps,
+                                                        topology_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -2644,7 +2691,7 @@ extern "C"
   
   static PyObject *py_scatter_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status;
+    int status; int topology_flag = 1;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size = 0;
@@ -2658,13 +2705,14 @@ extern "C"
                                    "comm",
                                    "node_rank_map",
                                    "namespaces",
+                                   "topology",
                                    "io_size",
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOk", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, 
                                      &py_node_rank_map, &py_attr_name_spaces,
-                                     &io_size))
+                                     &topology_flag, &io_size))
       return NULL;
     MPI_Comm comm;
 
@@ -2757,7 +2805,8 @@ extern "C"
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromMap(tree_map,
                                                      attr_name_spaces,
-                                                     attr_maps);
+                                                     attr_maps,
+                                                     topology_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -2771,7 +2820,7 @@ extern "C"
 
   static PyObject *py_read_tree_selection (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; 
+    int status; int topology_flag=1;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
@@ -2785,12 +2834,14 @@ extern "C"
                                    "selection",
                                    "comm",
                                    "namespaces",
+                                   "topology",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOi", (char **)kwlist,
                                      &file_name, &pop_name,
                                      &py_selection, &py_comm, 
-                                     &py_attr_name_spaces))
+                                     &py_attr_name_spaces,
+                                     &topology_flag))
       return NULL;
 
     MPI_Comm comm;
@@ -2883,7 +2934,8 @@ extern "C"
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
                                                         attr_name_spaces,
-                                                        attr_maps);
+                                                        attr_maps,
+                                                        topology_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -3969,6 +4021,7 @@ extern "C"
     map <string, vector< vector <string> > > attr_names;
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
     map<CELL_IDX_T, rank_t> node_rank_map;
+    bool topology_flag;
     
   } NeuroH5TreeGenState;
 
@@ -4531,7 +4584,7 @@ extern "C"
             {
               CELL_IDX_T key = py_ntrg->state->it_tree->first;
               const neurotree_t &tree = py_ntrg->state->it_tree->second;
-              PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps);
+              PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps, py_ntrg->state->topology_flag);
               assert(elem != NULL);
               
               /* Exceptions from PySequence_GetItem are propagated to the caller
