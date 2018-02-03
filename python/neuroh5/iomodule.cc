@@ -145,6 +145,7 @@ void append_value_map (CELL_IDX_T idx,
 void build_cell_attr_value_maps (PyObject *idx_values,
                                  vector<string>& attr_names,
                                  vector<int>& attr_types,
+                                 vector< map<string, size_t> >& attr_type_index_map,
                                  vector<map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
                                  vector<map<CELL_IDX_T, vector<uint16_t>>>& all_attr_values_uint16,
                                  vector<map<CELL_IDX_T, vector<uint8_t>>>& all_attr_values_uint8,
@@ -168,7 +169,8 @@ void build_cell_attr_value_maps (PyObject *idx_values,
       Py_ssize_t attr_pos = 0;
       size_t attr_idx = 0;
       vector<size_t> attr_type_idx(AttrMap::num_attr_types);
-                                 
+      attr_type_index_map.resize(AttrMap::num_attr_types);
+                        
       while (PyDict_Next(idx_value, &attr_pos, &attr_key, &attr_values))
         {
           if (!PyArray_Check(attr_values))
@@ -178,15 +180,15 @@ void build_cell_attr_value_maps (PyObject *idx_values,
 
           npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
 
+          string attr_name = string(PyBytes_AsString(attr_key));
           if (attr_names.size() < (size_t)attr_idx+1)
             {
-              string attr_name = string(PyBytes_AsString(attr_key));
               attr_names.push_back(attr_name);
               attr_types.push_back(npy_type);
             }
           else
             {
-              assert(attr_names[attr_idx] == string(PyBytes_AsString(attr_key)));
+              assert(attr_names[attr_idx] == attr_name);
               assert(attr_types[attr_idx] == npy_type);
             }
 
@@ -201,6 +203,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                   }
                 append_value_map<uint32_t> (idx, attr_values, attr_idx,
                                             all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
+                attr_type_index_map[AttrMap::attr_index_uint32][attr_name] = attr_type_idx[AttrMap::attr_index_uint32];
                 attr_type_idx[AttrMap::attr_index_uint32]++;
                 break;
               }
@@ -212,6 +215,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                   }
                 append_value_map<int32_t> (idx, attr_values, attr_idx,
                                            all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]]);
+                attr_type_index_map[AttrMap::attr_index_int32][attr_name] = attr_type_idx[AttrMap::attr_index_int32];
                 attr_type_idx[AttrMap::attr_index_int32]++;
                 break;
               }
@@ -223,6 +227,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                   }
                 append_value_map<uint16_t> (idx, attr_values, attr_idx,
                                             all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
+                attr_type_index_map[AttrMap::attr_index_uint16][attr_name] = attr_type_idx[AttrMap::attr_index_uint16];
                 attr_type_idx[AttrMap::attr_index_uint16]++;
                 break;
               }
@@ -234,6 +239,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                   }
                 append_value_map<int16_t> (idx, attr_values, attr_idx,
                                            all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]]);
+                attr_type_index_map[AttrMap::attr_index_int16][attr_name] = attr_type_idx[AttrMap::attr_index_int16];
                 attr_type_idx[AttrMap::attr_index_int16]++;
                 break;
               }
@@ -245,6 +251,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                   }
                 append_value_map<uint8_t> (idx, attr_values, attr_idx,
                                            all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
+                attr_type_index_map[AttrMap::attr_index_uint8][attr_name] = attr_type_idx[AttrMap::attr_index_uint8];
                 attr_type_idx[AttrMap::attr_index_uint8]++;
                 break;
               }
@@ -256,6 +263,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                   }
                 append_value_map<int8_t> (idx, attr_values, attr_idx,
                                           all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]]);
+                attr_type_index_map[AttrMap::attr_index_int8][attr_name] = attr_type_idx[AttrMap::attr_index_int8];
                 attr_type_idx[AttrMap::attr_index_int8]++;
                 break;
               }
@@ -267,6 +275,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                   }
                 append_value_map<float> (idx, attr_values, attr_idx,
                                          all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
+                attr_type_index_map[AttrMap::attr_index_float][attr_name] = attr_type_idx[AttrMap::attr_index_float];
                 attr_type_idx[AttrMap::attr_index_float]++;
                 break;
               }
@@ -3457,6 +3466,7 @@ extern "C"
         
         vector<string> attr_names;
         vector<int> attr_types;
+        vector< map<string, size_t> > attr_type_index_map;
         
         vector < map <CELL_IDX_T, vector<uint32_t> > > all_attr_values_uint32;
         vector < map <CELL_IDX_T, vector<int32_t> > >  all_attr_values_int32;
@@ -3469,6 +3479,7 @@ extern "C"
         build_cell_attr_value_maps(idx_values,
                                    attr_names,
                                    attr_types,
+                                   attr_type_index_map,
                                    all_attr_values_uint32,
                                    all_attr_values_uint16,
                                    all_attr_values_uint8,
@@ -3682,6 +3693,7 @@ extern "C"
     
         vector<string> attr_names;
         vector<int> attr_types;
+        vector< map<string, size_t> > attr_type_index_map;
         
         vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
         vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
@@ -3694,6 +3706,7 @@ extern "C"
         build_cell_attr_value_maps(idx_values,
                                    attr_names,
                                    attr_types,
+                                   attr_type_index_map,
                                    all_attr_values_uint32,
                                    all_attr_values_uint16,
                                    all_attr_values_uint8,
@@ -3917,7 +3930,8 @@ extern "C"
     
     vector<string> attr_names;
     vector<int> attr_types;
-        
+    vector< map<string, size_t> > attr_type_index_map;
+    
     vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
     vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
     vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
@@ -3926,11 +3940,11 @@ extern "C"
     vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
     vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
 
-    vector<neurotree_t> tree_vector;
     
     build_cell_attr_value_maps(idx_values,
                                attr_names,
                                attr_types,
+                               attr_type_index_map,
                                all_attr_values_uint32,
                                all_attr_values_uint16,
                                all_attr_values_uint8,
@@ -3939,6 +3953,86 @@ extern "C"
                                all_attr_values_int8,
                                all_attr_values_float);
 
+    map<string, size_t>::iterator it;
+    
+    it = attr_type_index_map[AttrMap::attr_index_float].find("x");
+    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    size_t xcoord_index = it->second;
+    it = attr_type_index_map[AttrMap::attr_index_float].find("y");
+    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    size_t ycoord_index = it->second;
+    it = attr_type_index_map[AttrMap::attr_index_float].find("z");
+    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    size_t zcoord_index = it->second;
+    it = attr_type_index_map[AttrMap::attr_index_float].find("radius");
+    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    size_t radius_index = it->second;
+    it = attr_type_index_map[AttrMap::attr_index_int8].find("layer");
+    assert(it != attr_type_index_map[AttrMap::attr_index_int8].end());
+    size_t layer_index = it->second;
+    it = attr_type_index_map[AttrMap::attr_index_int32].find("parent");
+    assert(it != attr_type_index_map[AttrMap::attr_index_int32].end());
+    size_t parent_index = it->second;
+    it = attr_type_index_map[AttrMap::attr_index_int8].find("swc_type");
+    assert(it != attr_type_index_map[AttrMap::attr_index_int8].end());
+    size_t swc_type_index = it->second;
+    it = attr_type_index_map[AttrMap::attr_index_uint16].find("sections");
+    assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
+    size_t sections_index = it->second; 
+    it = attr_type_index_map[AttrMap::attr_index_uint16].find("src");
+    assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
+    size_t src_index = it->second; 
+    it = attr_type_index_map[AttrMap::attr_index_uint16].find("dst");
+    assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
+    size_t dst_index = it->second; 
+    
+    vector<neurotree_t> tree_vector;
+
+    map<CELL_IDX_T, vector<float> >& xcoord_values = all_attr_values_float[xcoord_index];
+    map<CELL_IDX_T, vector<float> >& ycoord_values = all_attr_values_float[ycoord_index];
+    map<CELL_IDX_T, vector<float> >& zcoord_values = all_attr_values_float[zcoord_index];
+    map<CELL_IDX_T, vector<float> >& radius_values = all_attr_values_float[radius_index];
+    map<CELL_IDX_T, vector<int32_t> >& parent_values = all_attr_values_int32[parent_index];
+    map<CELL_IDX_T, vector<uint16_t> >& src_values = all_attr_values_uint16[src_index];
+    map<CELL_IDX_T, vector<uint16_t> >& dst_values = all_attr_values_uint16[dst_index];
+    map<CELL_IDX_T, vector<uint16_t> >& sections_values = all_attr_values_uint16[sections_index];
+    map<CELL_IDX_T, vector<int8_t> >& layer_values = all_attr_values_int8[layer_index];
+    map<CELL_IDX_T, vector<int8_t> >& swc_type_values = all_attr_values_int8[swc_type_index];
+
+
+    auto sections_it  = sections_values.begin();
+    auto src_it  = src_values.begin();
+    auto dst_it  = dst_values.begin();
+
+    auto parent_it  = parent_values.begin();
+    
+    auto xcoord_it  = xcoord_values.begin();
+    auto ycoord_it  = ycoord_values.begin();
+    auto zcoord_it  = zcoord_values.begin();
+    auto radius_it  = radius_values.begin();
+
+    auto layer_it   = layer_values.begin();
+    auto swc_type_it  = swc_type_values.begin();
+
+    while (sections_it != sections_values.end())
+      {
+        CELL_IDX_T id = sections_it->first;
+        tree_vector.push_back(make_tuple(id,
+                                         src_it->second,
+                                         dst_it->second,
+                                         sections_it->second,
+                                         xcoord_it->second,
+                                         ycoord_it->second,
+                                         zcoord_it->second,
+                                         radius_it->second,
+                                         layer_it->second,
+                                         parent_it->second,
+                                         swc_type_it->second));
+        
+        ++sections_it, ++src_it, ++dst_it, ++parent_it,
+          ++xcoord_it, ++ycoord_it, ++zcoord_it, ++radius_it,
+          ++layer_it, ++swc_type_it;
+      }
     
     CELL_IDX_T pop_start = pop_vector[pop_idx].start;
 
