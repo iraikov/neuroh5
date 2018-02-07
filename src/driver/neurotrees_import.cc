@@ -249,6 +249,9 @@ int main(int argc, char** argv)
   hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
   assert(gid_list.size() > 0);
+
+  printf("Task %d: gid_list size is %u\n", rank, gid_list.size());
+
   
   if (opt_include)
     { 

@@ -68,7 +68,7 @@ namespace neuroh5
           Graph::vertex_set outs = A.out_neighbors(v);
           bool type_change = false;
         
-          while (outs.size() == 1)
+          while ((outs.size() == 1) && (!(type_change)))
             {
               if (types[v] != p_type)
                 {
@@ -105,6 +105,8 @@ namespace neuroh5
           Graph::vertex s, v = Graph::node (p); 
           SWC_TYPE_T p_type = types[v];
 
+          printf("contract_tree_dfs: v = %u\n", v);
+          
           if (contraction_map[sp].size() > 1)
             {
               if (spp != v) section_members.push_back(spp);
@@ -131,8 +133,8 @@ namespace neuroh5
           // identifies the node neighbors
           Graph::vertex_set outs = A.out_neighbors(v);
           bool type_change = false;
-          
-          while (outs.size() == 1)
+
+          while ((outs.size() == 1) && (!(type_change)))
             {
               if (types[v] != p_type)
                 {
@@ -147,6 +149,8 @@ namespace neuroh5
                   outs = A.out_neighbors(v);
                 }
             }
+
+          printf("type_change = %d outs.size() = %u\n", type_change, outs.size());
 
           // if the node is a branching point, recurse to create new section entry
           if ((outs.size() > 1) || type_change)
