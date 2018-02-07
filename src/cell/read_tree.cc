@@ -30,6 +30,8 @@ namespace neuroh5
       
       for (CELL_IDX_T idx : attr_values.index_set)
         {
+          printf("append_tree_list: idx = %u\n", idx);
+          
           const vector<SECTION_IDX_T>& src_vector = attr_values.find_name<SECTION_IDX_T>(hdf5::SRCSEC, idx);
           const vector<SECTION_IDX_T>& dst_vector = attr_values.find_name<SECTION_IDX_T>(hdf5::DSTSEC, idx);
 
@@ -45,6 +47,7 @@ namespace neuroh5
           const vector<SWC_TYPE_T> swc_types   = attr_values.find_name<SWC_TYPE_T>(hdf5::SWCTYPE, idx);
 
           CELL_IDX_T gid = pop_start+idx;
+          printf("append_tree_list: gid = %u\n", gid);
           tree_list.push_back(make_tuple(gid,
                                          src_vector, dst_vector, sections,
                                          xcoords,ycoords,zcoords,

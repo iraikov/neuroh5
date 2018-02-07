@@ -547,8 +547,6 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   const vector<SWC_TYPE_T> & swc_types=get<10>(tree);
                            
   size_t num_nodes = xcoords.size();
-  npy_intp dims[1];
-  dims[0] = xcoords.size();
   npy_intp ind = 0;
 
   PyObject *py_section_topology = NULL;
@@ -559,6 +557,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   
   if (topology)
     {
+      npy_intp dims[1];
+      dims[0] = num_nodes;
       py_section_topology = PyDict_New();
       py_section_vector = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
       SECTION_IDX_T *section_vector_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_vector, &ind);
@@ -597,11 +597,12 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           section_idx++;
         }
       assert(section_idx == num_sections);
-      
-      dims[0] = src_vector.size();
-      py_section_src = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+
+      npy_intp topology_dims[1];
+      topology_dims[0] = src_vector.size();
+      py_section_src = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
       SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
-      py_section_dst = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      py_section_dst = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
       SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
       for (size_t s = 0; s < src_vector.size(); s++)
         {
@@ -621,9 +622,11 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
     }
   else
     {
-      py_section_src = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      npy_intp topology_dims[1];
+      topology_dims[0] = src_vector.size();
+      py_section_src = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
       SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
-      py_section_dst = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      py_section_dst = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
       SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
       for (size_t s = 0; s < src_vector.size(); s++)
         {
@@ -631,7 +634,10 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           section_dst_ptr[s] = dst_vector[s];
         }
 
-      py_sections = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      
+      npy_intp sections_dims[1];
+      sections_dims[0] = sections.size();
+      py_sections = (PyObject *)PyArray_SimpleNew(1, sections_dims, NPY_UINT16);
       SECTION_IDX_T *sections_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_sections, &ind);
       for (size_t p = 0; p < sections.size(); p++)
         {
@@ -640,6 +646,10 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
     }
   
                            
+
+  npy_intp dims[1];
+  dims[0] = num_nodes;
+
   PyObject *py_xcoords = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
   float *xcoords_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_xcoords, &ind);
   PyObject *py_ycoords = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
@@ -687,9 +697,11 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   PyDict_SetItemString(py_treeval, "swc_type", py_swc_types);
   Py_DECREF(py_swc_types);
 
-  
   if (topology)
     {
+      assert(py_section_vector != NULL);
+      assert(py_section_topology != NULL);
+      
       PyDict_SetItemString(py_treeval, "section", py_section_vector);
       Py_DECREF(py_section_vector);
 
@@ -698,6 +710,10 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
     }
   else
     {
+      assert(py_sections != NULL);
+      assert(py_section_src != NULL);
+      assert(py_section_dst != NULL);
+
       PyDict_SetItemString(py_treeval, "sections", py_sections);
       Py_DECREF(py_sections);
       PyDict_SetItemString(py_treeval, "src", py_section_src);
@@ -952,7 +968,7 @@ NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
   p->state->attr_name_spaces = attr_name_spaces;
   p->state->attr_maps  = attr_maps;
   p->state->it_tree    = p->state->tree_vector.cbegin();
-  p->state->topology_flag = p->state->topology_flag;
+  p->state->topology_flag = topology_flag;
 
                            
   return (PyObject *)p;
@@ -2846,7 +2862,7 @@ extern "C"
                                    "topology",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOi", (char **)kwlist,
                                      &file_name, &pop_name,
                                      &py_selection, &py_comm, 
                                      &py_attr_name_spaces,
@@ -5137,7 +5153,7 @@ extern "C"
       "Returns the names of the projections contained in the given file." },
     { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS,
       "Reads neuronal tree morphology." },
-    { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS,
+    { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads the selected neuronal tree morphologies." },
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
       "Reads neuronal tree morphology using scalable parallel read/scatter." },
