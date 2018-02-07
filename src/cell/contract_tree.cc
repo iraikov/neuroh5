@@ -70,6 +70,7 @@ namespace neuroh5
         
           while ((outs.size() == 1) && (!(type_change)))
             {
+              v = Graph::node(outs.cbegin());
               if (types[v] != p_type)
                 {
                   type_change = true;
@@ -77,7 +78,6 @@ namespace neuroh5
               else
                 {
                   // adds the output node to the section map for the current section
-                  v = Graph::node(outs.cbegin());
                   contraction_map[s].push_back(v);
                   // obtains the neighbors of the next node
                   outs = A.out_neighbors(v);
@@ -135,6 +135,7 @@ namespace neuroh5
 
           while ((outs.size() == 1) && (!(type_change)))
             {
+              v = Graph::node(outs.cbegin());
               if (types[v] != p_type)
                 {
                   type_change = true;
@@ -142,7 +143,6 @@ namespace neuroh5
               else
                 {
                   // adds the output node to the section map for the current section
-                  v = Graph::node(outs.cbegin());
                   contraction_map[s].push_back(v);
                   // obtains the neighbors of the next node
                   outs = A.out_neighbors(v);
