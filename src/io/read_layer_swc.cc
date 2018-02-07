@@ -69,8 +69,6 @@ namespace neuroh5
           REALVAL_T radius;
           COORD_T x, y, z;
 
-          printf("read_layer_swc: line = %s\n", line.c_str());
-
           iss >> id;
           id = id+id_offset;
           if (iss.fail()) continue;
@@ -130,7 +128,6 @@ namespace neuroh5
       vector<SECTION_IDX_T> sec_vector;
       S.insert_vertex(0);
 
-      printf("before contract_tree: split_layers = %d\n", split_layers);
       if (split_layers)
         cell::contract_tree_regions_dfs (A, layers, swc_types, roots, S, contraction_map, 0, 0);
       else
@@ -242,7 +239,6 @@ namespace neuroh5
           SWC_TYPE_T swc_type;
           REALVAL_T radius;
           COORD_T x, y, z;
-          printf("read_swc: line = %s\n", line.c_str());
 
           iss >> id;
           id = id+id_offset;
