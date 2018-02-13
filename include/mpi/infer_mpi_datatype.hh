@@ -9,7 +9,7 @@
 template <typename T>
 MPI_Datatype infer_mpi_datatype(const T& x)
 {
-  MPI_Datatype result;
+  MPI_Datatype result = MPI_DATATYPE_NULL;
 
   if (std::is_same<T, double>::value)
     {
@@ -53,7 +53,7 @@ MPI_Datatype infer_mpi_datatype(const T& x)
     }
   else
     {
-      assert(result >= 0);
+      assert(result != MPI_DATATYPE_NULL);
     }
 
   return result;
