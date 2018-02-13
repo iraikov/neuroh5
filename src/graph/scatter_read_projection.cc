@@ -65,8 +65,8 @@ namespace neuroh5
       int io_color = 1;
 
       int rank, size;
-      assert(MPI_Comm_size(all_comm, &size) >= 0);
-      assert(MPI_Comm_rank(all_comm, &rank) >= 0);
+      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
       // Am I an I/O rank?
       if (rank < io_size)
@@ -204,9 +204,9 @@ namespace neuroh5
                 sendbuf_size = sendbuf.size();
               }
             
-            assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+            assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
             sendbuf.resize(sendbuf_size);
-            assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
+            assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
             
             if (rank != 0)
               {

@@ -59,8 +59,8 @@ namespace neuroh5
     {
 
       int rank, size;
-      assert(MPI_Comm_size(all_comm, &size) >= 0);
-      assert(MPI_Comm_rank(all_comm, &rank) >= 0);
+      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
       vector<char> sendbuf; 
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
@@ -154,9 +154,9 @@ namespace neuroh5
             names_sendbuf_size = sendbuf.size();
           }
 
-        assert(MPI_Bcast(&names_sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+        assert(MPI_Bcast(&names_sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
         names_sendbuf.resize(names_sendbuf_size);
-        assert(MPI_Bcast(&names_sendbuf[0], names_sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
+        assert(MPI_Bcast(&names_sendbuf[0], names_sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
         
         if (rank != 0)
           {

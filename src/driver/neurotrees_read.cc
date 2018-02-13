@@ -148,8 +148,8 @@ int main(int argc, char** argv)
   assert(MPI_Init(&argc, &argv) >= 0);
 
   int rank, size;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
+  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
+  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   

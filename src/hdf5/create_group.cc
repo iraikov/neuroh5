@@ -21,7 +21,7 @@ namespace neuroh5
      const string&   path
      )
     {
-      herr_t status;
+      herr_t status = 0;
       if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
         {
         

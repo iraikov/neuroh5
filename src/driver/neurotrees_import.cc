@@ -100,8 +100,8 @@ int main(int argc, char** argv)
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
   int rank, size;
-  assert(MPI_Comm_size(all_comm, &size) >= 0);
-  assert(MPI_Comm_rank(all_comm, &rank) >= 0);
+  assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+  assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
   bool opt_include_layer  = false;
   bool opt_split_layers   = false;

@@ -58,8 +58,8 @@ namespace neuroh5
     {
       herr_t ierr = 0;
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);

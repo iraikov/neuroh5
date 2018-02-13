@@ -32,7 +32,7 @@ namespace neuroh5
     {
       int status=0; 
       int ssize;
-      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
       size_t size;
       size = (size_t)ssize;
 
@@ -56,7 +56,7 @@ namespace neuroh5
           vector<uint32_t> num_nodes_vector(size, 0);
           num_nodes_vector.resize(size,0);
           assert(MPI_Allgather(&local_num_nodes, 1, MPI_UINT32_T, 
-                               &num_nodes_vector[0], 1, MPI_UINT32_T, comm) >= 0);
+                               &num_nodes_vector[0], 1, MPI_UINT32_T, comm) == MPI_SUCCESS);
           vector<int> recvcounts, rdispls;
           recvcounts.resize(size,0); 
           rdispls.resize(size,0); 
@@ -75,11 +75,11 @@ namespace neuroh5
           assert(MPI_Allgatherv(&local_degree_vector[0], 
                                 local_num_nodes, MPI_UINT32_T,
                                 &degree_vector[0], &recvcounts[0], &rdispls[0], MPI_UINT32_T,
-                                comm) >= 0);
+                                comm) == MPI_SUCCESS);
           assert(MPI_Allgatherv(&local_node_id_vector[0], 
                                 local_num_nodes, MPI_NODE_IDX_T,
                                 &node_id_vector[0], &recvcounts[0], &rdispls[0], MPI_NODE_IDX_T,
-                                comm) >= 0);
+                                comm) == MPI_SUCCESS);
 
           map< NODE_IDX_T, uint32_t > degree_map;
           for (size_t i = 0; i < node_id_vector.size(); i++)

@@ -57,8 +57,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       size_t all_attr_size=0, all_sec_size=0,  all_topo_size=0;
       std::vector<size_t> attr_size_vector, sec_size_vector, topo_size_vector;
@@ -160,8 +160,8 @@ namespace neuroh5
      )
     {
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       size_t block  = tree_list.size();
       assert(block == 1); // singleton tree set
@@ -227,8 +227,8 @@ namespace neuroh5
       hsize_t value_size, index_size;
       
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       if (rank == 0)
         {
@@ -289,8 +289,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       
       std::vector<SEC_PTR_T> sec_ptr;

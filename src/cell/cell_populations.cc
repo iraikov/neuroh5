@@ -59,8 +59,8 @@ namespace neuroh5
     
       int rank, size;
     
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
     
       // MPI rank 0 reads and broadcasts the names of populations
       hid_t grp = -1;
@@ -102,10 +102,10 @@ namespace neuroh5
           }
 
         size_t sendbuf_size = sendbuf.size();
-        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) >= 0);
+        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
         sendbuf.resize(sendbuf_size);
         
-        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) >= 0);
+        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, 0, comm) == MPI_SUCCESS);
         
         if (rank != 0)
           {
@@ -132,8 +132,8 @@ namespace neuroh5
 
       int rank, size;
 
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
       // MPI rank 0 reads and broadcasts the number of pairs
 
@@ -271,8 +271,8 @@ namespace neuroh5
       herr_t ierr = 0;
 
       int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
       // MPI rank 0 reads and broadcasts the number of ranges
 
@@ -309,7 +309,7 @@ namespace neuroh5
           assert(H5Fclose(file) >= 0);
         }
 
-      assert(MPI_Bcast(&num_ranges, 1, MPI_SIZE_T, 0, comm) >= 0);
+      assert(MPI_Bcast(&num_ranges, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
       assert(num_ranges > 0);
 
       // allocate buffers
@@ -317,7 +317,7 @@ namespace neuroh5
 
       // MPI rank 0 reads and broadcasts the population ranges
       assert(MPI_Bcast(&pop_vector[0], (int)num_ranges*sizeof(pop_range_t),
-                       MPI_BYTE, 0, comm) >= 0);
+                       MPI_BYTE, 0, comm) == MPI_SUCCESS);
 
       n_nodes = 0;
       for(size_t i = 0; i < pop_vector.size(); ++i)
@@ -399,8 +399,8 @@ namespace neuroh5
       herr_t ierr = 0;
 
       int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
       // MPI rank 0 reads and broadcasts the number of ranges
 
@@ -445,10 +445,10 @@ namespace neuroh5
             sendbuf_size = sendbuf.size();
           }
 
-        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) >= 0);
+        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
         assert(sendbuf_size > 0);
         sendbuf.resize(sendbuf_size);
-        assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) >= 0);
+        assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
         
         if (rank != 0)
           {

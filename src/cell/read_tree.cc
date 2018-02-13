@@ -72,8 +72,8 @@ namespace neuroh5
      )
     {
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       data::NamedAttrMap attr_values;
       

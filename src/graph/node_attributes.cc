@@ -284,8 +284,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       vector< pair<string,hid_t> > attr_info;
     
@@ -563,8 +563,8 @@ namespace neuroh5
      )
     {
       int srank, ssize; size_t rank, size;
-      assert(MPI_Comm_size(all_comm, &ssize) >= 0);
-      assert(MPI_Comm_rank(all_comm, &srank) >= 0);
+      assert(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
       assert(ssize > 0);
       assert(srank >= 0);
       size = ssize;
@@ -620,7 +620,7 @@ namespace neuroh5
           num_attrs_bcast[i] = num_attrs[i];
         }
       // 4. Broadcast the number of attributes of each type to all ranks
-      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, all_comm) >= 0);
+      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs[i] = num_attrs_bcast[i];
@@ -635,9 +635,9 @@ namespace neuroh5
             sendbuf_size = sendbuf.size();
           }
 
-        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, all_comm) >= 0);
+        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
         sendbuf.resize(sendbuf_size);
-        assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
+        assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
         
         if (rank != 0)
           {
@@ -678,7 +678,7 @@ namespace neuroh5
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero)
     
       assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                          &recvcounts[0], 1, MPI_INT, all_comm) >= 0);
+                          &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
     
       // 7. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls

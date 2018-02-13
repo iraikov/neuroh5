@@ -51,8 +51,8 @@ namespace neuroh5
 
         int rank, size;
 
-        assert(MPI_Comm_size(comm, &size) >= 0);
-        assert(MPI_Comm_rank(comm, &rank) >= 0);
+        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
         // MPI rank 0 reads and broadcasts the number of ranges
         hsize_t num_objs;

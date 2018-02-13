@@ -78,8 +78,8 @@ int main(int argc, char** argv)
   EdgeMapType edge_map_type = EdgeMapDst;
   int rank, size, io_size; size_t n_nodes, local_num_nodes;
   size_t local_num_edges, total_num_edges;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
+  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
+  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
 
   debug_enabled = false;
 

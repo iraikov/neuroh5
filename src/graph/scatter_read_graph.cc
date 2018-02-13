@@ -63,8 +63,8 @@ namespace neuroh5
       vector< pair<pop_t, string> > pop_labels;
       
       int rank, size;
-      assert(MPI_Comm_size(all_comm, &size) >= 0);
-      assert(MPI_Comm_rank(all_comm, &rank) >= 0);
+      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
           
        assert(cell::read_population_ranges
               (all_comm, file_name, pop_ranges, pop_vector, total_num_nodes)

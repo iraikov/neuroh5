@@ -37,7 +37,7 @@ namespace neuroh5
         {
           MPE_Seq_begin( comm, 1 );
           int rank;
-          assert(MPI_Comm_rank(comm, &rank) >= 0);
+          assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
           std::cerr << "Rank " << rank << ": ";
           std::cerr << std::forward<First>(first);
           DEBUG(std::forward<Rest>(rest)...);

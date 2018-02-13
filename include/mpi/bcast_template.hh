@@ -29,11 +29,11 @@ namespace neuroh5
                       vector< vector<T> > &data)
     {
       int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       uint32_t num_items = data.size();
-      assert(MPI_Bcast(&num_items, 1, MPI_UINT32_T, root, comm) >= 0);
+      assert(MPI_Bcast(&num_items, 1, MPI_UINT32_T, root, comm) == MPI_SUCCESS);
       
       if (num_items > 0)
         {
@@ -55,8 +55,8 @@ namespace neuroh5
             }
           
           // Broadcast string lengths
-          assert(MPI_Bcast(&items_total_length, 1, MPI_UINT32_T, root, comm) >= 0);
-          assert(MPI_Bcast(&items_lengths[0], num_items, MPI_UINT32_T, root, comm) >= 0);
+          assert(MPI_Bcast(&items_total_length, 1, MPI_UINT32_T, root, comm) == MPI_SUCCESS);
+          assert(MPI_Bcast(&items_lengths[0], num_items, MPI_UINT32_T, root, comm) == MPI_SUCCESS);
 
           for (size_t i = 1; i < num_items; ++i)
             {
@@ -76,7 +76,7 @@ namespace neuroh5
             }
 
           assert(sendbuf.size() = items_total_length);
-          assert(MPI_Bcast(sendbuf, sendbuf.size(), datatype, root, comm) >= 0);
+          assert(MPI_Bcast(sendbuf, sendbuf.size(), datatype, root, comm) == MPI_SUCCESS);
         }
       
       return 0;

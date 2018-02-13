@@ -40,13 +40,13 @@ namespace neuroh5
     {
 
       int srank; size_t rank;
-      assert(MPI_Comm_rank(comm, &srank) >= 0);
+      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
 
       assert(srank >= 0);
       rank = srank;
 
       int ssize; size_t size;
-      assert(MPI_Comm_size(comm, &ssize) >= 0);
+      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
 
       assert(ssize > 0);
       size = ssize;
@@ -62,7 +62,7 @@ namespace neuroh5
       //    creates sendcounts and sdispls arrays
 
       assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                          &recvcounts[0], 1, MPI_INT, comm) >= 0);
+                          &recvcounts[0], 1, MPI_INT, comm) == MPI_SUCCESS);
 
     
       // 2. Each rank accumulates the vector sizes and allocates
@@ -80,13 +80,13 @@ namespace neuroh5
 
       size_t global_recvbuf_size=0;
       assert(MPI_Allreduce(&recvbuf_size, &global_recvbuf_size, 1, MPI_SIZE_T, MPI_SUM,
-                           comm) >= 0);
+                           comm) == MPI_SUCCESS);
       assert(global_recvbuf_size > 0);
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,
-                           comm) >= 0);
+                           comm) == MPI_SUCCESS);
 
       return 0;
     }

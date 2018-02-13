@@ -56,8 +56,8 @@ namespace neuroh5
 
         int rank, size;
 
-        assert(MPI_Comm_size(comm, &size) >= 0);
-        assert(MPI_Comm_rank(comm, &rank) >= 0);
+        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
         
         vector<string> prj_src_pop_names, prj_dst_pop_names;
         
@@ -99,9 +99,9 @@ namespace neuroh5
               sendbuf_size = sendbuf.size();
             }
 
-          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) >= 0);
+          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) == MPI_SUCCESS);
           sendbuf.resize(sendbuf_size);
-          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) >= 0);
+          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
           
           if (rank != 0)
             {
@@ -117,9 +117,9 @@ namespace neuroh5
             }
           
 
-          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) >= 0);
+          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) == MPI_SUCCESS);
           sendbuf.resize(sendbuf_size);
-          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) >= 0);
+          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
           
           if (rank != 0)
             {

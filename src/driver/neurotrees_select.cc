@@ -114,8 +114,8 @@ int main(int argc, char** argv)
 
   size_t chunksize=1000, value_chunksize=1000, cachesize=1*1024*1024;
   int rank, size, io_size=1;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) >= 0);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) >= 0);
+  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
+  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
@@ -499,8 +499,8 @@ int main(int argc, char** argv)
   uint32_t global_subset_size=0, local_subset_size=tree_subset.size();
 
   assert(MPI_Reduce(&local_subset_size, &global_subset_size, 1, MPI_UINT32_T,
-                    MPI_SUM, 0, all_comm) >= 0);
-  assert(MPI_Bcast(&global_subset_size, 1, MPI_UINT32_T, 0, all_comm) >= 0);
+                    MPI_SUM, 0, all_comm) == MPI_SUCCESS);
+  assert(MPI_Bcast(&global_subset_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
 
   for (auto const& tree : tree_subset)
     {

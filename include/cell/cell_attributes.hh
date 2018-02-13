@@ -279,7 +279,7 @@ namespace neuroh5
       // Create gid, attr_ptr, value arrays
       vector<ATTR_PTR_T>  attr_ptr;
       ATTR_PTR_T value_offset = 0;
-      hsize_t global_value_size;
+      hsize_t global_value_size = 0;
       for (size_t i=0; i<size; i++)
         {
           if (i<rank)

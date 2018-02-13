@@ -1846,7 +1846,7 @@ extern "C"
         edge_map_type = EdgeMapSrc;
       }
     
-    assert(MPI_Comm_size(comm, &size) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
 
     if (io_size == 0)
       {
@@ -2036,7 +2036,7 @@ extern "C"
         edge_map_type = EdgeMapSrc;
       }
     
-    assert(MPI_Comm_size(comm, &size) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
 
     vector <string> edge_attr_name_spaces;
     // Create C++ vector of namespace strings:
@@ -2181,8 +2181,8 @@ extern "C"
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     if (io_size == 0)
       {
@@ -2264,8 +2264,8 @@ extern "C"
     if (dict_size > 0)
       {
         int rank, size;
-        assert(MPI_Comm_size(data_comm, &size) >= 0);
-        assert(MPI_Comm_rank(data_comm, &rank) >= 0);
+        assert(MPI_Comm_size(data_comm, &size) == MPI_SUCCESS);
+        assert(MPI_Comm_rank(data_comm, &rank) == MPI_SUCCESS);
 
         if (io_size == 0)
           {
@@ -2334,8 +2334,8 @@ extern "C"
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     vector <string> pop_names;
     status = cell::read_population_names(comm, input_file_name, pop_names);
@@ -2391,8 +2391,8 @@ extern "C"
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     vector <string> pop_names;
     if (py_pop_names != NULL)
@@ -2443,10 +2443,10 @@ extern "C"
           sendbuf_size = sendbuf.size();
         }
       
-      assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) >= 0);
+      assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
       
       sendbuf.resize(sendbuf_size);
-      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) >= 0);
+      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
       
       if ((rank != (unsigned int)root) && (sendbuf_size > 0))
         {
@@ -2757,8 +2757,8 @@ extern "C"
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     if (io_size == 0)
       {
@@ -3015,8 +3015,8 @@ extern "C"
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     if (io_size == 0)
       {
@@ -3336,8 +3336,8 @@ extern "C"
       }
 
     int srank, ssize; size_t size, rank;
-    assert(MPI_Comm_size(comm, &ssize) >= 0);
-    assert(MPI_Comm_rank(comm, &srank) >= 0);
+    assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
     assert(ssize > 0);
     assert(srank >= 0);
     size = ssize;
@@ -3659,8 +3659,8 @@ extern "C"
     if (dict_size > 0)
       {
         int srank, ssize; size_t size;
-        assert(MPI_Comm_size(data_comm, &ssize) >= 0);
-        assert(MPI_Comm_rank(data_comm, &srank) >= 0);
+        assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS);
+        assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS);
         assert(ssize > 0);
         assert(srank >= 0);
         size = ssize;
@@ -3900,8 +3900,8 @@ extern "C"
 
     
     int srank, ssize; size_t size;
-    assert(MPI_Comm_size(data_comm, &ssize) >= 0);
-    assert(MPI_Comm_rank(data_comm, &srank) >= 0);
+    assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS);
     assert(ssize > 0);
     assert(srank >= 0);
     size = ssize;
@@ -4237,8 +4237,8 @@ extern "C"
       }
     
     int size, rank;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     if (io_size <= 0)
       {
@@ -4352,8 +4352,8 @@ extern "C"
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     assert(size > 0);
     
@@ -4503,8 +4503,8 @@ extern "C"
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) >= 0);
-    assert(MPI_Comm_rank(comm, &rank) >= 0);
+    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     assert(size > 0);
     

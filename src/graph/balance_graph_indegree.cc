@@ -118,8 +118,8 @@ namespace neuroh5
       int status=0;
     
       int rank, size;
-      assert(MPI_Comm_size(comm, &size) >= 0);
-      assert(MPI_Comm_rank(comm, &rank) >= 0);
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     
       // Read population info to determine total_num_nodes

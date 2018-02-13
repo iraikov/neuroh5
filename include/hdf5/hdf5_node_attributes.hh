@@ -52,7 +52,7 @@ namespace neuroh5
      size_t numitems = 0
      )
     {
-      herr_t status;
+      herr_t status = 0;
 
       int size, rank;
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
