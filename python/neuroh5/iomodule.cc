@@ -2050,10 +2050,10 @@ extern "C"
           }
       }
 
-    assert(graph::read_projection_names(*comm_ptr, input_file_name, prj_names) >= 0);
+    assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
-    assert(cell::read_population_ranges(*comm_ptr, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+    assert(cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
     graph::bcast_graph(comm, edge_map_type, std::string(input_file_name),
                        edge_attr_name_spaces, prj_names, prj_vector, edge_attr_name_vector, 
@@ -2523,7 +2523,7 @@ extern "C"
         assert(status == MPI_SUCCESS);
       }
 
-    status = cell::read_population_labels(*comm_ptr, input_file_name, pop_labels);
+    status = cell::read_population_labels(comm, input_file_name, pop_labels);
     assert (status >= 0);
 
     size_t n_nodes;
@@ -3890,11 +3890,11 @@ extern "C"
     // only on the ranks that do have data.
     if (dict_size > 0)
       {
-        MPI_Comm_split(*comm_ptr,data_color,0,&data_comm);
+        MPI_Comm_split(comm,data_color,0,&data_comm);
       }
     else
       {
-        MPI_Comm_split(*comm_ptr,0,0,&data_comm);
+        MPI_Comm_split(comm,0,0,&data_comm);
       }
     MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
