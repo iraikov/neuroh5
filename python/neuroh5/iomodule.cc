@@ -62,6 +62,10 @@
 #include "edge_attributes.hh"
 #include "serialize_data.hh"
 
+#if PY_MAJOR_VERSION >= 3
+#define Py_TPFLAGS_HAVE_ITER ((Py_ssize_t)0)
+#endif
+
 using namespace std;
 using namespace neuroh5;
 using namespace neuroh5::data;
@@ -910,8 +914,7 @@ PyObject* NeuroH5TreeIter_iternext(PyObject *self)
 
 
 static PyTypeObject PyNeuroH5TreeIter_Type = {
-  PyObject_HEAD_INIT(NULL)
-  0,                         /*ob_size*/
+  PyVarObject_HEAD_INIT(&PyType_Type, 0)
   "NeuroH5TreeIter",         /*tp_name*/
   sizeof(PyNeuroH5TreeIterState), /*tp_basicsize*/
   0,                         /*tp_itemsize*/
@@ -1222,8 +1225,7 @@ PyObject* NeuroH5CellAttrIter_iternext(PyObject *self)
 
 
 static PyTypeObject PyNeuroH5CellAttrIter_Type = {
-  PyObject_HEAD_INIT(NULL)
-  0,                         /*ob_size*/
+  PyVarObject_HEAD_INIT(&PyType_Type, 0)
   "NeuroH5CellAttrIter",         /*tp_name*/
   sizeof(PyNeuroH5CellAttrIterState), /*tp_basicsize*/
   0,                         /*tp_itemsize*/
@@ -1584,8 +1586,7 @@ PyObject* NeuroH5EdgeIter_iternext(PyObject *self)
 
 
 static PyTypeObject PyNeuroH5EdgeIter_Type = {
-  PyObject_HEAD_INIT(NULL)
-  0,                         /*ob_size*/
+  PyVarObject_HEAD_INIT(&PyType_Type, 0)
   "NeuroH5EdgeIter",         /*tp_name*/
   sizeof(PyNeuroH5EdgeIterState), /*tp_basicsize*/
   0,                         /*tp_itemsize*/
