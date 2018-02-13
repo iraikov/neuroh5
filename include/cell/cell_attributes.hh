@@ -331,7 +331,7 @@ namespace neuroh5
       MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
       assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
                            &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
-                           comm) >= 0);
+                           comm) == MPI_SUCCESS);
       value_vector.clear();
     
       vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
@@ -363,7 +363,7 @@ namespace neuroh5
       // Each ALL_COMM rank participates in the MPI_Alltoallv
       assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
                            &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
-                           comm) >= 0);
+                           comm) == MPI_SUCCESS);
       if (rank < io_size_value)
         {
           attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
@@ -411,7 +411,7 @@ namespace neuroh5
     
       assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
                            &gid_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_CELL_IDX_T,
-                           comm) >= 0);
+                           comm) == MPI_SUCCESS);
       index_vector.clear();
       idx_sendcounts.clear();
       idx_sdispls.clear();

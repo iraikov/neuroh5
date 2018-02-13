@@ -5146,13 +5146,13 @@ extern "C"
 
   
   static PyMethodDef module_methods[] = {
-    { "read_population_ranges", (PyCFunction)py_read_population_ranges, METH_VARARGS,
+    { "read_population_ranges", (PyCFunction)py_read_population_ranges, METH_VARARGS | METH_KEYWORDS,
       "Returns population size and ranges." },
-    { "read_population_names", (PyCFunction)py_read_population_names, METH_VARARGS,
+    { "read_population_names", (PyCFunction)py_read_population_names, METH_VARARGS | METH_KEYWORDS,
       "Returns the names of the populations contained in the given file." },
-    { "read_projection_names", (PyCFunction)py_read_projection_names, METH_VARARGS,
+    { "read_projection_names", (PyCFunction)py_read_projection_names, METH_VARARGS | METH_KEYWORDS,
       "Returns the names of the projections contained in the given file." },
-    { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS,
+    { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS | METH_KEYWORDS,
       "Reads neuronal tree morphology." },
     { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads the selected neuronal tree morphologies." },
