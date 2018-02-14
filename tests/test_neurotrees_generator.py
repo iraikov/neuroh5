@@ -1,16 +1,15 @@
-from mpi4py import MPI
-from neuroh5.io import read_population_ranges, append_cell_attributes, bcast_cell_attributes, NeuroH5TreeGen, NeuroH5CellAttrGen
-
 # import mkl
 import sys
-import os
-import gc
+
 import numpy as np
+from mpi4py import MPI
+from neuroh5.io import bcast_cell_attributes, NeuroH5CellAttrGen
+
 comm = MPI.COMM_WORLD
 rank = comm.rank  # The process ID (integer 0-3 for 4-process run)
 
 if rank == 0:
-    print '%i ranks have been allocated' % comm.size
+    print('%i ranks have been allocated' % comm.size)
 sys.stdout.flush()
 
 neurotrees_dir = 'data/'
@@ -34,10 +33,10 @@ g = NeuroH5CellAttrGen(neurotrees_dir+test_file, 'GC', io_size=comm.size,
 global_count = 0
 count = 0
 for target_gid, synapse_dict in g:
-    print 'Rank: %i, gid: %i, count: %i' % (rank, target_gid, count)
+    print('Rank: %i, gid: %i, count: %i' % (rank, target_gid, count))
     count += 1
 global_count = comm.gather(count, root=0)
 if rank == 0:
-    print 'Total: %i' % np.sum(global_count)
+    print('Total: %i' % np.sum(global_count))
 
 test = bcast_cell_attributes(0, coords_dir+coords_file, 'GC', namespace='Coordinates')

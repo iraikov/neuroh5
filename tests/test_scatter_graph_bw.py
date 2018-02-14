@@ -1,11 +1,11 @@
+import numpy as np
 from mpi4py import MPI
 from neuroh5.io import scatter_read_graph
-import numpy as np
 
 comm = MPI.COMM_WORLD
 
-print "rank = ", comm.Get_rank()
-print "size = ", comm.Get_size()
+print("rank = ", comm.Get_rank())
+print("size = ", comm.Get_size())
 
 if comm.Get_rank() == 0:
    node_rank_vector = np.loadtxt("parts.4096", dtype=np.uint32)

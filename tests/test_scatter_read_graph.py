@@ -19,5 +19,5 @@ edge_iter = graph['MC']['BC']
 for (gid,edges) in edge_iter:
     edge_dict[gid] = edges
 
-print edge_dict[1004346]
+print(edge_dict[1004346])
 

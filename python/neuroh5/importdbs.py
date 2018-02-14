@@ -24,10 +24,9 @@ src dest src-branch src-sec dest-branch dest-sec weight
 
 '''
 
+import click
 import h5py
 import numpy as np
-import sys, os
-import click
 
 grp_h5types      = 'H5Types'
 grp_projections  = 'Projections'
@@ -67,14 +66,14 @@ attr_gj_dst_sec    = 'Destination Section'
 
 
 def h5_get_group (h, groupname):
-    if groupname in h.keys():
+    if groupname in list(h.keys()):
         g = h[groupname]
     else:
         g = h.create_group(groupname)
     return g
 
 def h5_get_dataset (g, dsetname, **kwargs):
-    if dsetname in g.keys():
+    if dsetname in list(g.keys()):
         dset = g[dsetname]
     else:
         dset = g.create_dataset(dsetname, (0,), **kwargs)
@@ -261,7 +260,7 @@ def import_lsn(inputfiles, outputfile, source, dest, groupname, layout, indextyp
                      "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
-        if not (grp_h5types in h5.keys()):
+        if not (grp_h5types in list(h5.keys())):
             # create an HDF5 enumerated type for the layer information
             dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
             h5[path_layer_tags] = dt
@@ -398,7 +397,7 @@ def import_ltdist(inputfiles, outputfile, source, dest, groupname, layout, index
                      "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
-        if not (grp_h5types in h5.keys()):
+        if not (grp_h5types in list(h5.keys())):
             # create an HDF5 enumerated type for the layer information
             dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
             h5[path_layer_tags] = dt
@@ -527,7 +526,7 @@ def import_dist(inputfiles, outputfile, source, dest, groupname, layout, indexty
                      "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
-        if not (grp_h5types in h5.keys()):
+        if not (grp_h5types in list(h5.keys())):
             # create an HDF5 enumerated type for the layer information
             dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
             h5[path_layer_tags] = dt
@@ -678,7 +677,7 @@ def import_gapjunction(inputfiles, outputfile, source, dest, groupname, layout, 
                      "MIDDLE_MOLECULAR_LAYER": 3, "OUTER_MOLECULAR_LAYER": 4}
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
-        if not (grp_h5types in h5.keys()):
+        if not (grp_h5types in list(h5.keys())):
             # create an HDF5 enumerated type for the layer information
             dt = h5py.special_dtype(enum=(np.uint8, layer_mapping))
             h5[path_layer_tags] = dt
@@ -745,7 +744,7 @@ def import_globals(population_file, connectivity_file, outputfile, colsep):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        if grp_h5types in h5.keys():
+        if grp_h5types in list(h5.keys()):
             dt = h5[path_population_projections].dtype
         else: 
             # create an HDF5 enumerated type for the layer information
@@ -819,7 +818,7 @@ def import_connectivity(connectivity_file, outputfile, colsep):
 
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
-        if (grp_h5types in h5.keys()) & (grp_population_projections in h5[grp_h5types].keys()):
+        if (grp_h5types in list(h5.keys())) & (grp_population_projections in list(h5[grp_h5types].keys())):
             dt = h5[path_population_projections].dtype
         else: 
             # create an HDF5 compound type for valid combinations of

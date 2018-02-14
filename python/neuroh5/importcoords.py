@@ -3,13 +3,10 @@ This script reads a text file in SWC format and creates a
 representation of it in an HDF5 file.
 '''
 
-from mpi4py import MPI
-import h5py
-import numpy as np
-import sys, os
 import click
-import itertools
-from neuroh5.io import write_cell_attributes, append_cell_attributes
+import numpy as np
+from mpi4py import MPI
+from neuroh5.io import append_cell_attributes
 
 grp_h5types   = 'H5Types'
 ns_coords     = 'Coordinates'
@@ -39,12 +36,12 @@ def import_xyz_uvl_coords (header,offset,lines,colsep,population,outputfile,iosi
     else:
         lines1 = lines
 
-    lst = filter(None,lines1[0].split(colsep))
+    lst = [_f for _f in lines1[0].split(colsep) if _f]
     # read and parse line-by-line
     if len(lst) > 6:
         for l in lines1:
             if not(l.startswith("#")):
-                a = filter(None, l.split(colsep))
+                a = [_f for _f in l.split(colsep) if _f]
                 try:
                     l_gid.append(int(float(a[0])))
                 except ValueError:
@@ -58,7 +55,7 @@ def import_xyz_uvl_coords (header,offset,lines,colsep,population,outputfile,iosi
     else:
         for l in lines1:
             if not(l.startswith("#")):
-                a = filter(None, l.split(colsep))
+                a = [_f for _f in l.split(colsep) if _f]
                 try:
                     l_gid.append(int(float(a[0])))
                 except ValueError:
@@ -72,7 +69,7 @@ def import_xyz_uvl_coords (header,offset,lines,colsep,population,outputfile,iosi
     values = {}
 
     if len(l_l_coord) > 0:
-        for (gid,x,y,z,u,v,l) in itertools.izip(l_gid,l_x_coord,l_y_coord,l_z_coord,l_u_coord,l_v_coord,l_l_coord):
+        for (gid,x,y,z,u,v,l) in zip(l_gid,l_x_coord,l_y_coord,l_z_coord,l_u_coord,l_v_coord,l_l_coord):
             gid1 = gid + offset
             values[gid1] = {attr_x_coord:np.asarray([x]).astype('float32'),
                             attr_y_coord:np.asarray([y]).astype('float32'),
@@ -81,7 +78,7 @@ def import_xyz_uvl_coords (header,offset,lines,colsep,population,outputfile,iosi
                             attr_v_coord:np.asarray([v]).astype('float32'),
                             attr_l_coord:np.asarray([l]).astype('float32')}
     else:
-        for (gid,x,y,z,u,v) in itertools.izip(l_gid,l_x_coord,l_y_coord,l_z_coord,l_u_coord,l_v_coord):
+        for (gid,x,y,z,u,v) in zip(l_gid,l_x_coord,l_y_coord,l_z_coord,l_u_coord,l_v_coord):
             gid1 = gid + offset
             values[gid1] = {attr_x_coord:np.asarray([x]).astype('float32'),
                             attr_y_coord:np.asarray([y]).astype('float32'),
