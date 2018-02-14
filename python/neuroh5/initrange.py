@@ -4,9 +4,10 @@ creates a representation of it in an HDF5 file.
 
 '''
 
-import click
 import h5py
 import numpy as np
+import sys, os
+import click
 
 grp_h5types   = 'H5Types'
 grp_populations= 'Populations'
@@ -16,14 +17,14 @@ path_population_range = '/%s/Population range' % grp_h5types
 
 
 def h5_get_group (h, groupname):
-    if groupname in list(h.keys()):
+    if groupname in h.keys():
         g = h[groupname]
     else:
         g = h.create_group(groupname)
     return g
 
 def h5_get_dataset (g, dsetname, **kwargs):
-    if dsetname in list(g.keys()):
+    if dsetname in g.keys():
         dset = g[dsetname]
     else:
         dset = g.create_dataset(dsetname, (0,), **kwargs)

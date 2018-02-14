@@ -1,17 +1,16 @@
 #!/usr/bin/env python
-import os
-import sys
-from distutils.core import setup, Extension
-
+import os, sys
 import mpi4py
 import numpy as np
+from distutils.core import setup, Extension
+
 
 if sys.platform == 'darwin':
     HDF5_INCDIR = os.environ.get("HDF5_INCDIR", "/usr/local/hdf5/include")
     HDF5_LIBDIR = os.environ.get("HDF5_LIBDIR", "/usr/local/hdf5/lib")
     HDF5_LIB    = os.environ.get("HDF5_LIB", "hdf5")
-    MPI_LIBDIR  = os.environ.get("MPI_LIBDIR", "/usr/local/Cellar/mpich/3.2.1_1/lib")
-    MPI_INCDIR  = os.environ.get("MPI_INCDIR", "/usr/local/Cellar/mpich/3.2.1_1/include")
+    MPI_LIBDIR  = os.environ.get("MPI_LIBDIR", "/usr/local/Cellar/mpich/3.2_2/lib")
+    MPI_INCDIR  = os.environ.get("MPI_INCDIR", "/usr/local/Cellar/mpich/3.2_2/include")
     MPI_LIB     = os.environ.get("MPI_LIB", "mpich")
     NUMPY_INCDIR= np.get_include()
     MPI4PY_INCDIR=mpi4py.get_include()

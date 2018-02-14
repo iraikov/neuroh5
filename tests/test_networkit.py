@@ -1,17 +1,18 @@
+import itertools
 import matplotlib
 matplotlib.use('Agg')
-from neuroh5.io import read_graph_serial
+from neuroh5.io import read_graph, read_graph_serial, population_ranges
 from networkit import *
 
 input_file = "data/dentate_test.h5"
 input_file = "/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_GC_20170728.h5"
 
-print(("maximum number of threads is %d\n" % engineering.getMaxNumberOfThreads()))
+print("maximum number of threads is %d\n" % engineering.getMaxNumberOfThreads())
 sys.stdout.flush()
 
 def prj_stream(nhg):
-    for (presyn, prjs) in list(nhg.items()):
-        for (postsyn, edges) in list(prjs.items()):
+    for (presyn, prjs) in nhg.items():
+        for (postsyn, edges) in prjs.items():
             sources = edges[0]
             destinations = edges[1]
             for (src,dst) in zip(sources,destinations):

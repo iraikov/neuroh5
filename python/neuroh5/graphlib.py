@@ -1,13 +1,14 @@
 """ Module for parallel graph analysis operations. """
 
-import functools
-import sys
-from array import array
+import sys, os
+import os.path
+import click
+import itertools, functools
 from collections import defaultdict
-
-from mpi4py import MPI
+from array import array
+import numpy as np
+from mpi4py import MPI 
 from neuroh5.io import read_population_ranges, scatter_read_graph, read_graph
-
 
 #from networkit import *
 #from _NetworKit import GraphEvent, GraphUpdater
@@ -23,8 +24,8 @@ def flatten(iterables):
 def query_alltoall (comm, f, query_rank_node_dict):
     sendbuf=[]
 
-    for rank in range(0,comm.Get_size()):
-        if rank in query_rank_node_dict:
+    for rank in xrange(0,comm.Get_size()):
+        if query_rank_node_dict.has_key(rank):
             sendbuf.append(query_rank_node_dict[rank])
         else:
             sendbuf.append(None)
@@ -34,8 +35,8 @@ def query_alltoall (comm, f, query_rank_node_dict):
     query_local_result = functools.reduce(f, query_input, {})
 
     sendbuf = []
-    for rank in range(0,comm.Get_size()):
-        if rank in query_local_result:
+    for rank in xrange(0,comm.Get_size()):
+        if query_local_result.has_key(rank):
             sendbuf.append(query_local_result[rank])
         else:
             sendbuf.append(None)
@@ -52,7 +53,7 @@ def make_node_rank_map (comm, filepath, iosize):
     (_, n_nodes) = read_population_ranges(filepath, comm=comm)
 
     node_rank_map = {}
-    for i in range(0, n_nodes):
+    for i in xrange(0, n_nodes):
         node_rank_map[i] = i % size
     
     return (node_rank_map, n_nodes)
@@ -69,8 +70,8 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
                                      node_rank_map=node_ranks, comm=comm)
     
     ## determine neighbors of vertex based on incoming edges
-    for post, prj in graph.items():
-        for pre, edge_iter in prj.items():
+    for post, prj in graph.iteritems():
+        for pre, edge_iter in prj.iteritems():
             for (n, edges) in edge_iter:
                 neighbors_dict[n]['src'].extend(edges[0])
                 
@@ -79,8 +80,8 @@ def read_neighbors (comm, filepath, iosize, node_ranks):
                                      node_rank_map=node_ranks, comm=comm)
 
     ## determine neighbors of vertex based on outgoing edges
-    for pre, prj in graph.items():
-        for post, edge_iter in prj.items():
+    for pre, prj in graph.iteritems():
+        for post, edge_iter in prj.iteritems():
             for (n, edges) in edge_iter:
                 neighbors_dict[n]['dst'].extend(edges[0])
             
@@ -93,11 +94,11 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks, verbose=False):
 
     degree_dict = {}
 
-    min_total_degree=sys.maxsize
+    min_total_degree=sys.maxint
     max_total_degree=0
-    min_in_degree=sys.maxsize
+    min_in_degree=sys.maxint
     max_in_degree=0
-    min_out_degree=sys.maxsize
+    min_out_degree=sys.maxint
     max_out_degree=0
     
     max_in_degree_node_id=0
@@ -107,7 +108,7 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks, verbose=False):
     max_total_degree_node_id=0
     min_total_degree_node_id=0
 
-    for (v,ns) in neighbors_dict.items():
+    for (v,ns) in neighbors_dict.iteritems():
         in_degree  = len(ns['src'])
         out_degree = len(ns['dst'])
         total_degree = in_degree+out_degree
@@ -138,12 +139,12 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks, verbose=False):
     (global_min_out_degree, global_min_out_degree_node_id)     = comm.allreduce(sendobj=(min_out_degree,min_out_degree_node_id), op=MPI.MINLOC)
     (global_max_out_degree, global_max_out_degree_node_id)     = comm.allreduce(sendobj=(max_out_degree,max_out_degree_node_id), op=MPI.MAXLOC)
     if rank == 0 and verbose:
-        print('neighbor_degrees: max degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_max_total_degree, global_max_total_degree_node_id,
+        print 'neighbor_degrees: max degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_max_total_degree, global_max_total_degree_node_id,
                                                                                        global_max_in_degree, global_max_in_degree_node_id,
-                                                                                       global_max_out_degree, global_max_out_degree_node_id))
-        print('neighbor_degrees: min degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_min_total_degree, global_min_total_degree_node_id,
+                                                                                       global_max_out_degree, global_max_out_degree_node_id)
+        print 'neighbor_degrees: min degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_min_total_degree, global_min_total_degree_node_id,
                                                                                        global_min_in_degree, global_min_in_degree_node_id,
-                                                                                       global_min_out_degree, global_min_out_degree_node_id))
+                                                                                       global_min_out_degree, global_min_out_degree_node_id)
 
     neighbor_index=0
     while True:
@@ -151,14 +152,14 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks, verbose=False):
         ith_neighbors=[]
 
         if rank == 0 and verbose:
-            print('neighbor_degrees: rank %d: neighbor_index = %d' % (rank, neighbor_index))
+            print 'neighbor_degrees: rank %d: neighbor_index = %d' % (rank, neighbor_index)
         
-        for (v,ns) in neighbors_dict.items():
-            if 'src' in ns:
+        for (v,ns) in neighbors_dict.iteritems():
+            if ns.has_key('src'):
                 len_src = len(ns['src'])
             else:
                 len_src = 0
-            if 'dst' in ns:
+            if ns.has_key('dst'):
                 len_dst = len(ns['dst'])
             else:
                 len_dst = 0
@@ -182,11 +183,11 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks, verbose=False):
            break
         
         if rank == 0 and verbose:
-            print('neighbor_degrees: rank %d: len of neighbors with index %d = %d' % (rank, neighbor_index, sum_len_ith_neighbors))
+            print 'neighbor_degrees: rank %d: len of neighbors with index %d = %d' % (rank, neighbor_index, sum_len_ith_neighbors)
 
         def f (rank_degree_dict, v):
             rank = node_ranks[v]
-            if rank in rank_degree_dict:
+            if rank_degree_dict.has_key(rank):
                 rank_degree_dict[rank].append((v, degree_dict[v]))
             else:
                 rank_degree_dict[rank] = [(v, degree_dict[v])]
@@ -210,7 +211,7 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
 
     cc_dict = {}
     k_dict = {}
-    for (v, d) in degree_dict.items():
+    for (v, d) in degree_dict.iteritems():
         degree = d['total']
         if degree > 1:
             k_dict[v] = degree * (degree-1)
@@ -220,18 +221,18 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
     neighbor_index=0
     while True:
         if rank == 0 and verbose:
-            print('clustering_coefficient: rank %d: neighbor_index = %d' % (rank, neighbor_index))
+            print 'clustering_coefficient: rank %d: neighbor_index = %d' % (rank, neighbor_index)
 
         ## For i-th neighbor, query the owning rank for its neighbors
         ith_neighbors=[]
         ith_neighbors_dict={}
 
-        for (v,ns) in neighbors_dict.items():
-            if 'src' in ns:
+        for (v,ns) in neighbors_dict.iteritems():
+            if ns.has_key('src'):
                 len_src = len(ns['src'])
             else:
                 len_src = 0
-            if 'dst' in ns:
+            if ns.has_key('dst'):
                 len_dst = len(ns['dst'])
             else:
                 len_dst = 0
@@ -246,13 +247,13 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
         ## Stop if all ranks have exhausted their lists of neighbors
         sum_len_ith_neighbors = comm.allreduce(sendobj=len(ith_neighbors), op=MPI.SUM)
         if rank == 0 and verbose:
-            print('clustering_coefficient: rank %d: sum ith neighbors = %d' % (rank, sum_len_ith_neighbors))
+            print 'clustering_coefficient: rank %d: sum ith neighbors = %d' % (rank, sum_len_ith_neighbors)
         if sum_len_ith_neighbors == 0:
            break
 
         def f (rank_ngbs_dict, v):
             rank = node_ranks[v]
-            if rank in rank_ngbs_dict:
+            if rank_ngbs_dict.has_key(rank):
                 rank_ngbs_dict[rank].append((v, neighbors_dict[v]))
             else:
                 rank_ngbs_dict[rank] = [(v, neighbors_dict[v])]
@@ -261,7 +262,7 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
         rank_neighbor_dict = {}
         for n in ith_neighbors:
             rank = node_ranks[n]
-            if rank in rank_neighbor_dict:
+            if rank_neighbor_dict.has_key(rank):
                 rank_neighbor_dict[rank].append(n)
             else:
                 rank_neighbor_dict[rank] = [n]
@@ -269,12 +270,12 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
         query_neighbors = flatten(query_alltoall(comm, f, rank_neighbor_dict))
 
         for (c, ngbs) in query_neighbors:
-            if c in cc_dict:
-                if 'dst' in neighbors_dict[c]:
+            if cc_dict.has_key(c):
+                if neighbors_dict[c].has_key('dst'):
                     dst_set = set(neighbors_dict[c]['dst'])
                 else:
                     dst_set = set([])
-                if 'src' in neighbors_dict[c]:
+                if neighbors_dict[c].has_key('src'):
                     src_set = set(neighbors_dict[c]['src'])
                 else:
                     src_set = set([])
@@ -286,7 +287,7 @@ def clustering_coefficient (comm, n_nodes, neighbors_dict, degree_dict, node_ran
         neighbor_index += 1
 
     wcc = 0.0
-    for (c,cc) in cc_dict.items():
+    for (c,cc) in cc_dict.iteritems():
         wcc += float(cc) / float(k_dict[c])
         
     sum_wcc = comm.allreduce(sendobj=wcc)
@@ -300,8 +301,8 @@ def load_graph_networkit(comm, input_file):
     nhg = read_graph(input_file, comm=comm)
     g = Graph(n_nodes, False, True)
 
-    for (presyn, prjs) in list(nhg.items()):
-        for (postsyn, edges) in list(prjs.items()):
+    for (presyn, prjs) in nhg.items():
+        for (postsyn, edges) in prjs.items():
             sources = edges[0]
             destinations = edges[1]
             for (src,dst) in zip(sources,destinations):

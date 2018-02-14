@@ -4,9 +4,10 @@ creates a representation of it in an HDF5 file.
 
 '''
 
-import click
 import h5py
 import numpy as np
+import sys, os
+import click
 
 grp_h5types      = 'H5Types'
 grp_projections  = 'Projections'
@@ -20,14 +21,14 @@ path_population_labels = '/%s/Population labels' % grp_h5types
 
 
 def h5_get_group (h, groupname):
-    if groupname in list(h.keys()):
+    if groupname in h.keys():
         g = h[groupname]
     else:
         g = h.create_group(groupname)
     return g
 
 def h5_get_dataset (g, dsetname, **kwargs):
-    if dsetname in list(g.keys()):
+    if dsetname in g.keys():
         dset = g[dsetname]
     else:
         dset = g.create_dataset(dsetname, (0,), **kwargs)
@@ -55,7 +56,7 @@ def import_defs(projections_file, outputfile, colsep):
     with h5py.File(outputfile, "a", libver="latest") as h5:
 
         has_population_projections = False
-        if grp_h5types in list(h5.keys()):
+        if grp_h5types in h5.keys():
             if grp_population_projections in h5[grp_h5types]:
                 dt = h5[path_population_projections].dtype
                 has_population_projections = True
