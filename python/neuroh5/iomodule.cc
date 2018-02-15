@@ -4313,6 +4313,7 @@ extern "C"
   neuroh5_tree_gen_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
   {
     int status;
+    int topology_flag=1;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned int io_size, cache_size=100;
@@ -4324,14 +4325,15 @@ extern "C"
                                    "file_name",
                                    "pop_name",
                                    "namespaces",
+                                   "topology",
                                    "comm",
                                    "io_size",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OOii", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OiOii", (char **)kwlist,
                                      &file_name, &pop_name, 
-                                     &py_attr_name_spaces,
+                                     &py_attr_name_spaces, &topology_flag,
                                      &py_comm, &io_size, &cache_size))
       return NULL;
 
@@ -4453,6 +4455,7 @@ extern "C"
     py_ntrg->state->comm_size  = size;
     py_ntrg->state->cache_size = cache_size;
     py_ntrg->state->attr_name_spaces  = attr_name_spaces;
+    py_ntrg->state->topology_flag  = topology_flag;
 
     map<CELL_IDX_T, neurotree_t> tree_map;
     py_ntrg->state->tree_map = tree_map;
