@@ -6,7 +6,7 @@ forest_path: contains tree attributes
 cell_attr_path: contains cell attributes
 connections_path: contains edge attributes
 """
-from neuroh5 import h5py_io_utils
+from neuroh5.h5py_io_utils import *
 from mpi4py import MPI
 from neuroh5.io import read_population_ranges, NeuroH5TreeGen, NeuroH5CellAttrGen, NeuroH5ProjectionGen
 import numpy as np
