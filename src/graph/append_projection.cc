@@ -98,6 +98,20 @@ namespace neuroh5
       dst_ptr.push_back(num_prj_edges);
       assert(num_edges == src_idx.size());
 
+      size_t sum_num_edges = 0;
+      assert(MPI_Reduce(&num_edges, &sum_num_edges, 1,
+                        MPI_SIZE_T, MPI_SUM, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+
+      if (sum_num_edges == 0)
+        {
+          assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+          if (info != MPI_INFO_NULL)
+            {
+              assert(MPI_Info_free(&info) == MPI_SUCCESS);
+            }
+          return;
+        }
+      
       hdf5::create_projection_groups(file, src_pop_name, dst_pop_name);
 
       hsize_t dst_blk_idx_size = 0, dst_ptr_size = 0, src_idx_size = 0;
