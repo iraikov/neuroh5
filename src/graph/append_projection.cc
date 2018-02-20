@@ -99,8 +99,8 @@ namespace neuroh5
       assert(num_edges == src_idx.size());
 
       size_t sum_num_edges = 0;
-      assert(MPI_Reduce(&num_edges, &sum_num_edges, 1,
-                        MPI_SIZE_T, MPI_SUM, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+      assert(MPI_Allreduce(&num_edges, &sum_num_edges, 1,
+                        MPI_SIZE_T, MPI_SUM, comm) == MPI_SUCCESS);
 
       if (sum_num_edges == 0)
         {
@@ -229,6 +229,9 @@ namespace neuroh5
       assert(H5Sclose(fspace) >= 0);
 
       hsize_t block = num_blocks;
+
+
+      
       hid_t mspace  = H5Screate_simple(1, &block, &block);
       assert(mspace >= 0);
       assert(H5Sselect_all(mspace) >= 0);
