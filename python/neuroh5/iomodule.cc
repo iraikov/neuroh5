@@ -4811,8 +4811,7 @@ extern "C"
               assert(elem != NULL);
               py_ntrg->state->it_idx++;
               py_ntrg->state->seq_index++;
-              CELL_IDX_T pop_start = py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start;
-              result = Py_BuildValue("lN", key+pop_start, elem);
+              result = Py_BuildValue("lN", key, elem);
             }
 
           break;
