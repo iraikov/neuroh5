@@ -4547,7 +4547,7 @@ extern "C"
     vector< pair<string,hid_t> > attr_info;
     assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
                                       get<1>(pop_labels[pop_idx]), attr_info) >= 0);
-    
+    assert(attr_info.size() > 0);
     vector<CELL_IDX_T> cell_index;
     assert(cell::read_cell_index(comm,
                                  string(file_name),
