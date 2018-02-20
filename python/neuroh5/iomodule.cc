@@ -5163,7 +5163,7 @@ extern "C"
       "Reads the selected neuronal tree morphologies." },
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
       "Reads neuronal tree morphology using scalable parallel read/scatter." },
-    { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS,
+    { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS | METH_KEYWORDS,
       "Returns population attribute namespaces and names." },
     { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads attributes for a selection of cells." },
