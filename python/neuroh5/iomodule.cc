@@ -2735,7 +2735,7 @@ extern "C"
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOk", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOik", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, 
                                      &py_node_rank_map, &py_attr_name_spaces,
                                      &topology_flag, &io_size))

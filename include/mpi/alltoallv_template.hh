@@ -81,12 +81,15 @@ namespace neuroh5
       size_t global_recvbuf_size=0;
       assert(MPI_Allreduce(&recvbuf_size, &global_recvbuf_size, 1, MPI_SIZE_T, MPI_SUM,
                            comm) == MPI_SUCCESS);
-      assert(global_recvbuf_size > 0);
+
+      if (global_recvbuf_size > 0)
+        {
       
-      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,
-                           comm) == MPI_SUCCESS);
+          // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
+          assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,
+                               &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,
+                               comm) == MPI_SUCCESS);
+        }
 
       return 0;
     }
