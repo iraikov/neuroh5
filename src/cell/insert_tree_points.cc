@@ -23,7 +23,10 @@ namespace neuroh5
   namespace cell
   {
     
-    void insert_tree_points(const neurotree_t& src_tree, neurotree_t& dst_tree, LAYER_IDX_T include_layer)
+    void insert_tree_points(const neurotree_t& src_tree,
+                            neurotree_t& dst_tree,
+                            LAYER_IDX_T include_layer,
+                            bool translate)
     {
       CELL_IDX_T tree_id = get<0>(dst_tree);
       std::vector<SECTION_IDX_T> & src_vector=get<1>(dst_tree);
@@ -50,7 +53,12 @@ namespace neuroh5
 
 
       size_t num_xpoints = xcoords.size();
-
+      assert(num_xpoints > 0);
+      
+      COORD_T dst_origin_x = xcoords[0];
+      COORD_T dst_origin_y = ycoords[0];
+      COORD_T dst_origin_z = zcoords[0];
+      
       size_t num_nodes = num_xpoints, sections_ptr=1;
       size_t num_sections = sections[0];
       size_t include_num_sections = include_sections[0];
@@ -92,6 +100,19 @@ namespace neuroh5
           *it = *it + num_sections;
         }
 
+      if (translate)
+        {
+          size_t x_offset = dst_origin_x - include_xcoords[0];
+          size_t y_offset = dst_origin_y - include_ycoords[0];
+          size_t z_offset = dst_origin_z - include_zcoords[0];
+          for (size_t i = 0; i<include_xcoords.size(); i++)
+            {
+              include_xcoords[i] += x_offset;
+              include_ycoords[i] += y_offset;
+              include_zcoords[i] += z_offset;
+            }
+        }
+      
       sections_ptr = 1;
       size_t include_num_nodes = include_xcoords.size();
       set<NODE_IDX_T> include_all_section_nodes;

@@ -5,6 +5,6 @@ comm = MPI.COMM_WORLD
 print "rank = ", comm.Get_rank()
 print "size = ", comm.Get_size()
 
-g = scatter_read_graph("data/dentate_test.h5")
-print (g)
+g = read_graph("data/dentate_test.h5")
+print list(g[0]['HC']['MC'])
 

@@ -23,6 +23,7 @@ namespace neuroh5
     
     void insert_tree_points(const neurotree_t& src_tree,
                             neurotree_t& dst_tree,
-                            LAYER_IDX_T include_layer);
+                            LAYER_IDX_T include_layer,
+                            bool translate = true);
   }
 }
