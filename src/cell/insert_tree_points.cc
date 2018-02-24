@@ -102,9 +102,9 @@ namespace neuroh5
 
       if (translate)
         {
-          size_t x_offset = dst_origin_x - include_xcoords[0];
-          size_t y_offset = dst_origin_y - include_ycoords[0];
-          size_t z_offset = dst_origin_z - include_zcoords[0];
+          COORD_T x_offset = dst_origin_x - include_xcoords[0];
+          COORD_T y_offset = dst_origin_y - include_ycoords[0];
+          COORD_T z_offset = dst_origin_z - include_zcoords[0];
           for (size_t i = 0; i<include_xcoords.size(); i++)
             {
               include_xcoords[i] += x_offset;
