@@ -364,9 +364,13 @@ namespace neuroh5
       assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
                            &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
                            comm) == MPI_SUCCESS);
-      if (rank < io_size_value)
+      if ((rank < io_size_value) && (attr_ptr_recvbuf.size() > 0))
         {
           attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
+        }
+      else
+        {
+          attr_ptr_recvbuf.push_back(value_recvbuf.size());
         }
       if (attr_ptr_recvbuf.size() > 0)
         {

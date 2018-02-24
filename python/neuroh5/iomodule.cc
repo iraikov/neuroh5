@@ -133,15 +133,17 @@ void append_value_map (CELL_IDX_T idx,
   assert(PyArray_Check(pyval));
   PyArrayObject* pyarr = (PyArrayObject*)PyArray_FROM_OTF(pyval, NPY_NOTYPE, NPY_ARRAY_IN_ARRAY);
   dims = PyArray_DIMS(pyarr);
-  assert(dims != NULL);
-  size_t value_size = dims[0];
-  T *pyarr_ptr = (T *)PyArray_GetPtr(pyarr, &ind);
-  vector<T> attr_values(value_size);
-  for (size_t j=0; j<value_size; j++)
+  if (dims != NULL)
     {
-      attr_values[j] = pyarr_ptr[j];
+      size_t value_size = dims[0];
+      T *pyarr_ptr = (T *)PyArray_GetPtr(pyarr, &ind);
+      vector<T> attr_values(value_size);
+      for (size_t j=0; j<value_size; j++)
+        {
+          attr_values[j] = pyarr_ptr[j];
+        }
+      all_attr_values.insert(make_pair(idx, attr_values));
     }
-  all_attr_values.insert(make_pair(idx, attr_values));
   Py_DECREF(pyarr);
 }
 
