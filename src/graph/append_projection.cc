@@ -112,7 +112,6 @@ namespace neuroh5
           return;
         }
       
-      hdf5::create_projection_groups(file, src_pop_name, dst_pop_name);
 
       hsize_t dst_blk_idx_size = 0, dst_ptr_size = 0, src_idx_size = 0;
       
