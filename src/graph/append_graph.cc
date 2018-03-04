@@ -16,6 +16,7 @@
 #include "cell_populations.hh"
 #include "append_graph.hh"
 #include "append_projection.hh"
+#include "edge_attributes.hh"
 #include "path_names.hh"
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
@@ -280,7 +281,7 @@ namespace neuroh5
           
           assert(H5Fclose(file) >= 0);
           
-          hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+          file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           assert(file >= 0);
 
           append_projection (file, src_pop_name, dst_pop_name,
@@ -290,8 +291,9 @@ namespace neuroh5
 
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);
-        }
-
+        } 
+      MPI_Barrier(io_comm);
+      MPI_Barrier(all_comm);
       assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       return 0;
