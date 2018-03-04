@@ -9,6 +9,7 @@
 
 #include "attr_val.hh"
 #include "edge_attributes.hh"
+#include "exists_dataset.hh"
 #include "path_names.hh"
 
 #include <cassert>
@@ -51,21 +52,21 @@ namespace neuroh5
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
       string path = "/" + hdf5::PROJECTIONS;
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, path) > 0))
         {
           hdf5::create_group(file, path.c_str());
         }
       
       path = "/" + hdf5::PROJECTIONS + "/" + dst_pop_name;
             
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, path) > 0))
         {
           hdf5::create_group(file, path.c_str());
         }
 
       path = hdf5::projection_prefix(src_pop_name, dst_pop_name);
 
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, path) > 0))
         {
           hdf5::create_group(file, path.c_str());
         }

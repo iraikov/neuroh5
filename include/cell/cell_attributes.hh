@@ -16,6 +16,7 @@
 #include "infer_mpi_datatype.hh"
 #include "path_names.hh"
 #include "hdf5_cell_attributes.hh"
+#include "exists_dataset.hh"
 #include "attr_map.hh"
 #include "compact_optional.hh"
 #include "optional_value.hh"
@@ -170,10 +171,7 @@ namespace neuroh5
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
 
-      if (!(H5Lexists (file, ("/" + hdf5::POPULATIONS).c_str(), H5P_DEFAULT) > 0) ||
-          !(H5Lexists (file, hdf5::population_path(pop_name).c_str(), H5P_DEFAULT) > 0) ||
-          !(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0) ||
-          !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, attr_path) > 0))
         {
           create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
                                          ftype, index_type, ptr_type,

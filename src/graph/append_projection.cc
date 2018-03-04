@@ -4,6 +4,7 @@
 #include "neuroh5_types.hh"
 #include "path_names.hh"
 #include "create_group.hh"
+#include "exists_dataset.hh"
 #include "append_projection.hh"
 #include "write_template.hh"
 #include "edge_attributes.hh"
@@ -199,7 +200,7 @@ namespace neuroh5
 
       hid_t dset; hid_t fspace;
       
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, path) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);
@@ -284,7 +285,7 @@ namespace neuroh5
 
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
       hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, path) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);
@@ -373,7 +374,7 @@ namespace neuroh5
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);
       hsize_t dst_ptr_dims = total_num_dests+1;
 
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, path) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);
@@ -447,7 +448,7 @@ namespace neuroh5
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX);
       hsize_t src_idx_dims = total_num_edges;
 
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, path) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           assert(fspace >= 0);

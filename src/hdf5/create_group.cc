@@ -4,6 +4,7 @@
 #include <string>
 #include <cassert>
 
+#include "exists_dataset.hh"
 using namespace std;
 
 namespace neuroh5
@@ -22,7 +23,7 @@ namespace neuroh5
      )
     {
       herr_t status = 0;
-      if (!(H5Lexists (file, path.c_str(), H5P_DEFAULT) > 0))
+      if (!(exists_dataset (file, path) > 0))
         {
         
           hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);

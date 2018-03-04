@@ -9,6 +9,7 @@
 #include "neuroh5_types.hh"
 #include "rank_range.hh"
 #include "dataset_num_elements.hh"
+#include "exists_dataset.hh"
 #include "read_template.hh"
 #include "write_template.hh"
 #include "mpe_seq.hh"
@@ -94,8 +95,8 @@ namespace neuroh5
                 }
               
               // read pointer and determine ranges
-              status = H5Lexists (loc, ptr_path.c_str(), H5P_DEFAULT);
-              if (status)
+              status = exists_dataset (loc, ptr_path.c_str());
+              if (status > 0)
                 {
                   ptr.resize(block+1);
                   status = read<ATTR_PTR_T> (loc, ptr_path, start, block+1,
@@ -175,8 +176,8 @@ namespace neuroh5
                                      NODE_IDX_H5_NATIVE_T, index, H5P_DEFAULT);
 
           // read pointer and determine ranges
-          status = H5Lexists (loc, ptr_path.c_str(), H5P_DEFAULT);
-          if (status)
+          status = exists_dataset (loc, ptr_path);
+          if (status > 0)
             {
               ptr.resize(dset_size+1);
               status = read<ATTR_PTR_T> (loc, ptr_path, 0, dset_size+1,

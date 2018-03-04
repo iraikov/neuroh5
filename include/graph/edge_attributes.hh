@@ -6,6 +6,7 @@
 #include "infer_datatype.hh"
 #include "attr_val.hh"
 #include "hdf5_edge_attributes.hh"
+#include "exists_dataset.hh"
 
 #include "hdf5.h"
 #include "mpi.h"
@@ -273,8 +274,7 @@ namespace neuroh5
       string attr_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
                                                    attr_namespace, attr_name);
       
-      if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0) ||
-          !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, attr_path) > 0))
         {
           hdf5::create_edge_attribute_datasets(file, src_pop_name, dst_pop_name,
                                                attr_namespace, attr_name,
