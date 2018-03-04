@@ -122,6 +122,7 @@ setup(
                       'src/hdf5/dataset_num_elements.cc',
                       'src/hdf5/read_link_names.cc',
                       'src/hdf5/read_projection_datasets.cc',
+                      'src/hdf5/exists_dataset.cc',
                       'src/hdf5/exists_h5types.cc',
                       'src/hdf5/copy_h5types.cc',
                       'src/hdf5/create_file_toplevel.cc',

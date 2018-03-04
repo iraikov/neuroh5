@@ -12,6 +12,7 @@
 #include "read_template.hh"
 #include "write_template.hh"
 #include "hdf5_cell_attributes.hh"
+#include "exists_dataset.hh"
 #include "dataset_num_elements.hh"
 #include "create_group.hh"
 #include "append_rank_attr_map.hh"
@@ -193,7 +194,7 @@ namespace neuroh5
     
       string path = hdf5::cell_attribute_prefix(name_space, pop_name);
 
-      if (H5Lexists (in_file, path.c_str(), H5P_DEFAULT) > 0)
+      if (hdf5::exists_dataset (in_file, path) > 0)
         {
           hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
           assert(grp >= 0);
@@ -332,24 +333,24 @@ namespace neuroh5
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
     
-      if (!(H5Lexists (file, ("/" + hdf5::POPULATIONS).c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, ("/" + hdf5::POPULATIONS)) > 0))
         {
           hdf5::create_group(file, ("/" + hdf5::POPULATIONS).c_str());
         }
 
-      if (!(H5Lexists (file, hdf5::population_path(pop_name).c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, hdf5::population_path(pop_name)) > 0))
         {
           hdf5::create_group(file, hdf5::population_path(pop_name));
         }
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
-      if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, attr_prefix) > 0))
         {
           hdf5::create_group(file, attr_prefix);
         }
 
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
-      if (!(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, attr_path) > 0))
         {
           hdf5::create_group(file, attr_path);
         }

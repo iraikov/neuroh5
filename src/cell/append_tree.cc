@@ -17,6 +17,7 @@
 #include "file_access.hh"
 #include "rank_range.hh"
 #include "dataset_num_elements.hh"
+#include "exists_dataset.hh"
 #include "enum_type.hh"
 #include "path_names.hh"
 #include "cell_index.hh"
@@ -237,29 +238,26 @@ namespace neuroh5
 
           string path;
 
-          if (H5Lexists (file, ("/" + hdf5::POPULATIONS + "/" + pop_name).c_str(), H5P_DEFAULT))
+          if (hdf5::exists_dataset(file, hdf5::cell_attribute_prefix(hdf5::TREES, pop_name)) > 0)
             {
-              if (H5Lexists (file, hdf5::cell_attribute_prefix(hdf5::TREES, pop_name).c_str(), H5P_DEFAULT))
-                {
-                  path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::X_COORD);
-                  hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::ATTR_PTR),
-                                             attr_size, index_size, value_size);
-                  
-                  path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SECTION);
-                  hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
-                                             sec_size, index_size, value_size);
-                  
-                  path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SRCSEC);
-                  hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
+              path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::X_COORD);
+              hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::ATTR_PTR),
+                                         attr_size, index_size, value_size);
+              
+              path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SECTION);
+              hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
+                                         sec_size, index_size, value_size);
+              
+              path = hdf5::cell_attribute_path (hdf5::TREES, pop_name, hdf5::SRCSEC);
+              hdf5::size_cell_attributes(comm, file, path, CellPtr (PtrOwner, hdf5::SEC_PTR),
                                          topo_size, index_size, value_size);
-
-                }
-              else
-                {
-                  attr_size = 0;
-                  sec_size = 0;
-                  topo_size = 0;
-                }
+              
+            }
+          else
+            {
+              attr_size = 0;
+              sec_size = 0;
+              topo_size = 0;
             }
           assert(hdf5::close_file(file) >= 0);
         }
