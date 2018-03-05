@@ -47,10 +47,6 @@ namespace neuroh5
     {
       herr_t status=0;
     
-      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
-
       string path = "/" + hdf5::PROJECTIONS;
       if (!(hdf5::exists_dataset (file, path) > 0))
         {
@@ -70,8 +66,6 @@ namespace neuroh5
         {
           hdf5::create_group(file, path.c_str());
         }
-    
-      assert(H5Pclose(lcpl) >= 0);
     
     }
 
