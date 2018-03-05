@@ -16,6 +16,7 @@
 #include "infer_mpi_datatype.hh"
 #include "path_names.hh"
 #include "hdf5_node_attributes.hh"
+#include "exists_dataset.hh"
 #include "attr_map.hh"
 
 namespace neuroh5
@@ -105,8 +106,7 @@ namespace neuroh5
 
       string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
-      if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0) ||
-          !(H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, attr_prefix) > 0))
         {
           hdf5::create_node_attribute_datasets(file, attr_namespace, attr_name,
                                                ftype, chunk_size, value_chunk_size);

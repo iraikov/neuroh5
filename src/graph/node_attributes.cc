@@ -13,6 +13,7 @@
 #include "write_template.hh"
 #include "hdf5_node_attributes.hh"
 #include "dataset_num_elements.hh"
+#include "exists_dataset.hh"
 #include "create_group.hh"
 #include "attr_map.hh"
 #include "infer_datatype.hh"
@@ -81,13 +82,13 @@ namespace neuroh5
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
     
-      if (!(H5Lexists (file, ("/" + hdf5::NODES).c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, ("/" + hdf5::NODES)) > 0))
         {
           hdf5::create_group(file, ("/" + hdf5::NODES).c_str());
         }
 
       string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
-      if (!(H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0))
+      if (!(hdf5::exists_dataset (file, attr_prefix) > 0))
         {
           hdf5::create_group(file, attr_prefix);
         }

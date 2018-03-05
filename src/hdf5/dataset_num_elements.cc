@@ -1,4 +1,5 @@
 
+#include "exists_dataset.hh"
 #include "dataset_num_elements.hh"
 
 #include <cassert>
@@ -17,7 +18,7 @@ namespace neuroh5
     {
       hsize_t result = 0;
 
-      if (H5Lexists (loc, path.c_str(), H5P_DEFAULT) > 0)
+      if (exists_dataset (loc, path) > 0)
         {
           hid_t dset = H5Dopen2(loc, path.c_str(), H5P_DEFAULT);
           assert(dset >= 0);

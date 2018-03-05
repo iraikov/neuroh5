@@ -16,6 +16,7 @@
 
 #include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
+#include "exists_dataset.hh"
 #include "file_access.hh"
 #include "create_group.hh"
 #include "path_names.hh"
@@ -63,7 +64,7 @@ namespace neuroh5
 
           bool has_group=false, has_index=false;
 
-          has_group = H5Lexists (file, attr_prefix.c_str(), H5P_DEFAULT) > 0;
+          has_group = hdf5::exists_dataset (file, attr_prefix) > 0;
           if (!has_group)
             {
               ierr = hdf5::create_group (file, attr_prefix);
@@ -71,7 +72,7 @@ namespace neuroh5
             }
           else
             {
-              has_index = H5Lexists (file, attr_path.c_str(), H5P_DEFAULT) > 0;
+              has_index = hdf5::exists_dataset (file, attr_path) > 0;
             }
 
           if (!has_index)
