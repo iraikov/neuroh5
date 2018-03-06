@@ -289,7 +289,7 @@ int main(int argc, char** argv)
             string attr_name_space;
             string arg = string(optarg);
             string delimiter = ":";
-            tokenize(arg, delimiter, attr_name_spaces);
+            data::tokenize(arg, delimiter, attr_name_spaces);
             optflag_namespace = 0;
           }
           if (optflag_iosize == 1) {
@@ -316,7 +316,7 @@ int main(int argc, char** argv)
             string attr_name_space;
             string arg = string(optarg);
             string delimiter = ":";
-            tokenize(arg, delimiter, attr_name_spaces);
+            data::tokenize(arg, delimiter, attr_name_spaces);
           }
           break;
         case 'r':

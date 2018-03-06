@@ -23,9 +23,9 @@ namespace neuroh5
      )
     {
       const string delim = "/";
-      herr_t status;  string ppath;
+      herr_t status=-1;  string ppath;
       vector<string> tokens;
-      tokenize (path, delim, tokens);
+      data::tokenize (path, delim, tokens);
       
       for (string value : tokens)
         {

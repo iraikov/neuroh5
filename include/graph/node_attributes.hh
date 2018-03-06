@@ -106,10 +106,13 @@ namespace neuroh5
 
       string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
-      if (!(hdf5::exists_dataset (file, attr_prefix) > 0))
+      if (!(hdf5::exists_dataset (file, attr_path) > 0))
         {
           hdf5::create_node_attribute_datasets(file, attr_namespace, attr_name,
                                                ftype, chunk_size, value_chunk_size);
+          assert(H5Fclose(file) >= 0);
+          file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+          assert(file >= 0);
         }
 
       hdf5::append_node_attribute<T>(file, attr_path, index, attr_ptr, values);

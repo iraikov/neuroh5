@@ -103,17 +103,17 @@ namespace neuroh5
                           local_num_edges,
                           total_num_edges);
 
-      vector < std::map< NODE_IDX_T, uint32_t> > vertex_indegree_maps;
-      vertex_degree (comm, total_num_nodes, prj_vector, vertex_indegree_maps);
+      vector < std::map< NODE_IDX_T, size_t> > vertex_indegree_maps;
+      vertex_degree (comm, prj_vector, vertex_indegree_maps);
 
       size_t prj_index=0;
-      for (const map< NODE_IDX_T, uint32_t>& vertex_indegree_map : vertex_indegree_maps)
+      for (const map< NODE_IDX_T, size_t>& vertex_indegree_map : vertex_indegree_maps)
         {
           uint64_t sum_indegree=0, nz_indegree=0;
           
           for (auto it = vertex_indegree_map.begin(); it != vertex_indegree_map.end(); it++)
             {
-              uint32_t degree = it->second;
+              size_t degree = it->second;
               sum_indegree = sum_indegree + degree;
               if (degree > 0) nz_indegree++;
             }
@@ -128,7 +128,7 @@ namespace neuroh5
           
           vector <NODE_IDX_T> node_id;
           vector <ATTR_PTR_T> attr_ptr;
-          vector <uint32_t> vertex_indegree_value;
+          vector <size_t> vertex_indegree_value;
           vector <float> vertex_norm_indegree_value;
           
           attr_ptr.push_back(0);
@@ -136,18 +136,14 @@ namespace neuroh5
             {
               if (it->second == rank)
                 {
-                  node_id.push_back(it->first);
-                  attr_ptr.push_back(attr_ptr.back() + 1);
                   const auto it_indegree_value = vertex_indegree_map.find(it->first);
                   if (it_indegree_value != vertex_indegree_map.cend())
                     {
+                      node_id.push_back(it->first);
+                      attr_ptr.push_back(attr_ptr.back() + 1);
                       vertex_indegree_value.push_back(it_indegree_value->second);
+                      vertex_norm_indegree_value.push_back(vertex_norm_indegrees[it->first]);
                     }
-                  else
-                    {
-                      vertex_indegree_value.push_back(0);
-                    }
-                  vertex_norm_indegree_value.push_back(vertex_norm_indegrees[it->first]);
                 }
             }
 
@@ -220,18 +216,18 @@ namespace neuroh5
       map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
 
       uint64_t sum_outdegree=0, nz_outdegree=0;
-      vector < std::map<NODE_IDX_T, uint32_t> > vertex_outdegree_maps;
-      vertex_degree (comm, total_num_nodes, prj_vector, vertex_outdegree_maps);
+      vector < std::map<NODE_IDX_T, size_t> > vertex_outdegree_maps;
+      vertex_degree (comm, prj_vector, vertex_outdegree_maps);
 
       prj_vector.clear();
 
       size_t prj_index=0;
-      for (const map< NODE_IDX_T, uint32_t>& vertex_outdegree_map : vertex_outdegree_maps)
+      for (const map< NODE_IDX_T, size_t>& vertex_outdegree_map : vertex_outdegree_maps)
         {
 
           for (auto it = vertex_outdegree_map.begin(); it != vertex_outdegree_map.end(); it++)
             {
-              uint32_t degree = it->second;
+              size_t degree = it->second;
               sum_outdegree = sum_outdegree + degree;
               if (degree > 0) nz_outdegree++;
             }
@@ -246,7 +242,7 @@ namespace neuroh5
           
           vector <ATTR_PTR_T> attr_ptr;
           vector <NODE_IDX_T> node_id;
-          vector <uint32_t> vertex_outdegree_value;
+          vector <size_t> vertex_outdegree_value;
           vector <float> vertex_norm_outdegree_value;
           
           attr_ptr.push_back(0);
@@ -254,19 +250,14 @@ namespace neuroh5
             {
               if (it->second == rank)
                 {
-                  node_id.push_back(it->first);
-                  attr_ptr.push_back(attr_ptr.back() + 1);
-
                   const auto it_outdegree_value = vertex_outdegree_map.find(it->first);
                   if (it_outdegree_value != vertex_outdegree_map.cend())
                     {
+                      node_id.push_back(it->first);
+                      attr_ptr.push_back(attr_ptr.back() + 1);
                       vertex_outdegree_value.push_back(it_outdegree_value->second);
+                      vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[it->first]);
                     }
-                  else
-                    {
-                      vertex_outdegree_value.push_back(0);
-                    }
-                  vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[it->first]);
                 }
             }
           string src_pop_name = prj_names[prj_index].first;

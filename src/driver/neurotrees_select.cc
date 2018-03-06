@@ -173,7 +173,7 @@ int main(int argc, char** argv)
             string attr_name_space;
             string arg = string(optarg);
             string delimiter = ":";
-            tokenize(arg, delimiter, attr_name_spaces);
+            data::tokenize(arg, delimiter, attr_name_spaces);
             optflag_namespace = 0;
           }
           if (optflag_iosize == 1) {
@@ -219,7 +219,7 @@ int main(int argc, char** argv)
             string attr_name_space;
             string arg = string(optarg);
             string delimiter = ":";
-            tokenize(arg, delimiter, attr_name_spaces);
+            data::tokenize(arg, delimiter, attr_name_spaces);
           }
           break;
         case 'p':
@@ -244,7 +244,7 @@ int main(int argc, char** argv)
       input_file_name = string(argv[optind]);
       string selection_delimiter = "/";
       vector <string> selection_spec;
-      tokenize(string(argv[optind+1]), selection_delimiter, selection_spec);
+      data::tokenize(string(argv[optind+1]), selection_delimiter, selection_spec);
       selection_namespace = selection_spec[0];
       if (selection_spec.size() > 1)
         {

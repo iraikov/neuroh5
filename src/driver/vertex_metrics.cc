@@ -4,7 +4,7 @@
 ///
 ///  Driver program for computing graph vertex metrics and saving them to the file.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 

@@ -334,7 +334,7 @@ int main(int argc, char** argv)
             string nsindex_delimiter = ":";
             string name_delimiter = ",";
             vector <string> attr_type_spec;
-            tokenize(arg, nsindex_delimiter, attr_type_spec);
+            data::tokenize(arg, nsindex_delimiter, attr_type_spec);
 
             string attr_namespace = attr_type_spec[0];
             string attr_index_str = attr_type_spec[1];
@@ -345,7 +345,7 @@ int main(int argc, char** argv)
             ss >> attr_index;
 
             vector <string> attr_names;
-            tokenize(attr_names_str, name_delimiter, attr_names);
+            data::tokenize(attr_names_str, name_delimiter, attr_names);
 
             num_edge_attrs[attr_namespace].resize(data::AttrVal::num_attr_types);
             for (auto & attr_name : attr_names)
@@ -409,7 +409,7 @@ int main(int argc, char** argv)
             string delimiter = ":";
             vector <string> hdf5_spec;
 
-            tokenize(arg, delimiter, hdf5_spec);
+            data::tokenize(arg, delimiter, hdf5_spec);
 
             hdf5_input_file_name = hdf5_spec[0];
             hdf5_input_dsetpath  = hdf5_spec[1];
@@ -424,7 +424,7 @@ int main(int argc, char** argv)
             string nsindex_delimiter = ":";
             string name_delimiter = ",";
             vector <string> attr_type_spec;
-            tokenize(arg, nsindex_delimiter, attr_type_spec);
+            data::tokenize(arg, nsindex_delimiter, attr_type_spec);
 
             string attr_namespace = attr_type_spec[0];
             string attr_index_str = attr_type_spec[1];
@@ -435,7 +435,7 @@ int main(int argc, char** argv)
             ss >> attr_index;
 
             vector <string> attr_names;
-            tokenize(attr_names_str, name_delimiter, attr_names);
+            data::tokenize(attr_names_str, name_delimiter, attr_names);
             num_edge_attrs[attr_namespace].resize(data::AttrVal::num_attr_types);
             for (auto & attr_name : attr_names)
               {

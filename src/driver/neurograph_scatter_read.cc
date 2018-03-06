@@ -156,7 +156,7 @@ int main(int argc, char** argv)
             opt_attrs = true;
             string arg = string(optarg);
             string namespace_delimiter = ",";
-            tokenize(arg, namespace_delimiter, edge_attr_name_spaces);
+            data::tokenize(arg, namespace_delimiter, edge_attr_name_spaces);
           }
           break;
         case 'e':

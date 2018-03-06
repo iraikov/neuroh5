@@ -172,14 +172,14 @@ namespace neuroh5
       rank = srank;
 
       // Determine the total size of index
-      hsize_t local_index_size=index.size();
+      uint64_t local_index_size=index.size();
       std::vector<uint64_t> index_size_vector;
       index_size_vector.resize(size);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
       assert(status == MPI_SUCCESS);
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
-      hsize_t local_ptr_size=attr_ptr.size()-1;
+      uint64_t local_ptr_size=attr_ptr.size()-1;
       if (rank == size-1)
         {
           local_ptr_size=local_ptr_size+1;
@@ -224,7 +224,7 @@ namespace neuroh5
         }
 
       // calculate the new sizes of the datasets
-      hsize_t global_value_size=value_start, global_index_size=index_start, global_ptr_size=ptr_start;
+      hsize_t global_value_size=0, global_index_size=0, global_ptr_size=0;
       for (size_t i=0; i<size; i++)
         {
           global_value_size  = global_value_size + value_size_vector[i];
@@ -247,23 +247,24 @@ namespace neuroh5
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
         }
 
+      
       // TODO:
       // if option index_mode is:
       // 1) create: create the node index in /Populations, otherwise validate with index in /Populations
       // 2) link: link to node index already in this attribute namespace
       
       status = write<NODE_IDX_T> (file, path + "/" + NODE_INDEX,
-                                  global_index_size, local_index_start, local_index_size,
+                                  global_index_size+index_start, local_index_start, local_index_size,
                                   NODE_IDX_H5_NATIVE_T,
                                   index, wapl);
     
       status = write<ATTR_PTR_T> (file, path + "/" + ATTR_PTR,
-                                  global_ptr_size, local_ptr_start, local_ptr_size,
+                                  global_ptr_size+ptr_start, local_ptr_start, local_ptr_size,
                                   ATTR_PTR_H5_NATIVE_T,
                                   local_attr_ptr, wapl);
     
       status = write<T> (file, path + "/" + ATTR_VAL,
-                         global_value_size, local_value_start, local_value_size,
+                         global_value_size+value_start, local_value_start, local_value_size,
                          mtype, value, wapl);
 
       // clean house

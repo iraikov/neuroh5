@@ -21,9 +21,8 @@ namespace neuroh5
   namespace graph
   {
     int vertex_degree (MPI_Comm comm,
-                       const size_t global_num_nodes,
                        const vector < edge_map_t >& prj_vector,
-                       vector < map< NODE_IDX_T, uint32_t > > &degree_maps);
+                       vector < map< NODE_IDX_T, size_t > > &degree_maps);
   }
 }
 

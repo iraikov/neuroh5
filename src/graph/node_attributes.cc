@@ -94,7 +94,7 @@ namespace neuroh5
         }
 
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
-      
+
       hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
       assert(mspace >= 0);
       hid_t dset = H5Dcreate2(file, (attr_path + "/" + hdf5::NODE_INDEX).c_str(), NODE_IDX_H5_FILE_T,
