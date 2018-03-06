@@ -72,28 +72,14 @@ namespace neuroh5
      const vector<string>&           edge_attr_name_spaces,
      std::vector<edge_map_t>&        prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
+     size_t&                         local_num_nodes,
      size_t&                         local_num_edges,
      size_t&                         total_num_edges,
+     hsize_t&                        local_read_blocks,
+     hsize_t&                        total_read_blocks,
      size_t                          offset = 0,
      size_t                          numitems = 0,
      bool collective = true
-     );
-
-    extern herr_t read_projection_serial
-    (
-     const std::string&              file_name,
-     const pop_range_map_t&          pop_ranges,
-     const set < pair<pop_t, pop_t> >& pop_pairs,
-     const std::string&              src_pop_name,
-     const std::string&              dst_pop_name,
-     const NODE_IDX_T&               dst_start,
-     const NODE_IDX_T&               src_start,
-     const vector<string>&           attr_namespaces,
-     vector<edge_map_t>&            prj_vector,
-     vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
-     size_t&                         total_num_edges,
-     size_t                          offset = 0,
-     size_t                          numitems = 0
      );
   }
 }

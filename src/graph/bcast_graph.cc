@@ -68,6 +68,9 @@ namespace neuroh5
       map <string, vector < vector <string> > > edge_attr_names;
       vector< pair<pop_t, string> > pop_labels;
       size_t num_edges = 0, total_prj_num_edges = 0;
+      hsize_t local_read_blocks;
+      hsize_t total_read_blocks;
+
       
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
 
@@ -108,7 +111,8 @@ namespace neuroh5
           assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
                                                 dst_start, src_start, block_base, edge_base,
                                                 dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                total_prj_num_edges) >= 0);
+                                                total_prj_num_edges,
+                                                total_read_blocks, local_read_blocks) >= 0);
           
           // validate the edges
           assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,

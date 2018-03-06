@@ -4072,7 +4072,6 @@ extern "C"
    * src_pop: source population name
    * dst_pop: destination population name
    * namespace: attribute namespace
-   * node_rank_map: used to assign edges to MPI ranks
    * seq_index: index of the next edge in the sequence to yield
    * start_index: starting index of the next batch of edges to read from file
    * cache_size: how many edge blocks to read from file at at time
@@ -4086,7 +4085,6 @@ extern "C"
 
     seq_pos pos;
     EdgeMapType edge_map_type;
-    map<NODE_IDX_T, rank_t> node_rank_map;
     vector<pop_range_t> pop_vector;
     map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
     set< pair<pop_t, pop_t> > pop_pairs;
@@ -4098,7 +4096,8 @@ extern "C"
     vector<string> edge_attr_name_spaces;
     string src_pop_name, dst_pop_name;
     size_t total_num_nodes, local_num_nodes, total_num_edges, local_num_edges;
-
+    hsize_t total_read_blocks, local_read_blocks;
+    NODE_IDX_T dst_start, src_start;
 
   } NeuroH5ProjectionGenState;
 
@@ -4189,7 +4188,7 @@ extern "C"
     EdgeMapType edge_map_type = EdgeMapDst;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned int io_size=0, cache_size=1;
+    unsigned int cache_size=1;
     char *file_name, *src_pop_name, *dst_pop_name;
     PyObject* py_attr_name_spaces = NULL;
     vector<pop_range_t> pop_vector;
@@ -4206,14 +4205,13 @@ extern "C"
                                    "namespaces",
                                    "edge_map_type",
                                    "comm",
-                                   "io_size",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OiOkk", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OiOk", (char **)kwlist,
                                      &file_name, &src_pop_name, &dst_pop_name, 
                                      &py_attr_name_spaces, &opt_edge_map_type,
-                                     &py_comm, &io_size, &cache_size))
+                                     &py_comm, &cache_size))
       return NULL;
 
     MPI_Comm comm;
@@ -4242,10 +4240,6 @@ extern "C"
     assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
     assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-    if (io_size <= 0)
-      {
-        io_size = size;
-      }
 
     if (cache_size <= 0)
       {
@@ -4281,7 +4275,6 @@ extern "C"
     if (!py_ngg) return NULL;
     py_ngg->state = new NeuroH5ProjectionGenState();
 
-    map<CELL_IDX_T, rank_t> node_rank_map;
     assert(MPI_Comm_dup(comm, &(py_ngg->state->comm)) == MPI_SUCCESS);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
@@ -4291,7 +4284,6 @@ extern "C"
     py_ngg->state->block_index     = 0;
     py_ngg->state->block_count     = num_blocks;
     py_ngg->state->cache_size      = cache_size;
-    py_ngg->state->io_size         = io_size;
     py_ngg->state->file_name       = string(file_name);
     py_ngg->state->src_pop_name    = string(src_pop_name);
     py_ngg->state->dst_pop_name    = string(dst_pop_name);
@@ -4306,6 +4298,32 @@ extern "C"
     py_ngg->state->local_num_nodes = 0;
     py_ngg->state->total_num_edges = 0;
     py_ngg->state->local_num_edges = 0;
+    py_ngg->state->total_read_blocks = 0;
+    py_ngg->state->local_read_blocks = 0;
+
+    uint32_t dst_pop_idx = 0, src_pop_idx = 0;
+    bool src_pop_set = false, dst_pop_set = false;
+    
+    for (size_t i=0; i< pop_labels.size(); i++)
+      {
+        if (string(src_pop_name) == get<1>(pop_labels[i]))
+          {
+            src_pop_idx = get<0>(pop_labels[i]);
+            src_pop_set = true;
+          }
+        if (string(dst_pop_name) == get<1>(pop_labels[i]))
+          {
+            dst_pop_idx = get<0>(pop_labels[i]);
+            dst_pop_set = true;
+          }
+      }
+    assert(dst_pop_set && src_pop_set);
+    
+    NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
+    NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
+
+    py_ngg->state->dst_start = dst_start;
+    py_ngg->state->src_start = src_start;
     
     return (PyObject *)py_ngg;
     
@@ -4869,25 +4887,26 @@ extern "C"
 
     vector < map <string, vector < vector<string> > > > edge_attr_name_vector;
     vector <edge_map_t> prj_vector;
+
     
-    status = graph::scatter_read_projection(py_ngg->state->comm,
-                                            py_ngg->state->io_size,
-                                            py_ngg->state->edge_map_type, 
-                                            py_ngg->state->file_name,
-                                            py_ngg->state->src_pop_name,
-                                            py_ngg->state->dst_pop_name,
-                                            py_ngg->state->edge_attr_name_spaces,
-                                            py_ngg->state->node_rank_map,
-                                            py_ngg->state->pop_vector,
-                                            py_ngg->state->pop_ranges,
-                                            py_ngg->state->pop_labels,
-                                            py_ngg->state->pop_pairs,
-                                            prj_vector, edge_attr_name_vector,
-                                            py_ngg->state->local_num_nodes,
-                                            py_ngg->state->local_num_edges,
-                                            py_ngg->state->total_num_edges,
-                                            py_ngg->state->block_index,
-                                            py_ngg->state->cache_size);
+    status = graph::read_projection(py_ngg->state->comm,
+                                    py_ngg->state->file_name,
+                                    py_ngg->state->pop_ranges,
+                                    py_ngg->state->pop_pairs,
+                                    py_ngg->state->src_pop_name,
+                                    py_ngg->state->dst_pop_name,
+                                    py_ngg->state->src_start,
+                                    py_ngg->state->dst_start,
+                                    py_ngg->state->edge_attr_name_spaces,
+                                    prj_vector,
+                                    edge_attr_name_vector,
+                                    py_ngg->state->local_num_nodes,
+                                    py_ngg->state->local_num_edges,
+                                    py_ngg->state->total_num_edges,
+                                    py_ngg->state->local_read_blocks,
+                                    py_ngg->state->total_read_blocks,
+                                    py_ngg->state->block_index,
+                                    py_ngg->state->cache_size);
     assert (status >= 0);
     assert(prj_vector.size() > 0);
     if (edge_attr_name_vector.size() > 0)
@@ -4899,7 +4918,7 @@ extern "C"
     //assert(py_ngg->state->edge_map.size() > 0);
     py_ngg->state->edge_map_iter = py_ngg->state->edge_map.cbegin();
     
-    py_ngg->state->block_index += py_ngg->state->io_size * py_ngg->state->cache_size;
+    py_ngg->state->block_index += py_ngg->state->total_read_blocks;
 
     size_t max_local_num_nodes=0;
     status = MPI_Allreduce(&(py_ngg->state->local_num_nodes), &max_local_num_nodes, 1,
@@ -4927,6 +4946,7 @@ extern "C"
       {
       case seq_next:
         {
+
           if ((py_ngg->state->edge_map_iter == py_ngg->state->edge_map.cend()) &&
               (py_ngg->state->node_index == py_ngg->state->node_count))
             {

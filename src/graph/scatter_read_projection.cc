@@ -5,7 +5,7 @@
 ///  Top-level functions for reading edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project Neurograph.
 //==============================================================================
 
 #include "debug.hh"
@@ -108,7 +108,8 @@ namespace neuroh5
               vector<DST_PTR_T> dst_ptr;
               vector<NODE_IDX_T> src_idx;
               map<string, data::NamedAttrVal> edge_attr_map;
-            
+              hsize_t local_read_blocks, total_read_blocks;
+              
               uint32_t dst_pop_idx=0, src_pop_idx=0;
               bool src_pop_set = false, dst_pop_set = false;
             
@@ -134,7 +135,8 @@ namespace neuroh5
               assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
                                                     dst_start, src_start, block_base, edge_base,
                                                     dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                    total_num_edges, offset, numitems) >= 0);
+                                                    total_num_edges, total_read_blocks, local_read_blocks,
+                                                    offset, numitems) >= 0);
           
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges

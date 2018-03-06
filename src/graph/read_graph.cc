@@ -58,8 +58,11 @@ namespace neuroh5
       // read the edges
       for (size_t i = 0; i < prj_names.size(); i++)
         {
+          size_t local_prj_num_nodes;
           size_t local_prj_num_edges;
           size_t total_prj_num_edges;
+          hsize_t local_read_blocks;
+          hsize_t total_read_blocks;
 
           //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
@@ -95,7 +98,9 @@ namespace neuroh5
                   src_pop_name, dst_pop_name, 
                   dst_start, src_start, edge_attr_name_spaces, 
                   prj_vector, edge_attr_names_vector,
-                  local_prj_num_edges, total_prj_num_edges) >= 0);
+                  local_prj_num_nodes,
+                  local_prj_num_edges, total_prj_num_edges,
+                  local_read_blocks, total_read_blocks) >= 0);
 
           mpi::MPI_DEBUG(comm, "read_graph: projection ", i, " has a total of ", total_prj_num_edges, " edges");
           
@@ -122,73 +127,6 @@ namespace neuroh5
     }
 
 
-    
-    int read_graph_serial
-    (
-     const std::string&   file_name,
-     const vector<string>& edge_attr_name_spaces,
-     const vector< pair<string, string> >& prj_names,
-     vector<edge_map_t>& prj_vector,
-     vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
-     size_t&              total_num_nodes,
-     size_t&              total_num_edges
-     )
-    {
-      // read the population info
-      vector<pop_range_t> pop_vector;
-      vector< pair<pop_t, string> > pop_labels;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      set< pair<pop_t, pop_t> > pop_pairs;
-      
-      assert(cell::read_population_combos_serial
-             (file_name, pop_pairs) >= 0);
-      assert(cell::read_population_ranges_serial
-             (file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
-      assert(cell::read_population_labels_serial
-             (file_name, pop_labels) >= 0);
-
-      // read the edges
-      for (size_t i = 0; i < prj_names.size(); i++)
-        {
-          NODE_IDX_T dst_start, src_start;
-          NamedAttrVal edge_attr_values;
-          size_t total_prj_num_edges;
-
-          //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
-
-          string src_pop_name = prj_names[i].first, dst_pop_name = prj_names[i].second;
-          uint32_t dst_pop_idx = 0, src_pop_idx = 0;
-          bool src_pop_set = false, dst_pop_set = false;
-      
-          for (size_t i=0; i< pop_labels.size(); i++)
-            {
-              if (src_pop_name == get<1>(pop_labels[i]))
-                {
-                  src_pop_idx = get<0>(pop_labels[i]);
-                  src_pop_set = true;
-                }
-              if (dst_pop_name == get<1>(pop_labels[i]))
-                {
-                  dst_pop_idx = get<0>(pop_labels[i]);
-                  dst_pop_set = true;
-                }
-            }
-          assert(dst_pop_set && src_pop_set);
-      
-          dst_start = pop_vector[dst_pop_idx].start;
-          src_start = pop_vector[src_pop_idx].start;
-
-          assert(graph::read_projection_serial
-                 (file_name, pop_ranges, pop_pairs,
-                  src_pop_name, dst_pop_name, dst_start, src_start,
-                  edge_attr_name_spaces, prj_vector, edge_attr_names_vector,
-                  total_prj_num_edges) >= 0);
-
-          total_num_edges = total_num_edges + total_prj_num_edges;
-        }
-
-      return 0;
-    }
 
 
   }

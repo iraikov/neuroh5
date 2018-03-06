@@ -51,6 +51,8 @@ namespace neuroh5
      vector<DST_PTR_T>&         dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
+     hsize_t&                   total_read_blocks,
+     hsize_t&                   local_read_blocks,
      size_t                     offset,
      size_t                     numitems,
      bool collective
@@ -101,6 +103,8 @@ namespace neuroh5
           read_blocks = num_blocks;
         }
 
+      total_read_blocks = read_blocks;
+      
       if (read_blocks > 0)
         {
           // determine which blocks of block_ptr are read by which rank
@@ -118,9 +122,11 @@ namespace neuroh5
             block = stop - start + 1;
           else
             block = 0;
-
-          mpi::MPI_DEBUG(comm, "read_projection_datasets: ","num_blocks = ", num_blocks, " read_blocks = ", read_blocks, 
-                    " start = ", start, " stop = ", stop, ", block = ", block);
+          local_read_blocks = block-1;
+          
+          mpi::MPI_DEBUG(comm, "read_projection_datasets: ", "offset = ", offset,
+                         " num_blocks = ", num_blocks, " read_blocks = ", read_blocks, 
+                         " start = ", start, " stop = ", stop, ", block = ", block);
 
           DST_BLK_PTR_T block_rebase = 0;
 
@@ -273,167 +279,6 @@ namespace neuroh5
       return ierr;
     }
 
-    
-    herr_t read_projection_datasets_serial
-    (
-     const std::string&         file_name,
-     const std::string&         src_pop_name,
-     const std::string&         dst_pop_name,
-     const NODE_IDX_T&          dst_start,
-     const NODE_IDX_T&          src_start,
-     DST_PTR_T&                 edge_base,
-     vector<DST_BLK_PTR_T>&     dst_blk_ptr,
-     vector<NODE_IDX_T>&        dst_idx,
-     vector<DST_PTR_T>&         dst_ptr,
-     vector<NODE_IDX_T>&        src_idx,
-     size_t&                    total_num_edges,
-     size_t                     offset,
-     size_t                     numitems
-     )
-    {
-        herr_t ierr = 0;
-
-        hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-        assert(fapl >= 0);
-
-        hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-        assert(file >= 0);
-
-        // determine number of blocks in projection
-        size_t num_blocks = hdf5::dataset_num_elements
-          (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR)) - 1;
-
-        // determine number of edges in projection
-        total_num_edges = hdf5::dataset_num_elements
-          (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX));
-
-        hsize_t read_blocks = 0;
-
-        if (numitems > 0) 
-          {
-            if (offset < num_blocks)
-              {
-                read_blocks = num_blocks-offset;
-              }
-          }
-        else
-          {
-            read_blocks = num_blocks;
-          }
-
-      
-        DST_BLK_PTR_T block_rebase = 0;
-        hsize_t block = read_blocks+1;
-
-        // read destination block pointers
-
-        if (read_blocks > 0)
-          {
-            // allocate buffer and memory dataspace
-            dst_blk_ptr.resize(block, 0);
-
-            ierr = hdf5::read_serial<DST_BLK_PTR_T>
-              (
-               file,
-               hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR),
-               block,
-               DST_BLK_PTR_H5_NATIVE_T,
-               dst_blk_ptr,
-               H5P_DEFAULT
-               );
-            assert(ierr >= 0);
-
-            // rebase the block_ptr array to local offsets
-            // REBASE is going to be the start offset for the hyperslab
-
-            block_rebase = dst_blk_ptr[0];
-
-            for (size_t i = 0; i < dst_blk_ptr.size(); ++i)
-              {
-                dst_blk_ptr[i] -= block_rebase;
-              }
-          }
-
-        // read destination block indices
-
-        if (block > 0)
-          {
-            hsize_t dst_idx_block = block-1;
-            dst_idx.resize(dst_idx_block, 0);
-
-            assert(dst_idx.size() > 0);
-
-            ierr = hdf5::read_serial<NODE_IDX_T>
-              (
-               file,
-               hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX),
-               dst_idx_block,
-               NODE_IDX_H5_NATIVE_T,
-               dst_idx,
-               H5P_DEFAULT
-               );
-            assert(ierr >= 0);
-          }
-
-        DST_PTR_T dst_rebase = 0;
-
-        // read destination pointers
-
-        if (block > 0)
-          {
-            hsize_t dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-            dst_ptr.resize(dst_ptr_block, 0);
-            assert(dst_ptr.size() > 0);
-
-            ierr = hdf5::read_serial<DST_PTR_T>
-              (
-               file,
-               hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR),
-               dst_ptr_block,
-               DST_PTR_H5_NATIVE_T,
-               dst_ptr,
-               H5P_DEFAULT
-               );
-            assert(ierr >= 0);
-
-            dst_rebase = dst_ptr[0];
-            edge_base = dst_rebase;
-            for (size_t i = 0; i < dst_ptr.size(); ++i)
-              {
-                dst_ptr[i] -= dst_rebase;
-              }
-          }
-
-        if (block > 0)
-          {
-            hsize_t src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
-
-            if (src_idx_block > 0)
-              {
-                // allocate buffer and memory dataspace
-                src_idx.resize(src_idx_block, 0);
-                assert(src_idx.size() > 0);
-
-                ierr = hdf5::read_serial<NODE_IDX_T>
-                  (
-                   file,
-                   hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
-                   src_idx_block,
-                   NODE_IDX_H5_NATIVE_T,
-                   src_idx,
-                   H5P_DEFAULT
-                   );
-                assert(ierr >= 0);
-              }
-
-          }
-
-        assert(H5Fclose(file) >= 0);
-        assert(H5Pclose(fapl) >= 0);
-        assert(ierr == 0);
-        
-        return ierr;
-    }
     
   }
 }
