@@ -36,28 +36,14 @@ namespace neuroh5
      vector<DST_PTR_T>&         dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
+     hsize_t&                   total_read_blocks,
+     hsize_t&                   local_read_blocks,
      size_t                     offset = 0,
      size_t                     numitems = 0,
      bool collective = true
      );
 
     
-    herr_t read_projection_datasets_serial
-    (
-     const std::string&         file_name,
-     const std::string&         src_pop_name,
-     const std::string&         dst_pop_name,
-     const NODE_IDX_T&          dst_start,
-     const NODE_IDX_T&          src_start,
-     DST_PTR_T&                 edge_base,
-     vector<DST_BLK_PTR_T>&     dst_blk_ptr,
-     vector<NODE_IDX_T>&        dst_idx,
-     vector<DST_PTR_T>&         dst_ptr,
-     vector<NODE_IDX_T>&        src_idx,
-     size_t&                    total_num_edges,
-     size_t                     offset = 0,
-     size_t                     numitems = 0
-     );
   }
 }
 

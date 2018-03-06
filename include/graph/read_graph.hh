@@ -61,17 +61,6 @@ namespace neuroh5
      size_t&                          local_prj_num_edges,
      size_t&                          total_prj_num_edges
      );
-
-    extern int read_graph_serial
-    (
-     const std::string&   file_name,
-     const vector<string>& edge_attr_namespaces,
-     const vector< pair<string, string> >& prj_names,
-     vector<edge_map_t>& prj_vector,
-     vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
-     size_t&              total_num_nodes,
-     size_t&              total_num_edges
-     );
   }
 }
 
