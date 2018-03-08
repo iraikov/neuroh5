@@ -91,7 +91,7 @@ namespace neuroh5
       vector< pair<hsize_t,hsize_t> > bins;
       hsize_t read_blocks = 0;
 
-      if (numitems > 0) 
+      if (numitems > 0)
         {
           if (offset < num_blocks)
             {
@@ -133,7 +133,10 @@ namespace neuroh5
           // read destination block pointers
 
           // allocate buffer and memory dataspace
-          dst_blk_ptr.resize(block, 0);
+          if (block > 0)
+            {
+              dst_blk_ptr.resize(block, 0);
+            }
           
           ierr = hdf5::read<DST_BLK_PTR_T>
             (
@@ -152,8 +155,9 @@ namespace neuroh5
           
           if (dst_blk_ptr.size() > 0)
             {
-              DEBUG("Task ",rank,": ", "dst_blk_ptr.front() = ", dst_blk_ptr.front(),
-                    " dst_blk_ptr.back() = ", dst_blk_ptr.back());
+              mpi::MPI_DEBUG(comm,"read_projection_datasets: ", 
+                             " dst_blk_ptr.front() = ", dst_blk_ptr.front(),
+                             " dst_blk_ptr.back() = ", dst_blk_ptr.back());
             }
       
           if (block > 0)
@@ -173,16 +177,20 @@ namespace neuroh5
           mpi::MPI_DEBUG(comm, "read_projection_datasets: ","block_rebase = ", block_rebase);
 
           // read destination block indices
-          hsize_t dst_idx_block;
+          hsize_t dst_idx_block=0;
           
           if (dst_blk_ptr.size() > 0)
             dst_idx_block = block-1;
           else
             dst_idx_block = 0;
-          dst_idx.resize(dst_idx_block, 0);
+          if (dst_idx_block > 0)
+            {
+              dst_idx.resize(dst_idx_block, 0);
+            }
           
-          mpi::MPI_DEBUG(comm, "read_projection_datasets: ", "dst_idx: block = ", dst_idx_block, 
-                    " dst_idx: start = ", start);
+          mpi::MPI_DEBUG(comm, "read_projection_datasets: ", 
+                         " dst_idx: block = ", dst_idx_block, 
+                         " dst_idx: start = ", start);
           
           ierr = hdf5::read<NODE_IDX_T>
             (
@@ -197,7 +205,7 @@ namespace neuroh5
           assert(ierr >= 0);
 
           // read destination pointers
-          hsize_t dst_ptr_block, dst_ptr_start;
+          hsize_t dst_ptr_block=0, dst_ptr_start=0;
           if (dst_blk_ptr.size() > 0)
             {
               dst_ptr_start = (hsize_t)block_rebase;
@@ -207,15 +215,14 @@ namespace neuroh5
                   dst_ptr_block ++;
                 }
             }
-          else
-            {
-              dst_ptr_start = 0;
-              dst_ptr_block = 0;
-            }
-          dst_ptr.resize(dst_ptr_block, 0);
           
           mpi::MPI_DEBUG(comm, "read_projection_datasets: dst_ptr: start = ", dst_ptr_start, 
                 " dst_ptr: block = ", dst_ptr_block);
+
+          if (dst_ptr_block > 0)
+            {
+              dst_ptr.resize(dst_ptr_block, 0);
+            }
           
           ierr = hdf5::read<DST_PTR_T>
             (
@@ -231,8 +238,9 @@ namespace neuroh5
           
           if (dst_ptr.size() > 0)
             {
-              DEBUG("read_projection_datasets: rank ", rank, ": ", "dst_ptr.front() = ", dst_ptr.front(),
-                    " dst_ptr.back() = ", dst_ptr.back());
+              mpi::MPI_DEBUG(comm, "read_projection_datasets: rank ", rank, ": ", 
+                             " dst_ptr.front() = ", dst_ptr.front(),
+                             " dst_ptr.back() = ", dst_ptr.back());
             }
 
           DST_PTR_T dst_rebase = 0;
@@ -252,7 +260,10 @@ namespace neuroh5
               src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
 
               // allocate buffer and memory dataspace
-              src_idx.resize(src_idx_block, 0);
+              if (src_idx_block > 0)
+                {
+                  src_idx.resize(src_idx_block, 0);
+                }
             }
 
           ierr = hdf5::read<NODE_IDX_T>

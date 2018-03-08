@@ -15,10 +15,14 @@
 #include "compute_vertex_metrics.hh"
 #include "projection_names.hh"
 
+#include <execinfo.h>
+#include <unistd.h>
+
 #include <getopt.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <csignal>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -27,10 +31,26 @@
 #include <set>
 #include <vector>
 
+
 #include <mpi.h>
 
 using namespace std;
 using namespace neuroh5;
+
+void segv_handler(int sig) 
+{
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
+
 
 void throw_err(char const* err_message)
 {
@@ -68,6 +88,8 @@ int main(int argc, char** argv)
 {
   std::string input_file_name, output;
   size_t iosize = 0;
+
+  signal(SIGSEGV, segv_handler);  
   
   assert(MPI_Init(&argc, &argv) >= 0);
 

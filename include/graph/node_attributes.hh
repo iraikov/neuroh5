@@ -78,7 +78,6 @@ namespace neuroh5
       int status;
       assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
-      assert(values.size() > 0);
     
       int size, rank;
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);

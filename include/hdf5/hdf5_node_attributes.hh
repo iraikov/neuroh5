@@ -152,7 +152,6 @@ namespace neuroh5
       int status;
       assert(index.size() == attr_ptr.size()-1);
       std::vector<ATTR_PTR_T>  local_attr_ptr;
-      assert(value.size() > 0);
 
       hid_t file = H5Iget_file_id(loc);
       assert(file >= 0);
