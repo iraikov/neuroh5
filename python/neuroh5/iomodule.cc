@@ -3128,7 +3128,7 @@ extern "C"
                                    "comm",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|Os", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|sO", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace,
                                      &py_comm))
       return NULL;

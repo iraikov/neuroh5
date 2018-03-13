@@ -12,7 +12,6 @@
 
 #include "neuroh5_types.hh"
 
-#include <mpi.h>
 #include <vector>
 #include <map>
 
@@ -20,8 +19,8 @@ namespace neuroh5
 {
   namespace graph
   {
-    int vertex_degree (MPI_Comm comm,
-                       const vector < edge_map_t >& prj_vector,
+    int vertex_degree (const vector < edge_map_t >& prj_vector,
+                       const bool unique,
                        vector < map< NODE_IDX_T, size_t > > &degree_maps);
   }
 }

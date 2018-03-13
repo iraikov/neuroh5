@@ -4,7 +4,7 @@
 ///
 ///  Computes vertex metrics in the graph,
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 
@@ -55,6 +55,77 @@ namespace neuroh5
         }
     }
 
+
+    void append_vertex_degree_map (MPI_Comm comm, const map<NODE_IDX_T, rank_t>& node_rank_map,
+                                   const std::vector< std::pair<std::string, std::string> >& prj_names,
+                                   size_t total_num_nodes,
+                                   const std::vector < map< NODE_IDX_T, size_t> > & vertex_degree_maps,
+                                   const string& label, const string& norm_label,
+                                   const string& output_file_name)
+    {
+      int srank, ssize;
+      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+
+      size_t rank, size;
+      rank = (size_t)srank;
+      size = (size_t)ssize;
+
+      size_t prj_index=0;
+      for (const map< NODE_IDX_T, size_t>& vertex_degree_map : vertex_degree_maps)
+        {
+          uint64_t sum_degree=0, nz_degree=0;
+          
+          for (auto it = vertex_degree_map.begin(); it != vertex_degree_map.end(); it++)
+            {
+              size_t degree = it->second;
+              sum_degree = sum_degree + degree;
+              if (degree > 0) nz_degree++;
+            }
+          
+          std::vector<float> vertex_norm_degrees;
+          vertex_norm_degrees.resize(total_num_nodes);
+          for (auto it = vertex_degree_map.begin(); it != vertex_degree_map.end(); it++)
+            {
+              float norm_degree = (float)(it->second) / (float)sum_degree;
+              vertex_norm_degrees[it->first] += norm_degree;
+            }
+          
+          vector <NODE_IDX_T> node_id;
+          vector <ATTR_PTR_T> attr_ptr;
+          vector <size_t> vertex_degree_value;
+          vector <float> vertex_norm_degree_value;
+          
+          attr_ptr.push_back(0);
+          for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
+            {
+              if (it->second == rank)
+                {
+                  const auto it_degree_value = vertex_degree_map.find(it->first);
+                  if (it_degree_value != vertex_degree_map.cend())
+                    {
+                      node_id.push_back(it->first);
+                      attr_ptr.push_back(attr_ptr.back() + 1);
+                      vertex_degree_value.push_back(it_degree_value->second);
+                      vertex_norm_degree_value.push_back(vertex_norm_degrees[it->first]);
+                    }
+                }
+            }
+
+          string src_pop_name = prj_names[prj_index].first;
+          string dst_pop_name = prj_names[prj_index].second;
+          
+          graph::append_node_attribute (comm, output_file_name, "Vertex Metrics",
+                                        label + " " + src_pop_name + " -> " + dst_pop_name,
+                                        node_id, attr_ptr, vertex_degree_value);
+          graph::append_node_attribute (comm, output_file_name, "Vertex Metrics",
+                                        norm_label + " " + src_pop_name + " -> " + dst_pop_name,
+                                        node_id, attr_ptr, vertex_norm_degree_value);
+
+          prj_index++;
+        }
+    }
+    
     
     int compute_vertex_indegree
     (
@@ -103,63 +174,25 @@ namespace neuroh5
                           local_num_edges,
                           total_num_edges);
 
-      vector < std::map< NODE_IDX_T, size_t> > vertex_indegree_maps;
-      vertex_degree (comm, prj_vector, vertex_indegree_maps);
+      {
+        vector < std::map< NODE_IDX_T, size_t> > vertex_indegree_maps; 
+        vertex_degree (prj_vector, false, vertex_indegree_maps);
+        append_vertex_degree_map (comm, node_rank_map, prj_names,
+                                  total_num_nodes, vertex_indegree_maps,
+                                  "Indegree", "Norm indegree",
+                                  file_name);
+      }
 
-      size_t prj_index=0;
-      for (const map< NODE_IDX_T, size_t>& vertex_indegree_map : vertex_indegree_maps)
-        {
-          uint64_t sum_indegree=0, nz_indegree=0;
-          
-          for (auto it = vertex_indegree_map.begin(); it != vertex_indegree_map.end(); it++)
-            {
-              size_t degree = it->second;
-              sum_indegree = sum_indegree + degree;
-              if (degree > 0) nz_indegree++;
-            }
-          
-          std::vector<float> vertex_norm_indegrees;
-          vertex_norm_indegrees.resize(total_num_nodes);
-          for (auto it = vertex_indegree_map.begin(); it != vertex_indegree_map.end(); it++)
-            {
-              float norm_indegree = (float)(it->second) / (float)sum_indegree;
-              vertex_norm_indegrees[it->first] += norm_indegree;
-            }
-          
-          vector <NODE_IDX_T> node_id;
-          vector <ATTR_PTR_T> attr_ptr;
-          vector <size_t> vertex_indegree_value;
-          vector <float> vertex_norm_indegree_value;
-          
-          attr_ptr.push_back(0);
-          for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
-            {
-              if (it->second == rank)
-                {
-                  const auto it_indegree_value = vertex_indegree_map.find(it->first);
-                  if (it_indegree_value != vertex_indegree_map.cend())
-                    {
-                      node_id.push_back(it->first);
-                      attr_ptr.push_back(attr_ptr.back() + 1);
-                      vertex_indegree_value.push_back(it_indegree_value->second);
-                      vertex_norm_indegree_value.push_back(vertex_norm_indegrees[it->first]);
-                    }
-                }
-            }
+      {
+        vector < std::map< NODE_IDX_T, size_t> > vertex_unique_indegree_maps;
+        vertex_degree (prj_vector, true, vertex_unique_indegree_maps);
+        append_vertex_degree_map (comm, node_rank_map, prj_names,
+                                  total_num_nodes, vertex_unique_indegree_maps,
+                                  "Unique indegree", "Norm unique indegree",
+                                  file_name);
+      }
 
-          string src_pop_name = prj_names[prj_index].first;
-          string dst_pop_name = prj_names[prj_index].second;
-          
-          graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Indegree " +
-                                        src_pop_name + " -> " + dst_pop_name,
-                                        node_id, attr_ptr, vertex_indegree_value);
-          graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Norm indegree " +
-                                        src_pop_name + " -> " + dst_pop_name,
-                                        node_id, attr_ptr, vertex_norm_indegree_value);
-
-          prj_index++;
-        }
-
+      
       return status;
     }
 
@@ -212,66 +245,23 @@ namespace neuroh5
                           local_num_edges,
                           total_num_edges);
       
-      // Combine the edges from all projections into a single edge map
-      map<NODE_IDX_T, vector<NODE_IDX_T> > edge_map;
+      {
+        vector < std::map< NODE_IDX_T, size_t> > vertex_outdegree_maps; 
+        vertex_degree (prj_vector, false, vertex_outdegree_maps);
+        append_vertex_degree_map (comm, node_rank_map, prj_names,
+                                  total_num_nodes, vertex_outdegree_maps,
+                                  "Outdegree", "Norm outdegree",
+                                  file_name);
+      }
 
-      uint64_t sum_outdegree=0, nz_outdegree=0;
-      vector < std::map<NODE_IDX_T, size_t> > vertex_outdegree_maps;
-      vertex_degree (comm, prj_vector, vertex_outdegree_maps);
-
-      prj_vector.clear();
-
-      size_t prj_index=0;
-      for (const map< NODE_IDX_T, size_t>& vertex_outdegree_map : vertex_outdegree_maps)
-        {
-
-          for (auto it = vertex_outdegree_map.begin(); it != vertex_outdegree_map.end(); it++)
-            {
-              size_t degree = it->second;
-              sum_outdegree = sum_outdegree + degree;
-              if (degree > 0) nz_outdegree++;
-            }
-          std::vector<float> vertex_norm_outdegrees;
-          vertex_norm_outdegrees.resize(total_num_nodes);
-          for (auto it = vertex_outdegree_map.begin(); it != vertex_outdegree_map.end(); it++)
-            {
-              float norm_outdegree = (float)(it->second) / (float)sum_outdegree;
-              vertex_norm_outdegrees[it->first] = norm_outdegree;
-            }
-          
-          
-          vector <ATTR_PTR_T> attr_ptr;
-          vector <NODE_IDX_T> node_id;
-          vector <size_t> vertex_outdegree_value;
-          vector <float> vertex_norm_outdegree_value;
-          
-          attr_ptr.push_back(0);
-          for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
-            {
-              if (it->second == rank)
-                {
-                  const auto it_outdegree_value = vertex_outdegree_map.find(it->first);
-                  if (it_outdegree_value != vertex_outdegree_map.cend())
-                    {
-                      node_id.push_back(it->first);
-                      attr_ptr.push_back(attr_ptr.back() + 1);
-                      vertex_outdegree_value.push_back(it_outdegree_value->second);
-                      vertex_norm_outdegree_value.push_back(vertex_norm_outdegrees[it->first]);
-                    }
-                }
-            }
-          string src_pop_name = prj_names[prj_index].first;
-          string dst_pop_name = prj_names[prj_index].second;
-
-          graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex outdegree " +
-                                        src_pop_name + " -> " + dst_pop_name,
-                                        node_id, attr_ptr, vertex_outdegree_value);
-          graph::append_node_attribute (comm, file_name, "Vertex Metrics", "Vertex norm outdegree " +
-                                        src_pop_name + " -> " + dst_pop_name,
-                                        node_id, attr_ptr, vertex_norm_outdegree_value);
-
-          prj_index++;
-        }
+      {
+        vector < std::map< NODE_IDX_T, size_t> > vertex_unique_outdegree_maps;
+        vertex_degree (prj_vector, true, vertex_unique_outdegree_maps);
+        append_vertex_degree_map (comm, node_rank_map, prj_names,
+                                  total_num_nodes, vertex_unique_outdegree_maps,
+                                  "Unique outdegree", "Norm unique outdegree",
+                                  file_name);
+      }
       
       return status;
     }

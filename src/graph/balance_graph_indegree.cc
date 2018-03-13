@@ -152,7 +152,7 @@ namespace neuroh5
                           total_num_edges);
       
       vector < std::map<NODE_IDX_T, size_t> > vertex_indegree_maps;
-      vertex_degree (comm, prj_vector, vertex_indegree_maps);
+      vertex_degree (prj_vector, false, vertex_indegree_maps);
 
       std::vector<double> vertex_norm_indegrees(total_num_nodes, 0.0);
 

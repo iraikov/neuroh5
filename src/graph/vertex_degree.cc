@@ -11,8 +11,8 @@
 
 #include "neuroh5_types.hh"
 #include <map>
+#include <set>
 #include <vector>
-#include <mpi.h>
 
 #undef NDEBUG
 #include <cassert>
@@ -25,15 +25,11 @@ namespace neuroh5
   namespace graph
   {
     
-    int vertex_degree (MPI_Comm comm,
-                       const vector < edge_map_t >& prj_vector,
+    int vertex_degree (const vector < edge_map_t >& prj_vector,
+                       const bool unique,
                        vector < map< NODE_IDX_T, size_t > > &degree_maps)
     {
       int status=0; 
-      int ssize;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      size_t size;
-      size = (size_t)ssize;
 
       for (const map<NODE_IDX_T, edge_tuple_t >& edge_map : prj_vector)
         {
@@ -44,7 +40,19 @@ namespace neuroh5
             {
               node_id_vector.push_back(it->first);
               const vector<NODE_IDX_T>& adj_vector = get<0>(it->second);
-              size_t degree = adj_vector.size();
+              size_t degree = 0;
+
+              if (unique)
+                {
+                  set<NODE_IDX_T> s;
+                  for (size_t i = 0; i < adj_vector.size(); ++i )
+                    { s.insert( adj_vector[i] ); }
+                  degree = s.size();
+                }
+              else
+                {
+                  degree = adj_vector.size();
+                }
               degree_vector.push_back(degree);
             }
       
