@@ -2,9 +2,9 @@
 //==============================================================================
 ///  @file path_names.cc
 ///
-///  Definitions of Neurograph HDF5 path manipulation function.
+///  Definitions of NeuroH5 HDF5 path manipulation function.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "path_names.hh"

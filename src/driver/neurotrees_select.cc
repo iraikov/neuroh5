@@ -4,7 +4,7 @@
 ///
 ///  Program for selecting tree subsets.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2018 Project Neurotrees.
 //==============================================================================
 
 

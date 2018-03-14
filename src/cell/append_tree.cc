@@ -4,7 +4,7 @@
 ///
 ///  Append tree structures to NeuroH5 file.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>

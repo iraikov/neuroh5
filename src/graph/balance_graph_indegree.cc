@@ -4,7 +4,7 @@
 ///
 ///  Partition graph vertices according to their degree.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 

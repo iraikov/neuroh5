@@ -4,7 +4,7 @@
 ///
 ///  Calculate vertex (in/out)degree from an edge map.
 ///
-///  Copyright (C) 2016-2018 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"

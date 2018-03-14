@@ -4,7 +4,7 @@
 ///
 ///  Merge edges from multiple projections into a single edge map.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"

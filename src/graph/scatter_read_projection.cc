@@ -5,7 +5,7 @@
 ///  Top-level functions for reading edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"

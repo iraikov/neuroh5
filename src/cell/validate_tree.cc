@@ -4,7 +4,7 @@
 ///
 ///  Validate tree structure.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 

@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for reading descriptions of neurite structures.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"

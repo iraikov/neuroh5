@@ -4,7 +4,7 @@
 ///
 ///  Graph partitioning functions.
 ///
-///  Copyright (C) 2016 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 

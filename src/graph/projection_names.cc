@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading projection names from an HDF5 file.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 #include <mpi.h>
 #include <hdf5.h>

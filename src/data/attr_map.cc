@@ -4,7 +4,7 @@
 ///
 ///  Template specialization for AttrMap. 
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include <map>

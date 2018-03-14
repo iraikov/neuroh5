@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading population names from an HDF5 enumerated type.
 ///
-///  Copyright (C) 2016-2017 Project Neurotrees.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"

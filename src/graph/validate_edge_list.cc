@@ -5,7 +5,7 @@
 ///  Functions for validating edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "validate_edge_list.hh"

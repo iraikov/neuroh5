@@ -4,7 +4,7 @@
 ///
 ///  Driver program for graph vertex balancing functions.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 

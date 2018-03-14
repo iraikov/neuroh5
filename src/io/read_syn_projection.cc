@@ -2,9 +2,9 @@
 //==============================================================================
 ///  @file read_syn_projection.cc
 ///
-///  Functions for reading edge information in synapse format
+///  Functions for reading edge information in cell attribute format
 ///
-///  Copyright (C) 2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"

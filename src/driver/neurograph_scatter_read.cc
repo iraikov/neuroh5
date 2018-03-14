@@ -2,9 +2,9 @@
 //==============================================================================
 ///  @file neurograph_scatter_read.cc
 ///
-///  Driver program for scatter_graph function.
+///  Driver program for scatter_read_graph function.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
