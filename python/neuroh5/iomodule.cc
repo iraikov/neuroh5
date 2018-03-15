@@ -4,7 +4,7 @@
 ///
 ///  Python module for reading and writing neuronal connectivity and morphological information.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -2294,6 +2294,7 @@ extern "C"
 
       }
     
+    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
     assert(MPI_Barrier(comm) == MPI_SUCCESS);
     assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
@@ -4634,8 +4635,11 @@ extern "C"
   static void
   neuroh5_tree_gen_dealloc(PyNeuroH5TreeGenState *py_ntrg)
   {
-    int status = MPI_Comm_free(&(py_ntrg->state->comm));
-    assert(status == MPI_SUCCESS);
+    if (py_ntrg->state->pos == seq_next)
+      {
+        int status = MPI_Comm_free(&(py_ntrg->state->comm));
+        assert(status == MPI_SUCCESS);
+      }
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
@@ -4643,8 +4647,11 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
-    int status = MPI_Comm_free(&(py_ntrg->state->comm));
-    assert(status == MPI_SUCCESS);
+    if (py_ntrg->state->pos == seq_next)
+      {
+        int status = MPI_Comm_free(&(py_ntrg->state->comm));
+        assert(status == MPI_SUCCESS);
+      }
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
   }
@@ -4652,8 +4659,11 @@ extern "C"
   static void
   neuroh5_prj_gen_dealloc(PyNeuroH5ProjectionGenState *py_ngg)
   {
-    int status = MPI_Comm_free(&(py_ngg->state->comm));
-    assert(status == MPI_SUCCESS);
+    if (py_ngg->state->pos == seq_next)
+      {
+        int status = MPI_Comm_free(&(py_ngg->state->comm));
+        assert(status == MPI_SUCCESS);
+      }
     delete py_ngg->state;
     Py_TYPE(py_ngg)->tp_free(py_ngg);
   }
@@ -4662,9 +4672,6 @@ extern "C"
   neuroh5_tree_gen_next(PyNeuroH5TreeGenState *py_ntrg)
   {
     PyObject *result = NULL; 
-    int size, rank;
-    assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
 
     /* 
      * Returning NULL in this case is enough. The next() builtin will raise the
@@ -4674,6 +4681,10 @@ extern "C"
       {
       case seq_next:
         {
+          int size, rank;
+          assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
+          assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
+
           // If the end of the current cache block has been reached,
           // and the iterator has not exceed its locally assigned elements,
           // read the next block
@@ -4695,8 +4706,11 @@ extern "C"
                                                  py_ntrg->state->cache_index,
                                                  py_ntrg->state->cache_size);
               assert (status >= 0);
-              
-              py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
+
+              if (py_ntrg->state->cache_index < py_ntrg->state->count)
+                {
+                  py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
+                }
               py_ntrg->state->it_tree = py_ntrg->state->tree_map.cbegin();
             }
 
@@ -4704,6 +4718,8 @@ extern "C"
             {
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
+                  int status = MPI_Comm_free(&(py_ntrg->state->comm));
+                  assert(status == MPI_SUCCESS);
                   py_ntrg->state->pos = seq_last;
                 }
               else
@@ -4736,6 +4752,8 @@ extern "C"
         {
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
+              int status = MPI_Comm_free(&(py_ntrg->state->comm));
+              assert(status == MPI_SUCCESS);
               py_ntrg->state->pos = seq_last;
             }
           else
@@ -4771,9 +4789,6 @@ extern "C"
   neuroh5_cell_attr_gen_next(PyNeuroH5CellAttrGenState *py_ntrg)
   {
     PyObject *result = NULL; 
-    int size, rank;
-    assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
     
     switch (py_ntrg->state->pos)
       {
@@ -4784,6 +4799,10 @@ extern "C"
           if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
               (py_ntrg->state->cache_index < py_ntrg->state->count))
             {
+              int size, rank;
+              assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
+              assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
+
               // If the end of the current cache block has been reached,
               // read the next block
               py_ntrg->state->attr_map.clear();
@@ -4812,6 +4831,9 @@ extern "C"
             {
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
+                  int status = MPI_Comm_free(&(py_ntrg->state->comm));
+                  assert(status == MPI_SUCCESS);
+                  py_ntrg->state->attr_map.clear();
                   py_ntrg->state->pos = seq_last;
                 }
               else
@@ -4838,8 +4860,11 @@ extern "C"
         }
       case seq_empty:
         {
+          py_ntrg->state->attr_map.clear();
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
+              int status = MPI_Comm_free(&(py_ntrg->state->comm));
+              assert(status == MPI_SUCCESS);
               py_ntrg->state->pos = seq_last;
             }
           else
@@ -4936,9 +4961,6 @@ extern "C"
     PyObject *result = NULL;
 
     int status = 0;
-    int size, rank;
-    assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
 
     assert(py_ngg->state->node_index <= py_ngg->state->node_count);
 
@@ -4946,6 +4968,9 @@ extern "C"
       {
       case seq_next:
         {
+          int size, rank;
+          assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
+          assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
 
           if ((py_ngg->state->edge_map_iter == py_ngg->state->edge_map.cend()) &&
               (py_ngg->state->node_index == py_ngg->state->node_count))
@@ -4958,6 +4983,8 @@ extern "C"
                 {
                   if (py_ngg->state->node_index == py_ngg->state->node_count)
                     {
+                      int status = MPI_Comm_free(&(py_ngg->state->comm));
+                      assert(status == MPI_SUCCESS);
                       py_ngg->state->pos = seq_last;
                     }
                   else
@@ -4994,6 +5021,8 @@ extern "C"
 
           if (py_ngg->state->node_index == py_ngg->state->node_count)
             {
+              int status = MPI_Comm_free(&(py_ngg->state->comm));
+              assert(status == MPI_SUCCESS);
               py_ngg->state->pos = seq_last;
             }
           else
