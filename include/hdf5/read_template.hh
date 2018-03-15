@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <vector>
+#include <utility>
 
 namespace neuroh5
 {
@@ -56,18 +57,34 @@ namespace neuroh5
       return ierr;
     }
 
-
+    
     template<class T>
-    herr_t read_serial
+    herr_t read_selection
     (
      hid_t              loc,
      const std::string& name,
-     const hsize_t&     len,
      hid_t              ntype,
+     std::vector< std::pair<hsize_t,hsize_t> >& ranges,
      std::vector<T>&    v,
      hid_t rapl
      )
     {
+      hsize_t len = 0;
+
+      vector <hsize_t> coords;
+      for ( const std::pair<hsize_t,hsize_t> &range : ranges )
+        {
+          hsize_t start = range.first;
+          hsize_t count = range.second;
+
+          for (hsize_t i = start; i<start+count; ++i)
+            {
+              coords.push_back(i);
+            }
+          
+          len += count;
+        }
+      assert(coords.size() == len);
       herr_t ierr = 0;
       hid_t mspace = H5Screate_simple(1, &len, NULL);
       assert(mspace >= 0);
@@ -80,7 +97,16 @@ namespace neuroh5
       // make hyperslab selection
       hid_t fspace = H5Dget_space(dset);
       assert(fspace >= 0);
-      ierr = H5Sselect_all(fspace);
+      hsize_t one = 1;
+      
+      if (len > 0)
+        {
+          ierr = H5Sselect_elements (fspace, H5S_SELECT_SET, len, (const hsize_t *)&coords[0]);
+        }
+      else
+        {
+          ierr = H5Sselect_none(fspace);
+        }
       assert(ierr >= 0);
 
       ierr = H5Dread(dset, ntype, mspace, fspace, rapl, &v[0]);
@@ -92,6 +118,7 @@ namespace neuroh5
     
       return ierr;
     }
+
     
   }
 }

@@ -149,6 +149,7 @@ namespace neuroh5
     template <typename T>
     herr_t read_cell_attribute_selection
     (
+     MPI_Comm                  comm,
      const hid_t&              loc,
      const std::string&        path,
      const CELL_IDX_T          pop_start,
@@ -160,11 +161,20 @@ namespace neuroh5
       herr_t status = 0;
       std::vector<ATTR_PTR_T> ptr;
       std::vector<CELL_IDX_T> index;
+
+      int size, rank;
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
       
       hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
       
       if (dset_size > 0)
         {
+          /* Create property list for collective dataset operations. */
+          hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+          status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+
+          
           string index_path = path + "/" + CELL_INDEX;
           string ptr_path = path + "/" + ATTR_PTR;
           string value_path = path + "/" + ATTR_VAL;
@@ -173,7 +183,7 @@ namespace neuroh5
           index.resize(dset_size);
 
           status = read<NODE_IDX_T> (loc, index_path, 0, dset_size,
-                                     NODE_IDX_H5_NATIVE_T, index, H5P_DEFAULT);
+                                     NODE_IDX_H5_NATIVE_T, index, rapl);
 
           // read pointer and determine ranges
           status = exists_dataset (loc, ptr_path);
@@ -181,16 +191,23 @@ namespace neuroh5
             {
               ptr.resize(dset_size+1);
               status = read<ATTR_PTR_T> (loc, ptr_path, 0, dset_size+1,
-                                         ATTR_PTR_H5_NATIVE_T, ptr, H5P_DEFAULT);
+                                         ATTR_PTR_H5_NATIVE_T, ptr, rapl);
               assert (status >= 0);
             }
 
           if (ptr.size() > 0)
             {
-              for (size_t s=0; s<selection.size(); s++)
-                {
-                  std::vector<T> value;
+              vector< pair<hsize_t,hsize_t> > selection_ranges;
+              mpi::rank_ranges(selection.size(), size, selection_ranges);
 
+              
+              hsize_t selection_start = selection_ranges[rank].first;
+              hsize_t selection_end = selection_start + selection_ranges[rank].second;
+
+              ATTR_PTR_T selection_ptr_pos = 0;
+              vector< pair<hsize_t,hsize_t> > ranges;
+              for (size_t s=selection_start; s<selection_end; s++)
+                {
                   auto it = std::find(index.begin(), index.end(), selection[s]-pop_start);
                   assert(it != index.end());
 
@@ -199,26 +216,28 @@ namespace neuroh5
                   hsize_t value_start=ptr[pos];
                   hsize_t value_block=ptr[pos+1]-value_start;
 
-                  // read values
-                  hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
-                  assert(dset >= 0);
-                  hid_t ftype = H5Dget_type(dset);
-                  assert(ftype >= 0);
-                  hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-                  assert(H5Dclose(dset)   >= 0);
-                  assert(H5Tclose(ftype)  >= 0);
-
-
-                  value.resize(value_block);
-                  status = read<T> (loc, value_path, value_start, value_block,
-                                    ntype, value, H5P_DEFAULT);
-            
-                  assert(H5Tclose(ntype)  >= 0);
-
-                  selection_ptr.push_back(values.size());
-                  values.insert(values.end(), value.begin(), value.end());
+                  selection_ptr.push_back(selection_ptr_pos);
+                  ranges.push_back(make_pair(value_start, value_block));
+                  selection_ptr_pos += value_block;
                 }
-              selection_ptr.push_back(values.size());
+              selection_ptr.push_back(selection_ptr_pos);
+              
+              // read values
+              hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
+              assert(dset >= 0);
+              hid_t ftype = H5Dget_type(dset);
+              assert(ftype >= 0);
+              hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
+              assert(H5Dclose(dset)   >= 0);
+              assert(H5Tclose(ftype)  >= 0);
+              
+              values.resize(selection_ptr_pos);
+              status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
+
+              status = H5Pclose(rapl);
+              assert(status == 0);
+              
+              assert(H5Tclose(ntype)  >= 0);
             }
         }
       

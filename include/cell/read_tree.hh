@@ -29,6 +29,7 @@ namespace neuroh5
 
     int read_tree_selection
     (
+     MPI_Comm comm,
      const std::string& file_name,
      const std::string& pop_name,
      const CELL_IDX_T& pop_start,
