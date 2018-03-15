@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from neuroh5.io import read_population_ranges, append_cell_attributes, bcast_cell_attributes, NeuroH5TreeGen, NeuroH5CellAttrGen
+from neuroh5.io import read_population_ranges, NeuroH5TreeGen, NeuroH5CellAttrGen
 
 # import mkl
 import sys
@@ -13,31 +13,24 @@ if rank == 0:
     print '%i ranks have been allocated' % comm.size
 sys.stdout.flush()
 
-neurotrees_dir = 'data/'
+neurotrees_dir = 'datasets/Test_GC_1000/'
 # neurotrees_dir = os.environ['PI_SCRATCH']+'/DGC_forest/hdf5/'
 # neurotrees_dir = os.environ['PI_HOME']+'/'
-forest_file = 'DGC_forest_connectivity_040617.h5'
-test_file = 'DGC_forest_syns_test_012717.h5'
-
-# synapse_dict = read_from_pkl(neurotrees_dir+'010117_GC_test_synapse_attrs.pkl')
-#synapse_dict = read_cell_attributes(comm, neurotrees_dir+forest_file, 'GC',
-#                                    namespace='Synapse_Attributes')
-
-coords_dir = 'data/'
-# coords_dir = os.environ['PI_SCRATCH']+'/DG/'
-# coords_dir = os.environ['PI_HOME']+'/Full_Scale_Control/'
-coords_file = 'dentate_Full_Scale_Control_coords_compressed.h5'
+forest_file = 'DGC_forest_test_syns_20171019.h5'
 
 
-g = NeuroH5CellAttrGen(neurotrees_dir+test_file, 'GC', io_size=comm.size,
-                     namespace='Synapse_Attributes')
+g = NeuroH5CellAttrGen(neurotrees_dir+forest_file, 'GC', comm=comm, io_size=comm.size,
+                     namespace='Synapse Attributes')
 global_count = 0
 count = 0
-for target_gid, synapse_dict in g:
-    print 'Rank: %i, gid: %i, count: %i' % (rank, target_gid, count)
-    count += 1
+for destination_gid, synapse_dict in g:
+    if destination_gid is None:
+        print ('Rank %i destination gid is None' % rank)
+    else:
+        print 'Rank: %i, gid: %i, count: %i' % (rank, destination_gid, count)
+        count += 1
 global_count = comm.gather(count, root=0)
 if rank == 0:
     print 'Total: %i' % np.sum(global_count)
 
-test = bcast_cell_attributes(0, coords_dir+coords_file, 'GC', namespace='Coordinates')
+

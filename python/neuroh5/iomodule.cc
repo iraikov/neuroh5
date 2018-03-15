@@ -2942,23 +2942,23 @@ extern "C"
 
     vector<neurotree_t> tree_vector;
 
-    status = cell::read_tree_selection (string(file_name),
+    status = cell::read_tree_selection (comm, string(file_name),
                                         string(pop_name), pop_vector[pop_idx].start,
                                         tree_vector, selection);
     assert (status >= 0);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     map <string, NamedAttrMap> attr_maps;
     
     for (string attr_namespace : attr_name_spaces)
       {
         data::NamedAttrMap attr_map;
-        cell::read_cell_attribute_selection(string(file_name), 
+        cell::read_cell_attribute_selection(comm, string(file_name), 
                                             attr_namespace, pop_name,
                                             pop_vector[pop_idx].start,
                                             selection, attr_map);
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
                                                         attr_name_spaces,
@@ -3260,7 +3260,6 @@ extern "C"
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
@@ -3284,11 +3283,12 @@ extern "C"
       }
 
     NamedAttrMap attr_values;
-    cell::read_cell_attribute_selection (string(file_name), string(attr_namespace),
+    cell::read_cell_attribute_selection (comm, string(file_name), string(attr_namespace),
                                          string(pop_name), pop_vector[pop_idx].start,
                                          selection, attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
                                                         attr_names,

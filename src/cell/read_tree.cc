@@ -92,6 +92,7 @@ namespace neuroh5
      *****************************************************************************/
     int read_tree_selection
     (
+     MPI_Comm comm,
      const std::string& file_name,
      const std::string& pop_name,
      const CELL_IDX_T& pop_start,
@@ -101,7 +102,7 @@ namespace neuroh5
     {
       data::NamedAttrMap attr_values;
       
-      read_cell_attribute_selection (file_name, hdf5::TREES,
+      read_cell_attribute_selection (comm, file_name, hdf5::TREES,
                                      pop_name, pop_start, 
                                      selection, attr_values);
 

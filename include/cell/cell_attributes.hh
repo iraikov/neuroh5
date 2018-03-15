@@ -72,6 +72,7 @@ namespace neuroh5
 
     void read_cell_attribute_selection
     (
+     MPI_Comm         comm,
      const string& file_name,
      const string& name_space,
      const string& pop_name,
