@@ -766,15 +766,12 @@ namespace neuroh5
 	  const edge_tuple_t& et = iter.second;
           const vector<NODE_IDX_T>& v = get<0>(et);
           const vector<data::AttrVal>& a = get<1>(et);
-	  if (v.size() > 0)
-	    {
-              size_t ni=0;
-              for (auto const& attr_values : a)
-                {
-                  const string & attr_namespace = edge_attr_name_spaces[ni];
-                  edge_attr_map[attr_namespace].append(attr_values);
-                  ni++;
-                }
+          size_t ni=0;
+          for (auto const& attr_values : a)
+            {
+              const string & attr_namespace = edge_attr_name_spaces[ni];
+              edge_attr_map[attr_namespace].append(attr_values);
+              ni++;
             }
 	}
       append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
