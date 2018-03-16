@@ -545,7 +545,6 @@ namespace neuroh5
               num_block_edges += v.size();
             }
         }
-      dst_ptr.push_back(num_prj_edges);
       assert(num_edges == src_idx.size());
 
       size_t sum_num_edges = 0;
@@ -648,7 +647,12 @@ namespace neuroh5
             }
         }
 
-      size_t s = 0;
+      if (rank == last_rank) // only the last rank writes an additional element
+        {
+          dst_ptr.push_back(num_prj_edges);
+        }
+
+      size_t s = src_idx_size;
       for (size_t p = 0; p < rank; ++p)
         {
           s += recvbuf_num_edge[p];
@@ -656,14 +660,8 @@ namespace neuroh5
 
       for (size_t idst = 0; idst < dst_ptr.size(); ++idst)
         {
-          dst_ptr[idst] += s + src_idx_size;
+          dst_ptr[idst] += s;
         }
-
-      if (rank != last_rank) // only the last rank writes an additional element
-        {
-          dst_ptr.resize(num_dest);
-        }
-
       
       size_t total_num_blocks=0;
       for (size_t p=0; p<size; p++)
@@ -719,8 +717,8 @@ namespace neuroh5
          src_pop_name, dst_pop_name,
          src_start, src_end,
          dst_start, dst_end,
-         total_num_dests,
-         chunk_size, block_size, dst_ptr_size,
+         total_num_dests, dst_ptr_size,
+         chunk_size, block_size, 
          collective,
          recvbuf_num_dest,
          dst_ptr
@@ -735,8 +733,8 @@ namespace neuroh5
          src_pop_name, dst_pop_name,
          src_start, src_end,
          dst_start, dst_end,
-         total_num_edges,
-         chunk_size, block_size, dst_ptr_size,
+         total_num_edges, src_idx_size,
+         chunk_size, block_size, 
          collective,
          recvbuf_num_edge,
          src_idx
@@ -750,14 +748,6 @@ namespace neuroh5
           const string & attr_namespace = iter.first;
           const vector <vector <string> >& attr_names = iter.second;
 
-          for (size_t ti = 0; ti < attr_names.size(); ti++)
-            {
-              for (string attr_name : attr_names[ti])
-                {
-                  mpi::MPI_DEBUG(comm, "append_projection: ", attr_namespace, " :: ", attr_name, "\n");
-                }
-            }
-          
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           
           edge_attr_values.float_values.resize(attr_names[data::AttrVal::attr_index_float].size());
