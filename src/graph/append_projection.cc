@@ -9,6 +9,7 @@
 #include "write_template.hh"
 #include "edge_attributes.hh"
 #include "mpe_seq.hh"
+#include "mpi_debug.hh"
 
 #include <algorithm>
 #include <cassert>
@@ -21,7 +22,455 @@ namespace neuroh5
   namespace graph
   {
 
+    void append_dst_blk_idx
+    (
+     size_t                    rank,
+     hid_t                     file,
+     const string&             src_pop_name,
+     const string&             dst_pop_name,
+     const NODE_IDX_T&         src_start,
+     const NODE_IDX_T&         src_end,
+     const NODE_IDX_T&         dst_start,
+     const NODE_IDX_T&         dst_end,
+     const hsize_t&            num_blocks,
+     const hsize_t&            total_num_blocks,
+     const hsize_t&            dst_blk_idx_size,
+     const hsize_t             chunk_size,
+     const hsize_t             block_size,
+     const bool                collective,
+     vector<size_t>&           recvbuf_num_blocks,
+     vector<NODE_IDX_T>&       dst_blk_idx
+     )
+    {
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+      assert(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      hid_t wapl = H5P_DEFAULT;
+      if (collective)
+	{
+	  wapl = H5Pcreate(H5P_DATASET_XFER);
+	  assert(wapl >= 0);
+	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	}
 
+      hsize_t chunk = chunk_size;
+      assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hsize_t zerodims[1] = {0};
+
+      // do a sanity check on the input
+      assert(src_start < src_end);
+      assert(dst_start < dst_end);
+
+      
+      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
+      hsize_t dst_blk_idx_dims = total_num_blocks, one=1;
+
+      hid_t dset, fspace;
+      
+      if (!(hdf5::exists_dataset (file, path) > 0))
+        {
+          fspace = H5Screate_simple(1, zerodims, maxdims);
+          assert(fspace >= 0);
+	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+          dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
+                            lcpl, dcpl, H5P_DEFAULT);
+          assert(dset >= 0);
+        }
+      else
+        {
+          dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+      
+          fspace = H5Dget_space(dset);
+          assert(fspace >= 0);
+        }
+                                                            
+      hsize_t dst_blk_idx_start = dst_blk_idx_size;
+      hsize_t dst_blk_idx_newsize = dst_blk_idx_start + dst_blk_idx_dims;
+      if (dst_blk_idx_newsize > 0)
+        {
+          herr_t ierr = H5Dset_extent (dset, &dst_blk_idx_newsize);
+          assert(ierr >= 0);
+        }
+      assert(H5Sclose(fspace) >= 0);
+
+      hsize_t block = num_blocks;
+      
+      hid_t mspace  = H5Screate_simple(1, &block, &block);
+      assert(mspace >= 0);
+      assert(H5Sselect_all(mspace) >= 0);
+      hsize_t start = dst_blk_idx_start;
+      for (size_t p = 0; p < rank; ++p)
+        {
+          start += recvbuf_num_blocks[p];
+        }
+        
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      if (block > 0)
+	{
+	  assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+				     &one, &block) >= 0);
+	}
+      else
+	{
+          assert(H5Sselect_none(fspace) >= 0);
+	}
+      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
+		      wapl, &dst_blk_idx[0]) >= 0);
+
+      // clean-up
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+      assert(H5Sclose(fspace) >= 0);
+
+      assert(H5Pclose(lcpl) >= 0);
+      assert(H5Pclose(dcpl) >= 0);
+      assert(H5Pclose(wapl) >= 0);
+
+    }
+
+
+    void append_dst_blk_ptr
+    (
+     size_t                    rank,
+     hid_t                     file,
+     const string&             src_pop_name,
+     const string&             dst_pop_name,
+     const NODE_IDX_T&         src_start,
+     const NODE_IDX_T&         src_end,
+     const NODE_IDX_T&         dst_start,
+     const NODE_IDX_T&         dst_end,
+     const hsize_t&            num_blocks,
+     const hsize_t&            total_num_blocks,
+     const hsize_t&            dst_blk_ptr_size,
+     const hsize_t             chunk_size,
+     const hsize_t             block_size,
+     const bool                collective,
+     vector<size_t>&           recvbuf_num_blocks,
+     vector<DST_BLK_PTR_T>&    dst_blk_ptr
+     )
+    {
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+      assert(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      hid_t wapl = H5P_DEFAULT;
+      if (collective)
+	{
+	  wapl = H5Pcreate(H5P_DATASET_XFER);
+	  assert(wapl >= 0);
+	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	}
+
+      hsize_t chunk = chunk_size;
+      assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hsize_t zerodims[1] = {0};
+
+
+      hsize_t dst_blk_ptr_start = 0;
+      if (dst_blk_ptr_size > 0)
+        {
+          dst_blk_ptr_start = dst_blk_ptr_size - 1;
+        }
+      
+      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
+
+      hid_t dset, fspace;
+
+      hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1, one=1;
+      if (!(hdf5::exists_dataset (file, path) > 0))
+        {
+          fspace = H5Screate_simple(1, zerodims, maxdims);
+          assert(fspace >= 0);
+
+	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+
+          dset = H5Dcreate2 (file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
+                             fspace, lcpl, dcpl, H5P_DEFAULT);
+          assert(H5Sclose(fspace) >= 0);
+        }
+      else
+        {
+          dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+        }
+
+      hsize_t dst_blk_ptr_newsize = dst_blk_ptr_start + dst_blk_ptr_dims;
+      if (dst_blk_ptr_newsize > 0)
+        {
+          herr_t ierr = H5Dset_extent (dset, &dst_blk_ptr_newsize);
+          assert(ierr >= 0);
+        }
+
+      hsize_t block = dst_blk_ptr.size();
+
+      hid_t mspace  = H5Screate_simple(1, &block, &block);
+      assert(mspace >= 0);
+      assert(H5Sselect_all(mspace) >= 0);
+
+      hsize_t start = dst_blk_ptr_start;
+      for (size_t p = 0; p < rank; ++p)
+        {
+          start += recvbuf_num_blocks[p];
+        }
+
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      if (block > 0)
+        {
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
+      assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
+                      wapl, &dst_blk_ptr[0]) >= 0);
+
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+      assert(H5Sclose(fspace) >= 0);
+
+      assert(H5Pclose(lcpl) >= 0);
+      assert(H5Pclose(dcpl) >= 0);
+      assert(H5Pclose(wapl) >= 0);
+    }
+
+
+    void append_dst_ptr
+    (
+     size_t                    rank,
+     hid_t                     file,
+     const string&             src_pop_name,
+     const string&             dst_pop_name,
+     const NODE_IDX_T&         src_start,
+     const NODE_IDX_T&         src_end,
+     const NODE_IDX_T&         dst_start,
+     const NODE_IDX_T&         dst_end,
+     const hsize_t&            total_num_dests,
+     const hsize_t&            dst_ptr_size,
+     const hsize_t             chunk_size,
+     const hsize_t             block_size,
+     const bool                collective,
+     vector<size_t>&           recvbuf_num_dest,
+     vector<DST_PTR_T>&    dst_ptr
+     )
+    {
+
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+      assert(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      hid_t wapl = H5P_DEFAULT;
+      if (collective)
+	{
+	  wapl = H5Pcreate(H5P_DATASET_XFER);
+	  assert(wapl >= 0);
+	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	}
+
+      hsize_t chunk = chunk_size;
+      assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hsize_t zerodims[1] = {0};
+
+      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);
+      hsize_t dst_ptr_dims = total_num_dests+1, one=1;
+
+      hid_t dset, fspace;
+      
+      if (!(hdf5::exists_dataset (file, path) > 0))
+        {
+          fspace = H5Screate_simple(1, zerodims, maxdims);
+          assert(fspace >= 0);
+
+	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+
+          dset = H5Dcreate2 (file, path.c_str(), DST_PTR_H5_FILE_T,
+                             fspace, lcpl, dcpl, H5P_DEFAULT);
+          assert(dset >= 0);
+          assert(H5Sclose(fspace) >= 0);
+        }
+      else
+        {
+          dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+
+        }
+
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+      hsize_t dst_ptr_start = 0;
+      if (dst_ptr_size > 0)
+        {
+          dst_ptr_start = dst_ptr_size-1;
+        }
+      
+      assert(H5Sclose(fspace) >= 0);
+
+      hsize_t dst_ptr_newsize = dst_ptr_start + dst_ptr_dims;
+      if (dst_ptr_newsize > 0)
+        {
+          herr_t ierr = H5Dset_extent (dset, &dst_ptr_newsize);
+          assert(ierr >= 0);
+        }
+
+      hsize_t block = (hsize_t) dst_ptr.size();
+      hid_t mspace = H5Screate_simple(1, &block, &block);
+      assert(mspace >= 0);
+      assert(H5Sselect_all(mspace) >= 0);
+      
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+
+      hsize_t start=0;
+      if (block > 0)
+        {
+          start = dst_ptr_start;
+          for (size_t p = 0; p < rank; ++p)
+            {
+              start += recvbuf_num_dest[p];
+            }
+
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
+
+      assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
+                      wapl, &dst_ptr[0]) >= 0);
+
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+      assert(H5Sclose(fspace) >= 0);
+
+      assert(H5Pclose(lcpl) >= 0);
+      assert(H5Pclose(dcpl) >= 0);
+      assert(H5Pclose(wapl) >= 0);
+
+    }
+
+
+    void append_src_idx
+    (
+     size_t                    rank,
+     hid_t                     file,
+     const string&             src_pop_name,
+     const string&             dst_pop_name,
+     const NODE_IDX_T&         src_start,
+     const NODE_IDX_T&         src_end,
+     const NODE_IDX_T&         dst_start,
+     const NODE_IDX_T&         dst_end,
+     const hsize_t&            total_num_edges,
+     const hsize_t&            src_idx_size,
+     const hsize_t             chunk_size,
+     const hsize_t             block_size,
+     const bool                collective,
+     vector<size_t>&           recvbuf_num_edge,
+     vector<NODE_IDX_T>        src_idx
+     )
+    {
+
+      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+      assert(lcpl >= 0);
+      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+      assert(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      hid_t wapl = H5P_DEFAULT;
+      if (collective)
+	{
+	  wapl = H5Pcreate(H5P_DATASET_XFER);
+	  assert(wapl >= 0);
+	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	}
+
+      hsize_t chunk = chunk_size;
+      assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hsize_t zerodims[1] = {0};
+    
+
+      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX);
+      hsize_t src_idx_dims = total_num_edges, one=1;
+
+      hid_t dset, fspace;
+      
+      if (!(hdf5::exists_dataset (file, path) > 0))
+        {
+          fspace = H5Screate_simple(1, zerodims, maxdims);
+          assert(fspace >= 0);
+
+	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+
+          dset = H5Dcreate2 (file, path.c_str(), NODE_IDX_H5_FILE_T,
+                             fspace, lcpl, dcpl, H5P_DEFAULT);
+          assert(dset >= 0);
+        }
+      else
+        {
+          dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+          fspace = H5Dget_space(dset);
+          assert(fspace >= 0);
+        }
+
+      hsize_t src_idx_start = src_idx_size;
+      assert(H5Sclose(fspace) >= 0);
+
+      hsize_t src_idx_newsize = src_idx_start + src_idx_dims;
+      if (src_idx_newsize > 0)
+        {
+          herr_t ierr = H5Dset_extent (dset, &src_idx_newsize);
+          assert(ierr >= 0);
+        }
+
+      hsize_t block = (hsize_t) src_idx.size();
+      hid_t mspace = H5Screate_simple(1, &block, &block);
+      assert(mspace >= 0);
+      assert(H5Sselect_all(mspace) >= 0);
+
+      fspace = H5Dget_space(dset);
+      assert(fspace >= 0);
+
+      hsize_t start = 0;
+      if (block > 0)
+        {
+          start = src_idx_start;
+          for (size_t p = 0; p < rank; ++p)
+            {
+              start += recvbuf_num_edge[p];
+            }
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                     &one, &block) >= 0);
+        }
+      else
+        {
+          assert(H5Sselect_none(fspace) >= 0);
+        }
+      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
+                      wapl, &src_idx[0]) >= 0);
+
+      assert(H5Dclose(dset) >= 0);
+      assert(H5Sclose(mspace) >= 0);
+      assert(H5Sclose(fspace) >= 0);
+
+      assert(H5Pclose(lcpl) >= 0);
+      assert(H5Pclose(dcpl) >= 0);
+      assert(H5Pclose(wapl) >= 0);
+    }
+    
+    
     void append_projection
     (
      hid_t                     file,
@@ -114,20 +563,32 @@ namespace neuroh5
         }
       
 
-      hsize_t dst_blk_idx_size = 0, dst_ptr_size = 0, src_idx_size = 0;
-      
+
+      hsize_t dst_blk_ptr_size = 0;
+      hdf5::size_edge_attributes(file,
+                                 src_pop_name,
+                                 dst_pop_name,
+                                 hdf5::EDGES,
+                                 hdf5::DST_BLK_PTR,
+                                 dst_blk_ptr_size);
+
+      hsize_t dst_blk_idx_size = 0;
       hdf5::size_edge_attributes(file,
                                  src_pop_name,
                                  dst_pop_name,
                                  hdf5::EDGES,
                                  hdf5::DST_BLK_IDX,
                                  dst_blk_idx_size);
+
+      hsize_t dst_ptr_size = 0; 
       hdf5::size_edge_attributes(file,
                                  src_pop_name,
                                  dst_pop_name,
                                  hdf5::EDGES,
                                  hdf5::DST_PTR,
                                  dst_ptr_size);
+
+      hsize_t src_idx_size = 0;
       hdf5::size_edge_attributes(file,
                                  src_pop_name,
                                  dst_pop_name,
@@ -167,112 +628,7 @@ namespace neuroh5
 	    }
 	}
 
-      hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
-      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-      assert(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
-      hsize_t chunk = chunk_size;
-      assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-      hsize_t maxdims[1] = {H5S_UNLIMITED};
-      hsize_t zerodims[1] = {0};
-      
-      size_t total_num_blocks=0;
-      for (size_t p=0; p<size; p++)
-        {
-          total_num_blocks = total_num_blocks + recvbuf_num_blocks[p];
-        }
-
-      size_t total_num_dests=0;
-      for (size_t p=0; p<size; p++)
-        {
-          total_num_dests = total_num_dests + recvbuf_num_dest[p];
-        }
-
-      size_t total_num_edges=0;
-      for (size_t p=0; p<size; p++)
-        {
-          total_num_edges = total_num_edges + recvbuf_num_edge[p];
-        }
-
-      hid_t wapl = H5P_DEFAULT;
-      if (collective)
-	{
-	  wapl = H5Pcreate(H5P_DATASET_XFER);
-	  assert(wapl >= 0);
-	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
-	}
-
-      
-      string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
-      hsize_t dst_blk_idx_dims = total_num_blocks, one=1;
-
-      hid_t dset; hid_t fspace;
-      
-      if (!(hdf5::exists_dataset (file, path) > 0))
-        {
-          fspace = H5Screate_simple(1, zerodims, maxdims);
-          assert(fspace >= 0);
-	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-          dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
-                            lcpl, dcpl, H5P_DEFAULT);
-          assert(dset >= 0);
-        }
-      else
-        {
-          dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
-          assert(dset >= 0);
-      
-          fspace = H5Dget_space(dset);
-          assert(fspace >= 0);
-        }
-
-                                                            
-      hsize_t dst_blk_idx_start = dst_blk_idx_size;
-      hsize_t dst_blk_idx_newsize = dst_blk_idx_start + dst_blk_idx_dims;
-      if (dst_blk_idx_newsize > 0)
-        {
-          herr_t ierr = H5Dset_extent (dset, &dst_blk_idx_newsize);
-          assert(ierr >= 0);
-        }
-      assert(H5Sclose(fspace) >= 0);
-
-      hsize_t block = num_blocks;
-
-
-      
-      hid_t mspace  = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
-      hsize_t start = dst_blk_idx_start;
-      for (size_t p = 0; p < rank; ++p)
-        {
-          start += recvbuf_num_blocks[p];
-        }
-        
-      fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
-      if (block > 0)
-	{
-	  assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-				     &one, &block) >= 0);
-	}
-      else
-	{
-          assert(H5Sselect_none(fspace) >= 0);
-	}
-      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
-		      wapl, &dst_blk_idx[0]) >= 0);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
-
-      /*
-        vector<NODE_IDX_T> v_dst_start(1, dst_start);         
-        write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
-      */
-
-      if (block > 0)
+      if (num_blocks > 0)
         {
           if (dst_ptr_size > 0)
             {
@@ -292,78 +648,6 @@ namespace neuroh5
             }
         }
 
-      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
-      hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
-      if (!(hdf5::exists_dataset (file, path) > 0))
-        {
-          fspace = H5Screate_simple(1, zerodims, maxdims);
-          assert(fspace >= 0);
-
-	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-
-          dset = H5Dcreate2 (file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
-                             fspace, lcpl, dcpl, H5P_DEFAULT);
-          assert(H5Sclose(fspace) >= 0);
-        }
-      else
-        {
-          dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
-          assert(dset >= 0);
-        }
-
-      hsize_t dst_blk_ptr_newsize = dst_blk_idx_start + dst_blk_ptr_dims;
-      if (dst_blk_ptr_newsize > 0)
-        {
-          herr_t ierr = H5Dset_extent (dset, &dst_blk_ptr_newsize);
-          assert(ierr >= 0);
-        }
-
-      if (rank == last_rank)
-        {
-	  if (num_blocks > 0)
-	    block = num_blocks+1;
-        }
-      else
-        {
-          block = num_blocks;
-        }
-
-      mspace  = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
-
-      start = dst_blk_idx_start;
-      for (size_t p = 0; p < rank; ++p)
-        {
-          start += recvbuf_num_blocks[p];
-        }
-
-      fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
-      if (block > 0)
-        {
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                     &one, &block) >= 0);
-        }
-      else
-        {
-          assert(H5Sselect_none(fspace) >= 0);
-        }
-      assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
-                      wapl, &dst_blk_ptr[0]) >= 0);
-
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
-
-      /*
-
-        write(file, path, DST_BLK_PTR_H5_FILE_T, dbp);
-      */
-        
-
-      // write destination pointers
-      // # dest. pointers = number of destinations + 1
       size_t s = 0;
       for (size_t p = 0; p < rank; ++p)
         {
@@ -379,144 +663,84 @@ namespace neuroh5
         {
           dst_ptr.resize(num_dest);
         }
-      
-      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);
-      hsize_t dst_ptr_dims = total_num_dests+1;
-
-      if (!(hdf5::exists_dataset (file, path) > 0))
-        {
-          fspace = H5Screate_simple(1, zerodims, maxdims);
-          assert(fspace >= 0);
-
-	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-
-          dset = H5Dcreate2 (file, path.c_str(), DST_PTR_H5_FILE_T,
-                             fspace, lcpl, dcpl, H5P_DEFAULT);
-          assert(dset >= 0);
-          assert(H5Sclose(fspace) >= 0);
-        }
-      else
-        {
-          dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
-          assert(dset >= 0);
-
-        }
-
-      fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
-      hsize_t dst_ptr_start = dst_ptr_size;
-      if (dst_ptr_start > 0)
-        dst_ptr_start--;
-      assert(H5Sclose(fspace) >= 0);
-
-      hsize_t dst_ptr_newsize = dst_ptr_start + dst_ptr_dims;
-      if (dst_ptr_newsize > 0)
-        {
-          herr_t ierr = H5Dset_extent (dset, &dst_ptr_newsize);
-          assert(ierr >= 0);
-        }
-
-      block = (hsize_t) dst_ptr.size();
-      mspace = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
 
       
-      fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
-      if (block > 0)
+      size_t total_num_blocks=0;
+      for (size_t p=0; p<size; p++)
         {
-          start = dst_ptr_start;
-          for (size_t p = 0; p < rank; ++p)
-            {
-              start += recvbuf_num_dest[p];
-            }
-
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                     &one, &block) >= 0);
-        }
-      else
-        {
-          assert(H5Sselect_none(fspace) >= 0);
+          total_num_blocks = total_num_blocks + recvbuf_num_blocks[p];
         }
 
-      assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
-                      wapl, &dst_ptr[0]) >= 0);
+      size_t total_num_dests=0;
+      for (size_t p=0; p<size; p++)
+        {
+          total_num_dests = total_num_dests + recvbuf_num_dest[p];
+        }
 
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
+      size_t total_num_edges=0;
+      for (size_t p=0; p<size; p++)
+        {
+          total_num_edges = total_num_edges + recvbuf_num_edge[p];
+        }
+
+      append_dst_blk_idx
+        (
+         rank, file,
+         src_pop_name, dst_pop_name,
+         src_start, src_end, dst_start, dst_end,
+         num_blocks, total_num_blocks, dst_blk_idx_size,
+         chunk_size, block_size, collective,
+         recvbuf_num_blocks,
+         dst_blk_idx
+         );
 
       /*
-        write(file, path, DST_PTR_H5_FILE_T, dst_ptr);
+        vector<NODE_IDX_T> v_dst_start(1, dst_start);         
+        write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
       */
+
+      append_dst_blk_ptr
+        (
+         rank, file,
+         src_pop_name, dst_pop_name,
+         src_start, src_end, dst_start, dst_end,
+         num_blocks, total_num_blocks, dst_blk_ptr_size,
+         chunk_size, block_size, collective,
+         recvbuf_num_blocks,
+         dst_blk_ptr
+         );
+      
+
+      // write destination pointers
+      // # dest. pointers = number of destinations + 1
+      append_dst_ptr
+        (
+         rank, file,
+         src_pop_name, dst_pop_name,
+         src_start, src_end,
+         dst_start, dst_end,
+         total_num_dests,
+         chunk_size, block_size, dst_ptr_size,
+         collective,
+         recvbuf_num_dest,
+         dst_ptr
+         );
 
       // write source index
       // # source indexes = number of edges
 
-      path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX);
-      hsize_t src_idx_dims = total_num_edges;
-
-      if (!(hdf5::exists_dataset (file, path) > 0))
-        {
-          fspace = H5Screate_simple(1, zerodims, maxdims);
-          assert(fspace >= 0);
-
-	  assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-
-          dset = H5Dcreate2 (file, path.c_str(), NODE_IDX_H5_FILE_T,
-                             fspace, lcpl, dcpl, H5P_DEFAULT);
-          assert(dset >= 0);
-        }
-      else
-        {
-          dset = H5Dopen2(file, path.c_str(), H5P_DEFAULT);
-          assert(dset >= 0);
-          fspace = H5Dget_space(dset);
-          assert(fspace >= 0);
-        }
-
-      hsize_t src_idx_start = src_idx_size;
-      assert(H5Sclose(fspace) >= 0);
-
-      hsize_t src_idx_newsize = src_idx_start + src_idx_dims;
-      if (src_idx_newsize > 0)
-        {
-          herr_t ierr = H5Dset_extent (dset, &src_idx_newsize);
-          assert(ierr >= 0);
-        }
-
-      block = (hsize_t) src_idx.size();
-      mspace = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
-
-      fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
-      if (block > 0)
-        {
-          start = src_idx_start;
-          for (size_t p = 0; p < rank; ++p)
-            {
-              start += recvbuf_num_edge[p];
-            }
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                     &one, &block) >= 0);
-        }
-      else
-        {
-          assert(H5Sselect_none(fspace) >= 0);
-        }
-      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
-                      wapl, &src_idx[0]) >= 0);
-
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
-
-      /*
-        write(file, path, NODE_IDX_H5_FILE_T, src_idx);
-      */
+      append_src_idx
+        (
+         rank, file,
+         src_pop_name, dst_pop_name,
+         src_start, src_end,
+         dst_start, dst_end,
+         total_num_edges,
+         chunk_size, block_size, dst_ptr_size,
+         collective,
+         recvbuf_num_edge,
+         src_idx
+         );
 
       vector <string> edge_attr_name_spaces;
       map <string, data::NamedAttrVal> edge_attr_map;
@@ -526,6 +750,14 @@ namespace neuroh5
           const string & attr_namespace = iter.first;
           const vector <vector <string> >& attr_names = iter.second;
 
+          for (size_t ti = 0; ti < attr_names.size(); ti++)
+            {
+              for (string attr_name : attr_names[ti])
+                {
+                  mpi::MPI_DEBUG(comm, "append_projection: ", attr_namespace, " :: ", attr_name, "\n");
+                }
+            }
+          
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           
           edge_attr_values.float_values.resize(attr_names[data::AttrVal::attr_index_float].size());
@@ -571,9 +803,6 @@ namespace neuroh5
                                          edge_attr_map, edge_attr_names);
         
       // clean-up
-      assert(H5Pclose(lcpl) >= 0);
-      assert(H5Pclose(dcpl) >= 0);
-      assert(H5Pclose(wapl) >= 0);
 
       assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
       if (info != MPI_INFO_NULL)
