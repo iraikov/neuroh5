@@ -4209,7 +4209,7 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OiOk", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OiOi", (char **)kwlist,
                                      &file_name, &src_pop_name, &dst_pop_name, 
                                      &py_attr_name_spaces, &opt_edge_map_type,
                                      &py_comm, &cache_size))
