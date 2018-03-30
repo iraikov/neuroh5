@@ -122,7 +122,14 @@ namespace neuroh5
             block = stop - start + 1;
           else
             block = 0;
-          local_read_blocks = block-1;
+          if (block > 0)
+            {
+              local_read_blocks = block-1;
+            }
+          else
+            {
+              local_read_blocks = 0;
+            }
           
           mpi::MPI_DEBUG(comm, "read_projection_datasets: ", "offset = ", offset,
                          " num_blocks = ", num_blocks, " read_blocks = ", read_blocks, 
