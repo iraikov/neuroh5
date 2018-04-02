@@ -3097,7 +3097,6 @@ extern "C"
                                                      attr_map);
         assert (status >= 0);
 
-        assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
         vector<vector<string>> attr_names;
         attr_map.attr_names(attr_names);
@@ -3109,6 +3108,7 @@ extern "C"
         PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_idx_iter);
         Py_DECREF(py_idx_iter);
       }
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
     return py_namespace_dict;
   }
