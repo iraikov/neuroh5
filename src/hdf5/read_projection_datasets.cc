@@ -131,9 +131,6 @@ namespace neuroh5
               local_read_blocks = 0;
             }
           
-          mpi::MPI_DEBUG(comm, "read_projection_datasets: ", "offset = ", offset,
-                         " num_blocks = ", num_blocks, " read_blocks = ", read_blocks, 
-                         " start = ", start, " stop = ", stop, ", block = ", block);
 
           DST_BLK_PTR_T block_rebase = 0;
 
@@ -160,12 +157,6 @@ namespace neuroh5
           // rebase the block_ptr array to local offsets
           // REBASE is going to be the start offset for the hyperslab
           
-          if (dst_blk_ptr.size() > 0)
-            {
-              mpi::MPI_DEBUG(comm,"read_projection_datasets: ", 
-                             " dst_blk_ptr.front() = ", dst_blk_ptr.front(),
-                             " dst_blk_ptr.back() = ", dst_blk_ptr.back());
-            }
       
           if (block > 0)
             {
@@ -181,8 +172,6 @@ namespace neuroh5
               block_rebase = 0;
             }
 
-          mpi::MPI_DEBUG(comm, "read_projection_datasets: ","block_rebase = ", block_rebase);
-
           // read destination block indices
           hsize_t dst_idx_block=0;
           
@@ -195,9 +184,6 @@ namespace neuroh5
               dst_idx.resize(dst_idx_block, 0);
             }
           
-          mpi::MPI_DEBUG(comm, "read_projection_datasets: ", 
-                         " dst_idx: block = ", dst_idx_block, 
-                         " dst_idx: start = ", start);
           
           ierr = hdf5::read<NODE_IDX_T>
             (
@@ -223,8 +209,6 @@ namespace neuroh5
                 }
             }
           
-          mpi::MPI_DEBUG(comm, "read_projection_datasets: dst_ptr: start = ", dst_ptr_start, 
-                " dst_ptr: block = ", dst_ptr_block);
 
           if (dst_ptr_block > 0)
             {
@@ -243,13 +227,6 @@ namespace neuroh5
              );
           assert(ierr >= 0);
           
-          if (dst_ptr.size() > 0)
-            {
-              mpi::MPI_DEBUG(comm, "read_projection_datasets: rank ", rank, ": ", 
-                             " dst_ptr.front() = ", dst_ptr.front(),
-                             " dst_ptr.back() = ", dst_ptr.back());
-            }
-
           DST_PTR_T dst_rebase = 0;
           
           hsize_t src_idx_block=0, src_idx_start=0;
@@ -290,7 +267,6 @@ namespace neuroh5
           ierr = H5Pclose(rapl);
           assert(ierr == 0);
           
-          mpi::MPI_DEBUG(comm, "read_projection_datasets done");
         }
 
 
