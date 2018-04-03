@@ -2414,6 +2414,19 @@ extern "C"
 
     int root = 0;
 
+    vector< pair<pop_t, string> > pop_labels;
+    status = cell::read_population_labels(comm, input_file_name, pop_labels);
+    assert (status >= 0);
+
+    size_t n_nodes;
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    assert(cell::read_population_ranges(comm,
+                                        string(input_file_name),
+                                        pop_ranges, pop_vector,
+                                        n_nodes) >= 0);
+
+    
     map<string, map<string, vector<string> > > pop_attribute_info;
     map<string, map<string, map <string, vector<CELL_IDX_T> > > > cell_index_info;
     if (rank == (unsigned int)root)
@@ -2421,6 +2434,22 @@ extern "C"
 
         for (const string& pop_name : pop_names)
           {
+            // Determine index of population to be read
+            size_t pop_idx=0; bool pop_idx_set=false;
+            for (size_t i=0; i<pop_labels.size(); i++)
+              {
+                if (get<1>(pop_labels[i]) == pop_name)
+                  {
+                    pop_idx = get<0>(pop_labels[i]);
+                    pop_idx_set = true;
+                  }
+              }
+            if (!pop_idx_set)
+              {
+                throw_err("Population not found");
+              }
+
+
             vector <string> name_spaces;
             status = cell::get_cell_attribute_name_spaces (input_file_name, pop_name, name_spaces);
             assert (status >= 0);
@@ -2445,6 +2474,11 @@ extern "C"
                                                      pop_name,
                                                      name_space + "/" + attr_name,
                                                      cell_index_info[pop_name][name_space][attr_name]) >= 0);
+                        vector<CELL_IDX_T>& cell_index_vector = cell_index_info[pop_name][name_space][attr_name];
+                        for (size_t i=0; i<cell_index_vector.size(); i++)
+                          {
+                            cell_index_vector[i] += pop_vector[pop_idx].start;
+                          }
                       }
                   }
               }
