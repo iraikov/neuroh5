@@ -2380,7 +2380,7 @@ extern "C"
       return NULL;
 
     read_cell_index = read_cell_index_flag>0;
-    
+
     MPI_Comm comm;
 
     if (py_comm != NULL)
@@ -2415,7 +2415,7 @@ extern "C"
     int root = 0;
 
     map<string, map<string, vector<string> > > pop_attribute_info;
-    map<string, map<string, vector<CELL_IDX_T> > > cell_index_info;
+    map<string, map<string, map <string, vector<CELL_IDX_T> > > > cell_index_info;
     if (rank == (unsigned int)root)
       {
 
@@ -2444,7 +2444,7 @@ extern "C"
                                                      input_file_name,
                                                      pop_name,
                                                      name_space + "/" + attr_name,
-                                                     cell_index_info[pop_name][name_space]) >= 0);
+                                                     cell_index_info[pop_name][name_space][attr_name]) >= 0);
                       }
                   }
               }
@@ -2511,7 +2511,7 @@ extern "C"
                     PyObject *py_cell_index = PyList_New(0);
                     PyObject *py_info_tuple = PyTuple_New(2);
 
-                    for(auto const& value: cell_index_info[it_ns.first][name])
+                    for(auto const& value: cell_index_info[it.first][it_ns.first][name])
                       {
                         status = PyList_Append(py_cell_index, PyLong_FromLong((long)value));
                         assert (status == 0);
