@@ -2363,19 +2363,23 @@ extern "C"
   {
     int status; 
     char *input_file_name;
+    bool read_cell_index = false;
+    int read_cell_index_flag = 0;
     PyObject *py_comm = NULL, *py_pop_names = NULL;
     MPI_Comm *comm_ptr  = NULL;
 
     static const char *kwlist[] = {
                                    "file_name",
                                    "populations",
+                                   "cell_index",
                                    "comm",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|O", (char **)kwlist,
-                                     &input_file_name, &py_pop_names, &py_comm))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|iO", (char **)kwlist,
+                                     &input_file_name, &py_pop_names, &read_cell_index_flag, &py_comm))
       return NULL;
 
+    read_cell_index = read_cell_index_flag>0;
     
     MPI_Comm comm;
 
@@ -2410,7 +2414,8 @@ extern "C"
 
     int root = 0;
 
-    map<string, map<string ,vector<string> > > pop_attribute_info;
+    map<string, map<string, vector<string> > > pop_attribute_info;
+    map<string, map<string, vector<CELL_IDX_T> > > cell_index_info;
     if (rank == (unsigned int)root)
       {
 
@@ -2429,7 +2434,18 @@ extern "C"
 
                 for (auto const& it : ns_attributes)
                   {
-                    pop_attribute_info[pop_name][name_space].push_back(it.first);
+                    const string attr_name = it.first;
+                    
+                    pop_attribute_info[pop_name][name_space].push_back(attr_name);
+
+                    if (read_cell_index)
+                      {
+                        assert(cell::read_cell_index(comm,
+                                                     input_file_name,
+                                                     pop_name,
+                                                     name_space + "/" + attr_name,
+                                                     cell_index_info[pop_name][name_space]) >= 0);
+                      }
                   }
               }
           }
@@ -2457,6 +2473,26 @@ extern "C"
         }
     }
 
+    {
+      vector<char> sendbuf;
+      size_t sendbuf_size=0;
+      if ((rank == (unsigned int)root) && (cell_index_info.size() > 0) )
+        {
+          data::serialize_data(cell_index_info, sendbuf);
+          sendbuf_size = sendbuf.size();
+        }
+      
+      assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+      
+      sendbuf.resize(sendbuf_size);
+      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
+      
+      if ((rank != (unsigned int)root) && (sendbuf_size > 0))
+        {
+          data::deserialize_data(sendbuf, cell_index_info);
+        }
+    }
+
     PyObject *py_population_attribute_info = PyDict_New();
 
     for (auto const& it : pop_attribute_info)
@@ -2465,20 +2501,45 @@ extern "C"
 
         for (auto const& it_ns : it.second)
           {
-            PyObject *py_attribute_names  = PyList_New(0);
-            
-            for (const string& name : it_ns.second)
-              {
-                PyObject *py_name = PyBytes_FromString(name.c_str());
-                status = PyList_Append(py_attribute_names, py_name);
-                assert (status == 0);
-                Py_DECREF(py_name);
-              }
+            PyObject *py_attribute_infos  = PyList_New(0);
 
+            if (cell_index_info.size() > 0)
+              {
+                for (const string& name : it_ns.second)
+                  {
+                    PyObject *py_name = PyBytes_FromString(name.c_str());
+                    PyObject *py_cell_index = PyList_New(0);
+                    PyObject *py_info_tuple = PyTuple_New(2);
+
+                    for(auto const& value: cell_index_info[it_ns.first][name])
+                      {
+                        status = PyList_Append(py_cell_index, PyLong_FromLong((long)value));
+                        assert (status == 0);
+                      }
+
+                    PyTuple_SetItem(py_info_tuple, 0, py_name);
+                    PyTuple_SetItem(py_info_tuple, 1, py_cell_index);
+                    
+                    status = PyList_Append(py_attribute_infos, py_info_tuple);
+                    assert (status == 0);
+                    Py_DECREF(py_info_tuple);
+                  }
+              }
+            else
+              {
+                for (const string& name : it_ns.second)
+                  {
+                    PyObject *py_name = PyBytes_FromString(name.c_str());
+                    status = PyList_Append(py_attribute_infos, py_name);
+                    assert (status == 0);
+                    Py_DECREF(py_name);
+                  }
+              }
+            
             PyDict_SetItemString(py_ns_attribute_info,
                                  it_ns.first.c_str(),
-                                 py_attribute_names);
-            Py_DECREF(py_attribute_names);        
+                                 py_attribute_infos);
+            Py_DECREF(py_attribute_infos);        
           }
 
         PyDict_SetItemString(py_population_attribute_info,
