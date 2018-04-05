@@ -14,6 +14,7 @@ sys.stdout.flush()
 path = './data/dentate_test_connectivity.h5'
 path = '/home/igr/src/model/dentate/datasets/DG_test_connections_20171022.h5'
 path = '/home/igr/src/model/dentate/datasets/Test_GC_1000/DGC_test_connections_20171019.h5'
+path = '/home/igr/src/model/dentate/datasets/Test_GC_1000/DG_GC_test_connections_20180402.h5'
 
 gs = []
 for (src,dst) in [('MC','GC'),('MPP','GC'),('LPP','GC')]:

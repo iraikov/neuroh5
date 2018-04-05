@@ -167,6 +167,7 @@ namespace neuroh5
       assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
       
       hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
+      vector< pair<hsize_t,hsize_t> > ranges;
       
       if (dset_size > 0)
         {
@@ -197,18 +198,10 @@ namespace neuroh5
 
           if (ptr.size() > 0)
             {
-              vector< pair<hsize_t,hsize_t> > selection_ranges;
-              mpi::rank_ranges(selection.size(), size, selection_ranges);
-
-              
-              hsize_t selection_start = selection_ranges[rank].first;
-              hsize_t selection_end = selection_start + selection_ranges[rank].second;
-
               ATTR_PTR_T selection_ptr_pos = 0;
-              vector< pair<hsize_t,hsize_t> > ranges;
-              for (size_t s=selection_start; s<selection_end; s++)
+              for (const CELL_IDX_T& s : selection) 
                 {
-                  auto it = std::find(index.begin(), index.end(), selection[s]-pop_start);
+                  auto it = std::find(index.begin(), index.end(), s-pop_start);
                   assert(it != index.end());
 
                   ptrdiff_t pos = it - index.begin();
@@ -216,11 +209,10 @@ namespace neuroh5
                   hsize_t value_start=ptr[pos];
                   hsize_t value_block=ptr[pos+1]-value_start;
 
-                  selection_ptr.push_back(selection_ptr_pos);
                   ranges.push_back(make_pair(value_start, value_block));
+                  selection_ptr.push_back(selection_ptr_pos);
                   selection_ptr_pos += value_block;
                 }
-              selection_ptr.push_back(selection_ptr_pos);
               
               // read values
               hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);

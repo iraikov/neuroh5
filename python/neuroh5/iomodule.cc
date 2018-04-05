@@ -295,6 +295,55 @@ void build_cell_attr_value_maps (PyObject *idx_values,
 }
 
 
+PyObject *py_build_edge_attribute_info (const vector< pair<string,string> >& prj_names,
+                                        const vector <string>& edge_attr_name_spaces,
+                                        const vector < map <string, vector < vector <string> > > >& edge_attr_name_vector)
+{
+    PyObject *py_attribute_info = PyDict_New();
+    for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
+      {
+        PyObject *py_prj_attr_info  = PyDict_New();
+        for (const string& attr_namespace : edge_attr_name_spaces) 
+          {
+            PyObject *py_prj_ns_attr_info  = PyDict_New();
+            int attr_index=0;
+            const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
+            for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
+              {
+                for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
+                  {
+                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
+                    PyObject *py_attr_index = PyLong_FromLong(attr_index);
+                    
+                    PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
+                    Py_DECREF(py_attr_key);
+                    Py_DECREF(py_attr_index);
+
+                    attr_index++;
+                  }
+              }
+            PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
+            PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
+            Py_DECREF(py_ns_key);
+            Py_DECREF(py_prj_ns_attr_info);
+          }
+
+        PyObject *py_prj_attr_info_dict = PyDict_GetItemString(py_attribute_info, prj_names[p].second.c_str());
+        if (py_prj_attr_info_dict == NULL)
+          {
+            py_prj_attr_info_dict = PyDict_New();
+            PyDict_SetItemString(py_attribute_info, prj_names[p].second.c_str(),
+                                 py_prj_attr_info_dict);
+            Py_DECREF(py_prj_attr_info_dict);
+          }
+        PyDict_SetItemString(py_prj_attr_info_dict,
+                             prj_names[p].first.c_str(),
+                             py_prj_attr_info);
+        Py_DECREF(py_prj_attr_info);
+      }
+
+    return py_attribute_info;
+}
 
 void build_edge_map (PyObject *py_edge_values,
                      map <string, vector< vector <string> > >& attr_names,
@@ -1527,6 +1576,133 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
 
 }
 
+
+PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
+                                          const edge_tuple_t& et,
+                                          const vector<string>& edge_attr_name_spaces,
+                                          const map <string, vector <vector<string> > >& attr_names)
+{
+  int status;
+  const vector<NODE_IDX_T>& adj_vector = get<0>(et);
+  const vector<AttrVal>& edge_attr_vector = get<1>(et);
+
+  npy_intp dims[1], ind = 0;
+  dims[0] = adj_vector.size();
+                
+  PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
+  uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
+  
+  for (size_t j = 0; j < adj_vector.size(); j++)
+    {
+      adj_ptr[j] = adj_vector[j];
+    }
+  
+  PyObject *py_attrmap  = PyDict_New();
+  size_t namespace_index=0;
+  for (auto const & edge_attr_values : edge_attr_vector)
+    {
+      PyObject *py_attrvalmap  = PyDict_New();
+      const string& attr_namespace = edge_attr_name_spaces[namespace_index];
+      
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<float>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+          float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
+            {
+              ptr[j] = edge_attr_values.at<float>(i,j); 
+            }
+          status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_float][i].c_str(), py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint8_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
+          uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
+            {
+              ptr[j] = edge_attr_values.at<uint8_t>(i,j); 
+            }
+          status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint8][i].c_str(), py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint16_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+          uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
+            {
+              ptr[j] = edge_attr_values.at<uint16_t>(i,j); 
+            }
+          status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint16][i].c_str(), py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint32_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
+          uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
+            {
+              ptr[j] = edge_attr_values.at<uint32_t>(i,j); 
+            }
+          status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint32][i].c_str(), py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<int8_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
+          int8_t *ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
+            {
+              ptr[j] = edge_attr_values.at<int8_t>(i,j); 
+            }
+          status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int8][i].c_str(), py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<int16_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
+          int16_t *ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
+            {
+              ptr[j] = edge_attr_values.at<int16_t>(i,j); 
+            }
+          status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int16][i].c_str(), py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+      for (size_t i = 0; i < edge_attr_values.size_attr_vec<int32_t>(); i++)
+        {
+          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
+          int32_t *ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
+          for (size_t j = 0; j < adj_vector.size(); j++)
+            {
+              ptr[j] = edge_attr_values.at<int32_t>(i,j); 
+            }
+          status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int32][i].c_str(), py_arr);
+          assert(status == 0);
+          Py_DECREF(py_arr);
+        }
+          
+      PyDict_SetItemString(py_attrmap, attr_namespace.c_str(), py_attrvalmap);
+      Py_DECREF(py_attrvalmap);
+
+      namespace_index++;
+    }
+                
+  PyObject *py_edgeval  = PyTuple_New(2);
+  PyTuple_SetItem(py_edgeval, 0, adj_arr);
+  PyTuple_SetItem(py_edgeval, 1, py_attrmap);
+
+  return py_edgeval;
+
+}
+
 /* NeuroH5EdgeIterState - in-memory edge iterator instance.
  *
  * seq_index: index of the next id in the sequence to yield
@@ -1710,49 +1886,9 @@ extern "C"
                       total_num_nodes, local_num_edges, total_num_edges);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
-    PyObject *py_attribute_info = PyDict_New();
-    for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
-      {
-        PyObject *py_prj_attr_info  = PyDict_New();
-        for (string& attr_namespace : edge_attr_name_spaces) 
-          {
-            PyObject *py_prj_ns_attr_info  = PyDict_New();
-            int attr_index=0;
-            const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
-            for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
-              {
-                for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
-                  {
-                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
-                    PyObject *py_attr_index = PyLong_FromLong(attr_index);
-                    
-                    PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
-                    Py_DECREF(py_attr_key);
-                    Py_DECREF(py_attr_index);
-
-                    attr_index++;
-                  }
-              }
-            PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
-            PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
-            Py_DECREF(py_ns_key);
-            Py_DECREF(py_prj_ns_attr_info);
-          }
-
-        PyObject *py_prj_attr_info_dict = PyDict_GetItemString(py_attribute_info, prj_names[p].second.c_str());
-        if (py_prj_attr_info_dict == NULL)
-          {
-            py_prj_attr_info_dict = PyDict_New();
-            PyDict_SetItemString(py_attribute_info, prj_names[p].second.c_str(),
-                                 py_prj_attr_info_dict);
-            Py_DECREF(py_prj_attr_info_dict);
-          }
-        PyDict_SetItemString(py_prj_attr_info_dict,
-                             prj_names[p].first.c_str(),
-                             py_prj_attr_info);
-        Py_DECREF(py_prj_attr_info);
-      }
-
+    PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
+                                                                edge_attr_name_spaces,
+                                                                edge_attr_name_vector);
     
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
@@ -1911,49 +2047,9 @@ extern "C"
                               local_num_edges, total_num_edges);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
-    PyObject *py_attribute_info = PyDict_New();
-    for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
-      {
-        PyObject *py_prj_attr_info  = PyDict_New();
-        for (string& attr_namespace : edge_attr_name_spaces) 
-          {
-            PyObject *py_prj_ns_attr_info  = PyDict_New();
-            int attr_index=0;
-            const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
-            for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
-              {
-                for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
-                  {
-                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
-                    PyObject *py_attr_index = PyLong_FromLong(attr_index);
-                    
-                    PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
-                    Py_DECREF(py_attr_key);
-                    Py_DECREF(py_attr_index);
-
-                    attr_index++;
-                  }
-              }
-            PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
-            PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
-            Py_DECREF(py_ns_key);
-            Py_DECREF(py_prj_ns_attr_info);
-          }
-
-        PyObject *py_prj_attr_info_dict = PyDict_GetItemString(py_attribute_info, prj_names[p].second.c_str());
-        if (py_prj_attr_info_dict == NULL)
-          {
-            py_prj_attr_info_dict = PyDict_New();
-            PyDict_SetItemString(py_attribute_info, prj_names[p].second.c_str(),
-                                 py_prj_attr_info_dict);
-            Py_DECREF(py_prj_attr_info_dict);
-          }
-        PyDict_SetItemString(py_prj_attr_info_dict,
-                             prj_names[p].first.c_str(),
-                             py_prj_attr_info);
-        Py_DECREF(py_prj_attr_info);
-      }
-
+    PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
+                                                                edge_attr_name_spaces,
+                                                                edge_attr_name_vector);
     
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
@@ -5099,9 +5195,11 @@ extern "C"
           if ((py_ngg->state->edge_map_iter != py_ngg->state->edge_map.cend()))
             {
               const NODE_IDX_T key = py_ngg->state->edge_map_iter->first;
-              PyObject *py_edge = py_build_edge_tuple_value(key,
-                                                            py_ngg->state->edge_map_iter->second,
-                                                            py_ngg->state->edge_attr_name_spaces);
+              PyObject *py_edge = py_build_edge_array_dict_value(key,
+                                                                 py_ngg->state->edge_map_iter->second,
+                                                                 py_ngg->state->edge_attr_name_spaces,
+                                                                 py_ngg->state->edge_attr_names
+                                                                 );
               PyObject *py_key = PyLong_FromLong(key);
               result = PyTuple_Pack(2, py_key, py_edge);
               
