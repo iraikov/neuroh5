@@ -2371,7 +2371,7 @@ extern "C"
     static const char *kwlist[] = {
                                    "file_name",
                                    "populations",
-                                   "cell_index",
+                                   "read_cell_index",
                                    "comm",
                                    NULL};
 
