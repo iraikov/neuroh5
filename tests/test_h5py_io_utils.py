@@ -79,19 +79,19 @@ def main(forest_path, cell_attr_path, connections_path, cell_attr_namespace, cel
     cell_attr_processed = comm.gather(cell_attr_processed, root=0)
 
     if connections_path is not None:
-        edge_attr_gen = NeuroH5ProjectionGen(connections_path, source, destination, comm=comm, io_size=io_size,
+        edge_attr_gen = NeuroH5ProjectionGen(connections_path, source, destination, comm=comm,
                                                                cache_size=cache_size, namespaces=['Synapses'])
         index_map = get_edge_attributes_index_map(comm, connections_path, source, destination)
         processed = 0
         for itercount, (target_gid, attr_package) in enumerate(edge_attr_gen):
             print 'Rank: %i receieved target_gid: %s from the edge attribute generator.' % (rank, str(target_gid))
             source_indexes, attr_dict = attr_package
-            syn_ids = attr_dict['Synapses'][0]
+            syn_ids = attr_dict['Synapses']['syn_id']
             source_indexes2, attr_dict2 = select_edge_attributes(target_gid, comm, connections_path, index_map,
                                                                  source, destination, namespaces=['Synapses'],
                                                                  source_offset=source_gid_offset,
                                                                  destination_offset=destination_gid_offset)
-            syn_ids2 = attr_dict2['Synapses'][0]
+            syn_ids2 = attr_dict2['Synapses']['syn_id']
             if np.all(syn_ids == syn_ids2) and np.all(source_indexes == source_indexes2):
                 print 'Rank: %i; edge attributes match!' % rank
                 edge_attr_matched += 1

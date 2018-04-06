@@ -162,9 +162,9 @@ def select_edge_attributes(gid, comm, file_path, index_map, source, destination,
         for namespace in namespaces:
             attribute = valid_namespaces[namespace]
             value_dataset = f['Projections'][destination][source][namespace][attribute]
-            attr_dict[namespace] = []
+            attr_dict[namespace] = {}
             with value_dataset.collective:
-                attr_dict[namespace].append(value_dataset[start:end])
+                attr_dict[namespace][attribute] = value_dataset[start:end]
     if in_dataset:
         return source_indexes, attr_dict
     else:
