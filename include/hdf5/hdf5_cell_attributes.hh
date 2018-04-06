@@ -213,6 +213,7 @@ namespace neuroh5
                   selection_ptr.push_back(selection_ptr_pos);
                   selection_ptr_pos += value_block;
                 }
+              selection_ptr.push_back(selection_ptr_pos);
               
               // read values
               hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);

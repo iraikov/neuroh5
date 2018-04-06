@@ -437,6 +437,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
+        printf("first = %u last = %u\n", first, last);
         vector<int32_t> v(first, last);
         int32_values[index].insert(make_pair(vindex, v));
         index_set.insert(vindex);
