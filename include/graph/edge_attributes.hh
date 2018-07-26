@@ -95,7 +95,8 @@ namespace neuroh5
      const DST_PTR_T       edge_base,
      const DST_PTR_T       edge_count,
      const hid_t           attr_h5type,
-     data::NamedAttrVal&   attr_values
+     data::NamedAttrVal&   attr_values,
+     bool collective = true
      );
 
     extern int read_all_edge_attributes

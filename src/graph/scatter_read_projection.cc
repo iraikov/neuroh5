@@ -78,7 +78,6 @@ namespace neuroh5
         {
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      MPI_Barrier(all_comm);
 
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       rank_edge_map_t prj_rank_edge_map;
@@ -143,7 +142,6 @@ namespace neuroh5
               assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                         pop_ranges, pop_pairs) == true);
           
-          
               edge_count = src_idx.size();
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading attributes for ", src_pop_name, " -> ", dst_pop_name);
               for (const string& attr_namespace : attr_namespaces) 
@@ -183,8 +181,9 @@ namespace neuroh5
 
             } // rank < io_size
 
-          MPI_Comm_free(&io_comm);
           MPI_Barrier(all_comm);
+          MPI_Barrier(io_comm);
+          MPI_Comm_free(&io_comm);
           assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                              recvcounts, rdispls, recvbuf) >= 0);
         }

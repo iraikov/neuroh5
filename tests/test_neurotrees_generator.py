@@ -13,13 +13,11 @@ if rank == 0:
     print '%i ranks have been allocated' % comm.size
 sys.stdout.flush()
 
-neurotrees_dir = 'datasets/Test_GC_1000/'
-# neurotrees_dir = os.environ['PI_SCRATCH']+'/DGC_forest/hdf5/'
-# neurotrees_dir = os.environ['PI_HOME']+'/'
-forest_file = 'DGC_forest_test_syns_20171019.h5'
+neurotrees_dir = os.environ['SCRATCH']+'/dentate/Full_Scale_Control/'
+#forest_file = 'DGC_forest_test_syns_20171019.h5'
+forest_file = 'DGC_forest_syns_compressed_20180306.h5'
 
-
-g = NeuroH5CellAttrGen(neurotrees_dir+forest_file, 'GC', comm=comm, io_size=comm.size,
+g = NeuroH5CellAttrGen(neurotrees_dir+forest_file, 'GC', comm=comm, io_size=160,
                      namespace='Synapse Attributes')
 global_count = 0
 count = 0

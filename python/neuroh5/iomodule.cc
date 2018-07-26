@@ -370,12 +370,14 @@ void build_edge_map (PyObject *py_edge_values,
       vector<NODE_IDX_T>  adj_values;
 
       npy_type = PyArray_TYPE((PyArrayObject *)py_adj_values);
-                               
+      size_t num_edges=0;
+      
       switch (npy_type)
         {
         case NPY_UINT32:
           {
             py_array_to_vector<NODE_IDX_T> (py_adj_values, adj_values);
+            num_edges = adj_values.size();
             break;
           }
         default:
@@ -395,15 +397,6 @@ void build_edge_map (PyObject *py_edge_values,
           string attr_namespace = string(str);
                                    
           attr_names[attr_namespace].resize(AttrMap::num_attr_types);
-
-                                   
-          vector<uint32_t>    attr_values_uint32;
-          vector<uint16_t>    attr_values_uint16;
-          vector<uint8_t>     attr_values_uint8;
-          vector<int32_t>     attr_values_int32;
-          vector<int16_t>     attr_values_int16;
-          vector<int8_t>      attr_values_int8;
-          vector<float>       attr_values_float;
                                    
           data::AttrVal edge_attr_values;
 
@@ -415,6 +408,14 @@ void build_edge_map (PyObject *py_edge_values,
               string attr_name = string(PyBytes_AsString(py_attr_key));
 
               npy_type = PyArray_TYPE((PyArrayObject *)py_attr_values);
+
+              vector<uint32_t>    attr_values_uint32;
+              vector<uint16_t>    attr_values_uint16;
+              vector<uint8_t>     attr_values_uint8;
+              vector<int32_t>     attr_values_int32;
+              vector<int16_t>     attr_values_int16;
+              vector<int8_t>      attr_values_int8;
+              vector<float>       attr_values_float;
                                        
               switch (npy_type)
                 {
@@ -431,6 +432,7 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<uint32_t>(py_attr_values, attr_values_uint32);
+                    assert(attr_values_uint32.size() == num_edges);
                     edge_attr_values.insert(attr_values_uint32);
                     attr_type_idx[AttrMap::attr_index_uint32]++;
                     break;
@@ -448,6 +450,7 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<uint16_t>(py_attr_values, attr_values_uint16);
+                    assert(attr_values_uint16.size() == num_edges);
                     edge_attr_values.insert(attr_values_uint16);
                     attr_type_idx[AttrMap::attr_index_uint16]++;
                     break;
@@ -465,6 +468,7 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<uint8_t>(py_attr_values, attr_values_uint8);
+                    assert(attr_values_uint8.size() == num_edges);
                     edge_attr_values.insert(attr_values_uint8);
                     attr_type_idx[AttrMap::attr_index_uint8]++;
                     break;
@@ -482,6 +486,7 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<int32_t>(py_attr_values, attr_values_int32);
+                    assert(attr_values_int32.size() == num_edges);
                     edge_attr_values.insert(attr_values_int32);
                     attr_type_idx[AttrMap::attr_index_int32]++;
                     break;
@@ -499,6 +504,7 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<int16_t>(py_attr_values, attr_values_int16);
+                    assert(attr_values_int16.size() == num_edges);
                     edge_attr_values.insert(attr_values_int16);
                     attr_type_idx[AttrMap::attr_index_int16]++;
                     break;
@@ -516,6 +522,7 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<int8_t>(py_attr_values, attr_values_int8);
+                    assert(attr_values_int8.size() == num_edges);
                     edge_attr_values.insert(attr_values_int8);
                     attr_type_idx[AttrMap::attr_index_int8]++;
                     break;
@@ -533,6 +540,7 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<float>(py_attr_values, attr_values_float);
+                    assert(attr_values_float.size() == num_edges);
                     edge_attr_values.insert(attr_values_float);
                     attr_type_idx[AttrMap::attr_index_float]++;
                     break;
