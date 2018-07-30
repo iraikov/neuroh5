@@ -19,7 +19,6 @@
 #include "attr_map.hh"
 #include "infer_datatype.hh"
 #include "alltoallv_template.hh"
-#include "bcast_template.hh"
 #include "serialize_data.hh"
 #include "serialize_cell_attributes.hh"
 #include "mpe_seq.hh"

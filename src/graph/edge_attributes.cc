@@ -11,6 +11,7 @@
 #include "edge_attributes.hh"
 #include "exists_dataset.hh"
 #include "path_names.hh"
+#include "serialize_data.hh"
 
 #include <cassert>
 #include <iostream>
@@ -112,6 +113,39 @@ namespace neuroh5
       assert(status == 0);
     
     }
+
+    pair<AttrType, size_t> get_attr_type(hid_t attr_h5type)
+    {
+
+      AttrType ty;
+      size_t attr_size = H5Tget_size(attr_h5type);
+
+      switch (H5Tget_class(attr_h5type))
+        {
+        case H5T_INTEGER:
+          if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
+            {
+              ty = UIntVal;
+            }
+          else
+            {
+              ty = SIntVal;
+            }
+          break;
+        case H5T_FLOAT:
+          ty = FloatVal;
+          break;
+        case H5T_ENUM:
+          ty = EnumVal;
+          break;
+        default:
+          throw runtime_error("Unsupported attribute type");
+          break;
+        }
+
+      return make_pair(ty, attr_size);
+    }
+
   }
 
   namespace graph
@@ -126,61 +160,84 @@ namespace neuroh5
      void*             op_data
      )
     {
-      herr_t status = hdf5::exists_dataset (group_id, name);
-      if (status > 0)
+      hid_t dset = H5Dopen2(group_id, name, H5P_DEFAULT);
+      if (dset < 0) // skip the link, if this is not a dataset
         {
-          hid_t dset = H5Dopen2(group_id, name, H5P_DEFAULT);
-          if (dset < 0) // skip the link, if this is not a dataset
-            {
-              return 0;
-            }
-          
-          hid_t ftype = H5Dget_type(dset);
-          assert(ftype >= 0);
-          
-          vector< pair<string,hid_t> >* ptr =
-            (vector< pair<string,hid_t> >*) op_data;
-          ptr->push_back(make_pair(name, ftype));
-          
-          assert(H5Dclose(dset) >= 0);
+          return 0;
         }
+      
+      hid_t ftype = H5Dget_type(dset);
+      assert(ftype >= 0);
+      
+      vector< pair<string,hid_t> >* ptr =
+        (vector< pair<string,hid_t> >*) op_data;
+      ptr->push_back(make_pair(name, ftype));
+      
+      assert(H5Dclose(dset) >= 0);
 
-      return status;
+      return 0;
     }
 
     /////////////////////////////////////////////////////////////////////////
     herr_t get_edge_attributes
     (
+     MPI_Comm                      comm,
      const string&                 file_name,
      const string&                 src_pop_name,
      const string&                 dst_pop_name,
      const string&                 name_space,
-     vector< pair<string,hid_t> >& out_attributes
+     vector< pair<string,AttrType,size_t> >& out_attributes
      )
     {
       herr_t ierr=0;
+      int root=0;
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      hid_t in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(in_file >= 0);
+      if (rank == root)
+        {
+          hid_t in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+          assert(in_file >= 0);
+          out_attributes.clear();
+          
+          string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
+          
+          ierr = hdf5::exists_dataset (in_file, path.c_str());
+          printf("exists dataset %s: %d\n", path.c_str(), ierr);
+          if (ierr > 0)
+            {
+              hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+              if (grp >= 0)
+                {
+                  
+                  hsize_t idx = 0;
+                  ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                                    &edge_attribute_cb, (void*) &out_attributes);
+                  
+                  assert(H5Gclose(grp) >= 0);
+                }
+            }
+          ierr = H5Fclose(in_file);
+        }
+
+      vector<char> edge_attributes_sendbuf;  size_t edge_attributes_sendbuf_size=0;
+      if (rank == root)
+        {
+          data::serialize_data(out_attributes, edge_attributes_sendbuf);
+          edge_attributes_sendbuf_size = edge_attributes_sendbuf.size();
+        }
+
+      assert(MPI_Bcast(&edge_attributes_sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+      edge_attributes_sendbuf.resize(edge_attributes_sendbuf_size);
+
+      ierr = MPI_Bcast (&edge_attributes_sendbuf[0], edge_attributes_sendbuf_size,
+                        MPI_CHAR, root, comm);
+      assert(ierr == MPI_SUCCESS);
+
       out_attributes.clear();
 
-      string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
-
-      ierr = hdf5::exists_dataset (in_file, path.c_str());
-      if (ierr > 0)
-        {
-          hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-          if (grp >= 0)
-            {
-              
-              hsize_t idx = 0;
-              ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                                &edge_attribute_cb, (void*) &out_attributes);
-              
-              assert(H5Gclose(grp) >= 0);
-            }
-        }
-      ierr = H5Fclose(in_file);
+      data::deserialize_data(edge_attributes_sendbuf, out_attributes);
 
       return ierr;
     }
@@ -281,7 +338,8 @@ namespace neuroh5
      const string&         attr_name,
      const DST_PTR_T       edge_base,
      const DST_PTR_T       edge_count,
-     const hid_t           attr_h5type,
+     const AttrType        attr_type,
+     const size_t          attr_size,
      data::NamedAttrVal&   attr_values,
      bool collective
      )
@@ -293,7 +351,6 @@ namespace neuroh5
       vector <uint16_t> attr_values_uint16;
       vector <uint32_t> attr_values_uint32;
       vector <uint8_t>  attr_values_uint8;
-      size_t attr_size = H5Tget_size(attr_h5type);
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
@@ -337,9 +394,9 @@ namespace neuroh5
             }
           assert(ierr >= 0);
           
-          switch (H5Tget_class(attr_h5type))
+          switch (attr_type)
             {
-            case H5T_INTEGER:
+            case UIntVal:
               if (attr_size == 4)
                 {
                   attr_values_uint32.resize(edge_count);
@@ -360,6 +417,33 @@ namespace neuroh5
                   ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
                                  &attr_values_uint8[0]);
                   attr_values.insert(string(attr_name), attr_values_uint8);
+                }
+              else
+                {
+                  throw runtime_error("Unsupported integer attribute size");
+                };
+              break;
+            case SIntVal:
+              if (attr_size == 4)
+                {
+                  attr_values_int32.resize(edge_count);
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
+                                 &attr_values_int32[0]);
+                  attr_values.insert(string(attr_name), attr_values_int32);
+                }
+              else if (attr_size == 2)
+                {
+                  attr_values_int16.resize(edge_count);
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
+                                 &attr_values_int16[0]);
+                  attr_values.insert(string(attr_name), attr_values_int16);
+                }
+              else if (attr_size == 1)
+                {
+                  attr_values_int8.resize(edge_count);
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
+                                 &attr_values_int8[0]);
+                  attr_values.insert(string(attr_name), attr_values_int8);
                 }
               else
                 {

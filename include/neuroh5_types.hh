@@ -64,6 +64,11 @@ namespace neuroh5
   // Block offset type
   typedef uint64_t DST_BLK_PTR_T;
         
+  enum AttrType
+    {
+      SIntVal, UIntVal, FloatVal, EnumVal
+    };
+        
   enum EdgeMapType
     {
       EdgeMapDst,

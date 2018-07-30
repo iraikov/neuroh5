@@ -11,6 +11,7 @@ input_file='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control
 (graph, a) = scatter_read_graph(input_file,io_size=256,
                                 projections=[('GC', 'MC'), ('MC', 'MC'), ('AAC', 'MC')],
                                 namespaces=['Synapses','Connections'])
+print a
 print graph.keys()
 #print graph.keys()
 edge_dict = {}

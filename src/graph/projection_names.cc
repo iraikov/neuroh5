@@ -15,7 +15,6 @@
 #include "debug.hh"
 #include "path_names.hh"
 #include "group_contents.hh"
-#include "bcast_template.hh"
 #include "serialize_data.hh"
 
 

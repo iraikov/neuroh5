@@ -29,6 +29,7 @@
 #include "cereal/types/string.hpp"
 #include "cereal/types/complex.hpp"
 #include "cereal/types/memory.hpp"
+#include "cereal/types/utility.hpp"
 
 
 #include "cereal/archives/binary.hpp"

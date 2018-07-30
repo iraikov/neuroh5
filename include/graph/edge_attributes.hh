@@ -37,11 +37,12 @@ namespace neuroh5
     /// @return                  HDF5 error code.
     herr_t get_edge_attributes
     (
+     MPI_Comm                                     comm,
      const std::string&                           file_name,
      const std::string&                           src_pop_name,
      const std::string&                           dst_pop_name,
      const string&                                name_space,
-     std::vector< std::pair<std::string,hid_t> >& out_attributes
+     std::vector< std::pair<std::string,AttrType,size_t> >& out_attributes
      );
 
     /// @brief Determines the number of edge attributes for each supported

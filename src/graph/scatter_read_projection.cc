@@ -16,7 +16,6 @@
 #include "cell_populations.hh"
 #include "validate_edge_list.hh"
 #include "scatter_read_projection.hh"
-#include "bcast_template.hh"
 #include "alltoallv_template.hh"
 #include "serialize_edge.hh"
 #include "serialize_data.hh"
@@ -147,8 +146,9 @@ namespace neuroh5
               for (const string& attr_namespace : attr_namespaces) 
                 {
                   vector< pair<string,hid_t> > edge_attr_info;
-                  assert(graph::get_edge_attributes(file_name, src_pop_name, dst_pop_name,
+                  assert(graph::get_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
                                                     attr_namespace, edge_attr_info) >= 0);
+
                   assert(graph::read_all_edge_attributes(io_comm, file_name,
                                                          src_pop_name, dst_pop_name, attr_namespace,
                                                          edge_base, edge_count, edge_attr_info,
