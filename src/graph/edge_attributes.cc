@@ -173,7 +173,6 @@ namespace neuroh5
           string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
           
           ierr = hdf5::exists_dataset (in_file, path.c_str());
-          printf("exists dataset %s: %d\n", path.c_str(), ierr);
           if (ierr > 0)
             {
               hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
