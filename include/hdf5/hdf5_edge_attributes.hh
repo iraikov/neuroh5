@@ -122,8 +122,8 @@ namespace neuroh5
               status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
             }
           
-          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
-                                                  attr_namespace, attr_name);
+          string path = edge_attribute_path(src_pop_name, dst_pop_name,
+                                            attr_namespace, attr_name);
           
           status = write<T> (file, path,
                              global_value_size, local_value_start, local_value_size,

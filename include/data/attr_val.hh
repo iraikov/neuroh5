@@ -20,7 +20,7 @@
 #include "cereal/types/map.hpp"
 #include "cereal/types/string.hpp"
 #include "cereal/types/complex.hpp"
-#include <cereal/types/memory.hpp>
+#include "cereal/types/memory.hpp"
 
 namespace neuroh5
 {

@@ -122,7 +122,7 @@ namespace neuroh5
 
           for (string attr_namespace : attr_namespaces) 
             {
-              vector< pair<string,hid_t> > edge_attr_info;
+              vector< pair<string,AttrKind> > edge_attr_info;
               assert(graph::get_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
                                                 attr_namespace, edge_attr_info) >= 0);
               assert(graph::read_all_edge_attributes(io_comm, file_name,

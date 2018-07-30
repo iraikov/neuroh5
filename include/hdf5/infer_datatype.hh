@@ -6,6 +6,7 @@
 
 #include <type_traits>
 
+
 template <typename T>
 hid_t infer_datatype(const T& x)
 {

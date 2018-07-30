@@ -145,7 +145,7 @@ namespace neuroh5
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading attributes for ", src_pop_name, " -> ", dst_pop_name);
               for (const string& attr_namespace : attr_namespaces) 
                 {
-                  vector< pair<string,hid_t> > edge_attr_info;
+                  vector< pair<string,AttrKind> > edge_attr_info;
                   assert(graph::get_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
                                                     attr_namespace, edge_attr_info) >= 0);
 
