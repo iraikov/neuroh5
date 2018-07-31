@@ -506,7 +506,6 @@ namespace neuroh5
       size = (size_t)ssize;
       rank = (size_t)srank;
 
-      assert(H5Pclose(fapl) >= 0);
         
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
@@ -796,6 +795,7 @@ namespace neuroh5
         {
           assert(MPI_Info_free(&info) == MPI_SUCCESS);
         }
+      assert(H5Pclose(fapl) >= 0);
     }
   }
 }

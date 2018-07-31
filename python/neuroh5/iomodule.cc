@@ -2108,7 +2108,7 @@ extern "C"
                                    "map_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|Oii", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|OOi", (char **)kwlist,
                                      &input_file_name, &py_comm, 
                                      &py_attr_name_spaces, &opt_edge_map_type))
       return NULL;
