@@ -73,7 +73,7 @@ namespace neuroh5
       vector<pair <pop_t, string> > pop_labels;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
-      size_t total_num_nodes;
+      size_t total_num_nodes=0;
       size_t dst_start, dst_end;
       size_t src_start, src_end;
 
@@ -127,7 +127,6 @@ namespace neuroh5
         {
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      
 
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;

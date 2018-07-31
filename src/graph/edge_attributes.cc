@@ -8,9 +8,11 @@
 //==============================================================================
 
 #include "attr_val.hh"
+#include "attr_kind_datatype.hh"
 #include "edge_attributes.hh"
 #include "exists_dataset.hh"
 #include "path_names.hh"
+#include "serialize_data.hh"
 
 #include <cassert>
 #include <iostream>
@@ -112,6 +114,7 @@ namespace neuroh5
       assert(status == 0);
     
     }
+
   }
 
   namespace graph
@@ -131,14 +134,14 @@ namespace neuroh5
         {
           return 0;
         }
-
+      
       hid_t ftype = H5Dget_type(dset);
       assert(ftype >= 0);
-
-      vector< pair<string,hid_t> >* ptr =
-        (vector< pair<string,hid_t> >*) op_data;
-      ptr->push_back(make_pair(name, ftype));
-
+      
+      vector< pair<string,AttrKind> >* ptr =
+        (vector< pair<string,AttrKind> >*) op_data;
+      ptr->push_back(make_pair(name, hdf5::h5type_attr_kind(ftype)));
+      
       assert(H5Dclose(dset) >= 0);
 
       return 0;
@@ -147,34 +150,62 @@ namespace neuroh5
     /////////////////////////////////////////////////////////////////////////
     herr_t get_edge_attributes
     (
+     MPI_Comm                      comm,
      const string&                 file_name,
      const string&                 src_pop_name,
      const string&                 dst_pop_name,
      const string&                 name_space,
-     vector< pair<string,hid_t> >& out_attributes
+     vector< pair<string,AttrKind> >& out_attributes
      )
     {
-      hid_t in_file;
-      herr_t ierr;
+      herr_t ierr=0;
+      int root=0;
+      int rank, size;
+      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(in_file >= 0);
+      if (rank == root)
+        {
+          hid_t in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+          assert(in_file >= 0);
+          out_attributes.clear();
+          
+          string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
+          
+          ierr = hdf5::exists_dataset (in_file, path.c_str());
+          if (ierr > 0)
+            {
+              hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+              if (grp >= 0)
+                {
+                  
+                  hsize_t idx = 0;
+                  ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                                    &edge_attribute_cb, (void*) &out_attributes);
+                  
+                  assert(H5Gclose(grp) >= 0);
+                }
+            }
+          ierr = H5Fclose(in_file);
+        }
+
+      vector<char> edge_attributes_sendbuf;  size_t edge_attributes_sendbuf_size=0;
+      if (rank == root)
+        {
+          data::serialize_data(out_attributes, edge_attributes_sendbuf);
+          edge_attributes_sendbuf_size = edge_attributes_sendbuf.size();
+        }
+
+      assert(MPI_Bcast(&edge_attributes_sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+      edge_attributes_sendbuf.resize(edge_attributes_sendbuf_size);
+
+      ierr = MPI_Bcast (&edge_attributes_sendbuf[0], edge_attributes_sendbuf_size,
+                        MPI_CHAR, root, comm);
+      assert(ierr == MPI_SUCCESS);
+
       out_attributes.clear();
 
-      string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
-
-      // TODO: Be more gentle if the group is not found!
-      hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-      if (grp >= 0)
-        {
-
-          hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                            &edge_attribute_cb, (void*) &out_attributes);
-          
-          assert(H5Gclose(grp) >= 0);
-        }
-      ierr = H5Fclose(in_file);
+      data::deserialize_data(edge_attributes_sendbuf, out_attributes);
 
       return ierr;
     }
@@ -275,18 +306,14 @@ namespace neuroh5
      const string&         attr_name,
      const DST_PTR_T       edge_base,
      const DST_PTR_T       edge_count,
-     const hid_t           attr_h5type,
-     data::NamedAttrVal&   attr_values
+     const AttrKind        attr_kind,
+     data::NamedAttrVal&   attr_values,
+     bool collective
      )
     {
       hid_t file;
       herr_t ierr = 0;
       hsize_t block = edge_count, base = edge_base;
-      vector <float>    attr_values_float;
-      vector <uint16_t> attr_values_uint16;
-      vector <uint32_t> attr_values_uint32;
-      vector <uint8_t>  attr_values_uint8;
-      size_t attr_size = H5Tget_size(attr_h5type);
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
@@ -295,7 +322,16 @@ namespace neuroh5
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
       assert(file >= 0);
 
-      if (edge_count > 0)
+      /* Create property list for collective dataset operations. */
+      hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+      if (collective)
+        {
+          ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+        }
+
+      string dset_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, name_space, attr_name);
+      ierr = hdf5::exists_dataset (file, dset_path.c_str());
+      if (ierr > 0)
         {
           hsize_t one = 1;
 
@@ -303,39 +339,50 @@ namespace neuroh5
           assert(mspace >= 0);
           ierr = H5Sselect_all(mspace);
           assert(ierr >= 0);
-
-          hid_t dset = H5Dopen2 (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, name_space, attr_name).c_str(),
-                                 H5P_DEFAULT);
+          
+          hid_t dset = H5Dopen2 (file, dset_path.c_str(), H5P_DEFAULT);
           assert(dset >= 0);
-
+          
           // make hyperslab selection
           hid_t fspace = H5Dget_space(dset);
           assert(fspace >= 0);
-          ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &base, NULL, &one,
-                                     &block);
-          assert(ierr >= 0);
-
-          switch (H5Tget_class(attr_h5type))
+          
+          if (block > 0)
             {
-            case H5T_INTEGER:
+              ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &base, NULL, &one, &block);
+            }
+          else
+            {
+              ierr = H5Sselect_none(fspace);
+            }
+          assert(ierr >= 0);
+          
+          size_t attr_size = attr_kind.size;
+          hid_t attr_h5type = hdf5::attr_kind_h5type(attr_kind);
+          switch (attr_kind.type)
+            {
+            case UIntVal:
               if (attr_size == 4)
                 {
+                  vector <uint32_t> attr_values_uint32;
                   attr_values_uint32.resize(edge_count);
-                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
                                  &attr_values_uint32[0]);
                   attr_values.insert(string(attr_name), attr_values_uint32);
                 }
               else if (attr_size == 2)
                 {
+                  vector <uint16_t>    attr_values_uint16;
                   attr_values_uint16.resize(edge_count);
-                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
                                  &attr_values_uint16[0]);
                   attr_values.insert(string(attr_name), attr_values_uint16);
                 }
               else if (attr_size == 1)
                 {
+                  vector <uint8_t> attr_values_uint8;
                   attr_values_uint8.resize(edge_count);
-                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
                                  &attr_values_uint8[0]);
                   attr_values.insert(string(attr_name), attr_values_uint8);
                 }
@@ -344,17 +391,51 @@ namespace neuroh5
                   throw runtime_error("Unsupported integer attribute size");
                 };
               break;
-            case H5T_FLOAT:
-              attr_values_float.resize(edge_count);
-              ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
-                             &attr_values_float[0]);
-              attr_values.insert(string(attr_name), attr_values_float);
+            case SIntVal:
+              if (attr_size == 4)
+                {
+                  vector <int32_t>  attr_values_int32;
+                  attr_values_int32.resize(edge_count);
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
+                                 &attr_values_int32[0]);
+                  attr_values.insert(string(attr_name), attr_values_int32);
+                }
+              else if (attr_size == 2)
+                {
+                  vector <int16_t>  attr_values_int16;
+                  attr_values_int16.resize(edge_count);
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
+                                 &attr_values_int16[0]);
+                  attr_values.insert(string(attr_name), attr_values_int16);
+                }
+              else if (attr_size == 1)
+                {
+                  vector <int8_t>  attr_values_int8;
+                  attr_values_int8.resize(edge_count);
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
+                                 &attr_values_int8[0]);
+                  attr_values.insert(string(attr_name), attr_values_int8);
+                }
+              else
+                {
+                  throw runtime_error("Unsupported integer attribute size");
+                };
               break;
-            case H5T_ENUM:
+            case FloatVal:
+              {
+                vector <float>  attr_values_float;
+                attr_values_float.resize(edge_count);
+                ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
+                               &attr_values_float[0]);
+                attr_values.insert(string(attr_name), attr_values_float);
+              }
+              break;
+            case EnumVal:
               if (attr_size == 1)
                 {
+                  vector <uint8_t>  attr_values_uint8;;
                   attr_values_uint8.resize(edge_count);
-                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, H5P_DEFAULT,
+                  ierr = H5Dread(dset, attr_h5type, mspace, fspace, rapl,
                                  &attr_values_uint8[0]);
                   attr_values.insert(string(attr_name), attr_values_uint8);
                 }
@@ -367,9 +448,9 @@ namespace neuroh5
               throw runtime_error("Unsupported attribute type");
               break;
             }
-
+          
           assert(ierr >= 0);
-
+          
           assert(H5Sclose(fspace) >= 0);
           assert(H5Dclose(dset) >= 0);
           assert(H5Sclose(mspace) >= 0);
@@ -377,6 +458,7 @@ namespace neuroh5
 
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);
+      assert(H5Pclose(rapl) >= 0);
 
       return ierr;
     }
@@ -391,7 +473,7 @@ namespace neuroh5
      const string&                       name_space,
      const DST_PTR_T                     edge_base,
      const DST_PTR_T                     edge_count,
-     const vector< pair<string,hid_t> >& edge_attr_info,
+     const vector< pair<string,AttrKind> >& edge_attr_info,
      data::NamedAttrVal&                 edge_attr_values
      )
     {
@@ -401,10 +483,10 @@ namespace neuroh5
       for (size_t j = 0; j < edge_attr_info.size(); j++)
         {
           string attr_name   = edge_attr_info[j].first;
-          hid_t  attr_h5type = edge_attr_info[j].second;
+          AttrKind attr_kind = edge_attr_info[j].second;
           assert ((ierr = read_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
                                                name_space, attr_name, edge_base, edge_count,
-                                               attr_h5type, edge_attr_values))
+                                               attr_kind, edge_attr_values))
                   >= 0);
         }
 

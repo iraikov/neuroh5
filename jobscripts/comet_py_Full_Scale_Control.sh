@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-#SBATCH -J neurograph_scatter_attrs_test
-#SBATCH -o ./results/neurograph_scatter_attrs_test.%j.o
+#SBATCH -J neurograph_scatter_read_test
+#SBATCH -o ./results/neurograph_scatter_read_test.%j.o
 #SBATCH --nodes=32
 #SBATCH --ntasks-per-node=16
 #SBATCH -p compute
@@ -15,11 +15,14 @@ module load python
 module load mpi4py
 
 export LD_PRELOAD=$MPIHOME/lib/libmpi.so
+
+export PYTHONPATH=/share/apps/compute/mpi4py/mvapich2_ib/lib/python2.7/site-packages:/opt/python/lib/python2.7/site-packages:$PYTHONPATH
 export PYTHONPATH=$HOME/.local/lib/python2.7/site-packages:$PYTHONPATH
+
 
 set -x
 
-ibrun -np 512 python ./tests/comet_scatter_test.py
+ibrun -np 512 python ./tests/test_scatter_read_graph.py
 
 echo All done!
 

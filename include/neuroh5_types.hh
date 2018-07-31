@@ -4,7 +4,7 @@
 ///
 ///  Type definitions for the fundamental datatypes used in the API
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 #ifndef NEUROH5_TYPES_HH
 #define NEUROH5_TYPES_HH
@@ -19,6 +19,15 @@
 
 #include <mpi.h>
 #include <hdf5.h>
+
+// type support
+#include "cereal/types/vector.hpp"
+#include "cereal/types/tuple.hpp"
+#include "cereal/types/set.hpp"
+#include "cereal/types/map.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/complex.hpp"
+#include "cereal/types/memory.hpp"
 
 #include "ngraph.hh"
 #include "attr_val.hh"
@@ -64,6 +73,27 @@ namespace neuroh5
   // Block offset type
   typedef uint64_t DST_BLK_PTR_T;
         
+  enum AttrType
+    {
+      NoneVal, SIntVal, UIntVal, FloatVal, EnumVal
+    };
+
+  struct AttrKind
+  {
+    AttrType type=NoneVal;
+    size_t size=0;
+    AttrKind() {};
+    AttrKind (const AttrType& p_type, const size_t& p_size ) : type(p_type), size(p_size) {}
+    AttrKind (AttrType& p_type, size_t& p_size ) : type(p_type), size(p_size) {}
+    // This method lets cereal know which data members to serialize
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+      archive(type, size);
+    }
+    
+  };
+  
   enum EdgeMapType
     {
       EdgeMapDst,

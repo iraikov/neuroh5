@@ -60,6 +60,7 @@ namespace neuroh5
                                     const std::vector<std::size_t>& p)
     {
       std::vector<bool> done(vec.size());
+      assert(vec.size() == p.size());
       for (std::size_t i = 0; i < vec.size(); ++i)
         {
           if (done[i])

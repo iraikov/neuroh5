@@ -2,9 +2,9 @@
 #define EDGE_ATTRIBUTES_HH
 
 #include "neuroh5_types.hh"
-
-#include "infer_datatype.hh"
 #include "attr_val.hh"
+#include "infer_datatype.hh"
+#include "attr_kind_datatype.hh"
 #include "hdf5_edge_attributes.hh"
 #include "exists_dataset.hh"
 
@@ -37,11 +37,12 @@ namespace neuroh5
     /// @return                  HDF5 error code.
     herr_t get_edge_attributes
     (
+     MPI_Comm                                     comm,
      const std::string&                           file_name,
      const std::string&                           src_pop_name,
      const std::string&                           dst_pop_name,
      const string&                                name_space,
-     std::vector< std::pair<std::string,hid_t> >& out_attributes
+     std::vector< std::pair<std::string,AttrKind> >& out_attributes
      );
 
     /// @brief Determines the number of edge attributes for each supported
@@ -54,15 +55,11 @@ namespace neuroh5
     ///
     /// @param num_attrs     A vector which indicates the number of attributes
     ///                      of each type.
-    ///                      - Index 0 float type
-    ///                      - Index 1: uint8/enum type
-    ///                      - Index 1: uint16 type
-    ///                      - Index 1: uint32 type
     ///
     /// @return                  HDF5 error code.
     herr_t num_edge_attributes
     (
-     const std::vector< std::pair<std::string,hid_t> >& attributes,
+     const std::vector< std::pair<std::string,AttrKind> >& attributes,
      std:: vector <size_t> &num_attrs
      );
 
@@ -94,8 +91,9 @@ namespace neuroh5
      const std::string&    attr_name,
      const DST_PTR_T       edge_base,
      const DST_PTR_T       edge_count,
-     const hid_t           attr_h5type,
-     data::NamedAttrVal&   attr_values
+     const AttrKind        attr_kind,
+     data::NamedAttrVal&   attr_values,
+     bool collective = true
      );
 
     extern int read_all_edge_attributes
@@ -107,7 +105,7 @@ namespace neuroh5
      const std::string&                                 name_space,
      const DST_PTR_T                                    edge_base,
      const DST_PTR_T                                    edge_count,
-     const std::vector< std::pair<std::string,hid_t> >& edge_attr_info,
+     const std::vector< std::pair<std::string,AttrKind> >& edge_attr_info,
      data::NamedAttrVal&                              edge_attr_values
      );
 
