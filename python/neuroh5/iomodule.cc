@@ -5021,8 +5021,6 @@ extern "C"
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
               py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
-              assert(status == MPI_SUCCESS);
-
             }
 
 
