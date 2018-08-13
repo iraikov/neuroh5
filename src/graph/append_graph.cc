@@ -37,21 +37,6 @@ namespace neuroh5
   {
 
 
-    // Assign each node to a rank 
-    static void compute_node_rank_map
-    (
-     size_t num_ranks,
-     size_t num_nodes,
-     map< NODE_IDX_T, rank_t > &node_rank_map
-     )
-    {
-      // round-robin node to rank assignment from file
-      for (size_t i = 0; i < num_nodes; i++)
-        {
-            node_rank_map.insert(make_pair(i, i%num_ranks));
-        }
-    }
-
     
     int append_graph
     (
@@ -73,9 +58,11 @@ namespace neuroh5
       vector<pair <pop_t, string> > pop_labels;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
-      size_t total_num_nodes=0;
+      size_t total_num_nodes=0, pop_num_nodes=0;
       size_t dst_start, dst_end;
       size_t src_start, src_end;
+
+      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
 
       int size, rank;
       assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
@@ -91,7 +78,7 @@ namespace neuroh5
         }
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
-                                          pop_ranges, pop_vector, total_num_nodes) >= 0);
+                                          pop_ranges, pop_vector, pop_num_nodes) >= 0);
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
       
       for (size_t i=0; i< pop_labels.size(); i++)
@@ -114,27 +101,63 @@ namespace neuroh5
       src_start = pop_vector[src_pop_idx].start;
       src_end   = src_start + pop_vector[src_pop_idx].count;
       
-      // Create an I/O communicator
-      MPI_Comm  io_comm;
-      // MPI group color value used for I/O ranks
-      int io_color = 1;
-      if ((rank_t)rank < io_size)
-        {
-          MPI_Comm_split(all_comm,io_color,rank,&io_comm);
-          MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
-        }
-      else
-        {
-          MPI_Comm_split(all_comm,0,rank,&io_comm);
-        }
+      vector< NODE_IDX_T > node_index;
 
+      { // Determine the destination node indices present in the input
+        // edge map across all ranks
+        size_t num_nodes = input_edge_map.size();
+        vector<size_t> sendbuf_num_nodes(size, num_nodes);
+        vector<size_t> recvbuf_num_nodes(size);
+        vector<int> recvcounts(size, 0);
+        vector<int> displs(size+1, 0);
+        assert(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
+                             &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
+               == MPI_SUCCESS);
+        for (size_t p=0; p<size; p++)
+          {
+            total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
+            displs[p+1] = displs[p] + recvbuf_num_nodes[p];
+            recvcounts[p] = recvbuf_num_nodes[p];
+          }
+        
+        vector< NODE_IDX_T > local_node_index;
+        for (auto iter: input_edge_map)
+          {
+            NODE_IDX_T dst          = iter.first;
+            local_node_index.push_back(dst);
+          }
+        
+        node_index.resize(total_num_nodes,0);
+        assert(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
+                              &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
+                              all_comm) == MPI_SUCCESS);
+
+        vector<size_t> p = sort_permutation(node_index, compare_nodes);
+        apply_permutation_in_place(node_index, p);
+      }
+
+      assert(node_index.size() == total_num_nodes);
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
-      compute_node_rank_map(io_size, total_num_nodes, node_rank_map);
+      {
+        rank_t r=0; 
+        for (size_t i = 0; i < node_index.size(); i++)
+          {
+            node_rank_map.insert(make_pair(node_index[i], r++));
+            if ((unsigned int)io_size <= r) r=0;
+          }
+      }
+      rank_edge_map_t rank_edge_map;
+      {
+        for (rank_t r = 0; r < io_size; r++)
+          {
+            edge_map_t &m = rank_edge_map[r];
+          }
+      }
+      mpi::MPI_DEBUG(all_comm, "append_graph: ", src_pop_name, " -> ", dst_pop_name, ": ",
+                     " total_num_nodes = ", total_num_nodes);
 
       // construct a map where each set of edges are arranged by destination I/O rank
-      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
-      rank_edge_map_t rank_edge_map;
       for (auto iter: input_edge_map)
         {
           NODE_IDX_T dst          = iter.first;
@@ -143,6 +166,11 @@ namespace neuroh5
           edge_tuple_t& et        = iter.second;
           const vector<NODE_IDX_T>& v   = get<0>(et);
           vector <AttrVal>& va    = get<1>(et);
+
+          auto it = node_rank_map.find(dst);
+          assert(it != node_rank_map.end());
+          size_t dst_rank = it->second;
+          edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
 
           if (v.size() > 0)
             {
@@ -193,10 +221,7 @@ namespace neuroh5
                       apply_permutation_in_place(a.int32_values[i], p);
                     }
                 }
-              auto it = node_rank_map.find(dst);
-              assert(it != node_rank_map.end());
-              size_t dst_rank = it->second;
-              edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
+
               vector<NODE_IDX_T> &src_vec = get<0>(et1);
               src_vec.insert(src_vec.end(),adj_vector.begin(),adj_vector.end());
               vector <AttrVal> &edge_attr_vec = get<1>(et1);
@@ -265,6 +290,20 @@ namespace neuroh5
         {
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes, num_unpacked_edges);
+        }
+
+      // Create an I/O communicator
+      MPI_Comm  io_comm;
+      // MPI group color value used for I/O ranks
+      int io_color = 1;
+      if ((rank_t)rank < io_size)
+        {
+          MPI_Comm_split(all_comm,io_color,rank,&io_comm);
+          MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+        }
+      else
+        {
+          MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
 
       if ((rank_t)rank < io_size)

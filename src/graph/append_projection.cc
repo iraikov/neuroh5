@@ -509,7 +509,7 @@ namespace neuroh5
         
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
-        
+
       // create relative destination pointers and source index
       vector<DST_BLK_PTR_T> dst_blk_ptr; 
       vector<DST_PTR_T> dst_ptr;
@@ -679,6 +679,10 @@ namespace neuroh5
         {
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
+
+      mpi::MPI_DEBUG(comm, "append_projection: ", src_pop_name, " -> ", dst_pop_name, ": ",
+                     " total_num_dests = ", total_num_dests);
+
 
       append_dst_blk_idx
         (
