@@ -36,11 +36,6 @@ namespace neuroh5
      std::vector< std::pair<std::string,std::string> >& proj_names
      );
 
-    extern herr_t read_projection_names_serial
-    (
-     const std::string&        file_name,
-     std::vector< std::pair<std::string,std::string> >& proj_names
-     );
   }
 }
 

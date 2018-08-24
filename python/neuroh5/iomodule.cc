@@ -2407,6 +2407,30 @@ extern "C"
     return Py_None;
   }
   
+  PyDoc_STRVAR(
+    read_population_names_doc,
+    "read_population_names(file_name, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns the names of all populations for which attributes exist in the given file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "populations : list\n"
+    "    A list of strings with the populations names\n"
+    "\n");
+
+  
   
   static PyObject *py_read_population_names (PyObject *self, PyObject *args, PyObject *kwds)
   {
@@ -2690,7 +2714,35 @@ extern "C"
     return py_population_attribute_info;
   }
 
-  
+
+  PyDoc_STRVAR(
+    read_population_ranges_doc,
+    "read_population_ranges(file_name, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns population size and range for each population defined in the input file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains an /H5Types group.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "(range_dict, n_nodes) : tuple\n"
+    "    A tuple with the following elements:  \n"
+    "    - range_dict: { population: (size, offset) }\n"
+    "       a dictionary where the key is population name and the value is tuple (size, offset).\n"
+    "    - n_nodes: int\n"
+    "       the total number of cells.\n"
+    "\n");
+
+
   static PyObject *py_read_population_ranges (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
@@ -2762,7 +2814,29 @@ extern "C"
     return py_result_tuple;
   }
 
-  
+  PyDoc_STRVAR(
+    read_projection_names_doc,
+    "read_projection_names(file_name, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns the names of the projections contained in the given file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "projections : (source, destination) list\n"
+    "    A list of tuples with (source, destination) population names corresponding to each projection.\n"
+    "\n");
+
   static PyObject *py_read_projection_names (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status;
@@ -5402,11 +5476,11 @@ extern "C"
   
   static PyMethodDef module_methods[] = {
     { "read_population_ranges", (PyCFunction)py_read_population_ranges, METH_VARARGS | METH_KEYWORDS,
-      "Returns population size and ranges." },
+       read_population_ranges_doc },
     { "read_population_names", (PyCFunction)py_read_population_names, METH_VARARGS | METH_KEYWORDS,
-      "Returns the names of the populations contained in the given file." },
+      read_population_names_doc },
     { "read_projection_names", (PyCFunction)py_read_projection_names, METH_VARARGS | METH_KEYWORDS,
-      "Returns the names of the projections contained in the given file." },
+      read_projection_names_doc },
     { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS | METH_KEYWORDS,
       "Reads neuronal tree morphology." },
     { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
