@@ -74,71 +74,71 @@ namespace neuroh5
           hsize_t end   = start + ranges[rank].second;
           hsize_t block = end - start;
     
-          if (block > 0)
+          /* Create property list for collective dataset operations. */
+          hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+          status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+          
+          string index_path = path + "/" + CELL_INDEX;
+          string ptr_path = path + "/" + ATTR_PTR;
+          string value_path = path + "/" + ATTR_VAL;
+          
+          // read index
+          index.resize(block);
+
+          status = read<NODE_IDX_T> (loc, index_path, start, block,
+                                     NODE_IDX_H5_NATIVE_T, index, rapl);
+          for (size_t i=0; i<index.size(); i++)
             {
-              /* Create property list for collective dataset operations. */
-              hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
-              status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
-            
-              string index_path = path + "/" + CELL_INDEX;
-              string ptr_path = path + "/" + ATTR_PTR;
-              string value_path = path + "/" + ATTR_VAL;
-
-              // read index
-              index.resize(block);
-
-              status = read<NODE_IDX_T> (loc, index_path, start, block,
-                                         NODE_IDX_H5_NATIVE_T, index, rapl);
-              for (size_t i=0; i<index.size(); i++)
-                {
-                  index[i] += pop_start;
-                }
+              index[i] += pop_start;
+            }
               
-              // read pointer and determine ranges
-              status = exists_dataset (loc, ptr_path.c_str());
-              if (status > 0)
+          // read pointer and determine ranges
+          status = exists_dataset (loc, ptr_path.c_str());
+          if (status > 0)
+            {
+              if (block > 0)
                 {
                   ptr.resize(block+1);
-                  status = read<ATTR_PTR_T> (loc, ptr_path, start, block+1,
-                                             ATTR_PTR_H5_NATIVE_T, ptr, rapl);
-                  assert (status >= 0);
                 }
+              status = read<ATTR_PTR_T> (loc, ptr_path, start, block > 0 ? block+1 : 0,
+                                         ATTR_PTR_H5_NATIVE_T, ptr, rapl);
+              assert (status >= 0);
+            }
               
-              hsize_t value_start, value_block;
-              if (ptr.size() > 0)
+          hsize_t value_start, value_block;
+          if (ptr.size() > 0)
+            {
+              value_start = ptr[0];
+              value_block = ptr.back()-value_start;
+            }
+          else
+            {
+              value_start = 0;
+              value_block = block > 0 ? dataset_num_elements (loc, value_path) : 0;
+            }
+          
+          // read values
+          hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+          hid_t ftype = H5Dget_type(dset);
+          assert(ftype >= 0);
+          hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
+          assert(H5Dclose(dset)   >= 0);
+          assert(H5Tclose(ftype)  >= 0);
+          
+          values.resize(value_block);
+          status = read<T> (loc, value_path, value_start, value_block,
+                            ntype, values, rapl);
+          
+          assert(H5Tclose(ntype)  >= 0);
+          status = H5Pclose(rapl);
+          assert(status == 0);
+          
+          if (ptr.size() > 0)
+            {
+              for (size_t i=0; i<block+1; i++)
                 {
-                  value_start = ptr[0];
-                  value_block = ptr.back()-value_start;
-                }
-              else
-                {
-                  value_start = 0;
-                  value_block = dataset_num_elements (loc, value_path);
-                }
-            
-              // read values
-              hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
-              assert(dset >= 0);
-              hid_t ftype = H5Dget_type(dset);
-              assert(ftype >= 0);
-              hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-              assert(H5Dclose(dset)   >= 0);
-              assert(H5Tclose(ftype)  >= 0);
-            
-              values.resize(value_block);
-              status = read<T> (loc, value_path, value_start, value_block,
-                                ntype, values, rapl);
-            
-              assert(H5Tclose(ntype)  >= 0);
-              status = H5Pclose(rapl);
-              assert(status == 0);
-
-              if (ptr.size() > 0)
-                {
-                  for (size_t i=0; i<block+1; i++)
-                    {
-                      ptr[i] -= value_start;
-                    }
+                  ptr[i] -= value_start;
                 }
             }
         }
@@ -196,9 +196,9 @@ namespace neuroh5
               assert (status >= 0);
             }
 
+          ATTR_PTR_T selection_ptr_pos = 0;
           if (ptr.size() > 0)
             {
-              ATTR_PTR_T selection_ptr_pos = 0;
               for (const CELL_IDX_T& s : selection) 
                 {
                   auto it = std::find(index.begin(), index.end(), s-pop_start);
@@ -214,24 +214,24 @@ namespace neuroh5
                   selection_ptr_pos += value_block;
                 }
               selection_ptr.push_back(selection_ptr_pos);
-              
-              // read values
-              hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
-              assert(dset >= 0);
-              hid_t ftype = H5Dget_type(dset);
-              assert(ftype >= 0);
-              hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-              assert(H5Dclose(dset)   >= 0);
-              assert(H5Tclose(ftype)  >= 0);
-              
-              values.resize(selection_ptr_pos);
-              status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
-
-              status = H5Pclose(rapl);
-              assert(status == 0);
-              
-              assert(H5Tclose(ntype)  >= 0);
             }
+          
+          // read values
+          hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
+          hid_t ftype = H5Dget_type(dset);
+          assert(ftype >= 0);
+          hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
+          assert(H5Dclose(dset)   >= 0);
+          assert(H5Tclose(ftype)  >= 0);
+              
+          values.resize(selection_ptr_pos);
+          status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
+          
+          status = H5Pclose(rapl);
+          assert(status == 0);
+          
+          assert(H5Tclose(ntype)  >= 0);
         }
       
       return status;
