@@ -10,6 +10,7 @@
 #include "rank_range.hh"
 #include "dataset_num_elements.hh"
 #include "exists_dataset.hh"
+#include "exists_group.hh"
 #include "read_template.hh"
 #include "write_template.hh"
 #include "mpe_seq.hh"
@@ -51,6 +52,9 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
+      status = exists_group (loc, path.c_str());
+      assert(status > 0);
+      
       hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
       size_t read_size = 0;
       if (numitems > 0) 
@@ -165,6 +169,9 @@ namespace neuroh5
       int size, rank;
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+
+      status = exists_group (loc, path.c_str());
+      assert(status > 0);
       
       hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
       vector< pair<hsize_t,hsize_t> > ranges;

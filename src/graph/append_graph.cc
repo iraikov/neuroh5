@@ -64,17 +64,21 @@ namespace neuroh5
 
       auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
 
-      int size, rank;
-      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+      int ssize, srank; size_t size, rank;
+      assert(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
+      assert(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
+      assert(ssize > 0);
+      assert(srank >= 0);
+      size = ssize;
+      rank = srank;
 
-      if (size < io_size_arg)
+      if (ssize < io_size_arg)
         {
           io_size = size > 0 ? size : 1;
         }
       else
         {
-          io_size = io_size_arg > 0 ? io_size_arg : 1;
+          io_size = io_size_arg > 0 ? (size_t)io_size_arg : 1;
         }
       //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       assert(cell::read_population_ranges(all_comm, file_name,
@@ -148,12 +152,6 @@ namespace neuroh5
           }
       }
       rank_edge_map_t rank_edge_map;
-      {
-        for (rank_t r = 0; r < io_size; r++)
-          {
-            edge_map_t &m = rank_edge_map[r];
-          }
-      }
       mpi::MPI_DEBUG(all_comm, "append_graph: ", src_pop_name, " -> ", dst_pop_name, ": ",
                      " total_num_nodes = ", total_num_nodes);
 

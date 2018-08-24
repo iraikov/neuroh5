@@ -229,12 +229,14 @@ namespace neuroh5
       hid_t fapl = H5Fget_access_plist(file);
       assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
 
+      /*
       int ssize, srank;
       assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
       size_t size, rank;
       size = (size_t)ssize;
       rank = (size_t)srank;
+      */
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);

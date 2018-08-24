@@ -141,9 +141,9 @@ namespace neuroh5
       herr_t ierr;
       
       /* Save old error handler */
-      H5E_auto2_t old_func;
-      void *old_client_data;
-      H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
+      H5E_auto2_t error_handler;
+      void *client_data;
+      H5Eget_auto(H5E_DEFAULT, &error_handler, &client_data);
       
       /* Turn off error handling */
       H5Eset_auto(H5E_DEFAULT, NULL, NULL);
@@ -157,7 +157,7 @@ namespace neuroh5
           hid_t dset = H5Dopen2(grp, value_path.c_str(), H5P_DEFAULT);
           if (dset < 0) // skip the link, if this is not a dataset
             {
-              H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+              H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
               return 0;
             }
     
@@ -171,7 +171,7 @@ namespace neuroh5
           assert(H5Dclose(dset) >= 0);
         }
       
-      H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+      H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
       return 0;
     }
 

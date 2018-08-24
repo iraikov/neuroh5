@@ -2525,10 +2525,14 @@ extern "C"
         assert(status == MPI_SUCCESS);
       }
 
-    int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-
+    int srank, ssize; size_t rank, size;
+    assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+    assert(ssize > 0);
+    assert(srank >= 0);
+    size = ssize;
+    rank = srank;
+    
     vector <string> pop_names;
     if (py_pop_names != NULL)
       {
@@ -2540,7 +2544,7 @@ extern "C"
           }
       }
 
-    int root = 0;
+    size_t root = 0;
 
     vector< pair<pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, input_file_name, pop_labels);
@@ -2557,7 +2561,7 @@ extern "C"
     
     map<string, map<string, vector<string> > > pop_attribute_info;
     map<string, map<string, map <string, vector<CELL_IDX_T> > > > cell_index_info;
-    if (rank == (unsigned int)root)
+    if (rank == root)
       {
 
         for (const string& pop_name : pop_names)
@@ -2618,7 +2622,7 @@ extern "C"
     {
       vector<char> sendbuf;
       size_t sendbuf_size=0;
-      if ((rank == (unsigned int)root) && (pop_attribute_info.size() > 0) )
+      if ((rank == root) && (pop_attribute_info.size() > 0) )
         {
           data::serialize_data(pop_attribute_info, sendbuf);
           sendbuf_size = sendbuf.size();
@@ -2629,7 +2633,7 @@ extern "C"
       sendbuf.resize(sendbuf_size);
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
       
-      if ((rank != (unsigned int)root) && (sendbuf_size > 0))
+      if ((rank != root) && (sendbuf_size > 0))
         {
           data::deserialize_data(sendbuf, pop_attribute_info);
         }
@@ -2638,7 +2642,7 @@ extern "C"
     {
       vector<char> sendbuf;
       size_t sendbuf_size=0;
-      if ((rank == (unsigned int)root) && (cell_index_info.size() > 0) )
+      if ((rank == root) && (cell_index_info.size() > 0) )
         {
           data::serialize_data(cell_index_info, sendbuf);
           sendbuf_size = sendbuf.size();
@@ -2649,7 +2653,7 @@ extern "C"
       sendbuf.resize(sendbuf_size);
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
       
-      if ((rank != (unsigned int)root) && (sendbuf_size > 0))
+      if ((rank != root) && (sendbuf_size > 0))
         {
           data::deserialize_data(sendbuf, cell_index_info);
         }
