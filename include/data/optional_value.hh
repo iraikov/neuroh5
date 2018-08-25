@@ -4,7 +4,6 @@
 ///
 ///  Functions for storing optional values.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
 #ifndef OPTIONAL_VALUE_HH

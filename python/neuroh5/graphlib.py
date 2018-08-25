@@ -139,12 +139,12 @@ def neighbor_degrees (comm, neighbors_dict, node_ranks, verbose=False):
     (global_min_out_degree, global_min_out_degree_node_id)     = comm.allreduce(sendobj=(min_out_degree,min_out_degree_node_id), op=MPI.MINLOC)
     (global_max_out_degree, global_max_out_degree_node_id)     = comm.allreduce(sendobj=(max_out_degree,max_out_degree_node_id), op=MPI.MAXLOC)
     if rank == 0 and verbose:
-        print 'neighbor_degrees: max degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_max_total_degree, global_max_total_degree_node_id,
+        print ('neighbor_degrees: max degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_max_total_degree, global_max_total_degree_node_id,
                                                                                        global_max_in_degree, global_max_in_degree_node_id,
-                                                                                       global_max_out_degree, global_max_out_degree_node_id)
-        print 'neighbor_degrees: min degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_min_total_degree, global_min_total_degree_node_id,
+                                                                                       global_max_out_degree, global_max_out_degree_node_id))
+        print ('neighbor_degrees: min degrees: total=%d (%d) in=%d (%d) out=%d (%d)' % (global_min_total_degree, global_min_total_degree_node_id,
                                                                                        global_min_in_degree, global_min_in_degree_node_id,
-                                                                                       global_min_out_degree, global_min_out_degree_node_id)
+                                                                                       global_min_out_degree, global_min_out_degree_node_id))
 
     neighbor_index=0
     while True:

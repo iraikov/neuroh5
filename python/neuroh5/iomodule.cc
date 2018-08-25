@@ -2588,7 +2588,7 @@ extern "C"
 
             for(const string& name_space : name_spaces)
               {
-                vector< pair<string, hid_t> > ns_attributes;
+                vector< pair<string, AttrKind> > ns_attributes;
 
                 status = cell::get_cell_attributes (input_file_name, name_space, pop_name, ns_attributes);
                 assert (status >= 0);
@@ -4842,7 +4842,7 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
-    vector< pair<string,hid_t> > attr_info;
+    vector< pair<string,AttrKind> > attr_info;
     assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
                                       get<1>(pop_labels[pop_idx]), attr_info) >= 0);
     vector<CELL_IDX_T> cell_index;

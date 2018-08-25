@@ -213,7 +213,7 @@ namespace neuroh5
     /////////////////////////////////////////////////////////////////////////
     herr_t num_edge_attributes
     (
-     const vector< pair<string,hid_t> >& attributes,
+     const vector< pair<string,AttrKind> >& attributes,
      vector <size_t> &num_attrs
      )
     {
@@ -221,63 +221,53 @@ namespace neuroh5
       num_attrs.resize(data::AttrVal::num_attr_types);
       for (size_t i = 0; i < attributes.size(); i++)
         {
-          hid_t attr_h5type = attributes[i].second;
-          size_t attr_size = H5Tget_size(attr_h5type);
-          switch (H5Tget_class(attr_h5type))
+          AttrKind attr_kind = attributes[i].second;
+          size_t attr_size = attr_kind.size;
+          switch (attr_kind.type)
             {
-            case H5T_INTEGER:
+            case UIntVal:
               if (attr_size == 4)
                 {
-                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
-                    {
-                      num_attrs[data::AttrVal::attr_index_uint32]++;
-                    }
-                  else
-                    {
-                      num_attrs[data::AttrVal::attr_index_int32]++;
-                    }
+                  num_attrs[data::AttrVal::attr_index_uint32]++;
                 }
               else if (attr_size == 2)
                 {
-                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
-                    {
-                      num_attrs[data::AttrVal::attr_index_uint16]++;
-                    }
-                  else
-                    {
-                      num_attrs[data::AttrVal::attr_index_int16]++;
-                    }
+                  num_attrs[data::AttrVal::attr_index_uint16]++;
                 }
               else if (attr_size == 1)
                 {
-                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
-                    {
-                      num_attrs[data::AttrVal::attr_index_uint8]++;
-                    }
-                  else
-                    {
-                      num_attrs[data::AttrVal::attr_index_int8]++;
-                    }
+                  num_attrs[data::AttrVal::attr_index_uint8]++;
                 }
               else
                 {
                   throw runtime_error("Unsupported integer attribute size");
                 };
               break;
-            case H5T_FLOAT:
+            case SIntVal:
+              if (attr_size == 4)
+                {
+                  num_attrs[data::AttrVal::attr_index_int32]++;
+                }
+              else if (attr_size == 2)
+                {
+                  num_attrs[data::AttrVal::attr_index_int16]++;
+                }
+              else if (attr_size == 1)
+                {
+                  num_attrs[data::AttrVal::attr_index_int8]++;
+                }
+              else
+                {
+                  throw runtime_error("Unsupported integer attribute size");
+                };
+              break;
+            case FloatVal:
               num_attrs[data::AttrVal::attr_index_float]++;
               break;
-            case H5T_ENUM:
+            case EnumVal:
               if (attr_size == 1)
                 {
-                  if (H5Tget_sign( attr_h5type ) == H5T_SGN_NONE)
-                    {
-                      num_attrs[data::AttrVal::attr_index_uint8]++;
-                    }
-                  else
-                    {
-                      num_attrs[data::AttrVal::attr_index_int8]++;
-                    }
+                  num_attrs[data::AttrVal::attr_index_uint8]++;
                 }
               else
                 {

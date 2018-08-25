@@ -54,7 +54,7 @@ namespace neuroh5
      const string&                 file_name,
      const string&                 name_space,
      const string&                 pop_name,
-     vector< pair<string,hid_t> >& out_attributes
+     vector< pair<string,AttrKind> >& out_attributes
      );
 
     
