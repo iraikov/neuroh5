@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file read_projection_datasets.cc
+///  @file read_projection_dataset_selection.cc
 ///
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
@@ -33,10 +33,10 @@ namespace neuroh5
   {
     
     /**************************************************************************
-     * Read the basic DBS graph structure
+     * Read a subset of the basic DBS graph structure
      *************************************************************************/
 
-    herr_t read_projection_datasets
+    herr_t read_projection_dataset_selection
     (
      MPI_Comm                   comm,
      const std::string&         file_name,
@@ -44,11 +44,10 @@ namespace neuroh5
      const std::string&         dst_pop_name,
      const NODE_IDX_T&          dst_start,
      const NODE_IDX_T&          src_start,
-     DST_BLK_PTR_T&             block_base,
+     const std::vector<NODE_IDX_T>&  selection,
      DST_PTR_T&                 edge_base,
-     vector<DST_BLK_PTR_T>&     dst_blk_ptr,
-     vector<NODE_IDX_T>&        dst_idx,
-     vector<DST_PTR_T>&         dst_ptr,
+     vector<NODE_IDX_T>&        selection_dst_idx,
+     vector<DST_PTR_T>&         selection_dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
      hsize_t&                   total_read_blocks,
@@ -229,7 +228,9 @@ namespace neuroh5
           
           DST_PTR_T dst_rebase = 0;
           
-          hsize_t src_idx_block=0, src_idx_start=0;
+          // Create source index ranges based on selection_dst_ptr
+          vector< pair<hsize_t,hsize_t> > src_idx_ranges;
+          ATTR_PTR_T selection_ptr_pos = 0;
           if (dst_ptr_block > 0)
             {
               dst_rebase = dst_ptr[0];
@@ -238,25 +239,39 @@ namespace neuroh5
                 {
                   dst_ptr[i] -= dst_rebase;
                 }
-              
-              // read source indices
-              src_idx_start = dst_rebase;
-              src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
 
-              // allocate buffer and memory dataspace
-              if (src_idx_block > 0)
+              // Create node index in order to determine which edges to read
+
+              for (const NODE_IDX_T& s : selection) 
                 {
-                  src_idx.resize(src_idx_block, 0);
+                  auto it = std::find(dst_idx.begin(), dst_idx.end(), s-dst_start);
+                  assert(it != node_index.end());
+                  selection_dst_idx.push_back(s);
+                  
+                  ptrdiff_t pos = it - dst_idx.begin();
+
+                  hsize_t src_idx_start=dst_ptr[pos];
+                  hsize_t src_idx_block=dst_ptr[pos+1]-src_idx_start;
+
+                  src_idx_ranges.push_back(make_pair(src_idx_start, src_idx_block));
+                  selection_dst_ptr.push_back(selection_ptr_pos);
+                  selection_dst_ptr_pos += src_idx_block;
                 }
+              selection_dst_ptr.push_back(selection_ptr_pos);
             }
 
-          ierr = hdf5::read<NODE_IDX_T>
+          if (src_idx_ranges.size() > 0)
+            {
+              // allocate buffer and memory dataspace
+              src_idx.resize(selection_ptr_pos, 0);
+            }
+
+          ierr = hdf5::read_selection<NODE_IDX_T>
             (
              file,
              hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX),
-             src_idx_start,
-             src_idx_block,
              NODE_IDX_H5_NATIVE_T,
+             src_idx_ranges,
              src_idx,
              rapl
              );

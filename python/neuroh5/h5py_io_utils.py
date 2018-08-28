@@ -202,7 +202,6 @@ def create_new_neuroh5_file(template_path, output_path):
             raise KeyError('Invalid neuroH5 template file: %s' % template_path)
         with h5py.File(output_path, 'w') as target:
             target.copy(source['H5Types'], target, name='H5Types')
-            print 'Created new neuroH5 file: %s' % output_path
 
 
 def gid_in_population_list(gid, population_list, population_range_dict):
@@ -229,5 +228,4 @@ if __name__ == '__main__':
     index_map = get_cell_attributes_index_map(comm, file_path, population, namespace)
     gid = index_map.itervalues().next().keys()[rank]
     attr_dict = select_cell_attributes(gid, comm, file_path, index_map, population, namespace, population_offset=0)
-    print 'Rank: %i, gid: %i, num_syns: %i' % (rank, gid, len(attr_dict['syn_ids']))
     sys.stdout.flush()

@@ -453,6 +453,160 @@ namespace neuroh5
       return ierr;
     }
 
+
+    /////////////////////////////////////////////////////////////////////////
+    herr_t read_edge_attribute_selection
+    (
+     MPI_Comm              comm,
+     const string&         file_name,
+     const string&         src_pop_name,
+     const string&         dst_pop_name,
+     const string&         name_space,
+     const string&         attr_name,
+     const DST_PTR_T&       edge_base,
+     const DST_PTR_T&       edge_count,
+     const vector<NODE_IDX_T>&   selection_dst_idx,
+     const vector<DST_PTR_T>&    selection_dst_ptr,
+     const AttrKind        attr_kind,
+     data::NamedAttrVal&   attr_values,
+     bool collective
+     )
+    {
+      hid_t file;
+      herr_t ierr = 0;
+      hsize_t block = edge_count, base = edge_base;
+
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      assert(fapl >= 0);
+      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+
+      file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+      assert(file >= 0);
+
+      /* Create property list for collective dataset operations. */
+      hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+      if (collective)
+        {
+          ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+        }
+
+      
+      string dset_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, name_space, attr_name);
+      ierr = hdf5::exists_dataset (file, dset_path.c_str());
+      if (ierr > 0)
+        {
+          vector< pair<hsize_t,hsize_t> > ranges;
+          for (size_t i=0; i<selection_dst_ptr.size()-1; i++)
+            {
+              start = selection_dst_ptr[i];
+              block = selection_dst_ptr[i+1] - start;
+              ranges.push_back(make_pair(start, block));
+            }
+          
+          size_t attr_size = attr_kind.size;
+          hid_t attr_h5type = hdf5::attr_kind_h5type(attr_kind);
+          switch (attr_kind.type)
+            {
+            case UIntVal:
+              if (attr_size == 4)
+                {
+                  vector <uint32_t> attr_values_uint32;
+                  attr_values_uint32.resize(edge_count);
+                  ierr = read_selection<uint32_t>(file, dset_path, attr_h5type, ranges,
+                                                  &attr_values_uint32[0]);
+                  attr_values.insert(string(attr_name), attr_values_uint32);
+                }
+              else if (attr_size == 2)
+                {
+                  vector <uint16_t>    attr_values_uint16;
+                  attr_values_uint16.resize(edge_count);
+                  ierr = read_selection<uint16_t>(file, dset_path, attr_h5type, ranges,
+                                                  &attr_values_uint16[0]);
+                  attr_values.insert(string(attr_name), attr_values_uint16);
+                }
+              else if (attr_size == 1)
+                {
+                  vector <uint8_t> attr_values_uint8;
+                  attr_values_uint8.resize(edge_count);
+                  ierr = read_selection<uint8_t>(file, dset_path, attr_h5type, ranges,
+                                                 &attr_values_uint8[0]);
+                  attr_values.insert(string(attr_name), attr_values_uint8);
+                }
+              else
+                {
+                  throw runtime_error("Unsupported integer attribute size");
+                };
+              break;
+            case SIntVal:
+              if (attr_size == 4)
+                {
+                  vector <int32_t>  attr_values_int32;
+                  attr_values_int32.resize(edge_count);
+                  ierr = read_selection<int32_t>(file, dset_path, attr_h5type, ranges,
+                                                 &attr_values_int32[0]);
+                  attr_values.insert(string(attr_name), attr_values_int32);
+                }
+              else if (attr_size == 2)
+                {
+                  vector <int16_t>  attr_values_int16;
+                  attr_values_int16.resize(edge_count);
+                  ierr = read_selection<int16_t>(file, dset_path, attr_h5type, ranges,
+                                                 &attr_values_int16[0]);
+                  attr_values.insert(string(attr_name), attr_values_int16);
+                }
+              else if (attr_size == 1)
+                {
+                  vector <int8_t>  attr_values_int8;
+                  attr_values_int8.resize(edge_count);
+                  ierr = read_selection<int8_t>(file, dset_path, attr_h5type, ranges,
+                                                &attr_values_int8[0]);
+                  attr_values.insert(string(attr_name), attr_values_int8);
+                }
+              else
+                {
+                  throw runtime_error("Unsupported integer attribute size");
+                };
+              break;
+            case FloatVal:
+              {
+                vector <float>  attr_values_float;
+                attr_values_float.resize(edge_count);
+                ierr = read_selection<float>(file, dset_path, attr_h5type, ranges,
+                                             &attr_values_float[0]);
+                attr_values.insert(string(attr_name), attr_values_float);
+              }
+              break;
+            case EnumVal:
+              if (attr_size == 1)
+                {
+                  vector <uint8_t>  attr_values_uint8;;
+                  attr_values_uint8.resize(edge_count);
+                  ierr = read_selection<uint8_t>(file, dset_path, attr_h5type, ranges,
+                                                 &attr_values_uint8[0]);
+
+                  attr_values.insert(string(attr_name), attr_values_uint8);
+                }
+              else
+                {
+                  throw runtime_error("Unsupported enumerated attribute size");
+                };
+              break;
+            default:
+              throw runtime_error("Unsupported attribute type");
+              break;
+            }
+          
+          assert(ierr >= 0);
+          
+        }
+
+      assert(H5Fclose(file) >= 0);
+      assert(H5Pclose(fapl) >= 0);
+      assert(H5Pclose(rapl) >= 0);
+
+      return ierr;
+    }
+
     /////////////////////////////////////////////////////////////////////////
     int read_all_edge_attributes
     (
