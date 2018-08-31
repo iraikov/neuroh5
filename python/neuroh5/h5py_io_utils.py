@@ -185,7 +185,7 @@ def select_tree_attributes(gid, comm, file_path, population):
     except Exception:
         raise Exception('Something went wrong with read_tree_selection for population: %s; gid: %s, file_path: %s' %
                         (population, gid, file_path))
-    gid, attr_dict = tree_attr_iter.next()
+    gid, attr_dict = next(tree_attr_iter)
     return attr_dict
 
 
@@ -226,6 +226,6 @@ if __name__ == '__main__':
     population = 'GC'
     namespace = 'Synapse Attributes'
     index_map = get_cell_attributes_index_map(comm, file_path, population, namespace)
-    gid = index_map.itervalues().next().keys()[rank]
+    gid = next(index_map.itervalues()).keys()[rank]
     attr_dict = select_cell_attributes(gid, comm, file_path, index_map, population, namespace, population_offset=0)
     sys.stdout.flush()

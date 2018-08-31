@@ -634,7 +634,7 @@ namespace neuroh5
 
 
     /////////////////////////////////////////////////////////////////////////
-    int read_all_edge_attributes_selection
+    int read_all_edge_attribute_selection
     (
      MPI_Comm                            comm,
      const string&                       file_name,

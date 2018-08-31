@@ -81,7 +81,7 @@ namespace neuroh5
     ///
     /// @param attr_values    An EdgeNamedAttr object that holds attribute
     //                        values.
-    herr_t read_edge_attributes
+    extern herr_t read_edge_attributes
     (
      MPI_Comm              comm,
      const std::string&    file_name,
@@ -96,7 +96,7 @@ namespace neuroh5
      bool collective = true
      );
 
-    int read_all_edge_attributes
+    extern int read_all_edge_attributes
     (
      MPI_Comm                                           comm,
      const std::string&                                 file_name,
@@ -109,7 +109,7 @@ namespace neuroh5
      data::NamedAttrVal&                              edge_attr_values
      );
     
-    herr_t read_edge_attribute_selection
+    extern herr_t read_edge_attribute_selection
     (
      MPI_Comm              comm,
      const std::string&    file_name,
@@ -126,15 +126,15 @@ namespace neuroh5
      bool collective = true
      );
 
-    int read_all_edge_attribute_selection
+    extern int read_all_edge_attribute_selection
     (
      MPI_Comm                    comm,
      const std::string&          file_name,
      const std::string&          src_pop_name,
      const std::string&          dst_pop_name,
      const std::string&          name_space,
-     const DST_PTR_T             edge_base,
-     const DST_PTR_T             edge_count,
+     const DST_PTR_T&            edge_base,
+     const DST_PTR_T&            edge_count,
      const vector<NODE_IDX_T>&   selection_dst_idx,
      const vector<DST_PTR_T>&    selection_dst_ptr,
      const std::vector< std::pair<std::string,AttrKind> >& edge_attr_info,
