@@ -53,6 +53,7 @@
 #include "mpe_seq.hh"
 #include "read_projection.hh"
 #include "read_graph.hh"
+#include "read_graph_selection.hh"
 #include "scatter_read_graph.hh"
 #include "scatter_read_projection.hh"
 #include "bcast_graph.hh"
@@ -2247,6 +2248,114 @@ extern "C"
     return py_prj_tuple;
   }
 
+  static PyObject *py_read_graph_selection (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status;
+    vector < map <string, vector < vector <string> > > > edge_attr_name_vector;
+    vector<edge_map_t> prj_vector;
+    vector< pair<string,string> > prj_names;
+    char *input_file_name;
+    PyObject *py_selection=NULL;
+    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_comm = NULL;
+    MPI_Comm *comm_ptr  = NULL;
+    vector <NODE_IDX_T> selection;
+    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
+
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "selection",
+                                   "namespaces",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|OO", (char **)kwlist,
+                                     &input_file_name,
+                                     &py_selection, 
+                                     &py_attr_name_spaces,
+                                     &py_comm))
+      return NULL;
+
+    PyObject *py_prj_dict = PyDict_New();
+    MPI_Comm comm;
+
+    if (py_comm != NULL)
+      {
+        comm_ptr = PyMPIComm_Get(py_comm);
+        assert(comm_ptr != NULL);
+        assert(*comm_ptr != MPI_COMM_NULL);
+        status = MPI_Comm_dup(*comm_ptr, &comm);
+        assert(status == MPI_SUCCESS);
+      }
+    else
+      {
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+        assert(status == MPI_SUCCESS);
+      }
+
+    vector <string> edge_attr_name_spaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            char *str = PyBytes_AsString (pyval);
+            edge_attr_name_spaces.push_back(string(str));
+          }
+      }
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
+            CELL_IDX_T n = PyLong_AsLong(pyval);
+            selection.push_back(n);
+          }
+      }
+
+    assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
+
+    graph::read_graph_selection(comm, std::string(input_file_name), edge_attr_name_spaces,
+                                prj_names, selection, prj_vector, edge_attr_name_vector,
+                                total_num_nodes, local_num_edges, total_num_edges);
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    
+    PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
+                                                                edge_attr_name_spaces,
+                                                                edge_attr_name_vector);
+    
+    for (size_t i = 0; i < prj_vector.size(); i++)
+      {
+        edge_map_t prj_edge_map = prj_vector[i];
+
+        PyObject *py_edge_iter = NeuroH5EdgeIter_FromMap(prj_edge_map, edge_attr_name_spaces);
+
+        PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
+        if (py_src_dict == NULL)
+          {
+            py_src_dict = PyDict_New();
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+            PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+            Py_DECREF(py_edge_iter);
+            Py_DECREF(py_src_dict);
+          }
+        else
+          {
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+            Py_DECREF(py_edge_iter);
+          }
+        
+      }
+
+    PyObject *py_prj_tuple = PyTuple_New(2);
+    PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
+    PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+
+    return py_prj_tuple;
+  }
+
 
   static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
@@ -2950,7 +3059,7 @@ extern "C"
     "       the total number of cells.\n"
     "\n");
   
-  static PyObject *py_read_trees (PyObject *self, PyObject *args)
+  static PyObject *py_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; int topology_flag=1; 
     PyObject *py_comm = NULL;
@@ -5637,12 +5746,14 @@ extern "C"
       "Appends additional attributes for the given range of cells." },
     { "append_cell_trees", (PyCFunction)py_append_cell_trees, METH_VARARGS | METH_KEYWORDS,
       "Appends tree morphologies." },
-    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
+    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads graph connectivity in Destination Block Sparse format." },
     { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and scatters graph connectivity in Destination Block Sparse format." },
     { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
+    { "read_graph_selection", (PyCFunction)py_read_graph, METH_VARARGS | METH_KEYWORDS,
+      "Reads graph connectivity in Destination Block Sparse format." },
     { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS,
       "Writes graph connectivity in Destination Block Sparse format." },
     { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,
