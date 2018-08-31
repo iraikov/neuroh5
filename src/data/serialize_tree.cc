@@ -49,14 +49,17 @@ namespace neuroh5
 
       sdispls.resize(num_ranks);
       sendcounts.resize(num_ranks);
+
+      int end_rank = num_ranks;
+      assert((int)start_rank < end_rank);
       
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
       // (as opposed to starting at rank 0)
-      for (int key_rank = start_rank; (int)key_rank < num_ranks; key_rank++)
+      for (int key_rank = start_rank; key_rank < end_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }
-      for (int key_rank = 0; (int)key_rank < start_rank; key_rank++)
+      for (int key_rank = 0; key_rank < (int)start_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }

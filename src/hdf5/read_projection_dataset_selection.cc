@@ -50,10 +50,6 @@ namespace neuroh5
      vector<DST_PTR_T>&         selection_dst_ptr,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
-     hsize_t&                   total_read_blocks,
-     hsize_t&                   local_read_blocks,
-     size_t                     offset,
-     size_t                     numitems,
      bool collective
      )
     {
@@ -88,21 +84,7 @@ namespace neuroh5
         }
 
       vector< pair<hsize_t,hsize_t> > bins;
-      hsize_t read_blocks = 0;
-
-      if (numitems > 0)
-        {
-          if (offset < num_blocks)
-            {
-              read_blocks = min((hsize_t)numitems*size, num_blocks-offset);
-            }
-        }
-      else
-        {
-          read_blocks = num_blocks;
-        }
-
-      total_read_blocks = read_blocks;
+      hsize_t read_blocks = num_blocks;
       
       if (read_blocks > 0)
         {
@@ -112,34 +94,20 @@ namespace neuroh5
           // determine start and stop block for the current rank
           hsize_t start, stop;
           
-          start = bins[rank].first + offset;
+          start = bins[rank].first;
           stop  = start + bins[rank].second;
-          block_base = start;
           
           hsize_t block;
           if (stop > start)
             block = stop - start + 1;
           else
             block = 0;
-          if (block > 0)
-            {
-              local_read_blocks = block-1;
-            }
-          else
-            {
-              local_read_blocks = 0;
-            }
-          
 
           DST_BLK_PTR_T block_rebase = 0;
 
           // read destination block pointers
 
-          // allocate buffer and memory dataspace
-          if (block > 0)
-            {
-              dst_blk_ptr.resize(block, 0);
-            }
+          vector<DST_BLK_PTR_T> dst_blk_ptr(block, 0);
           
           ierr = hdf5::read<DST_BLK_PTR_T>
             (
@@ -173,6 +141,8 @@ namespace neuroh5
 
           // read destination block indices
           hsize_t dst_idx_block=0;
+          vector<NODE_IDX_T> dst_idx;
+
           
           if (dst_blk_ptr.size() > 0)
             dst_idx_block = block-1;
@@ -208,7 +178,7 @@ namespace neuroh5
                 }
             }
           
-
+          vector<DST_PTR_T> dst_ptr;
           if (dst_ptr_block > 0)
             {
               dst_ptr.resize(dst_ptr_block, 0);
@@ -230,7 +200,7 @@ namespace neuroh5
           
           // Create source index ranges based on selection_dst_ptr
           vector< pair<hsize_t,hsize_t> > src_idx_ranges;
-          ATTR_PTR_T selection_ptr_pos = 0;
+          ATTR_PTR_T selection_dst_ptr_pos = 0;
           if (dst_ptr_block > 0)
             {
               dst_rebase = dst_ptr[0];
@@ -245,7 +215,7 @@ namespace neuroh5
               for (const NODE_IDX_T& s : selection) 
                 {
                   auto it = std::find(dst_idx.begin(), dst_idx.end(), s-dst_start);
-                  assert(it != node_index.end());
+                  assert(it != dst_idx.end());
                   selection_dst_idx.push_back(s);
                   
                   ptrdiff_t pos = it - dst_idx.begin();
@@ -254,16 +224,16 @@ namespace neuroh5
                   hsize_t src_idx_block=dst_ptr[pos+1]-src_idx_start;
 
                   src_idx_ranges.push_back(make_pair(src_idx_start, src_idx_block));
-                  selection_dst_ptr.push_back(selection_ptr_pos);
+                  selection_dst_ptr.push_back(selection_dst_ptr_pos);
                   selection_dst_ptr_pos += src_idx_block;
                 }
-              selection_dst_ptr.push_back(selection_ptr_pos);
+              selection_dst_ptr.push_back(selection_dst_ptr_pos);
             }
 
           if (src_idx_ranges.size() > 0)
             {
               // allocate buffer and memory dataspace
-              src_idx.resize(selection_ptr_pos, 0);
+              src_idx.resize(selection_dst_ptr_pos, 0);
             }
 
           ierr = hdf5::read_selection<NODE_IDX_T>

@@ -38,7 +38,7 @@ namespace neuroh5
       ///                      procedure
       ///
       /// @return              True if the edges are valid, false otherwise
-      extern bool validate_edge_list
+      extern bool validate_selection_edge_list
       (
        const NODE_IDX_T&                          dst_start,
        const NODE_IDX_T&                          src_start,

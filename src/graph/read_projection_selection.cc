@@ -11,9 +11,9 @@
 #include "debug.hh"
 
 #include "neuroh5_types.hh"
-#include "read_projection.hh"
+#include "read_projection_selection.hh"
 #include "edge_attributes.hh"
-#include "read_projection_datasets.hh"
+#include "read_projection_dataset_selection.hh"
 #include "validate_selection_edge_list.hh"
 #include "append_edge_map_selection.hh"
 #include "mpi_debug.hh"
@@ -66,13 +66,12 @@ namespace neuroh5
       vector<DST_PTR_T> selection_dst_ptr;
       vector<NODE_IDX_T> src_idx;
       map<string, data::NamedAttrVal> edge_attr_map;
-
+      
       mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name);
       assert(hdf5::read_projection_dataset_selection(comm, file_name, src_pop_name, dst_pop_name,
-                                                     dst_start, src_start, edge_base,
+                                                     dst_start, src_start, selection, edge_base,
                                                      selection_dst_idx, selection_dst_ptr, src_idx,
-                                                     total_num_edges, total_read_blocks, local_read_blocks,
-                                                     offset, numitems) >= 0);
+                                                     total_num_edges) >= 0);
       
       mpi::MPI_DEBUG(comm, "read_projection_selection: validating projection ", src_pop_name, " -> ", dst_pop_name);
       
@@ -105,8 +104,8 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       // append to the vectors representing a projection (sources,
       // destinations, edge attributes)
-      assert(data::append_edge_map_selection(dst_start, src_start, dst_blk_ptr, dst_idx,
-                                             dst_ptr, src_idx, attr_namespaces, edge_attr_map,
+      assert(data::append_edge_map_selection(dst_start, src_start, selection_dst_idx, selection_dst_ptr,
+                                             src_idx, attr_namespaces, edge_attr_map,
                                              local_prj_num_edges, prj_edge_map,
                                              EdgeMapDst) >= 0);
       local_num_nodes = prj_edge_map.size();

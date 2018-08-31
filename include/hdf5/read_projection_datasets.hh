@@ -5,7 +5,7 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project Neurograph.
+///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
