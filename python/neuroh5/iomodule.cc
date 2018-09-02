@@ -3382,7 +3382,7 @@ extern "C"
                                    "topology",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOi", (char **)kwlist,
                                      &file_name, &pop_name,
                                      &py_selection, &py_comm, 
                                      &py_attr_name_spaces,

@@ -170,6 +170,8 @@ namespace neuroh5
       assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
+      assert(selection.size() > 0);
+      
       status = exists_group (loc, path.c_str());
       assert(status > 0);
       

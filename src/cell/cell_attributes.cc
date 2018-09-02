@@ -990,6 +990,7 @@ namespace neuroh5
       herr_t status; 
 
       vector< pair<string,AttrKind> > attr_info;
+      assert(selection.size() > 0);
 
       status = get_cell_attributes (file_name, name_space,
                                     pop_name, attr_info);
