@@ -3363,6 +3363,66 @@ extern "C"
   }
   
 
+  PyDoc_STRVAR(
+    read_tree_selection_doc,
+    "read_tree_selection(file_name, population_name, selection, namespaces=[], topology=True, comm=None)\n"
+    "--\n"
+    "\n"
+    "Reads selected neuronal tree morphologies contained in the given file. "
+    "Each rank will be assigned an equal number of morphologies, with the exception of the last rank if the number of morphologies is not evenly divisible by the number of ranks. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations/Trees groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "selection : int list\n"
+    "    A list of gids to read.\n"
+    "\n"
+    "namespaces : string list\n"
+    "    An optional list of namespaces from which additional attributes for the trees will be read.\n"
+    "\n"
+    "topology : boolean\n"
+    "    An optional flag that specifies whether section topology dictionary should be returned.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "(tree_iter, n_nodes) : tuple\n"
+    "    A tuple with the following elements:  \n"
+    "    - tree_iter: ( gid, tree_dict }\n"
+    "       An iterator that returns pairs (gid, tree_dict) where gid is the cell id and tree_dict is a morphology dictionary with the following fields: \n"
+    "          - x: X coordinates of tree morphology points (float ndarray)\n"
+    "          - y: Y coordinates of tree morphology points (float ndarray)\n"
+    "          - z: Z coordinates of tree morphology points (float ndarray)\n"
+    "          - radius: radiuses of tree morphology points (float ndarray)\n"
+    "          - layer: layer index of tree morphology points (-1 is undefined) (int8 ndarray)\n"
+    "          - parent: parent index of tree morphology points (-1 is undefined) (int32 ndarray)\n"
+    "          - swc_type: SWC type of tree morphology points (enumerated ndarray)\n"
+    "          If topology is True :\n"
+    "             - section: the section to which each point is assigned (uint16 ndarray)\n"
+    "             - section_topology: a dictionary with the following fields: \n"
+    "               - num_sections: number of sections in the morphology\n"
+    "               - nodes: a dictionary that maps each section indices to the point indices contained in that section\n"
+    "               - src: a vector of source section indices (uint16 ndarray)\n"
+    "               - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "          If topology is False :\n"
+    "             - sections: for each section, the number of points, followed by the corresponding point indices (uint16 ndarray)\n"
+    "             - src: a vector of source section indices (uint16 ndarray)\n"
+    "             - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "    - n_nodes: int\n"
+    "    - n_nodes: int\n"
+    "       the total number of cells.\n"
+    "\n");
+
   static PyObject *py_read_tree_selection (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; int topology_flag=1;
@@ -5727,7 +5787,7 @@ extern "C"
     { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS | METH_KEYWORDS,
       read_trees_doc },
     { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
-      "Reads the selected neuronal tree morphologies." },
+      read_tree_selection_doc },
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
       scatter_read_trees_doc },
     { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS | METH_KEYWORDS,

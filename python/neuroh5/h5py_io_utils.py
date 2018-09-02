@@ -4,13 +4,7 @@ import h5py
 import numpy as np
 from neuroh5.io import read_tree_selection
 
-
-def list_find(criterion, items):
-    for i, item in enumerate(items):
-        if criterion(item):
-            return i
-    return None
-
+populations_namespace='Populations'
 
 def get_cell_attributes_index_map(comm, file_path, population, namespace):
     """
@@ -24,11 +18,11 @@ def get_cell_attributes_index_map(comm, file_path, population, namespace):
     index_name = 'Cell Index'
     index_map = {}
     with h5py.File(file_path, 'r', driver='mpio', comm=comm) as f:
-        if 'Populations' not in f or population not in f['Populations'] or \
-                namespace not in f['Populations'][population]:
+        if populations_namespace not in f or population not in f[populations_namespace] or \
+                namespace not in f[populations_namespace][population]:
             raise KeyError('Population: %s; namespace: %s; not found in file_path: %s' %
                            (population, namespace, file_path))
-        for attribute, group in f['Populations'][population][namespace].iteritems():
+        for attribute, group in f[populations_namespace][population][namespace].iteritems():
             dataset = group[index_name]
             with dataset.collective:
                 index_map[attribute] = dict(zip(dataset[:], xrange(dataset.shape[0])))
@@ -52,11 +46,11 @@ def select_cell_attributes(gid, comm, file_path, index_map, population, namespac
     in_dataset = True
     attr_dict = {}
     with h5py.File(file_path, 'r', driver='mpio', comm=comm) as f:
-        if 'Populations' not in f or population not in f['Populations'] or \
-                namespace not in f['Populations'][population]:
+        if populations_namespace not in f or population not in f[populations_namespace] or \
+                namespace not in f[populations_namespace][population]:
             raise KeyError('Population: %s; namespace: %s; not found in file_path: %s' %
                            (population, namespace, file_path))
-        group = f['Populations'][population][namespace]
+        group = f[populations_namespace][population][namespace]
         for attribute in group:
             if attribute not in index_map:
                 raise KeyError('Invalid index_map; population: %s; namespace: %s; attribute: %s' %
@@ -93,22 +87,23 @@ def get_edge_attributes_index_map(comm, file_path, source, destination):
     :param destination: str
     :return: dict
     """
+    projections_namespace = projections_namespace
     index_namespace = 'Edges'
     index_name = 'Destination Block Index'
     index_map = {}
     with h5py.File(file_path, 'r', driver='mpio', comm=comm) as f:
-        if 'Projections' not in f or destination not in f['Projections'] or \
-                source not in f['Projections'][destination]:
+        if projections_namespace not in f or destination not in f[projections_namespace] or \
+                source not in f[projections_namespace][destination]:
             raise KeyError('Projection from source: %s --> destination: %s not found in file_path: %s' %
                            (source, destination, file_path))
-        if index_namespace not in f['Projections'][destination][source]:
+        if index_namespace not in f[projections_namespace][destination][source]:
             raise KeyError('Projection from source: %s --> destination: %s; namespace: %s not found in file_path: '
                            '%s' % (source, destination, index_namespace, file_path))
-        dataset = f['Projections'][destination][source][index_namespace]['Destination Block Pointer']
+        dataset = f[projections_namespace][destination][source][index_namespace]['Destination Block Pointer']
         with dataset.collective:
             if np.any(np.diff(dataset[:])[:-1] > 1):
                 raise NotImplementedError('get_edge_attributes_gid_index_map: block size > 1 not yet implemented')
-        dataset = f['Projections'][destination][source][index_namespace][index_name]
+        dataset = f[projections_namespace][destination][source][index_namespace][index_name]
         with dataset.collective:
             index_map = dict(zip(dataset[:], xrange(dataset.shape[0])))
     return index_map
@@ -130,6 +125,7 @@ def select_edge_attributes(gid, comm, file_path, index_map, source, destination,
     :return: tuple: (array, dict)
     """
     pointer_name = 'Destination Pointer'
+    edges_namespace = 'Edges'
     valid_namespaces = {'Synapses': 'syn_id', 'Connections': 'distance'}
     for namespace in namespaces:
         if namespace not in valid_namespaces:
@@ -138,8 +134,8 @@ def select_edge_attributes(gid, comm, file_path, index_map, source, destination,
     in_dataset = True
     attr_dict = {}
     with h5py.File(file_path, 'r', driver='mpio', comm=comm) as f:
-        if 'Projections' not in f or destination not in f['Projections'] or \
-                source not in f['Projections'][destination]:
+        if projections_namespace not in f or destination not in f[projections_namespace] or \
+                source not in f[projections_namespace][destination]:
             raise KeyError('Projection from source: %s --> destination: %s not found in file_path: %s' %
                            (source, destination, file_path))
         if not in_dataset or gid is None:
@@ -152,16 +148,16 @@ def select_edge_attributes(gid, comm, file_path, index_map, source, destination,
             except KeyError:
                 index = 0
                 in_dataset = False
-        pointer_dataset = f['Projections'][destination][source]['Edges'][pointer_name]
+        pointer_dataset = f[projections_namespace][destination][source][edges_namespace][pointer_name]
         with pointer_dataset.collective:
             start = pointer_dataset[index]
             end = pointer_dataset[index + 1]
-        source_index_dataset = f['Projections'][destination][source]['Edges']['Source Index']
+        source_index_dataset = f[projections_namespace][destination][source][edges_namespace]['Source Index']
         with source_index_dataset.collective:
             source_indexes = source_index_dataset[start:end] + source_offset
         for namespace in namespaces:
             attribute = valid_namespaces[namespace]
-            value_dataset = f['Projections'][destination][source][namespace][attribute]
+            value_dataset = f[projections_namespace][destination][source][namespace][attribute]
             attr_dict[namespace] = {}
             with value_dataset.collective:
                 attr_dict[namespace][attribute] = value_dataset[start:end]
