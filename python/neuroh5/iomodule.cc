@@ -2594,6 +2594,33 @@ extern "C"
     
     return py_population_names;
   }
+  PyDoc_STRVAR(
+    read_cell_attribute_info_doc,
+    "read_cell_attribute_info(file_name, populations, read_cell_index=False, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns information about the attributes which are defined for the given populations in the given file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "populations : string list\n"
+    "     The populations for which attribute information should be returned\n"
+    "\n"
+    "read_cell_index : bool\n"
+    "     Optional flag that specifies whether to return the cell ids for which attributes are defined in the given file.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "populations : list\n"
+    "    A list of strings with the populations names\n"
+    "\n");
 
   
   static PyObject *py_read_cell_attribute_info (PyObject *self, PyObject *args, PyObject *kwds)
@@ -5791,7 +5818,7 @@ extern "C"
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
       scatter_read_trees_doc },
     { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS | METH_KEYWORDS,
-      "Returns population attribute namespaces and names." },
+      read_cell_attribute_info_doc },
     { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads attributes for a selection of cells." },
     { "read_cell_attributes", (PyCFunction)py_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
