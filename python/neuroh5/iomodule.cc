@@ -2618,8 +2618,8 @@ extern "C"
     "\n"
     "Returns\n"
     "-------\n"
-    "populations : list\n"
-    "    A list of strings with the populations names\n"
+    "{ population : { namespace : [ \"attribute name\", ... ] } }\n"
+    "    A dictionary that maps population names to dictionaries that map attribute name spaces to lists of attribute names.\n"
     "\n");
 
   
@@ -2643,6 +2643,7 @@ extern "C"
                                      &input_file_name, &py_pop_names, &read_cell_index_flag, &py_comm))
       return NULL;
 
+    assert(PyList_Check(py_pop_names) > 0);
     read_cell_index = read_cell_index_flag>0;
 
     MPI_Comm comm;
@@ -2732,7 +2733,7 @@ extern "C"
                 for (auto const& it : ns_attributes)
                   {
                     const string attr_name = it.first;
-                    
+
                     pop_attribute_info[pop_name][name_space].push_back(attr_name);
 
                     if (read_cell_index)
@@ -3475,6 +3476,8 @@ extern "C"
                                      &py_attr_name_spaces,
                                      &topology_flag))
       return NULL;
+    assert(PyList_Check(py_selection) > 0);
+    assert(PyList_Check(py_attr_name_spaces) > 0);
 
     MPI_Comm comm;
 

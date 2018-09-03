@@ -119,7 +119,7 @@ namespace neuroh5
 
       hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
       assert(grp >= 0);
-    
+
       hsize_t idx = 0;
       ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                         &name_space_iterate_cb, (void*) &out_name_spaces);
