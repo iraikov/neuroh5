@@ -3477,7 +3477,7 @@ extern "C"
                                      &topology_flag))
       return NULL;
     assert(PyList_Check(py_selection) > 0);
-    assert(PyList_Check(py_attr_name_spaces) > 0);
+
 
     MPI_Comm comm;
 
@@ -3499,6 +3499,7 @@ extern "C"
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
       {
+        assert(PyList_Check(py_attr_name_spaces) > 0);
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
