@@ -42,8 +42,8 @@ namespace neuroh5
      const std::string&         file_name,
      const std::string&         src_pop_name,
      const std::string&         dst_pop_name,
-     const NODE_IDX_T&          dst_start,
      const NODE_IDX_T&          src_start,
+     const NODE_IDX_T&          dst_start,
      const std::vector<NODE_IDX_T>&  selection,
      DST_PTR_T&                 edge_base,
      vector<NODE_IDX_T>&        selection_dst_idx,
@@ -57,7 +57,6 @@ namespace neuroh5
       unsigned int rank, size;
       assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
-
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
@@ -166,6 +165,7 @@ namespace neuroh5
              );
           assert(ierr >= 0);
 
+          
           // read destination pointers
           hsize_t dst_ptr_block=0, dst_ptr_start=0;
           if (dst_blk_ptr.size() > 0)
@@ -214,18 +214,23 @@ namespace neuroh5
 
               for (const NODE_IDX_T& s : selection) 
                 {
-                  auto it = std::find(dst_idx.begin(), dst_idx.end(), s-dst_start);
-                  assert(it != dst_idx.end());
-                  selection_dst_idx.push_back(s);
-                  
-                  ptrdiff_t pos = it - dst_idx.begin();
-
-                  hsize_t src_idx_start=dst_ptr[pos];
-                  hsize_t src_idx_block=dst_ptr[pos+1]-src_idx_start;
-
-                  src_idx_ranges.push_back(make_pair(src_idx_start, src_idx_block));
-                  selection_dst_ptr.push_back(selection_dst_ptr_pos);
-                  selection_dst_ptr_pos += src_idx_block;
+                  if (s >= dst_start)
+                    {
+                      auto it = std::find(dst_idx.begin(), dst_idx.end(), s-dst_start);
+                      if (it != dst_idx.end())
+                        {
+                          selection_dst_idx.push_back(s);
+                          
+                          ptrdiff_t pos = it - dst_idx.begin();
+                          
+                          hsize_t src_idx_start=dst_ptr[pos];
+                          hsize_t src_idx_block=dst_ptr[pos+1]-src_idx_start;
+                          
+                          src_idx_ranges.push_back(make_pair(src_idx_start, src_idx_block));
+                          selection_dst_ptr.push_back(selection_dst_ptr_pos);
+                          selection_dst_ptr_pos += src_idx_block;
+                        }
+                    }
                 }
               selection_dst_ptr.push_back(selection_dst_ptr_pos);
             }

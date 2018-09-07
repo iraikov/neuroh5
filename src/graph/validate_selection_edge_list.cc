@@ -21,8 +21,8 @@ namespace neuroh5
   {
     bool validate_selection_edge_list
     (
-     const NODE_IDX_T&         dst_start,
      const NODE_IDX_T&         src_start,
+     const NODE_IDX_T&         dst_start,
      const vector<NODE_IDX_T>& selection_dst_idx,
      const vector<DST_PTR_T>&  selection_dst_ptr,
      const vector<NODE_IDX_T>& src_idx,
@@ -40,8 +40,12 @@ namespace neuroh5
 
       // loop over all edges, look up the node populations, and validate the pairs
 
+      if (selection_dst_idx.size() == 0)
+        return result;
+      
       size_t dst_ptr_size = selection_dst_ptr.size();
-      for (size_t i = 0; i < dst_ptr_size; ++i)
+      
+      for (size_t i = 0; i < dst_ptr_size-1; ++i)
         {
           dst = selection_dst_idx[i];
           riter = pop_ranges.upper_bound(dst);

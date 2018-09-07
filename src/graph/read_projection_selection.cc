@@ -69,14 +69,14 @@ namespace neuroh5
       
       mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name);
       assert(hdf5::read_projection_dataset_selection(comm, file_name, src_pop_name, dst_pop_name,
-                                                     dst_start, src_start, selection, edge_base,
+                                                     src_start, dst_start, selection, edge_base,
                                                      selection_dst_idx, selection_dst_ptr, src_idx,
                                                      total_num_edges) >= 0);
       
       mpi::MPI_DEBUG(comm, "read_projection_selection: validating projection ", src_pop_name, " -> ", dst_pop_name);
       
       // validate the edges
-      assert(validate_selection_edge_list(dst_start, src_start, selection_dst_idx,
+      assert(validate_selection_edge_list(src_start, dst_start, selection_dst_idx,
                                           selection_dst_ptr, src_idx, pop_ranges, pop_pairs) ==
              true);
       

@@ -108,16 +108,6 @@ namespace neuroh5
       status = MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
                           MPI_SIZE_T, MPI_SUM, 0, MPI_COMM_WORLD);
       assert(status == MPI_SUCCESS);
-      
-      if (rank == 0)
-        {
-          if (sum_local_num_edges != total_num_edges)
-            {
-              printf("sum_local_num_edges = %lu total_num_edges = %lu\n",
-                     sum_local_num_edges, total_num_edges);
-            }
-          assert(sum_local_num_edges == total_num_edges);
-        }
 
       return 0;
     }

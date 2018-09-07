@@ -42,9 +42,12 @@ namespace neuroh5
     {
       int ierr = 0; size_t dst_ptr_size;
 
+      if (selection_dst_idx.size() == 0)
+        return ierr;
+      
       dst_ptr_size = selection_dst_ptr.size();
 
-      for (size_t i = 0; i < dst_ptr_size; ++i)
+      for (size_t i = 0; i < dst_ptr_size-1; ++i)
         {
           NODE_IDX_T dst = selection_dst_idx[i];
           size_t low = selection_dst_ptr[i], high = selection_dst_ptr[i+1];

@@ -5843,7 +5843,7 @@ extern "C"
       "Reads and scatters graph connectivity in Destination Block Sparse format." },
     { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
-    { "read_graph_selection", (PyCFunction)py_read_graph, METH_VARARGS | METH_KEYWORDS,
+    { "read_graph_selection", (PyCFunction)py_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads graph connectivity in Destination Block Sparse format." },
     { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS,
       "Writes graph connectivity in Destination Block Sparse format." },

@@ -14,10 +14,10 @@ namespace neuroh5
       ///        destination indices that are within the population ranges
       ///        defined for that projection
       ///
-      /// @param dst_start     Updated with global starting index of destination
+      /// @param src_start     Updated with global starting index of source
       ///                      population
       ///
-      /// @param src_start     Updated with global starting index of source
+      /// @param dst_start     Updated with global starting index of destination
       ///                      population
       ///
       /// @param selection_dst_idx       Destination Index (starting destination index for
@@ -40,8 +40,8 @@ namespace neuroh5
       /// @return              True if the edges are valid, false otherwise
       extern bool validate_selection_edge_list
       (
-       const NODE_IDX_T&                          dst_start,
        const NODE_IDX_T&                          src_start,
+       const NODE_IDX_T&                          dst_start,
        const std::vector<NODE_IDX_T>&             selection_dst_idx,
        const std::vector<DST_PTR_T>&              selection_dst_ptr,
        const std::vector<NODE_IDX_T>&             src_idx,
