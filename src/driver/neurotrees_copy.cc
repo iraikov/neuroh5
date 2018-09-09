@@ -238,7 +238,7 @@ int main(int argc, char** argv)
       target_gid_list.clear();
       for (size_t i=0; i<pop_vector[pop_idx].count; i++)
         {
-          if (i != source_gid)
+          if (i != source_gid-pop_start)
             {
               target_gid_list.push_back(i);
             }
