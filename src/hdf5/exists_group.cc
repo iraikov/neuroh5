@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "tokenize.hh"
 #include "exists_group.hh"
 
 using namespace std;
@@ -21,23 +22,20 @@ namespace neuroh5
      const string& path
      )
     {
-      int result=0;
-      int status=0;
-      H5L_info_t infobuf;
+      const string delim = "/";
+      herr_t status=-1;  string ppath;
+      vector<string> tokens;
+      data::tokenize (path, delim, tokens);
       
-      /* Save old error handler */
-      H5E_auto_t error_handler;
-      void *client_data;
-      H5Eget_auto(H5E_DEFAULT, &error_handler, &client_data);
-
-      /* Turn off error handling */
-      H5Eset_auto(H5E_DEFAULT, NULL, NULL);
-
-      result = H5Lget_info (file, path.c_str(), &infobuf, H5P_DEFAULT);
-
-      status = H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
+      for (string value : tokens)
+        {
+          ppath = ppath + delim + value;
+          status = H5Lexists (file, ppath.c_str(), H5P_DEFAULT);
+          if (status <= 0)
+            break;
+        }
       
-      return result >= 0;
+      return status;
     }
   }
 }

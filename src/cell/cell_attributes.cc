@@ -525,7 +525,7 @@ namespace neuroh5
                   }
                 else if (attr_size == 1)
                   {
-                    vector<uint8_t> attr_values_int8;
+                    vector<int8_t> attr_values_int8;
                     status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
                                                        index, ptr, attr_values_int8,
                                                        offset, numitems);
