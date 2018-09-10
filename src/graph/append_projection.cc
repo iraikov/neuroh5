@@ -767,7 +767,7 @@ namespace neuroh5
       for (auto const& iter : prj_edge_map)
 	{
 	  const edge_tuple_t& et = iter.second;
-          const vector<NODE_IDX_T>& v = get<0>(et);
+          //const vector<NODE_IDX_T>& v = get<0>(et);
           const vector<data::AttrVal>& a = get<1>(et);
           size_t ni=0;
           for (auto const& attr_values : a)

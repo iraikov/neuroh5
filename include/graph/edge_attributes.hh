@@ -81,7 +81,7 @@ namespace neuroh5
     ///
     /// @param attr_values    An EdgeNamedAttr object that holds attribute
     //                        values.
-    herr_t read_edge_attributes
+    extern herr_t read_edge_attributes
     (
      MPI_Comm              comm,
      const std::string&    file_name,
@@ -107,6 +107,38 @@ namespace neuroh5
      const DST_PTR_T                                    edge_count,
      const std::vector< std::pair<std::string,AttrKind> >& edge_attr_info,
      data::NamedAttrVal&                              edge_attr_values
+     );
+    
+    extern herr_t read_edge_attribute_selection
+    (
+     MPI_Comm              comm,
+     const std::string&    file_name,
+     const std::string&    src_pop_name,
+     const std::string&    dst_pop_name,
+     const std::string&    name_space,
+     const std::string&    attr_name,
+     const DST_PTR_T&      edge_base,
+     const DST_PTR_T&      edge_count,
+     const vector<NODE_IDX_T>&   selection_dst_idx,
+     const vector<DST_PTR_T>&    selection_dst_ptr,
+     const AttrKind        attr_kind,
+     data::NamedAttrVal&   attr_values,
+     bool collective = true
+     );
+
+    extern int read_all_edge_attribute_selection
+    (
+     MPI_Comm                    comm,
+     const std::string&          file_name,
+     const std::string&          src_pop_name,
+     const std::string&          dst_pop_name,
+     const std::string&          name_space,
+     const DST_PTR_T&            edge_base,
+     const DST_PTR_T&            edge_count,
+     const vector<NODE_IDX_T>&   selection_dst_idx,
+     const vector<DST_PTR_T>&    selection_dst_ptr,
+     const std::vector< std::pair<std::string,AttrKind> >& edge_attr_info,
+     data::NamedAttrVal&         edge_attr_values
      );
 
 
@@ -229,12 +261,14 @@ namespace neuroh5
       hid_t fapl = H5Fget_access_plist(file);
       assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
 
+      /*
       int ssize, srank;
       assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
       assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
       size_t size, rank;
       size = (size_t)ssize;
       rank = (size_t)srank;
+      */
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);

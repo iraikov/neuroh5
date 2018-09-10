@@ -53,6 +53,7 @@
 #include "mpe_seq.hh"
 #include "read_projection.hh"
 #include "read_graph.hh"
+#include "read_graph_selection.hh"
 #include "scatter_read_graph.hh"
 #include "scatter_read_projection.hh"
 #include "bcast_graph.hh"
@@ -2247,6 +2248,114 @@ extern "C"
     return py_prj_tuple;
   }
 
+  static PyObject *py_read_graph_selection (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status;
+    vector < map <string, vector < vector <string> > > > edge_attr_name_vector;
+    vector<edge_map_t> prj_vector;
+    vector< pair<string,string> > prj_names;
+    char *input_file_name;
+    PyObject *py_selection=NULL;
+    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_comm = NULL;
+    MPI_Comm *comm_ptr  = NULL;
+    vector <NODE_IDX_T> selection;
+    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
+
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "selection",
+                                   "namespaces",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|OO", (char **)kwlist,
+                                     &input_file_name,
+                                     &py_selection, 
+                                     &py_attr_name_spaces,
+                                     &py_comm))
+      return NULL;
+
+    PyObject *py_prj_dict = PyDict_New();
+    MPI_Comm comm;
+
+    if (py_comm != NULL)
+      {
+        comm_ptr = PyMPIComm_Get(py_comm);
+        assert(comm_ptr != NULL);
+        assert(*comm_ptr != MPI_COMM_NULL);
+        status = MPI_Comm_dup(*comm_ptr, &comm);
+        assert(status == MPI_SUCCESS);
+      }
+    else
+      {
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+        assert(status == MPI_SUCCESS);
+      }
+
+    vector <string> edge_attr_name_spaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            char *str = PyBytes_AsString (pyval);
+            edge_attr_name_spaces.push_back(string(str));
+          }
+      }
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
+            CELL_IDX_T n = PyLong_AsLong(pyval);
+            selection.push_back(n);
+          }
+      }
+
+    assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
+
+    graph::read_graph_selection(comm, std::string(input_file_name), edge_attr_name_spaces,
+                                prj_names, selection, prj_vector, edge_attr_name_vector,
+                                total_num_nodes, local_num_edges, total_num_edges);
+    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    
+    PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
+                                                                edge_attr_name_spaces,
+                                                                edge_attr_name_vector);
+    
+    for (size_t i = 0; i < prj_vector.size(); i++)
+      {
+        edge_map_t prj_edge_map = prj_vector[i];
+
+        PyObject *py_edge_iter = NeuroH5EdgeIter_FromMap(prj_edge_map, edge_attr_name_spaces);
+
+        PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
+        if (py_src_dict == NULL)
+          {
+            py_src_dict = PyDict_New();
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+            PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+            Py_DECREF(py_edge_iter);
+            Py_DECREF(py_src_dict);
+          }
+        else
+          {
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+            Py_DECREF(py_edge_iter);
+          }
+        
+      }
+
+    PyObject *py_prj_tuple = PyTuple_New(2);
+    PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
+    PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+
+    return py_prj_tuple;
+  }
+
 
   static PyObject *py_write_graph (PyObject *self, PyObject *args, PyObject *kwds)
   {
@@ -2407,6 +2516,30 @@ extern "C"
     return Py_None;
   }
   
+  PyDoc_STRVAR(
+    read_population_names_doc,
+    "read_population_names(file_name, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns the names of all populations for which attributes exist in the given file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "populations : list\n"
+    "    A list of strings with the populations names\n"
+    "\n");
+
+  
   
   static PyObject *py_read_population_names (PyObject *self, PyObject *args, PyObject *kwds)
   {
@@ -2461,6 +2594,33 @@ extern "C"
     
     return py_population_names;
   }
+  PyDoc_STRVAR(
+    read_cell_attribute_info_doc,
+    "read_cell_attribute_info(file_name, populations, read_cell_index=False, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns information about the attributes which are defined for the given populations in the given file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "populations : string list\n"
+    "     The populations for which attribute information should be returned\n"
+    "\n"
+    "read_cell_index : bool\n"
+    "     Optional flag that specifies whether to return the cell ids for which attributes are defined in the given file.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "{ population : { namespace : [ \"attribute name\", ... ] } }\n"
+    "    A dictionary that maps population names to dictionaries that map attribute name spaces to lists of attribute names.\n"
+    "\n");
 
   
   static PyObject *py_read_cell_attribute_info (PyObject *self, PyObject *args, PyObject *kwds)
@@ -2483,6 +2643,7 @@ extern "C"
                                      &input_file_name, &py_pop_names, &read_cell_index_flag, &py_comm))
       return NULL;
 
+    assert(PyList_Check(py_pop_names) > 0);
     read_cell_index = read_cell_index_flag>0;
 
     MPI_Comm comm;
@@ -2501,10 +2662,14 @@ extern "C"
         assert(status == MPI_SUCCESS);
       }
 
-    int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-
+    int srank, ssize; size_t rank, size;
+    assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+    assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+    assert(ssize > 0);
+    assert(srank >= 0);
+    size = ssize;
+    rank = srank;
+    
     vector <string> pop_names;
     if (py_pop_names != NULL)
       {
@@ -2516,7 +2681,7 @@ extern "C"
           }
       }
 
-    int root = 0;
+    size_t root = 0;
 
     vector< pair<pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, input_file_name, pop_labels);
@@ -2533,7 +2698,7 @@ extern "C"
     
     map<string, map<string, vector<string> > > pop_attribute_info;
     map<string, map<string, map <string, vector<CELL_IDX_T> > > > cell_index_info;
-    if (rank == (unsigned int)root)
+    if (rank == root)
       {
 
         for (const string& pop_name : pop_names)
@@ -2560,7 +2725,7 @@ extern "C"
 
             for(const string& name_space : name_spaces)
               {
-                vector< pair<string, hid_t> > ns_attributes;
+                vector< pair<string, AttrKind> > ns_attributes;
 
                 status = cell::get_cell_attributes (input_file_name, name_space, pop_name, ns_attributes);
                 assert (status >= 0);
@@ -2568,7 +2733,7 @@ extern "C"
                 for (auto const& it : ns_attributes)
                   {
                     const string attr_name = it.first;
-                    
+
                     pop_attribute_info[pop_name][name_space].push_back(attr_name);
 
                     if (read_cell_index)
@@ -2594,7 +2759,7 @@ extern "C"
     {
       vector<char> sendbuf;
       size_t sendbuf_size=0;
-      if ((rank == (unsigned int)root) && (pop_attribute_info.size() > 0) )
+      if ((rank == root) && (pop_attribute_info.size() > 0) )
         {
           data::serialize_data(pop_attribute_info, sendbuf);
           sendbuf_size = sendbuf.size();
@@ -2605,7 +2770,7 @@ extern "C"
       sendbuf.resize(sendbuf_size);
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
       
-      if ((rank != (unsigned int)root) && (sendbuf_size > 0))
+      if ((rank != root) && (sendbuf_size > 0))
         {
           data::deserialize_data(sendbuf, pop_attribute_info);
         }
@@ -2614,7 +2779,7 @@ extern "C"
     {
       vector<char> sendbuf;
       size_t sendbuf_size=0;
-      if ((rank == (unsigned int)root) && (cell_index_info.size() > 0) )
+      if ((rank == root) && (cell_index_info.size() > 0) )
         {
           data::serialize_data(cell_index_info, sendbuf);
           sendbuf_size = sendbuf.size();
@@ -2625,7 +2790,7 @@ extern "C"
       sendbuf.resize(sendbuf_size);
       assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
       
-      if ((rank != (unsigned int)root) && (sendbuf_size > 0))
+      if ((rank != root) && (sendbuf_size > 0))
         {
           data::deserialize_data(sendbuf, cell_index_info);
         }
@@ -2690,7 +2855,35 @@ extern "C"
     return py_population_attribute_info;
   }
 
-  
+
+  PyDoc_STRVAR(
+    read_population_ranges_doc,
+    "read_population_ranges(file_name, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns population size and range for each population defined in the input file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains an /H5Types group.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "(range_dict, n_nodes) : tuple\n"
+    "    A tuple with the following elements:  \n"
+    "    - range_dict: { population: (size, offset) }\n"
+    "       a dictionary where the key is population name and the value is tuple (size, offset).\n"
+    "    - n_nodes: int\n"
+    "       the total number of cells.\n"
+    "\n");
+
+
   static PyObject *py_read_population_ranges (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
@@ -2762,7 +2955,29 @@ extern "C"
     return py_result_tuple;
   }
 
-  
+  PyDoc_STRVAR(
+    read_projection_names_doc,
+    "read_projection_names(file_name, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns the names of the projections contained in the given file.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "projections : (source, destination) list\n"
+    "    A list of tuples with (source, destination) population names corresponding to each projection.\n"
+    "\n");
+
   static PyObject *py_read_projection_names (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status;
@@ -2815,17 +3030,84 @@ extern "C"
     return py_result;
   }
 
+  PyDoc_STRVAR(
+    read_trees_doc,
+    "read_trees(file_name, population_name, namespaces=[], topology=True, comm=None)\n"
+    "--\n"
+    "\n"
+    "Reads neuronal tree morphologies contained in the given file. "
+    "Each rank will be assigned an equal number of morphologies, with the exception of the last rank if the number of morphologies is not evenly divisible by the number of ranks. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations/Trees groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "namespaces : string list\n"
+    "    An optional list of namespaces from which additional attributes for the trees will be read.\n"
+    "\n"
+    "topology : boolean\n"
+    "    An optional flag that specifies whether section topology dictionary should be returned.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "(tree_iter, n_nodes) : tuple\n"
+    "    A tuple with the following elements:  \n"
+    "    - tree_iter: ( gid, tree_dict }\n"
+    "       An iterator that returns pairs (gid, tree_dict) where gid is the cell id and tree_dict is a morphology dictionary with the following fields: \n"
+    "          - x: X coordinates of tree morphology points (float ndarray)\n"
+    "          - y: Y coordinates of tree morphology points (float ndarray)\n"
+    "          - z: Z coordinates of tree morphology points (float ndarray)\n"
+    "          - radius: radiuses of tree morphology points (float ndarray)\n"
+    "          - layer: layer index of tree morphology points (-1 is undefined) (int8 ndarray)\n"
+    "          - parent: parent index of tree morphology points (-1 is undefined) (int32 ndarray)\n"
+    "          - swc_type: SWC type of tree morphology points (enumerated ndarray)\n"
+    "          If topology is True :\n"
+    "             - section: the section to which each point is assigned (uint16 ndarray)\n"
+    "             - section_topology: a dictionary with the following fields: \n"
+    "               - num_sections: number of sections in the morphology\n"
+    "               - nodes: a dictionary that maps each section indices to the point indices contained in that section\n"
+    "               - src: a vector of source section indices (uint16 ndarray)\n"
+    "               - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "          If topology is False :\n"
+    "             - sections: for each section, the number of points, followed by the corresponding point indices (uint16 ndarray)\n"
+    "             - src: a vector of source section indices (uint16 ndarray)\n"
+    "             - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "    - n_nodes: int\n"
+    "    - n_nodes: int\n"
+    "       the total number of cells.\n"
+    "\n");
   
-  static PyObject *py_read_trees (PyObject *self, PyObject *args)
+  static PyObject *py_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; int topology_flag=1; size_t start=0, end=0;
+    int status; int topology_flag=1; 
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
     PyObject *py_attr_name_spaces=NULL;
     
-    
-    if (!PyArg_ParseTuple(args, "ss|OOi", &file_name, &pop_name, &py_attr_name_spaces, &py_comm, &topology_flag))
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "population_name",
+                                   "comm",
+                                   "namespaces",
+                                   "topology",
+                                   "io_size",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOi", (char **)kwlist,
+                                     &file_name, &pop_name, &py_comm, 
+                                     &py_attr_name_spaces,
+                                     &topology_flag))
       return NULL;
 
     MPI_Comm comm;
@@ -2889,7 +3171,7 @@ extern "C"
 
     status = cell::read_trees (comm, string(file_name),
                                string(pop_name), pop_vector[pop_idx].start,
-                               tree_vector, start, end);
+                               tree_vector);
     assert (status >= 0);
     map <string, NamedAttrMap> attr_maps;
     
@@ -2916,6 +3198,69 @@ extern "C"
   }
 
 
+
+  PyDoc_STRVAR(
+    scatter_read_trees_doc,
+    "scatter_read_trees(file_name, population_name, namespaces=[], topology=True, node_rank_map=None, comm=None, io_size=0)\n"
+    "--\n"
+    "\n"
+    "Reads neuronal tree morphologies contained in the given file and scatters them to their assigned ranks. "
+    "Each rank will be assigned morphologies according to a given rank to gid dictionary, or round robin if no user-specified assignment is given. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations/Trees groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "namespaces : string list\n"
+    "    An optional list of namespaces from which additional attributes for the trees will be read.\n"
+    "\n"
+    "node_rank_map : { gid: rank }\n"
+    "    An optional dictionary that specifies the mapping of cell gids to MPI ranks.\n"
+    "\n"
+    "topology : boolean\n"
+    "    An optional flag that specifies whether section topology dictionary should be returned.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "io_size : integer\n"
+    "    Optional number of I/O ranks, i.e. how many ranks should perform I/O operations. If 0, all ranks with perform I/O operations.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "(tree_iter, n_nodes) : tuple\n"
+    "    A tuple with the following elements:  \n"
+    "    - tree_iter: ( gid, tree_dict }\n"
+    "       An iterator that returns pairs (gid, tree_dict) where gid is the cell id and tree_dict is a morphology dictionary with the following fields: \n"
+    "          - x: X coordinates of tree morphology points (float ndarray)\n"
+    "          - y: Y coordinates of tree morphology points (float ndarray)\n"
+    "          - z: Z coordinates of tree morphology points (float ndarray)\n"
+    "          - radius: radiuses of tree morphology points (float ndarray)\n"
+    "          - layer: layer index of tree morphology points (-1 is undefined) (int8 ndarray)\n"
+    "          - parent: parent index of tree morphology points (-1 is undefined) (int32 ndarray)\n"
+    "          - swc_type: SWC type of tree morphology points (enumerated ndarray)\n"
+    "          If topology is True :\n"
+    "             - section: the section to which each point is assigned (uint16 ndarray)\n"
+    "             - section_topology: a dictionary with the following fields: \n"
+    "               - num_sections: number of sections in the morphology\n"
+    "               - nodes: a dictionary that maps each section indices to the point indices contained in that section\n"
+    "               - src: a vector of source section indices (uint16 ndarray)\n"
+    "               - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "          If topology is False :\n"
+    "             - sections: for each section, the number of points, followed by the corresponding point indices (uint16 ndarray)\n"
+    "             - src: a vector of source section indices (uint16 ndarray)\n"
+    "             - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "    - n_nodes: int\n"
+    "    - n_nodes: int\n"
+    "       the total number of cells.\n"
+    "\n");
   
   static PyObject *py_scatter_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
@@ -2929,7 +3274,7 @@ extern "C"
     map<CELL_IDX_T, rank_t> node_rank_map;
     static const char *kwlist[] = {
                                    "file_name",
-                                   "pop_name",
+                                   "population_name",
                                    "comm",
                                    "node_rank_map",
                                    "namespaces",
@@ -3046,6 +3391,66 @@ extern "C"
   }
   
 
+  PyDoc_STRVAR(
+    read_tree_selection_doc,
+    "read_tree_selection(file_name, population_name, selection, namespaces=[], topology=True, comm=None)\n"
+    "--\n"
+    "\n"
+    "Reads selected neuronal tree morphologies contained in the given file. "
+    "Each rank will be assigned an equal number of morphologies, with the exception of the last rank if the number of morphologies is not evenly divisible by the number of ranks. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations/Trees groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "selection : int list\n"
+    "    A list of gids to read.\n"
+    "\n"
+    "namespaces : string list\n"
+    "    An optional list of namespaces from which additional attributes for the trees will be read.\n"
+    "\n"
+    "topology : boolean\n"
+    "    An optional flag that specifies whether section topology dictionary should be returned.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "(tree_iter, n_nodes) : tuple\n"
+    "    A tuple with the following elements:  \n"
+    "    - tree_iter: ( gid, tree_dict }\n"
+    "       An iterator that returns pairs (gid, tree_dict) where gid is the cell id and tree_dict is a morphology dictionary with the following fields: \n"
+    "          - x: X coordinates of tree morphology points (float ndarray)\n"
+    "          - y: Y coordinates of tree morphology points (float ndarray)\n"
+    "          - z: Z coordinates of tree morphology points (float ndarray)\n"
+    "          - radius: radiuses of tree morphology points (float ndarray)\n"
+    "          - layer: layer index of tree morphology points (-1 is undefined) (int8 ndarray)\n"
+    "          - parent: parent index of tree morphology points (-1 is undefined) (int32 ndarray)\n"
+    "          - swc_type: SWC type of tree morphology points (enumerated ndarray)\n"
+    "          If topology is True :\n"
+    "             - section: the section to which each point is assigned (uint16 ndarray)\n"
+    "             - section_topology: a dictionary with the following fields: \n"
+    "               - num_sections: number of sections in the morphology\n"
+    "               - nodes: a dictionary that maps each section indices to the point indices contained in that section\n"
+    "               - src: a vector of source section indices (uint16 ndarray)\n"
+    "               - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "          If topology is False :\n"
+    "             - sections: for each section, the number of points, followed by the corresponding point indices (uint16 ndarray)\n"
+    "             - src: a vector of source section indices (uint16 ndarray)\n"
+    "             - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "    - n_nodes: int\n"
+    "    - n_nodes: int\n"
+    "       the total number of cells.\n"
+    "\n");
+
   static PyObject *py_read_tree_selection (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; int topology_flag=1;
@@ -3065,12 +3470,14 @@ extern "C"
                                    "topology",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOi", (char **)kwlist,
                                      &file_name, &pop_name,
                                      &py_selection, &py_comm, 
                                      &py_attr_name_spaces,
                                      &topology_flag))
       return NULL;
+    assert(PyList_Check(py_selection) > 0);
+
 
     MPI_Comm comm;
 
@@ -3092,6 +3499,7 @@ extern "C"
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
       {
+        assert(PyList_Check(py_attr_name_spaces) > 0);
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
@@ -4764,7 +5172,7 @@ extern "C"
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
-    vector< pair<string,hid_t> > attr_info;
+    vector< pair<string,AttrKind> > attr_info;
     assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
                                       get<1>(pop_labels[pop_idx]), attr_info) >= 0);
     vector<CELL_IDX_T> cell_index;
@@ -5402,19 +5810,19 @@ extern "C"
   
   static PyMethodDef module_methods[] = {
     { "read_population_ranges", (PyCFunction)py_read_population_ranges, METH_VARARGS | METH_KEYWORDS,
-      "Returns population size and ranges." },
+       read_population_ranges_doc },
     { "read_population_names", (PyCFunction)py_read_population_names, METH_VARARGS | METH_KEYWORDS,
-      "Returns the names of the populations contained in the given file." },
+      read_population_names_doc },
     { "read_projection_names", (PyCFunction)py_read_projection_names, METH_VARARGS | METH_KEYWORDS,
-      "Returns the names of the projections contained in the given file." },
+      read_projection_names_doc },
     { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS | METH_KEYWORDS,
-      "Reads neuronal tree morphology." },
+      read_trees_doc },
     { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
-      "Reads the selected neuronal tree morphologies." },
+      read_tree_selection_doc },
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
-      "Reads neuronal tree morphology using scalable parallel read/scatter." },
+      scatter_read_trees_doc },
     { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS | METH_KEYWORDS,
-      "Returns population attribute namespaces and names." },
+      read_cell_attribute_info_doc },
     { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads attributes for a selection of cells." },
     { "read_cell_attributes", (PyCFunction)py_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
@@ -5429,12 +5837,14 @@ extern "C"
       "Appends additional attributes for the given range of cells." },
     { "append_cell_trees", (PyCFunction)py_append_cell_trees, METH_VARARGS | METH_KEYWORDS,
       "Appends tree morphologies." },
-    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS,
+    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads graph connectivity in Destination Block Sparse format." },
     { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and scatters graph connectivity in Destination Block Sparse format." },
     { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
+    { "read_graph_selection", (PyCFunction)py_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
+      "Reads graph connectivity in Destination Block Sparse format." },
     { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS,
       "Writes graph connectivity in Destination Block Sparse format." },
     { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,

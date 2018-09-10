@@ -1,15 +1,15 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file read_graph.hh
+///  @file read_graph_selection.hh
 ///
-///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
+///  Top-level functions for reading subsets of graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
 ///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
-#ifndef READ_GRAPH_HH
-#define READ_GRAPH_HH
+#ifndef READ_GRAPH_SELECTION_HH
+#define READ_GRAPH_SELECTION_HH
 
 #include "neuroh5_types.hh"
 
@@ -49,17 +49,18 @@ namespace neuroh5
     ///
     /// @return              HDF5 error code
 
-    extern int read_graph
+    int read_graph_selection
     (
-     MPI_Comm                         comm,
-     const std::string&               file_name,
-     const std::vector< std::string >& edge_attr_name_spaces,
-     const std::vector< std::pair<std::string, std::string> >& prj_names,
-     std::vector<edge_map_t>&        prj_vector,
+     MPI_Comm              comm,
+     const std::string&    file_name,
+     const vector<string>& edge_attr_name_spaces,
+     const vector< pair<string, string> >& prj_names,
+     const std::vector<NODE_IDX_T>&  selection,
+     std::vector<edge_map_t>& prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
-     size_t&                          total_num_nodes,
-     size_t&                          local_prj_num_edges,
-     size_t&                          total_prj_num_edges
+     size_t&              total_num_nodes,
+     size_t&              local_num_edges,
+     size_t&              total_num_edges
      );
   }
 }

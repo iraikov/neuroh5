@@ -110,7 +110,6 @@ namespace neuroh5
 	  // make hyperslab selection
 	  hid_t fspace = H5Dget_space(dset);
 	  assert(fspace >= 0);
-	  hsize_t one = 1;
 	  
 	  if (len > 0)
 	    {

@@ -8,8 +8,8 @@
 ///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
-#ifndef READ_PROJECTION_HH
-#define READ_PROJECTION_HH
+#ifndef READ_PROJECTION_SELECTION_HH
+#define READ_PROJECTION_SELECTION_HH
 
 #include "neuroh5_types.hh"
 
@@ -24,7 +24,7 @@ namespace neuroh5
   namespace graph
   {
 
-    /// @brief Reads the projections
+    /// @brief Reads a subset of a a projection
     ///
     /// @param comm          MPI communicator
     ///
@@ -59,28 +59,25 @@ namespace neuroh5
     /// @param src_idx       Source Index (source indices of edges)
     ///
     /// @return              HDF5 error code
-    extern herr_t read_projection
+    herr_t read_projection_selection
     (
-     MPI_Comm                        comm,
-     const std::string&              file_name,
-     const pop_range_map_t&          pop_ranges,
-     const std::set< std::pair<pop_t, pop_t> >& pop_pairs,
-     const std::string&              src_pop_name,
-     const std::string&              dst_pop_name,
-     const NODE_IDX_T&               dst_start,
-     const NODE_IDX_T&               src_start,
-     const vector<string>&           edge_attr_name_spaces,
-     std::vector<edge_map_t>&        prj_vector,
+     MPI_Comm                   comm,
+     const std::string&         file_name,
+     const pop_range_map_t&     pop_ranges,
+     const set < pair<pop_t, pop_t> >& pop_pairs,
+     const std::string&         src_pop_name,
+     const std::string&         dst_pop_name,
+     const NODE_IDX_T&          src_start,
+     const NODE_IDX_T&          dst_start,
+     const vector<string>&      attr_namespaces,
+     const std::vector<NODE_IDX_T>&  selection,
+     vector<edge_map_t>&       prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
-     size_t&                         local_num_nodes,
-     size_t&                         local_num_edges,
-     size_t&                         total_num_edges,
-     hsize_t&                        local_read_blocks,
-     hsize_t&                        total_read_blocks,
-     size_t                          offset = 0,
-     size_t                          numitems = 0,
-     bool collective = true
-     );
+     size_t&                    local_num_nodes,
+     size_t&                    local_num_edges,
+     size_t&                    total_num_edges,
+     bool collective = true);
+
   }
 }
 

@@ -864,6 +864,10 @@ namespace neuroh5
   {
     vector<int8_t> result;
     auto attr_it = int8_names.find(name);
+    if (attr_it == int8_names.end())
+      {
+        printf("find_name int8: name = %s\n", name.c_str());
+      }
     assert(attr_it != int8_names.end());
     size_t attr_index = attr_it->second;
     auto it = int8_values[attr_index].find(index);

@@ -80,7 +80,7 @@ int main(int argc, char** argv)
   std::string input_filename, output_filename;
   CELL_IDX_T source_gid;
   std::vector<CELL_IDX_T> target_gid_list;
-  vector<neurotree_t> input_tree_list, output_tree_list;
+  vector<neurotree_t> input_tree_vec, output_tree_vec;
   MPI_Comm all_comm;
   
   assert(MPI_Init(&argc, &argv) >= 0);
@@ -203,16 +203,17 @@ int main(int argc, char** argv)
   
   status = cell::read_trees (all_comm, input_filename,
                              pop_name, pop_start,
-                             input_tree_list, source_gid, source_gid, true);
-  assert (status >= 0);
+                             input_tree_vec);
+  assert(status >= 0);
+  assert(input_tree_vec.size() > 0);
   
-  for_each(input_tree_list.cbegin(),
-           input_tree_list.cend(),
+  for_each(input_tree_vec.cbegin(),
+           input_tree_vec.cend(),
            [&] (const neurotree_t& tree)
            { cell::validate_tree(tree); } 
            );
 
-  const neurotree_t& input_tree = input_tree_list[0];
+  const neurotree_t& input_tree = input_tree_vec.at(source_gid-pop_start);
       
   const vector<SECTION_IDX_T> & src_vector=get<1>(input_tree);
   const vector<SECTION_IDX_T> & dst_vector=get<2>(input_tree);
@@ -237,7 +238,7 @@ int main(int argc, char** argv)
       target_gid_list.clear();
       for (size_t i=0; i<pop_vector[pop_idx].count; i++)
         {
-          if (i != source_gid)
+          if (i != source_gid-pop_start)
             {
               target_gid_list.push_back(i);
             }
@@ -260,13 +261,14 @@ int main(int argc, char** argv)
   for (size_t i=start, ii=0; i<end; i++, ii++)
     {
       CELL_IDX_T gid = target_gid_list[i];
-      printf("Task %d: output id %u\n", rank, gid);
-      
-      output_tree_list.push_back(make_tuple(gid,
-                                            src_vector, dst_vector, sections,
-                                            xcoords,ycoords,zcoords,
-                                            radiuses,layers,parents,
-                                            swc_types));
+      printf("Task %d: Output id %u\n", rank, gid);
+
+      neurotree_t tree = make_tuple(gid,
+                                    src_vector, dst_vector, sections,
+                                    xcoords, ycoords, zcoords,
+                                    radiuses, layers, parents,
+                                    swc_types);
+      output_tree_vec.push_back(tree);
 
     }
 
@@ -303,7 +305,7 @@ int main(int argc, char** argv)
 
   MPI_Barrier(all_comm);
 
-  status = cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list);
+  status = cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_vec);
   assert(status == 0);
 
   MPI_Comm_free(&all_comm);

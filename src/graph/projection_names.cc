@@ -135,52 +135,6 @@ namespace neuroh5
 
         return ierr;
       }
-
-
-      herr_t read_projection_names_serial
-      (
-       const std::string&   file_name,
-       vector<pair<string,string>>&      prj_names
-       )
-      {
-        herr_t ierr = 0;
-
-        vector<string> prj_src_pop_names, prj_dst_pop_names;
-        
-        // MPI rank 0 reads and broadcasts the number of ranges
-        hid_t file = -1;
-
-        vector <string> dst_pop_names;
-        file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        assert(file >= 0);
-        
-        assert(hdf5::group_contents_serial(file, hdf5::PROJECTIONS, dst_pop_names) >= 0);
-        
-        for (size_t i=0; i<dst_pop_names.size(); i++)
-          {
-            vector <string> src_pop_names;
-            const string& dst_pop_name = dst_pop_names[i];
-            
-            assert(hdf5::group_contents_serial(file, hdf5::PROJECTIONS+"/"+dst_pop_name, src_pop_names) >= 0);
-            
-            for (size_t j=0; j<src_pop_names.size(); j++)
-              {
-                prj_src_pop_names.push_back(src_pop_names[j]);
-                prj_dst_pop_names.push_back(dst_pop_name);
-              }
-          }
-        
-        assert(H5Fclose(file) >= 0);
-
-        for (size_t i=0; i<prj_dst_pop_names.size(); i++)
-          {
-            prj_names.push_back(make_pair(prj_src_pop_names[i],
-                                          prj_dst_pop_names[i]));
-          }
-
-        return ierr;
-      }
-
-      
+    
     }
 }

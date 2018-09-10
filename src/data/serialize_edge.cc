@@ -50,14 +50,18 @@ namespace neuroh5
 
       sendcounts.resize(num_ranks);
       sdispls.resize(num_ranks);
+
+      int end_rank = num_ranks;
+      assert(end_rank >= 0);
+      assert((int)start_rank < end_rank);
       
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
       // (as opposed to starting at rank 0)
-      for (int key_rank = start_rank; (int)key_rank < num_ranks; key_rank++)
+      for (int key_rank = start_rank; key_rank < end_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }
-      for (int key_rank = 0; (int)key_rank < start_rank; key_rank++)
+      for (int key_rank = 0; key_rank < (int)start_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }
@@ -84,7 +88,6 @@ namespace neuroh5
               
               for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
                 {
-                  NODE_IDX_T key_node = it->first;
                   const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
                   
                   num_packed_edges += adj_vector.size();
@@ -104,7 +107,6 @@ namespace neuroh5
     {
       for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
         {
-          NODE_IDX_T key_node = it->first;
           const vector<NODE_IDX_T>&  adj_vector = get<0>(it->second);
           
           num_packed_edges += adj_vector.size();
