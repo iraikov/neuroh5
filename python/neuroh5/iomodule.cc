@@ -3011,18 +3011,21 @@ extern "C"
         assert(status == MPI_SUCCESS);
       }
 
-    assert(graph::read_projection_names(comm, string(input_file_name), prj_names) >= 0);
 
     PyObject *py_result  = PyList_New(0);
 
-    for (auto name_pair: prj_names)
+    if (graph::read_projection_names(comm, string(input_file_name), prj_names) >= 0)
       {
-        PyObject *py_pairval = PyTuple_New(2);
-        PyTuple_SetItem(py_pairval, 0, PyBytes_FromString(name_pair.first.c_str()));
-        PyTuple_SetItem(py_pairval, 1, PyBytes_FromString(name_pair.second.c_str()));
-        status = PyList_Append(py_result, py_pairval);
-        assert (status == 0);
-        Py_DECREF(py_pairval);
+
+        for (auto name_pair: prj_names)
+          {
+            PyObject *py_pairval = PyTuple_New(2);
+            PyTuple_SetItem(py_pairval, 0, PyBytes_FromString(name_pair.first.c_str()));
+            PyTuple_SetItem(py_pairval, 1, PyBytes_FromString(name_pair.second.c_str()));
+            status = PyList_Append(py_result, py_pairval);
+            assert (status == 0);
+            Py_DECREF(py_pairval);
+          }
       }
 
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);

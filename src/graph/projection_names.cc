@@ -68,27 +68,33 @@ namespace neuroh5
           {
             vector <string> dst_pop_names;
             file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-            assert(file >= 0);
-
-            assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS, dst_pop_names) >= 0);
-
-            for (size_t i=0; i<dst_pop_names.size(); i++)
+            if (file >= 0)
               {
-                vector <string> src_pop_names;
-                const string& dst_pop_name = dst_pop_names[i];
 
-                assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS+"/"+dst_pop_name, src_pop_names) >= 0);
-
-                for (size_t j=0; j<src_pop_names.size(); j++)
+                assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS, dst_pop_names) >= 0);
+                
+                for (size_t i=0; i<dst_pop_names.size(); i++)
                   {
-                    prj_src_pop_names.push_back(src_pop_names[j]);
-                    prj_dst_pop_names.push_back(dst_pop_name);
+                    vector <string> src_pop_names;
+                    const string& dst_pop_name = dst_pop_names[i];
+                    
+                    assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS+"/"+dst_pop_name, src_pop_names) >= 0);
+                    
+                    for (size_t j=0; j<src_pop_names.size(); j++)
+                      {
+                        prj_src_pop_names.push_back(src_pop_names[j]);
+                        prj_dst_pop_names.push_back(dst_pop_name);
+                      }
                   }
+                
+                assert(H5Fclose(file) >= 0);
               }
-
-            assert(H5Fclose(file) >= 0);
+            else
+              {
+                ierr = file;
+              }
           }
-
+        
         // Broadcast projection names
         {
           vector<char> sendbuf; uint32_t sendbuf_size=0;
