@@ -498,6 +498,7 @@ namespace neuroh5
      const DST_PTR_T&       edge_count,
      const vector<NODE_IDX_T>&   selection_dst_idx,
      const vector<DST_PTR_T>&    selection_dst_ptr,
+     const vector< pair<hsize_t,hsize_t> >& ranges,
      const AttrKind        attr_kind,
      data::NamedAttrVal&   attr_values,
      bool collective
@@ -505,8 +506,8 @@ namespace neuroh5
     {
       hid_t file;
       herr_t ierr = 0;
-      hsize_t block = edge_count;
-
+      hsize_t block = 0;
+      
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       assert(fapl >= 0);
       assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
@@ -526,14 +527,6 @@ namespace neuroh5
       ierr = hdf5::exists_dataset (file, dset_path.c_str());
       if (ierr > 0)
         {
-          vector< pair<hsize_t,hsize_t> > ranges;
-          for (size_t i=0; i<selection_dst_ptr.size()-1; i++)
-            {
-              DST_PTR_T start = selection_dst_ptr[i];
-              block = selection_dst_ptr[i+1] - start;
-              ranges.push_back(make_pair(start, block));
-            }
-          
           size_t attr_size = attr_kind.size;
           hid_t attr_h5type = hdf5::attr_kind_h5type(attr_kind);
           switch (attr_kind.type)
@@ -541,21 +534,21 @@ namespace neuroh5
             case UIntVal:
               if (attr_size == 4)
                 {
-                  vector <uint32_t> attr_values_uint32(edge_count);
+                  vector <uint32_t> attr_values_uint32;
                   ierr = hdf5::read_selection<uint32_t>(file, dset_path, attr_h5type, ranges,
                                                         attr_values_uint32, rapl);
                   attr_values.insert(string(attr_name), attr_values_uint32);
                 }
               else if (attr_size == 2)
                 {
-                  vector <uint16_t>    attr_values_uint16(edge_count);
+                  vector <uint16_t>    attr_values_uint16;
                   ierr = hdf5::read_selection<uint16_t>(file, dset_path, attr_h5type, ranges,
                                                         attr_values_uint16, rapl);
                   attr_values.insert(string(attr_name), attr_values_uint16);
                 }
               else if (attr_size == 1)
                 {
-                  vector <uint8_t> attr_values_uint8(edge_count);
+                  vector <uint8_t> attr_values_uint8;
                   ierr = hdf5::read_selection<uint8_t>(file, dset_path, attr_h5type, ranges,
                                                        attr_values_uint8, rapl);
                   attr_values.insert(string(attr_name), attr_values_uint8);
@@ -568,21 +561,21 @@ namespace neuroh5
             case SIntVal:
               if (attr_size == 4)
                 {
-                  vector <int32_t>  attr_values_int32(edge_count);
+                  vector <int32_t>  attr_values_int32;
                   ierr = hdf5::read_selection<int32_t>(file, dset_path, attr_h5type, ranges,
                                                        attr_values_int32, rapl);
                   attr_values.insert(string(attr_name), attr_values_int32);
                 }
               else if (attr_size == 2)
                 {
-                  vector <int16_t>  attr_values_int16(edge_count);
+                  vector <int16_t>  attr_values_int16;
                   ierr = hdf5::read_selection<int16_t>(file, dset_path, attr_h5type, ranges,
                                                        attr_values_int16, rapl);
                   attr_values.insert(string(attr_name), attr_values_int16);
                 }
               else if (attr_size == 1)
                 {
-                  vector <int8_t>  attr_values_int8(edge_count);
+                  vector <int8_t>  attr_values_int8;
                   ierr = hdf5::read_selection<int8_t>(file, dset_path, attr_h5type, ranges,
                                                       attr_values_int8, rapl);
                   attr_values.insert(string(attr_name), attr_values_int8);
@@ -595,7 +588,6 @@ namespace neuroh5
             case FloatVal:
               {
                 vector <float>  attr_values_float;
-                attr_values_float.resize(edge_count);
                 ierr = hdf5::read_selection<float>(file, dset_path, attr_h5type, ranges,
                                                    attr_values_float, rapl);
                 attr_values.insert(string(attr_name), attr_values_float);
@@ -604,8 +596,7 @@ namespace neuroh5
             case EnumVal:
               if (attr_size == 1)
                 {
-                  vector <uint8_t>  attr_values_uint8;;
-                  attr_values_uint8.resize(edge_count);
+                  vector <uint8_t>  attr_values_uint8;
                   ierr = hdf5::read_selection<uint8_t>(file, dset_path, attr_h5type, ranges,
                                                        attr_values_uint8, rapl);
 
@@ -645,6 +636,7 @@ namespace neuroh5
      const DST_PTR_T&       edge_count,
      const vector<NODE_IDX_T>&   selection_dst_idx,
      const vector<DST_PTR_T>&    selection_dst_ptr,
+     const vector< pair<hsize_t,hsize_t> >& src_idx_ranges,
      const vector< pair<string,AttrKind> >& edge_attr_info,
      data::NamedAttrVal&                 edge_attr_values
      )
@@ -658,7 +650,7 @@ namespace neuroh5
           AttrKind attr_kind = edge_attr_info[j].second;
           assert ((ierr = read_edge_attribute_selection(comm, file_name, src_pop_name, dst_pop_name,
                                                         name_space, attr_name, edge_base, edge_count,
-                                                        selection_dst_idx, selection_dst_ptr,
+                                                        selection_dst_idx, selection_dst_ptr, src_idx_ranges,
                                                         attr_kind, edge_attr_values))
                   >= 0);
         }

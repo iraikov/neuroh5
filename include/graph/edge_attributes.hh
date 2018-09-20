@@ -121,6 +121,7 @@ namespace neuroh5
      const DST_PTR_T&      edge_count,
      const vector<NODE_IDX_T>&   selection_dst_idx,
      const vector<DST_PTR_T>&    selection_dst_ptr,
+     const vector< pair<hsize_t,hsize_t> >& src_idx_ranges,
      const AttrKind        attr_kind,
      data::NamedAttrVal&   attr_values,
      bool collective = true
@@ -137,6 +138,7 @@ namespace neuroh5
      const DST_PTR_T&            edge_count,
      const vector<NODE_IDX_T>&   selection_dst_idx,
      const vector<DST_PTR_T>&    selection_dst_ptr,
+     const vector< pair<hsize_t,hsize_t> >& src_idx_ranges,
      const std::vector< std::pair<std::string,AttrKind> >& edge_attr_info,
      data::NamedAttrVal&         edge_attr_values
      );

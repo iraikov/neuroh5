@@ -72,7 +72,7 @@ namespace neuroh5
      hid_t              loc,
      const std::string& name,
      hid_t              ntype,
-     std::vector< std::pair<hsize_t,hsize_t> >& ranges,
+     const std::vector< std::pair<hsize_t,hsize_t> >& ranges,
      std::vector<T>&    v,
      hid_t rapl
      )
@@ -120,7 +120,8 @@ namespace neuroh5
 	      ierr = H5Sselect_none(fspace);
 	    }
 	  assert(ierr >= 0);
-	  
+
+          v.resize(len);
 	  ierr = H5Dread(dset, ntype, mspace, fspace, rapl, &v[0]);
 	  assert(ierr >= 0);
 	  

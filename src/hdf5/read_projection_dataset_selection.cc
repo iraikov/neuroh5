@@ -21,6 +21,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 #undef NDEBUG
 #include <cassert>
@@ -48,6 +49,7 @@ namespace neuroh5
      DST_PTR_T&                 edge_base,
      vector<NODE_IDX_T>&        selection_dst_idx,
      vector<DST_PTR_T>&         selection_dst_ptr,
+     vector< pair<hsize_t,hsize_t> >& src_idx_ranges,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
      bool collective
@@ -139,17 +141,17 @@ namespace neuroh5
             }
 
           // read destination block indices
-          hsize_t dst_idx_block=0;
-          vector<NODE_IDX_T> dst_idx;
+          hsize_t dst_blk_idx_block=0;
+          vector<NODE_IDX_T> dst_blk_idx;
 
           
           if (dst_blk_ptr.size() > 0)
-            dst_idx_block = block-1;
+            dst_blk_idx_block = block-1;
           else
-            dst_idx_block = 0;
-          if (dst_idx_block > 0)
+            dst_blk_idx_block = 0;
+          if (dst_blk_idx_block > 0)
             {
-              dst_idx.resize(dst_idx_block, 0);
+              dst_blk_idx.resize(dst_blk_idx_block, 0);
             }
           
           
@@ -158,9 +160,9 @@ namespace neuroh5
              file,
              hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX),
              start,
-             dst_idx_block,
+             dst_blk_idx_block,
              NODE_IDX_H5_NATIVE_T,
-             dst_idx,
+             dst_blk_idx,
              rapl
              );
           assert(ierr >= 0);
@@ -199,7 +201,7 @@ namespace neuroh5
           DST_PTR_T dst_rebase = 0;
           
           // Create source index ranges based on selection_dst_ptr
-          vector< pair<hsize_t,hsize_t> > src_idx_ranges;
+          src_idx_ranges.clear();
           ATTR_PTR_T selection_dst_ptr_pos = 0;
           if (dst_ptr_block > 0)
             {
@@ -210,23 +212,35 @@ namespace neuroh5
                   dst_ptr[i] -= dst_rebase;
                 }
 
+              vector<NODE_IDX_T> dst_idx;
               // Create node index in order to determine which edges to read
-
+              for (size_t i=0; i < dst_blk_idx.size(); i++)
+                {
+                  NODE_IDX_T dst_base = dst_blk_idx[i];
+                  DST_BLK_PTR_T sz = dst_blk_ptr[i+1] - dst_blk_ptr[i];
+                  for (size_t j=0; j<sz; j++)
+                    {
+                      dst_idx.push_back(dst_base + j);
+                    }
+                }
+              
               for (const NODE_IDX_T& s : selection) 
                 {
                   if (s >= dst_start)
                     {
-                      auto it = std::find(dst_idx.begin(), dst_idx.end(), s-dst_start);
+                      NODE_IDX_T n = s-dst_start; 
+                      auto it = std::find(dst_idx.begin(), dst_idx.end(), n);
+                      
                       if (it != dst_idx.end())
                         {
                           selection_dst_idx.push_back(s);
                           
                           ptrdiff_t pos = it - dst_idx.begin();
-                          
+
                           hsize_t src_idx_start=dst_ptr[pos];
                           hsize_t src_idx_block=dst_ptr[pos+1]-src_idx_start;
-                          
-                          src_idx_ranges.push_back(make_pair(src_idx_start, src_idx_block));
+
+                          src_idx_ranges.push_back(make_pair(src_idx_start+dst_rebase, src_idx_block));
                           selection_dst_ptr.push_back(selection_dst_ptr_pos);
                           selection_dst_ptr_pos += src_idx_block;
                         }
