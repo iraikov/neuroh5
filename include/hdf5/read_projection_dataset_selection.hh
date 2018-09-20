@@ -33,6 +33,7 @@ namespace neuroh5
      DST_PTR_T&                 edge_base,
      vector<NODE_IDX_T>&        selection_dst_idx,
      vector<DST_PTR_T>&         selection_dst_ptr,
+     vector< pair<hsize_t,hsize_t> >& src_idx_ranges,
      vector<NODE_IDX_T>&        src_idx,
      size_t&                    total_num_edges,
      bool collective = true

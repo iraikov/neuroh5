@@ -37,6 +37,7 @@
 
 #undef NDEBUG
 #include <cassert>
+#include "throw_assert.hh"
 
 #include "neuroh5_types.hh"
 #include "cell_populations.hh"
@@ -109,11 +110,11 @@ void py_array_to_vector (PyObject *pyval,
                          vector<T>& value_vector)
 {
   npy_intp *dims, ind = 0;
-  assert(PyArray_Check(pyval));
+  throw_assert(PyArray_Check(pyval), "py_array_to_vector: argument is not an array");
   PyArrayObject* pyarr = (PyArrayObject*)PyArray_FROM_OTF(pyval, NPY_NOTYPE, NPY_ARRAY_IN_ARRAY);
   T *pyarr_ptr = (T *)PyArray_GetPtr(pyarr, &ind);
   dims = PyArray_DIMS(pyarr);
-  assert(dims != NULL);
+  throw_assert(dims != NULL, "py_array_to_vector: argument has no dimensions");
   size_t value_size = dims[0];
   value_vector.resize(value_size);
   for (size_t j=0; j<value_size; j++)
@@ -131,7 +132,7 @@ void append_value_map (CELL_IDX_T idx,
                        map<CELL_IDX_T, vector<T> >& all_attr_values)
 {
   npy_intp *dims, ind = 0;
-  assert(PyArray_Check(pyval));
+  throw_assert(PyArray_Check(pyval), "append_value_map: argument is not an array");
   PyArrayObject* pyarr = (PyArrayObject*)PyArray_FROM_OTF(pyval, NPY_NOTYPE, NPY_ARRAY_IN_ARRAY);
   dims = PyArray_DIMS(pyarr);
   if (dims != NULL)
@@ -3011,18 +3012,21 @@ extern "C"
         assert(status == MPI_SUCCESS);
       }
 
-    assert(graph::read_projection_names(comm, string(input_file_name), prj_names) >= 0);
 
     PyObject *py_result  = PyList_New(0);
 
-    for (auto name_pair: prj_names)
+    if (graph::read_projection_names(comm, string(input_file_name), prj_names) >= 0)
       {
-        PyObject *py_pairval = PyTuple_New(2);
-        PyTuple_SetItem(py_pairval, 0, PyBytes_FromString(name_pair.first.c_str()));
-        PyTuple_SetItem(py_pairval, 1, PyBytes_FromString(name_pair.second.c_str()));
-        status = PyList_Append(py_result, py_pairval);
-        assert (status == 0);
-        Py_DECREF(py_pairval);
+
+        for (auto name_pair: prj_names)
+          {
+            PyObject *py_pairval = PyTuple_New(2);
+            PyTuple_SetItem(py_pairval, 0, PyBytes_FromString(name_pair.first.c_str()));
+            PyTuple_SetItem(py_pairval, 1, PyBytes_FromString(name_pair.second.c_str()));
+            status = PyList_Append(py_result, py_pairval);
+            assert (status == 0);
+            Py_DECREF(py_pairval);
+          }
       }
 
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);

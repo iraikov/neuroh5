@@ -66,12 +66,13 @@ namespace neuroh5
       vector<DST_PTR_T> selection_dst_ptr;
       vector<NODE_IDX_T> src_idx;
       map<string, data::NamedAttrVal> edge_attr_map;
-      
+      vector< pair<hsize_t,hsize_t> > src_idx_ranges;
+        
       mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name);
       assert(hdf5::read_projection_dataset_selection(comm, file_name, src_pop_name, dst_pop_name,
                                                      src_start, dst_start, selection, edge_base,
-                                                     selection_dst_idx, selection_dst_ptr, src_idx,
-                                                     total_num_edges) >= 0);
+                                                     selection_dst_idx, selection_dst_ptr, src_idx_ranges,
+                                                     src_idx, total_num_edges) >= 0);
       
       mpi::MPI_DEBUG(comm, "read_projection_selection: validating projection ", src_pop_name, " -> ", dst_pop_name);
       
@@ -93,8 +94,8 @@ namespace neuroh5
           
           assert(graph::read_all_edge_attribute_selection
                  (comm, file_name, src_pop_name, dst_pop_name, attr_namespace,
-                  edge_base, edge_count, selection_dst_idx, selection_dst_ptr, edge_attr_info,
-                  edge_attr_map[attr_namespace]) >= 0);
+                  edge_base, edge_count, selection_dst_idx, selection_dst_ptr, src_idx_ranges,
+                  edge_attr_info, edge_attr_map[attr_namespace]) >= 0);
 
           edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
         }
