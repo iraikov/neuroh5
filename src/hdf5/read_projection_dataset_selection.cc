@@ -218,6 +218,10 @@ namespace neuroh5
                 {
                   NODE_IDX_T dst_base = dst_blk_idx[i];
                   DST_BLK_PTR_T sz = dst_blk_ptr[i+1] - dst_blk_ptr[i];
+                  if (i == (dst_blk_idx.size()-1))
+                    {
+                      sz--;
+                    }
                   for (size_t j=0; j<sz; j++)
                     {
                       dst_idx.push_back(dst_base + j);
