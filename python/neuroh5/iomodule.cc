@@ -168,8 +168,8 @@ void build_cell_attr_value_maps (PyObject *idx_values,
                            
   while (PyDict_Next(idx_values, &idx_pos, &idx_key, &idx_value))
     {
-      assert(idx_key != Py_None);
-      assert(idx_value != Py_None);
+      throw_assert((idx_key != Py_None) && (idx_value != Py_None),
+                   "build_cell_attr_value_maps: invalid idx_values dictionary");
 
       CELL_IDX_T idx = PyLong_AsLong(idx_key);
 
@@ -196,8 +196,9 @@ void build_cell_attr_value_maps (PyObject *idx_values,
             }
           else
             {
-              assert(attr_names[attr_idx] == attr_name);
-              assert(attr_types[attr_idx] == npy_type);
+              throw_assert((attr_names[attr_idx] == attr_name) && (attr_types[attr_idx] == npy_type),
+                           "build_cell_attr_value_maps: mismatch in attribute order");
+
             }
 
                                      
@@ -357,8 +358,9 @@ void build_edge_map (PyObject *py_edge_values,
                            
   while (PyDict_Next(py_edge_values, &edge_pos, &py_edge_key, &py_edge_value))
     {
-      assert(py_edge_key != Py_None);
-      assert(py_edge_value != Py_None);
+      throw_assert((py_edge_key != Py_None) && (py_edge_value != Py_None),
+                   "build_edge_map: invalid edge map");
+
 
       NODE_IDX_T node_idx = PyLong_AsLong(py_edge_key);
 
@@ -394,7 +396,9 @@ void build_edge_map (PyObject *py_edge_values,
           Py_ssize_t attr_pos = 0;
           size_t attr_idx = 0;
 
-          assert(PyBytes_Check(py_attr_namespace));
+          throw_assert(PyBytes_Check(py_attr_namespace),
+                       "build_edge_map: namespace is not a string");
+
           char *str = PyBytes_AsString (py_attr_namespace);
           string attr_namespace = string(str);
                                    
@@ -404,9 +408,9 @@ void build_edge_map (PyObject *py_edge_values,
 
           while (PyDict_Next(py_attr_namespace_value, &attr_pos, &py_attr_key, &py_attr_values))
             {
-              assert(py_attr_key != Py_None);
-              assert(py_attr_values != Py_None);
-              //assert(PyString_Check(py_attr_key));
+              throw_assert((py_attr_key != Py_None) && (py_attr_values != Py_None),
+                           "build_edge_map: invalid attribute dictionary");
+
               string attr_name = string(PyBytes_AsString(py_attr_key));
 
               npy_type = PyArray_TYPE((PyArrayObject *)py_attr_values);
@@ -430,7 +434,9 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint32];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                                     "build_edge_map: attribute name mismatch");
+
                       }
                                              
                     py_array_to_vector<uint32_t>(py_attr_values, attr_values_uint32);
@@ -448,7 +454,8 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint16];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                                     "build_edge_map: attribute name mismatch");
                       }
                                              
                     py_array_to_vector<uint16_t>(py_attr_values, attr_values_uint16);
@@ -466,7 +473,8 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint8];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_uint8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                                     "build_edge_map: attribute name mismatch");
                       }
                                              
                     py_array_to_vector<uint8_t>(py_attr_values, attr_values_uint8);
@@ -484,7 +492,8 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int32];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_int32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                                     "build_edge_map: attribute name mismatch");
                       }
                                              
                     py_array_to_vector<int32_t>(py_attr_values, attr_values_int32);
@@ -502,7 +511,9 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int16];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_int16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                                     "build_edge_map: attribute name mismatch");
+
                       }
                                              
                     py_array_to_vector<int16_t>(py_attr_values, attr_values_int16);
@@ -520,7 +531,8 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int8];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_int8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                                     "build_edge_map: attribute name mismatch");
                       }
                                              
                     py_array_to_vector<int8_t>(py_attr_values, attr_values_int8);
@@ -538,7 +550,9 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_float];
-                        assert(attr_names[attr_namespace][AttrMap::attr_index_float][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0);
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_float][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                                     "build_edge_map: attribute name mismatch");
+
                       }
                                              
                     py_array_to_vector<float>(py_attr_values, attr_values_float);
