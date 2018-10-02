@@ -22,8 +22,7 @@
 #include <sstream>
 #include <string>
 
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -61,8 +60,10 @@ namespace neuroh5
     {
       herr_t ierr = 0;
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS,
+                   "read_projection: invalid MPI communicator");
+      throw_assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS,
+                   "read_projection: invalid MPI communicator");
 
       
       
@@ -75,18 +76,19 @@ namespace neuroh5
       map<string, data::NamedAttrVal> edge_attr_map;
 
       mpi::MPI_DEBUG(comm, "read_projection: ", src_pop_name, " -> ", dst_pop_name);
-      assert(hdf5::read_projection_datasets(comm, file_name, src_pop_name, dst_pop_name,
-                                            dst_start, src_start, block_base, edge_base,
-                                            dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                            total_num_edges, total_read_blocks, local_read_blocks,
-                                            offset, numitems) >= 0);
+      throw_assert(hdf5::read_projection_datasets(comm, file_name, src_pop_name, dst_pop_name,
+                                                  dst_start, src_start, block_base, edge_base,
+                                                  dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                  total_num_edges, total_read_blocks, local_read_blocks,
+                                                  offset, numitems) >= 0,
+                   "read_projection: read_projection_datasets error");
       
       mpi::MPI_DEBUG(comm, "read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
       
       // validate the edges
-      assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx,
-                                dst_ptr, src_idx, pop_ranges, pop_pairs) ==
-             true);
+      throw_assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx,
+                                      dst_ptr, src_idx, pop_ranges, pop_pairs) ==
+                   true, "read_projection: invalid edge list");
       
       edge_count = src_idx.size();
       local_num_edges = edge_count;
@@ -96,14 +98,16 @@ namespace neuroh5
         {
           vector< pair<string,AttrKind> > edge_attr_info;
           
-          assert(graph::get_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
-                                            attr_namespace, edge_attr_info) >= 0);
+          throw_assert(graph::get_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
+                                                  attr_namespace, edge_attr_info) >= 0,
+                       "read_projection: get_edge_attributes error");
           
-          assert(graph::read_all_edge_attributes
-                 (comm, file_name, src_pop_name, dst_pop_name, attr_namespace,
-                  edge_base, edge_count, edge_attr_info,
-                  edge_attr_map[attr_namespace]) >= 0);
-
+          throw_assert(graph::read_all_edge_attributes
+                       (comm, file_name, src_pop_name, dst_pop_name, attr_namespace,
+                        edge_base, edge_count, edge_attr_info,
+                        edge_attr_map[attr_namespace]) >= 0,
+                       "read_projection: read_all_edge_attributes error");
+          
           edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
         }
       
@@ -112,15 +116,17 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       // append to the vectors representing a projection (sources,
       // destinations, edge attributes)
-      assert(data::append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx,
-                                   dst_ptr, src_idx, attr_namespaces, edge_attr_map,
-                                   local_prj_num_edges, prj_edge_map,
-                                   EdgeMapDst) >= 0);
+      throw_assert(data::append_edge_map(dst_start, src_start, dst_blk_ptr, dst_idx,
+                                         dst_ptr, src_idx, attr_namespaces, edge_attr_map,
+                                         local_prj_num_edges, prj_edge_map,
+                                         EdgeMapDst) >= 0,
+                   "read_projection: error in append_edge_map");
       local_num_nodes = prj_edge_map.size();
       
       // ensure that all edges in the projection have been read and
       // appended to edge_list
-      assert(local_prj_num_edges == edge_count);
+      throw_assert(local_prj_num_edges == edge_count,
+                   "read_projection: edge count mismatch");
 
       prj_vector.push_back(prj_edge_map);
       edge_attr_names_vector.push_back (edge_attr_names);

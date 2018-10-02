@@ -4845,15 +4845,15 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL, "NeuroH5ProjectionGen: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL, "NeuroH5ProjectionGen: null MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: unable to duplicate MPI communicator");
       }
 
     
@@ -4901,8 +4901,10 @@ extern "C"
     if (!py_ngg) return NULL;
     py_ngg->state = new NeuroH5ProjectionGenState();
 
-    assert(MPI_Comm_dup(comm, &(py_ngg->state->comm)) == MPI_SUCCESS);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_dup(comm, &(py_ngg->state->comm)) == MPI_SUCCESS, 
+                 "NeuroH5ProjectionGen: unable to duplicate MPI communicator");
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
+                 "NeuroH5ProjectionGen: unable to free MPI communicator");
 
     py_ngg->state->pos             = seq_next;
     py_ngg->state->node_index      = 0;
@@ -4943,7 +4945,8 @@ extern "C"
             dst_pop_set = true;
           }
       }
-    assert(dst_pop_set && src_pop_set);
+    throw_assert(dst_pop_set && src_pop_set, 
+                 "NeuroH5ProjectionGen: unable to determine source and destination population");
     
     NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
     NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
@@ -5287,7 +5290,8 @@ extern "C"
     if (py_ngg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ngg->state->comm));
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS, 
+                     "NeuroH5ProjectionGen: unable to free MPI communicator");
       }
     delete py_ngg->state;
     Py_TYPE(py_ngg)->tp_free(py_ngg);
@@ -5523,8 +5527,11 @@ extern "C"
   {
     int status = 0;
     int size, rank;
-    assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
+
+    throw_assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS,
+                 "NeuroH5ProjectionGen: invalid MPI communicator");
+    throw_assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS,
+                 "NeuroH5ProjectionGen: invalid MPI communicator");
     
     if (!(py_ngg->state->block_index < py_ngg->state->block_count))
       return 0;
@@ -5571,7 +5578,7 @@ extern "C"
     size_t max_local_num_nodes=0;
     status = MPI_Allreduce(&(py_ngg->state->local_num_nodes), &max_local_num_nodes, 1,
                            MPI_SIZE_T, MPI_MAX, py_ngg->state->comm);
-    assert(status == MPI_SUCCESS);
+    throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Allreduce error");
     py_ngg->state->node_count += max_local_num_nodes;
 
     return status;
@@ -5585,15 +5592,18 @@ extern "C"
 
     int status = 0;
 
-    assert(py_ngg->state->node_index <= py_ngg->state->node_count);
+    throw_assert(py_ngg->state->node_index <= py_ngg->state->node_count,
+                 "NeuroH5ProjectionGen: node index / node count mismatch");
 
     switch (py_ngg->state->pos)
       {
       case seq_next:
         {
           int size, rank;
-          assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS);
-          assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS);
+          throw_assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS,
+                       "NeuroH5ProjectionGen: invalid MPI communicator");
+          throw_assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS,
+                       "NeuroH5ProjectionGen: invalid MPI communicator");
 
           if ((py_ngg->state->edge_map_iter == py_ngg->state->edge_map.cend()) &&
               (py_ngg->state->node_index == py_ngg->state->node_count))
@@ -5607,7 +5617,9 @@ extern "C"
                   if (py_ngg->state->node_index == py_ngg->state->node_count)
                     {
                       int status = MPI_Comm_free(&(py_ngg->state->comm));
-                      assert(status == MPI_SUCCESS);
+                      throw_assert(status == MPI_SUCCESS,
+                                   "NeuroH5ProjectionGen: unable to free MPI communicator");
+
                       py_ngg->state->pos = seq_last;
                     }
                   else
@@ -5647,7 +5659,8 @@ extern "C"
           if (py_ngg->state->node_index == py_ngg->state->node_count)
             {
               int status = MPI_Comm_free(&(py_ngg->state->comm));
-              assert(status == MPI_SUCCESS);
+              throw_assert(status == MPI_SUCCESS,
+                     "NeuroH5ProjectionGen: unable to free MPI communicator");
               py_ngg->state->pos = seq_last;
             }
           else
@@ -5662,7 +5675,7 @@ extern "C"
           if (py_ngg->state->node_index == py_ngg->state->node_count)
             {
               int status = MPI_Comm_free(&(py_ngg->state->comm));
-              assert(status == MPI_SUCCESS);
+              throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: unable to free MPI communicator");
               py_ngg->state->pos = seq_last;
             }
           else
