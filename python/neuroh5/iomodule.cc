@@ -435,12 +435,13 @@ void build_edge_map (PyObject *py_edge_values,
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint32];
                         throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
-                                     "build_edge_map: attribute name mismatch");
+                                     "build_edge_map: uint32 attribute name mismatch");
 
                       }
                                              
                     py_array_to_vector<uint32_t>(py_attr_values, attr_values_uint32);
-                    assert(attr_values_uint32.size() == num_edges);
+                    throw_assert(attr_values_uint32.size() == num_edges,
+                                 "build_edge_map: mismatch in number of edges and number of uint32 attributes");
                     edge_attr_values.insert(attr_values_uint32);
                     attr_type_idx[AttrMap::attr_index_uint32]++;
                     break;
@@ -455,11 +456,12 @@ void build_edge_map (PyObject *py_edge_values,
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint16];
                         throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
-                                     "build_edge_map: attribute name mismatch");
+                                     "build_edge_map: uint16 attribute name mismatch");
                       }
                                              
                     py_array_to_vector<uint16_t>(py_attr_values, attr_values_uint16);
-                    assert(attr_values_uint16.size() == num_edges);
+                    throw_assert(attr_values_uint16.size() == num_edges,
+                                 "build_edge_map: mismatch in number of edges and number of uint16 attributes");
                     edge_attr_values.insert(attr_values_uint16);
                     attr_type_idx[AttrMap::attr_index_uint16]++;
                     break;
@@ -474,11 +476,12 @@ void build_edge_map (PyObject *py_edge_values,
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint8];
                         throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
-                                     "build_edge_map: attribute name mismatch");
+                                     "build_edge_map: uint8 attribute name mismatch");
                       }
                                              
                     py_array_to_vector<uint8_t>(py_attr_values, attr_values_uint8);
-                    assert(attr_values_uint8.size() == num_edges);
+                    throw_assert(attr_values_uint8.size() == num_edges,
+                                 "build_edge_map: mismatch in number of edges and number of uint8 attributes");
                     edge_attr_values.insert(attr_values_uint8);
                     attr_type_idx[AttrMap::attr_index_uint8]++;
                     break;
@@ -493,11 +496,12 @@ void build_edge_map (PyObject *py_edge_values,
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int32];
                         throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
-                                     "build_edge_map: attribute name mismatch");
+                                     "build_edge_map: int32 attribute name mismatch");
                       }
                                              
                     py_array_to_vector<int32_t>(py_attr_values, attr_values_int32);
-                    assert(attr_values_int32.size() == num_edges);
+                    throw_assert(attr_values_int32.size() == num_edges,
+                                 "build_edge_map: mismatch in number of edges and number of int32 attributes");
                     edge_attr_values.insert(attr_values_int32);
                     attr_type_idx[AttrMap::attr_index_int32]++;
                     break;
@@ -517,7 +521,8 @@ void build_edge_map (PyObject *py_edge_values,
                       }
                                              
                     py_array_to_vector<int16_t>(py_attr_values, attr_values_int16);
-                    assert(attr_values_int16.size() == num_edges);
+                    throw_assert(attr_values_int16.size() == num_edges,
+                                 "build_edge_map: mismatch in number of edges and number of int16 attributes");
                     edge_attr_values.insert(attr_values_int16);
                     attr_type_idx[AttrMap::attr_index_int16]++;
                     break;
@@ -532,11 +537,12 @@ void build_edge_map (PyObject *py_edge_values,
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int8];
                         throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
-                                     "build_edge_map: attribute name mismatch");
+                                     "build_edge_map: int8 attribute name mismatch");
                       }
                                              
                     py_array_to_vector<int8_t>(py_attr_values, attr_values_int8);
-                    assert(attr_values_int8.size() == num_edges);
+                    throw_assert(attr_values_int8.size() == num_edges,
+                                 "build_edge_map: mismatch in number of edges and number of int8 attributes");
                     edge_attr_values.insert(attr_values_int8);
                     attr_type_idx[AttrMap::attr_index_int8]++;
                     break;
@@ -551,12 +557,13 @@ void build_edge_map (PyObject *py_edge_values,
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_float];
                         throw_assert(attr_names[attr_namespace][AttrMap::attr_index_float][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
-                                     "build_edge_map: attribute name mismatch");
+                                     "build_edge_map: float attribute name mismatch");
 
                       }
                                              
                     py_array_to_vector<float>(py_attr_values, attr_values_float);
-                    assert(attr_values_float.size() == num_edges);
+                    throw_assert(attr_values_float.size() == num_edges,
+                                 "build_edge_map: mismatch in number of edges and number of float attributes");
                     edge_attr_values.insert(attr_values_float);
                     attr_type_idx[AttrMap::attr_index_float]++;
                     break;
@@ -583,17 +590,24 @@ void build_edge_maps (PyObject *py_edge_dict,
   while (PyDict_Next(py_edge_dict, &dst_dict_pos, &py_dst_dict_key, &py_dst_dict_value))
     {
       assert(py_dst_dict_key != Py_None);
-      assert(py_dst_dict_value != Py_None);
-      assert(PyBytes_Check(py_dst_dict_key));
-      string dst_pop_name = string(PyBytes_AsString (py_dst_dict_key));
+      throw_assert(py_dst_dict_key != Py_None,
+                   "build_edge_maps: invalid key in edge dictionary");
+      throw_assert(py_dst_dict_value != Py_None,
+                   "build_edge_maps: invalid value in edge dictionary");
+      throw_assert(PyBytes_Check(py_dst_dict_key),
+                   "build_edge_maps: non-string key in edge dictionary");
 
+      string dst_pop_name = string(PyBytes_AsString (py_dst_dict_key));
       PyObject *py_src_dict_key, *py_src_dict_value;
       Py_ssize_t src_dict_pos = 0;
 
       while (PyDict_Next(py_dst_dict_value, &src_dict_pos, &py_src_dict_key, &py_src_dict_value))
         {
-          assert(py_src_dict_key != Py_None);
-          assert(PyBytes_Check(py_src_dict_key));
+          throw_assert(py_src_dict_key != Py_None,
+                       "build_edge_maps: invalid key in edge dictionary");
+          throw_assert(PyBytes_Check(py_src_dict_key),
+                       "build_edge_maps: non-string key in edge dictionary");
+          
           string src_pop_name = string(PyBytes_AsString (py_src_dict_key));
 
           edge_map_t edge_map;
@@ -612,7 +626,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                               const bool topology)
 {
   const CELL_IDX_T idx = get<0>(tree);
-  assert(idx == key);
+  throw_assert(idx == key,
+               "py_build_tree_value: tree index mismatch");
 
   const vector<SECTION_IDX_T> & src_vector=get<1>(tree);
   const vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
@@ -661,7 +676,9 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           for (size_t p = 0; p < num_section_nodes; p++)
             {
               NODE_IDX_T node_idx = sections[sections_ptr];
-              assert(node_idx <= num_nodes);
+              throw_assert(node_idx <= num_nodes,
+                           "py_build_tree_value: invalid node index in tree");
+
               section_nodes_ptr[p] = node_idx;
               if (marked_nodes.find(node_idx) == marked_nodes.end())
                 {
@@ -675,7 +692,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           Py_DECREF(py_section_key);
           section_idx++;
         }
-      assert(section_idx == num_sections);
+      throw_assert(section_idx == num_sections,
+                   "py_build_tree_value: invalid section index in tree");
 
       npy_intp topology_dims[1];
       topology_dims[0] = src_vector.size();
@@ -778,8 +796,10 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
 
   if (topology)
     {
-      assert(py_section_vector != NULL);
-      assert(py_section_topology != NULL);
+      throw_assert(py_section_vector != NULL,
+                   "py_build_tree_value: invalid section vector in tree");
+      throw_assert(py_section_topology != NULL,
+                   "py_build_tree_value: invalid section topology in tree");
       
       PyDict_SetItemString(py_treeval, "section", py_section_vector);
       Py_DECREF(py_section_vector);
@@ -789,9 +809,12 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
     }
   else
     {
-      assert(py_sections != NULL);
-      assert(py_section_src != NULL);
-      assert(py_section_dst != NULL);
+      throw_assert(py_sections != NULL,
+                   "py_build_tree_value: invalid sections in tree");
+      throw_assert(py_section_src != NULL,
+                   "py_build_tree_value: invalid source section vector in tree");
+      throw_assert(py_section_dst != NULL,
+                   "py_build_tree_value: invalid destination section vector in tree");
 
       PyDict_SetItemString(py_treeval, "sections", py_sections);
       Py_DECREF(py_sections);
@@ -971,7 +994,9 @@ PyObject* NeuroH5TreeIter_iternext(PyObject *self)
       const map <string, NamedAttrMap>& attr_maps = py_state->state->attr_maps;
 
       PyObject *treeval = py_build_tree_value(key, tree, attr_maps, py_state->state->topology_flag);
-      assert(treeval != NULL);
+      throw_assert(treeval != NULL,
+                   "NeuroH5TreeIter: invalid tree value");
+      
       py_state->state->it_tree++;
       py_state->state->seq_index++;
 
@@ -1281,7 +1306,8 @@ PyObject* NeuroH5CellAttrIter_iternext(PyObject *self)
 
       PyObject *attrval = py_build_cell_attr_values(key, py_state->state->attr_map,
                                                     py_state->state->attr_names);
-      assert(attrval != NULL);
+      throw_assert(attrval != NULL,
+                   "NeuroH5CellAttrIter: invalid attribute value");
 
       PyObject *result = Py_BuildValue("lN", key, attrval);
 
@@ -1510,8 +1536,10 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<float>(i,j); 
             }
           status = PyList_Append(py_attrval, py_arr);
-          assert(status == 0);
-          Py_DECREF(py_arr);
+          throw_assert(status == 0,
+                       "py_build_edge_tuple_value: unable to append to list");
+          
+          PY_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint8_t>(); i++)
         {
@@ -1522,7 +1550,8 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<uint8_t>(i,j); 
             }
           status = PyList_Append(py_attrval, py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_tuple_value: unable to append to list");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint16_t>(); i++)
@@ -1534,7 +1563,8 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<uint16_t>(i,j); 
             }
           status = PyList_Append(py_attrval, py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_tuple_value: unable to append to list");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint32_t>(); i++)
@@ -1546,7 +1576,8 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<uint32_t>(i,j); 
             }
           status = PyList_Append(py_attrval, py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_tuple_value: unable to append to list");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int8_t>(); i++)
@@ -1558,7 +1589,8 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<int8_t>(i,j); 
             }
           status = PyList_Append(py_attrval, py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_tuple_value: unable to append to list");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int16_t>(); i++)
@@ -1570,7 +1602,8 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<int16_t>(i,j); 
             }
           status = PyList_Append(py_attrval, py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_tuple_value: unable to append to list");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int32_t>(); i++)
@@ -1582,7 +1615,8 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<int32_t>(i,j); 
             }
           status = PyList_Append(py_attrval, py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_tuple_value: unable to append to list");
           Py_DECREF(py_arr);
         }
           
@@ -1637,7 +1671,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<float>(i,j); 
             }
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_float][i].c_str(), py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_array_dict_value: unable to set dictionary item");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint8_t>(); i++)
@@ -1649,7 +1684,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<uint8_t>(i,j); 
             }
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint8][i].c_str(), py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_array_dict_value: unable to set dictionary item");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint16_t>(); i++)
@@ -1661,7 +1697,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<uint16_t>(i,j); 
             }
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint16][i].c_str(), py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_array_dict_value: unable to set dictionary item");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint32_t>(); i++)
@@ -1673,7 +1710,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<uint32_t>(i,j); 
             }
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint32][i].c_str(), py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_array_dict_value: unable to set dictionary item");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int8_t>(); i++)
@@ -1685,7 +1723,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<int8_t>(i,j); 
             }
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int8][i].c_str(), py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_array_dict_value: unable to set dictionary item");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int16_t>(); i++)
@@ -1697,7 +1736,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<int16_t>(i,j); 
             }
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int16][i].c_str(), py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_array_dict_value: unable to set dictionary item");
           Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int32_t>(); i++)
@@ -1709,7 +1749,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
               ptr[j] = edge_attr_values.at<int32_t>(i,j); 
             }
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int32][i].c_str(), py_arr);
-          assert(status == 0);
+          throw_assert(status == 0,
+                   "py_build_edge_array_dict_value: unable to set dictionary item");
           Py_DECREF(py_arr);
         }
           
@@ -1770,8 +1811,9 @@ PyObject* NeuroH5EdgeIter_iternext(PyObject *self)
       const edge_tuple_t& et    = py_state->state->it_edge->second;
 
       PyObject* py_edge_tuple_value = py_build_edge_tuple_value (key, et, py_state->state->edge_attr_name_spaces);
-      assert(py_edge_tuple_value != NULL);
-      
+      throw_assert(py_edge_tuple_value != NULL,
+                   "NeuroH5EdgeIter: invalid edge tuple value");
+
       py_state->state->it_edge++;
       py_state->state->seq_index++;
 
@@ -1880,15 +1922,20 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_graph: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_graph: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph: unable to duplicate MPI communicator");
+
       }
 
     vector <string> edge_attr_name_spaces;
@@ -1903,12 +1950,16 @@ extern "C"
           }
       }
 
-    assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
+    status = graph::read_projection_names(comm, input_file_name, prj_names) >= 0;
+    throw_assert(status >= 0,
+                 "py_read_graph: unable to read projection names");
 
     graph::read_graph(comm, std::string(input_file_name), edge_attr_name_spaces,
                       prj_names, prj_vector, edge_attr_name_vector,
                       total_num_nodes, local_num_edges, total_num_edges);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_graph: unable to free MPI communicator");
     
     PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
                                                                 edge_attr_name_spaces,
@@ -1992,15 +2043,19 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_scatter_read_graph: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_scatter_read_graph: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_graph: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_graph: unable to duplicate MPI communicator");
       }
     
     if (opt_edge_map_type == 1)
@@ -2008,8 +2063,10 @@ extern "C"
         edge_map_type = EdgeMapSrc;
       }
     
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_graph: unable to obtain size of MPI communicator");
+    
     if (io_size == 0)
       {
         io_size = size;
@@ -2030,7 +2087,9 @@ extern "C"
       }
     else
       {
-        assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
+        status = graph::read_projection_names(comm, input_file_name, prj_names);
+        throw_assert(status >= 0,
+                     "py_scatter_read_graph: unable to read projection names");
       }
     
     vector <string> edge_attr_name_spaces;
@@ -2048,7 +2107,10 @@ extern "C"
     
 
     // Read population info to determine total_num_nodes
-    assert(cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+    status = cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes);
+    throw_assert(status >= 0,
+                 "py_scatter_read_graph: unable to read population ranges");
+
 
     // Create C++ map for node_rank_map:
     if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
@@ -2069,7 +2131,9 @@ extern "C"
                               prj_vector, edge_attr_name_vector,
                               local_num_nodes, total_num_nodes,
                               local_num_edges, total_num_edges);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_graph: unable to free MPI communicator");
 
     PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
                                                                 edge_attr_name_spaces,
@@ -2142,15 +2206,19 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_bcast_graph: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_bcast_graph: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_bcast_graph: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_bcast_graph: unable to duplicate MPI communicator");
       }
 
     if (opt_edge_map_type == 1)
@@ -2159,6 +2227,8 @@ extern "C"
       }
     
     assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_bcast_graph: unable to obtain size of MPI communicator");
 
     vector <string> edge_attr_name_spaces;
     // Create C++ vector of namespace strings:
@@ -2172,15 +2242,23 @@ extern "C"
           }
       }
 
-    assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
+    status = graph::read_projection_names(comm, input_file_name, prj_names);
+    throw_assert(status >= 0,
+                 "py_bcast_graph: unable to read projection names");
+
 
     // Read population info to determine total_num_nodes
-    assert(cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+    status = cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes);
+    throw_assert(status >= 0,
+                 "py_bcast_graph: unable to read population ranges");
 
     graph::bcast_graph(comm, edge_map_type, std::string(input_file_name),
                        edge_attr_name_spaces, prj_names, prj_vector, edge_attr_name_vector, 
                        total_num_nodes, local_num_edges, total_num_edges);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_bcast_graph: unable to free MPI communicator");
+    
 
     PyObject *py_attribute_info = PyDict_New();
     for (size_t p = 0; p<edge_attr_name_vector.size(); p++)
@@ -2297,15 +2375,20 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_graph_selection: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_graph_selection: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph_selection: unable to duplicate MPI communicator");
+
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph_selection: unable to duplicate MPI communicator");
       }
 
     vector <string> edge_attr_name_spaces;
@@ -2330,12 +2413,17 @@ extern "C"
           }
       }
 
-    assert(graph::read_projection_names(comm, input_file_name, prj_names) >= 0);
+    status = graph::read_projection_names(comm, input_file_name, prj_names);
+    throw_assert(status >= 0,
+                 "py_read_graph_selection: unable to read projection names");
+    
 
     graph::read_graph_selection(comm, std::string(input_file_name), edge_attr_name_spaces,
                                 prj_names, selection, prj_vector, edge_attr_name_vector,
                                 total_num_nodes, local_num_edges, total_num_edges);
     assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_graph_selection: unable to free MPI communicator");
     
     PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
                                                                 edge_attr_name_spaces,
@@ -2399,20 +2487,29 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_graph_selection: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_graph_selection: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph_selection: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph_selection: unable to duplicate MPI communicator");
+
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_write_graph: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &rank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_write_graph: unable to obtain rank of MPI communicator");
 
     if (io_size == 0)
       {
@@ -2428,8 +2525,11 @@ extern "C"
     
     build_edge_map(edge_values, edge_attr_names, edge_map);
 
-    assert(graph::write_graph(comm, io_size, file_name, src_pop_name, dst_pop_name,
-                              edge_attr_names, edge_map) >= 0);
+    status = graph::write_graph(comm, io_size, file_name, src_pop_name, dst_pop_name,
+                                edge_attr_names, edge_map);
+    throw_assert(status >= 0,
+                 "py_write_graph: unable to write graph");
+
     Py_INCREF(Py_None);
     return Py_None;
   }
@@ -2461,15 +2561,19 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_append_graph: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_append_graph: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_append_graph: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_append_graph: unable to duplicate MPI communicator");
       }
     
     string file_name = string(file_name_arg);
@@ -2494,8 +2598,12 @@ extern "C"
     if (dict_size > 0)
       {
         int rank, size;
-        assert(MPI_Comm_size(data_comm, &size) == MPI_SUCCESS);
-        assert(MPI_Comm_rank(data_comm, &rank) == MPI_SUCCESS);
+        status = MPI_Comm_size(data_comm, &size);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_append_graph: unable to obtain size of MPI communicator");
+        status = MPI_Comm_rank(data_comm, &rank);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_append_graph: unable to obtain rank of MPI communicator");
 
         if (io_size == 0)
           {
@@ -2515,17 +2623,28 @@ extern "C"
                 const string & src_pop_name = edge_map_item.first;
                 const map <string, vector<vector<string> > > & edge_attr_names = edge_map_item.second.first; 
                 const edge_map_t & edge_map = edge_map_item.second.second; 
-                assert(graph::append_graph(data_comm, io_size, file_name, src_pop_name, dst_pop_name,
-                                           edge_attr_names, edge_map) >= 0);
+                status = graph::append_graph(data_comm, io_size, file_name, src_pop_name, dst_pop_name,
+                                             edge_attr_names, edge_map);
+                throw_assert(status >= 0,
+                             "py_append_graph: unable to append projection");
+                
               }
           }
 
       }
     
-    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
-    assert(MPI_Barrier(comm) == MPI_SUCCESS);
-    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Barrier(data_comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_append_graph: barrier error");
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_append_graph: barrier error");
+    status = MPI_Comm_free(&data_comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_append_graph: unable to free MPI communicator");
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_append_graph: unable to free MPI communicator");
     
     Py_INCREF(Py_None);
     return Py_None;
@@ -2577,26 +2696,38 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_population_names: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_population_names: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_population_names: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_population_names: unable to duplicate MPI communicator");
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_population_names: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &rank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_population_names: unable to obtain rank of MPI communicator");
 
     vector <string> pop_names;
     status = cell::read_population_names(comm, input_file_name, pop_names);
-    assert (status >= 0);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_population_names: unable to read population names");
 
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_population_names: unable to free MPI communicator");
 
 
     PyObject *py_population_names = PyList_New(0);
@@ -2609,6 +2740,7 @@ extern "C"
     
     return py_population_names;
   }
+  
   PyDoc_STRVAR(
     read_cell_attribute_info_doc,
     "read_cell_attribute_info(file_name, populations, read_cell_index=False, comm=None)\n"
@@ -2658,7 +2790,10 @@ extern "C"
                                      &input_file_name, &py_pop_names, &read_cell_index_flag, &py_comm))
       return NULL;
 
-    assert(PyList_Check(py_pop_names) > 0);
+    status = PyList_Check(py_pop_names);
+    throw_assert(status > 0,
+                 "py_read_cell_attribute_info: invalid pop_names list");
+
     read_cell_index = read_cell_index_flag>0;
 
     MPI_Comm comm;
@@ -2666,22 +2801,29 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_cell_attribute_info: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_cell_attribute_info: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_cell_attribute_info: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_cell_attribute_info: unable to duplicate MPI communicator");
       }
 
     int srank, ssize; size_t rank, size;
-    assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-    assert(ssize > 0);
-    assert(srank >= 0);
+    status = MPI_Comm_size(comm, &ssize);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_cell_attribute_info: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &srank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_cell_attribute_info: unable to obtain rank of MPI communicator");
+
     size = ssize;
     rank = srank;
     
@@ -2700,15 +2842,18 @@ extern "C"
 
     vector< pair<pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, input_file_name, pop_labels);
-    assert (status >= 0);
+    throw_assert(status >= 0,
+                 "py_read_cell_attribute_info: unable to read population labels");
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
-                                        string(input_file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
+    status = cell::read_population_ranges(comm,
+                                          string(input_file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert(status >= 0,
+                 "py_read_cell_attribute_info: unable to read population ranges");
 
     
     map<string, map<string, vector<string> > > pop_attribute_info;
@@ -2736,14 +2881,15 @@ extern "C"
 
             vector <string> name_spaces;
             status = cell::get_cell_attribute_name_spaces (input_file_name, pop_name, name_spaces);
-            assert (status >= 0);
+            throw_assert (status >= 0);
 
             for(const string& name_space : name_spaces)
               {
                 vector< pair<string, AttrKind> > ns_attributes;
 
                 status = cell::get_cell_attributes (input_file_name, name_space, pop_name, ns_attributes);
-                assert (status >= 0);
+                throw_assert (status >= 0,
+                              "py_read_cell_attribute_info: unable to read cell attributes metadata");
 
                 for (auto const& it : ns_attributes)
                   {
@@ -2753,11 +2899,13 @@ extern "C"
 
                     if (read_cell_index)
                       {
-                        assert(cell::read_cell_index(comm,
-                                                     input_file_name,
-                                                     pop_name,
-                                                     name_space + "/" + attr_name,
-                                                     cell_index_info[pop_name][name_space][attr_name]) >= 0);
+                        status = cell::read_cell_index(comm,
+                                                       input_file_name,
+                                                       pop_name,
+                                                       name_space + "/" + attr_name,
+                                                       cell_index_info[pop_name][name_space][attr_name]);
+                        throw_assert(status >= 0,
+                                     "py_read_cell_attribute_info: unable to read cell attribute index");
                         vector<CELL_IDX_T>& cell_index_vector = cell_index_info[pop_name][name_space][attr_name];
                         for (size_t i=0; i<cell_index_vector.size(); i++)
                           {
@@ -2769,7 +2917,8 @@ extern "C"
           }
       }
 
-    assert(MPI_Barrier(comm) == MPI_SUCCESS);
+    throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                 "py_read_cell_attribute_info: barrier error");
     
     {
       vector<char> sendbuf;
@@ -2779,11 +2928,15 @@ extern "C"
           data::serialize_data(pop_attribute_info, sendbuf);
           sendbuf_size = sendbuf.size();
         }
-      
-      assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+
+      status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_cell_attribute_info: broadcast error");
       
       sendbuf.resize(sendbuf_size);
-      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
+      status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_cell_attribute_info: broadcast error");
       
       if ((rank != root) && (sendbuf_size > 0))
         {
@@ -2800,10 +2953,14 @@ extern "C"
           sendbuf_size = sendbuf.size();
         }
       
-      assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+      status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_cell_attribute_info: broadcast error");
       
       sendbuf.resize(sendbuf_size);
-      assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
+      status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_cell_attribute_info: broadcast error");
       
       if ((rank != root) && (sendbuf_size > 0))
         {
@@ -2832,14 +2989,17 @@ extern "C"
                     for(auto const& value: cell_index_info[it.first][it_ns.first][name])
                       {
                         status = PyList_Append(py_cell_index, PyLong_FromLong((long)value));
-                        assert (status == 0);
+                        throw_assert(status == 0,
+                                     "py_read_cell_attribute_info: list append error");
+
                       }
 
                     PyTuple_SetItem(py_info_tuple, 0, py_name);
                     PyTuple_SetItem(py_info_tuple, 1, py_cell_index);
-                    
+                    throw_assert(status == 0,
+                                 "py_read_cell_attribute_info: list append error");
                     status = PyList_Append(py_attribute_infos, py_info_tuple);
-                    assert (status == 0);
+
                     Py_DECREF(py_info_tuple);
                   }
               }
@@ -2849,7 +3009,9 @@ extern "C"
                   {
                     PyObject *py_name = PyBytes_FromString(name.c_str());
                     status = PyList_Append(py_attribute_infos, py_name);
-                    assert (status == 0);
+                    throw_assert(status == 0,
+                                 "py_read_cell_attribute_info: list append error");
+
                     Py_DECREF(py_name);
                   }
               }
@@ -2866,7 +3028,11 @@ extern "C"
         Py_DECREF(py_ns_attribute_info);        
       }
 
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_cell_attribute_info: unable to free MPI communicator");
+
+                 
     return py_population_attribute_info;
   }
 
@@ -2922,29 +3088,38 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_population_ranges: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_population_ranges: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_population_ranges: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_population_ranges: unable to duplicate MPI communicator");
       }
 
     status = cell::read_population_labels(comm, input_file_name, pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0,
+                  "py_read_population_ranges: unable to read population labels");
 
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
-                                        string(input_file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
-
+    status = cell::read_population_ranges(comm,
+                                          string(input_file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert(status >= 0,
+                 "py_read_population_ranges: unable to read population labels");
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_population_ranges: unable to free MPI communicator");
+    
     PyObject *py_population_ranges_dict = PyDict_New();
     for (auto range: pop_ranges)
       {
@@ -3015,15 +3190,19 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_projection_names: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_projection_names: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_projection_names: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_projection_names: unable to duplicate MPI communicator");
       }
 
 
@@ -3038,12 +3217,15 @@ extern "C"
             PyTuple_SetItem(py_pairval, 0, PyBytes_FromString(name_pair.first.c_str()));
             PyTuple_SetItem(py_pairval, 1, PyBytes_FromString(name_pair.second.c_str()));
             status = PyList_Append(py_result, py_pairval);
-            assert (status == 0);
+            throw_assert(status == 0,
+                         "py_read_projection_names: unable to append to list");
             Py_DECREF(py_pairval);
           }
       }
 
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_projection_names: unable to free communicator");
     
     return py_result;
   }
@@ -3133,15 +3315,19 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_trees: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_trees: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_trees: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_trees: unable to duplicate MPI communicator");
       }
 
     vector <string> attr_name_spaces;
@@ -3158,7 +3344,9 @@ extern "C"
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0,
+                  "py_read_trees: unable to read population labels");
+
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -3180,9 +3368,11 @@ extern "C"
     size_t n_nodes;
     
     // Read population info
-    assert(cell::read_population_ranges(comm, string(file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
+    status = cell::read_population_ranges(comm, string(file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert(status >= 0,
+                 "py_read_trees: unable to read population ranges");
 
 
     vector<neurotree_t> tree_vector;
@@ -3190,7 +3380,7 @@ extern "C"
     status = cell::read_trees (comm, string(file_name),
                                string(pop_name), pop_vector[pop_idx].start,
                                tree_vector);
-    assert (status >= 0);
+    throw_assert (status >= 0);
     map <string, NamedAttrMap> attr_maps;
     
     for (string attr_namespace : attr_name_spaces)
@@ -3201,7 +3391,10 @@ extern "C"
                                    pop_vector[pop_idx].start, attr_map);
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_trees: unable to free MPI communicator");
+
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
                                                         attr_name_spaces,
@@ -3310,20 +3503,28 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_scatter_read_trees: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_scatter_read_trees: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_trees: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_trees: unable to duplicate MPI communicator");
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_trees: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &rank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_trees: unable to obtain rank of MPI communicator");
 
     if (io_size == 0)
       {
@@ -3336,9 +3537,13 @@ extern "C"
     size_t n_nodes;
     
     // Read population info
-    assert(cell::read_population_ranges(comm, string(file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
+    status = cell::read_population_ranges(comm, string(file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert (status >= 0,
+                 "py_scatter_read_trees: unable to read population ranges");
+
+                  
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
       {
@@ -3366,7 +3571,9 @@ extern "C"
     
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0,
+                  "py_scatter_read_trees: unable to read population labels");
+
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -3392,7 +3599,9 @@ extern "C"
                                        node_rank_map, string(pop_name),
                                        pop_vector[pop_idx].start,
                                        tree_map, attr_maps);
-    assert (status >= 0);
+    throw_assert (status >= 0,
+                 "py_scatter_read_trees: unable to read trees");
+
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromMap(tree_map,
                                                      attr_name_spaces,
@@ -3403,7 +3612,10 @@ extern "C"
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
     PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
 
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_trees: unable to free MPI communicator");
+
     
     return py_result_tuple;
   }
@@ -3494,7 +3706,7 @@ extern "C"
                                      &py_attr_name_spaces,
                                      &topology_flag))
       return NULL;
-    assert(PyList_Check(py_selection) > 0);
+    throw_assert(PyList_Check(py_selection) > 0);
 
 
     MPI_Comm comm;
@@ -3502,22 +3714,27 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_tree_selection: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_tree_selection: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_tree_selection: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_tree_selection: unable to duplicate MPI communicator");
       }
 
     vector <string> attr_name_spaces;
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
       {
-        assert(PyList_Check(py_attr_name_spaces) > 0);
+        throw_assert(PyList_Check(py_attr_name_spaces) > 0,
+                     "py_scatter_read_tree_selection: attribute name spaces argument is not a list");
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
@@ -3539,7 +3756,9 @@ extern "C"
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0,
+                  "py_scatter_read_tree_selection: unable to read population labels");
+
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -3561,9 +3780,11 @@ extern "C"
     size_t n_nodes;
     
     // Read population info
-    assert(cell::read_population_ranges(comm, string(file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
+    status = cell::read_population_ranges(comm, string(file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert(status >= 0,
+                 "py_scatter_read_tree_selection: unable to read population ranges");
 
 
     vector<neurotree_t> tree_vector;
@@ -3571,7 +3792,8 @@ extern "C"
     status = cell::read_tree_selection (comm, string(file_name),
                                         string(pop_name), pop_vector[pop_idx].start,
                                         tree_vector, selection);
-    assert (status >= 0);
+    throw_assert (status >= 0,
+                  "py_scatter_read_tree_selection: unable to read trees");
 
     map <string, NamedAttrMap> attr_maps;
     
@@ -3584,7 +3806,9 @@ extern "C"
                                             selection, attr_map);
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
+                 "py_scatter_read_tree_selection: unable to free MPI communicator");
+
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
                                                         attr_name_spaces,
@@ -3631,20 +3855,28 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL,
+                     "py_scatter_read_cell_attributes: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_scatter_read_cell_attributes: invalid MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_cell_attributes: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_cell_attributes: unable to duplicate MPI communicator");
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_cell_attributes: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &rank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_cell_attributes: unable to obtain rank of MPI communicator");
 
     if (io_size == 0)
       {
@@ -3669,10 +3901,14 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
-                                        string(file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
+
+    status = cell::read_population_ranges(comm,
+                                          string(file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert(status >= 0,
+                 "py_scatter_read_cell_attributes: unable to read population ranges");
+
 
     // Create C++ map for node_rank_map:
     if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
@@ -3690,7 +3926,8 @@ extern "C"
     
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0,
+                 "py_scatter_read_cell_attributes: unable to read population labels");
 
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -3720,7 +3957,9 @@ extern "C"
                                                      string(pop_name),
                                                      pop_vector[pop_idx].start,
                                                      attr_map);
-        assert (status >= 0);
+        throw_assert (status >= 0,
+                      "py_scatter_read_cell_attributes: unable to read cell attributes");
+                      
 
 
         vector<vector<string>> attr_names;
@@ -3733,7 +3972,10 @@ extern "C"
         PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_idx_iter);
         Py_DECREF(py_idx_iter);
       }
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_cell_attributes: unable to free MPI communicator");
+
     
     return py_namespace_dict;
   }
@@ -3764,20 +4006,20 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0);
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -3797,7 +4039,7 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
+    throw_assert(cell::read_population_ranges(comm,
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
@@ -3811,7 +4053,7 @@ extern "C"
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
     
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
                                                         attr_names,
@@ -3849,20 +4091,20 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0);
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -3882,7 +4124,7 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
+    throw_assert(cell::read_population_ranges(comm,
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
@@ -3914,7 +4156,7 @@ extern "C"
                                          selection, attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
                                                         attr_names,
@@ -3952,28 +4194,28 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
 
     int srank, ssize; size_t size, rank;
-    assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-    assert(ssize > 0);
-    assert(srank >= 0);
+    throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+    throw_assert(ssize > 0);
+    throw_assert(srank >= 0);
     size = ssize;
     rank = srank;
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0);
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -3993,7 +4235,7 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
+    throw_assert(cell::read_population_ranges(comm,
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
@@ -4002,7 +4244,7 @@ extern "C"
                                  string(file_name), string(attr_namespace),
                                  string(pop_name), pop_vector[pop_idx].start,
                                  attr_values);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
@@ -4046,15 +4288,15 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
 
     Py_ssize_t dict_size = PyDict_Size(idx_values);
@@ -4079,7 +4321,7 @@ extern "C"
 
         vector<pair <pop_t, string> > pop_labels;
         status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
-        assert (status >= 0);
+        throw_assert (status >= 0);
     
         // Determine index of population to be read
         size_t pop_idx=0; bool pop_idx_set=false;
@@ -4101,7 +4343,7 @@ extern "C"
         size_t n_nodes;
         
         // Read population info
-        assert(cell::read_population_ranges(data_comm, string(file_name),
+        throw_assert(cell::read_population_ranges(data_comm, string(file_name),
                                             pop_ranges, pop_vector,
                                             n_nodes) >= 0);
 
@@ -4206,11 +4448,11 @@ extern "C"
           }
       }
     
-    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
-    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+    throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     
-    assert(MPI_Barrier(comm) == MPI_SUCCESS);;
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Barrier(comm) == MPI_SUCCESS);;
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
     Py_INCREF(Py_None);
     return Py_None;
@@ -4256,15 +4498,15 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
 
     Py_ssize_t dict_size = PyDict_Size(idx_values);
@@ -4287,17 +4529,17 @@ extern "C"
     if (dict_size > 0)
       {
         int srank, ssize; size_t size;
-        assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS);
-        assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS);
-        assert(ssize > 0);
-        assert(srank >= 0);
+        throw_assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS);
+        throw_assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS);
+        throw_assert(ssize > 0);
+        throw_assert(srank >= 0);
         size = ssize;
     
         if ((io_size == 0) || (io_size > size))
           {
             io_size = size;
           }
-        assert(io_size <= size);
+        throw_assert(io_size <= size);
     
         string file_name      = string(file_name_arg);
         string pop_name       = string(pop_name_arg);
@@ -4305,7 +4547,7 @@ extern "C"
 
         vector<pair <pop_t, string> > pop_labels;
         status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
-        assert (status >= 0);
+        throw_assert (status >= 0);
     
         // Determine index of population to be read
         size_t pop_idx=0; bool pop_idx_set=false;
@@ -4327,7 +4569,7 @@ extern "C"
         size_t n_nodes;
         
         // Read population info
-        assert(cell::read_population_ranges(data_comm, string(file_name),
+        throw_assert(cell::read_population_ranges(data_comm, string(file_name),
                                             pop_ranges, pop_vector,
                                             n_nodes) >= 0);
 
@@ -4370,7 +4612,7 @@ extern "C"
           {
             status = 0;
           }
-        assert(status == 0);
+        throw_assert(status == 0);
         MPI_Barrier(data_comm);
 
         const data::optional_hid dflt_data_type;
@@ -4447,11 +4689,11 @@ extern "C"
 
       }
     
-    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
-    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+    throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
     
-    assert(MPI_Barrier(comm) == MPI_SUCCESS);;
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Barrier(comm) == MPI_SUCCESS);;
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     
     Py_INCREF(Py_None);
     return Py_None;
@@ -4497,15 +4739,15 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
 
     Py_ssize_t dict_size = PyDict_Size(idx_values);
@@ -4528,17 +4770,17 @@ extern "C"
 
     
     int srank, ssize; size_t size;
-    assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS);
-    assert(ssize > 0);
-    assert(srank >= 0);
+    throw_assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS);
+    throw_assert(ssize > 0);
+    throw_assert(srank >= 0);
     size = ssize;
     
     if ((io_size == 0) || (io_size > size))
       {
         io_size = size;
       }
-    assert(io_size <= size);
+    throw_assert(io_size <= size);
 
     
     string file_name      = string(file_name_arg);
@@ -4546,7 +4788,7 @@ extern "C"
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0);
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -4569,7 +4811,7 @@ extern "C"
     size_t n_nodes;
     
     // Read population info
-    assert(cell::read_population_ranges(data_comm, string(file_name),
+    throw_assert(cell::read_population_ranges(data_comm, string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
     
@@ -4601,34 +4843,34 @@ extern "C"
     map<string, size_t>::iterator it;
     
     it = attr_type_index_map[AttrMap::attr_index_float].find("x");
-    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
     size_t xcoord_index = it->second;
     it = attr_type_index_map[AttrMap::attr_index_float].find("y");
-    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
     size_t ycoord_index = it->second;
     it = attr_type_index_map[AttrMap::attr_index_float].find("z");
-    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
     size_t zcoord_index = it->second;
     it = attr_type_index_map[AttrMap::attr_index_float].find("radius");
-    assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end());
     size_t radius_index = it->second;
     it = attr_type_index_map[AttrMap::attr_index_int8].find("layer");
-    assert(it != attr_type_index_map[AttrMap::attr_index_int8].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_int8].end());
     size_t layer_index = it->second;
     it = attr_type_index_map[AttrMap::attr_index_int32].find("parent");
-    assert(it != attr_type_index_map[AttrMap::attr_index_int32].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_int32].end());
     size_t parent_index = it->second;
     it = attr_type_index_map[AttrMap::attr_index_int8].find("swc_type");
-    assert(it != attr_type_index_map[AttrMap::attr_index_int8].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_int8].end());
     size_t swc_type_index = it->second;
     it = attr_type_index_map[AttrMap::attr_index_uint16].find("sections");
-    assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
     size_t sections_index = it->second; 
     it = attr_type_index_map[AttrMap::attr_index_uint16].find("src");
-    assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
     size_t src_index = it->second; 
     it = attr_type_index_map[AttrMap::attr_index_uint16].find("dst");
-    assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
+    throw_assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end());
     size_t dst_index = it->second; 
     
     vector<neurotree_t> tree_vector;
@@ -4681,11 +4923,11 @@ extern "C"
     
     CELL_IDX_T pop_start = pop_vector[pop_idx].start;
 
-    assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0);
-    assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
+    throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0);
+    throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS);
     
-    assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
     Py_INCREF(Py_None);
     return Py_None;
   }
@@ -4863,8 +5105,8 @@ extern "C"
       }
     
     int size, rank;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
 
     if (cache_size <= 0)
@@ -4884,13 +5126,13 @@ extern "C"
           }
       }
     
-    assert(graph::read_projection_names(comm, string(file_name), prj_names) >= 0);
+    throw_assert(graph::read_projection_names(comm, string(file_name), prj_names) >= 0);
 
     // Read population info to determine total_num_nodes
-    assert(cell::read_population_ranges(comm, string(file_name),
+    throw_assert(cell::read_population_ranges(comm, string(file_name),
                                         pop_ranges, pop_vector, total_num_nodes) >= 0);
-    assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0);
-    assert(cell::read_population_combos(comm, string(file_name), pop_pairs) >= 0);
+    throw_assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0);
+    throw_assert(cell::read_population_combos(comm, string(file_name), pop_pairs) >= 0);
     
     hsize_t num_blocks = hdf5::num_projection_blocks(comm, string(file_name),
                                                      src_pop_name, dst_pop_name);
@@ -4991,22 +5233,22 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-    assert(size > 0);
+    throw_assert(size > 0);
     
     if ((size > 0) && (io_size > (unsigned int)size))
       io_size = size;
@@ -5027,7 +5269,7 @@ extern "C"
     
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0);
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -5047,13 +5289,13 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
+    throw_assert(cell::read_population_ranges(comm,
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
     
     vector<CELL_IDX_T> tree_index;
-    assert(cell::read_cell_index(comm,
+    throw_assert(cell::read_cell_index(comm,
                                  string(file_name),
                                  get<1>(pop_labels[pop_idx]),
                                  hdf5::TREES,
@@ -5085,10 +5327,10 @@ extern "C"
     size_t max_local_count=0;
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, comm);
-    assert(status == MPI_SUCCESS);
+    throw_assert(status == MPI_SUCCESS);
 
-    assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
 
     py_ntrg->state->pos             = seq_next;
     py_ntrg->state->count           = count;
@@ -5143,22 +5385,22 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        assert(comm_ptr != NULL);
-        assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL);
+        throw_assert(*comm_ptr != MPI_COMM_NULL);
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
 
     int rank, size;
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-    assert(size > 0);
+    throw_assert(size > 0);
     
     if (io_size > (unsigned int)size)
       io_size = size;
@@ -5168,7 +5410,7 @@ extern "C"
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    assert (status >= 0);
+    throw_assert (status >= 0);
 
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -5188,18 +5430,18 @@ extern "C"
     size_t n_nodes;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
-    assert(cell::read_population_ranges(comm,
+    throw_assert(cell::read_population_ranges(comm,
                                         string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
 
     vector< pair<string,AttrKind> > attr_info;
-    assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
+    throw_assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
                                       get<1>(pop_labels[pop_idx]), attr_info) >= 0);
     vector<CELL_IDX_T> cell_index;
     if (attr_info.size() > 0)
       {
-        assert(cell::read_cell_index(comm,
+        throw_assert(cell::read_cell_index(comm,
                                      string(file_name),
                                      get<1>(pop_labels[pop_idx]),
                                      string(attr_namespace) + "/" + attr_info[0].first,
@@ -5230,12 +5472,12 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
     
-    assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS);
 
     size_t max_local_count=0;
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, comm);
-    assert(status == MPI_SUCCESS);
+    throw_assert(status == MPI_SUCCESS);
 
     
     py_ntrg->state->pos            = seq_next;
@@ -5266,7 +5508,7 @@ extern "C"
     if (py_ntrg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
@@ -5278,7 +5520,7 @@ extern "C"
     if (py_ntrg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
-        assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS);
       }
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
@@ -5311,8 +5553,8 @@ extern "C"
       case seq_next:
         {
           int size, rank;
-          assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
-          assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
+          throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
+          throw_assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
 
           // If the end of the current cache block has been reached,
           // and the iterator has not exceed its locally assigned elements,
@@ -5334,7 +5576,7 @@ extern "C"
                                                  py_ntrg->state->attr_maps,
                                                  py_ntrg->state->cache_index,
                                                  py_ntrg->state->cache_size);
-              assert (status >= 0);
+              throw_assert (status >= 0);
 
               if (py_ntrg->state->cache_index < py_ntrg->state->count)
                 {
@@ -5348,7 +5590,7 @@ extern "C"
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
                   int status = MPI_Comm_free(&(py_ntrg->state->comm));
-                  assert(status == MPI_SUCCESS);
+                  throw_assert(status == MPI_SUCCESS);
                   py_ntrg->state->pos = seq_last;
                 }
               else
@@ -5366,7 +5608,7 @@ extern "C"
               CELL_IDX_T key = py_ntrg->state->it_tree->first;
               const neurotree_t &tree = py_ntrg->state->it_tree->second;
               PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps, py_ntrg->state->topology_flag);
-              assert(elem != NULL);
+              throw_assert(elem != NULL);
               
               /* Exceptions from PySequence_GetItem are propagated to the caller
                * (elem will be NULL so we also return NULL).
@@ -5382,7 +5624,7 @@ extern "C"
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
               int status = MPI_Comm_free(&(py_ntrg->state->comm));
-              assert(status == MPI_SUCCESS);
+              throw_assert(status == MPI_SUCCESS);
               py_ntrg->state->pos = seq_last;
             }
           else
@@ -5429,8 +5671,8 @@ extern "C"
               (py_ntrg->state->cache_index < py_ntrg->state->count))
             {
               int size, rank;
-              assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
-              assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
+              throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
+              throw_assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
 
               // If the end of the current cache block has been reached,
               // read the next block
@@ -5447,7 +5689,7 @@ extern "C"
                                                            py_ntrg->state->attr_map,
                                                            py_ntrg->state->cache_index,
                                                            py_ntrg->state->cache_size);
-              assert (status >= 0);
+              throw_assert (status >= 0);
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
               py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
@@ -5459,7 +5701,7 @@ extern "C"
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
                   int status = MPI_Comm_free(&(py_ntrg->state->comm));
-                  assert(status == MPI_SUCCESS);
+                  throw_assert(status == MPI_SUCCESS);
                   py_ntrg->state->attr_map.clear();
                   py_ntrg->state->pos = seq_last;
                 }
@@ -5477,7 +5719,7 @@ extern "C"
               const CELL_IDX_T key = *(py_ntrg->state->it_idx);
               PyObject *elem = py_build_cell_attr_values(key, py_ntrg->state->attr_map,
                                                          py_ntrg->state->attr_names);
-              assert(elem != NULL);
+              throw_assert(elem != NULL);
               py_ntrg->state->it_idx++;
               py_ntrg->state->seq_index++;
               result = Py_BuildValue("lN", key, elem);
@@ -5491,7 +5733,7 @@ extern "C"
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
               int status = MPI_Comm_free(&(py_ntrg->state->comm));
-              assert(status == MPI_SUCCESS);
+              throw_assert(status == MPI_SUCCESS);
               py_ntrg->state->pos = seq_last;
             }
           else
@@ -5562,15 +5804,15 @@ extern "C"
                                     py_ngg->state->total_read_blocks,
                                     py_ngg->state->block_index,
                                     py_ngg->state->cache_size);
-    assert (status >= 0);
-    assert(prj_vector.size() > 0);
+    throw_assert (status >= 0);
+    throw_assert(prj_vector.size() > 0);
     if (edge_attr_name_vector.size() > 0)
       {
         py_ngg->state->edge_attr_names = edge_attr_name_vector[0];
       }
     
     py_ngg->state->edge_map = prj_vector[0];
-    //assert(py_ngg->state->edge_map.size() > 0);
+    //throw_assert(py_ngg->state->edge_map.size() > 0);
     py_ngg->state->edge_map_iter = py_ngg->state->edge_map.cbegin();
     
     py_ngg->state->block_index += py_ngg->state->total_read_blocks;
@@ -5908,7 +6150,7 @@ PyMODINIT_FUNC
 initio(void)
 #endif
 {
-  assert(import_mpi4py() >= 0);
+  throw_assert(import_mpi4py() >= 0, "Error importing mpi4py");
   import_array();
   
 #if PY_MAJOR_VERSION >= 3

@@ -17,6 +17,7 @@
 
 #undef NDEBUG
 #include <cassert>
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -51,8 +52,8 @@ namespace neuroh5
 
         int rank, size;
 
-        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+        throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+        throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
         // MPI rank 0 reads and broadcasts the number of ranges
         hsize_t num_objs;
