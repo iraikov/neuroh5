@@ -1015,7 +1015,7 @@ namespace neuroh5
 
           for (size_t j=0; j<selection.size(); j++)
             {
-              index.push_back(selection[j]-pop_start);
+              index.push_back(selection[j]);
             }
           
           switch (attr_kind.type)

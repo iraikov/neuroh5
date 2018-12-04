@@ -5560,8 +5560,8 @@ extern "C"
                                     py_ngg->state->total_read_blocks,
                                     py_ngg->state->block_index,
                                     py_ngg->state->cache_size);
-    assert (status >= 0);
-    assert(prj_vector.size() > 0);
+    throw_assert (status >= 0, "NeuroH5ProjectionGen: read_projection error");
+    throw_assert(prj_vector.size() > 0, "NeuroH5ProjectionGen: empty projection");
     if (edge_attr_name_vector.size() > 0)
       {
         py_ngg->state->edge_attr_names = edge_attr_name_vector[0];
