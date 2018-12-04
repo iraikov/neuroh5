@@ -3496,7 +3496,6 @@ extern "C"
       return NULL;
     assert(PyList_Check(py_selection) > 0);
 
-
     MPI_Comm comm;
 
     if (py_comm != NULL)
@@ -3564,7 +3563,6 @@ extern "C"
     assert(cell::read_population_ranges(comm, string(file_name),
                                         pop_ranges, pop_vector,
                                         n_nodes) >= 0);
-
 
     vector<neurotree_t> tree_vector;
 
