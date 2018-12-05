@@ -12,7 +12,8 @@
 
 #include <map>
 #include <vector>
-#include <cassert>
+
+#include "throw_assert.hh"
 
 // type support
 #include "cereal/types/vector.hpp"
@@ -140,13 +141,21 @@ namespace neuroh5
 
       void append (AttrVal a)
       {
-        assert(float_values.size()  == a.float_values.size());
-        assert(uint8_values.size()  == a.uint8_values.size());
-        assert(uint16_values.size() == a.uint16_values.size());
-        assert(uint32_values.size() == a.uint32_values.size());
-        assert(int8_values.size()   == a.int8_values.size());
-        assert(int16_values.size()  == a.int16_values.size());
-        assert(int32_values.size()  == a.int32_values.size());
+        throw_assert(float_values.size()  == a.float_values.size(),
+                     "AttrVal::append: float value vectors are of different sizes");
+        throw_assert(uint8_values.size()  == a.uint8_values.size(),
+                     "AttrVal::append: uint8 value vectors are of different sizes");
+        throw_assert(uint16_values.size() == a.uint16_values.size(),
+                     "AttrVal::append: uint16 value vectors are of different sizes");
+        throw_assert(uint32_values.size() == a.uint32_values.size(),
+                     "AttrVal::append: uint32 value vectors are of different sizes");
+        throw_assert(int8_values.size()   == a.int8_values.size(),
+                     "AttrVal::append: int8 value vectors are of different sizes");
+        throw_assert(int16_values.size()  == a.int16_values.size(),
+                     "AttrVal::append: int16 value vectors are of different sizes");
+        throw_assert(int32_values.size()  == a.int32_values.size(),
+                     "AttrVal::append: int32 value vectors are of different sizes");
+        
         for (size_t i=0; i<float_values.size(); i++)
           {
             float_values[i].insert(float_values[i].end(),
@@ -304,7 +313,8 @@ namespace neuroh5
       for (const std::string& ns : edge_attr_namespaces) 
         {
           const auto& iter = edge_attr_map.find(ns);
-          assert(iter != edge_attr_map.cend());
+          throw_assert(iter != edge_attr_map.cend(),
+                       "fill_attr_vec: unable to find namespace");
           const NamedAttrVal& edge_attr_values = iter->second;
           for (size_t j = start; j < end; ++j)
             {
@@ -331,7 +341,8 @@ namespace neuroh5
       for (const std::string& ns : edge_attr_namespaces) 
         {
           const auto& iter = edge_attr_map.find(ns);
-          assert(iter != edge_attr_map.cend());
+          throw_assert(iter != edge_attr_map.cend(),
+                       "set_attr_vec: unable to find namespace");
           const NamedAttrVal& edge_attr_values = iter->second;
           edge_attr_vec[i].resize<T>(edge_attr_values.size_attr_vec<T>());
           for (size_t k = 0;

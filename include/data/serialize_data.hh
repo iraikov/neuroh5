@@ -36,9 +36,6 @@
 #include "cereal/archives/portable_binary.hpp"
 #include "cereal/archives/xml.hpp"
 
-#undef NDEBUG
-#include <cassert>
-
 using namespace std;
 using namespace neuroh5;
 

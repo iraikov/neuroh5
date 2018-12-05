@@ -35,8 +35,6 @@
 #include <algorithm>
 #include <iterator>
 
-#undef NDEBUG
-#include <cassert>
 #include "throw_assert.hh"
 
 #include "neuroh5_types.hh"
