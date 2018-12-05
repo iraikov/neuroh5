@@ -44,7 +44,7 @@ namespace neuroh5
           const vector<PARENT_NODE_IDX_T>& parents = attr_values.find_name<PARENT_NODE_IDX_T>(hdf5::PARENT, idx);
           const vector<SWC_TYPE_T> swc_types   = attr_values.find_name<SWC_TYPE_T>(hdf5::SWCTYPE, idx);
 
-          CELL_IDX_T gid = pop_start+idx;
+          CELL_IDX_T gid = idx;
           tree_list.push_back(make_tuple(gid,
                                          src_vector, dst_vector, sections,
                                          xcoords,ycoords,zcoords,
