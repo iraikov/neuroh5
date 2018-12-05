@@ -3708,7 +3708,6 @@ extern "C"
       return NULL;
     throw_assert(PyList_Check(py_selection) > 0);
 
-
     MPI_Comm comm;
 
     if (py_comm != NULL)
@@ -3785,7 +3784,6 @@ extern "C"
                                           n_nodes);
     throw_assert(status >= 0,
                  "py_scatter_read_tree_selection: unable to read population ranges");
-
 
     vector<neurotree_t> tree_vector;
 

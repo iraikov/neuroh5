@@ -43,7 +43,7 @@ namespace neuroh5
                                      
           if (contraction_map[sp].size() > 1)
             {
-              if (spp != v) section_members.push_back(spp);
+              //if (spp != v) section_members.push_back(spp);
               // creates an entry in the section map for this node
               section_members.push_back(v);
               // creates a new section node in the contraction map
@@ -108,7 +108,7 @@ namespace neuroh5
           
           if (contraction_map[sp].size() > 1)
             {
-              if (spp != v) section_members.push_back(spp);
+              //if (spp != v) section_members.push_back(spp);
               // creates an entry in the section map for this node
               section_members.push_back(v);
               // creates a new section node in the contraction map
@@ -181,7 +181,7 @@ namespace neuroh5
                                      
           if (contraction_map[sp].size() > 1)
             {
-              if (spp != v) section_members.push_back(spp);
+              //if (spp != v) section_members.push_back(spp);
               // creates an entry in the section map for this node
               section_members.push_back(v);
               // creates a new section node in the contraction map
@@ -253,7 +253,7 @@ namespace neuroh5
 
           if (contraction_map[sp].size() > 1)
             {
-              if (spp != v) section_members.push_back(spp);
+              //if (spp != v) section_members.push_back(spp);
               // creates an entry in the section map for this node
               section_members.push_back(v);
               // creates a new section node in the contraction map

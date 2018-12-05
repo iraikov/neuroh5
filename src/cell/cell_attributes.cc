@@ -1002,6 +1002,7 @@ namespace neuroh5
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
       assert(file >= 0);
 
+
       for (size_t i=0; i<attr_info.size(); i++)
         {
           vector<ATTR_PTR_T>  ptr;
@@ -1014,7 +1015,7 @@ namespace neuroh5
 
           for (size_t j=0; j<selection.size(); j++)
             {
-              index.push_back(selection[j]);
+              index.push_back(selection[j]-pop_start);
             }
           
           switch (attr_kind.type)
