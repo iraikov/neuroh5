@@ -20,6 +20,7 @@
 #include "attr_map.hh"
 #include "compact_optional.hh"
 #include "optional_value.hh"
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -482,7 +483,9 @@ namespace neuroh5
     
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
+		   "write_cell_attribute: unable to set fapl mpio property");
+
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 
       size_t nslots;  /* Number of slots in the 
@@ -496,7 +499,7 @@ namespace neuroh5
       assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0);
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
+      throw_assert(file >= 0, "write_cell_attribute: unable to open file");
 
       T dummy;
       hid_t ftype;
