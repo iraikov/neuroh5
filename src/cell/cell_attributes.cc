@@ -313,6 +313,11 @@ namespace neuroh5
       status = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
       assert(status == 0);
 
+#if H5_VERSION_GE(1,10,2)
+      status = H5Pset_deflate(plist, 9);
+      assert(status == 0);
+#endif
+      
       hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_layout(value_plist, H5D_CHUNKED);
@@ -321,7 +326,11 @@ namespace neuroh5
       assert(status == 0);
       status = H5Pset_alloc_time(value_plist, H5D_ALLOC_TIME_EARLY);
       assert(status == 0);
-    
+
+#if H5_VERSION_GE(1,10,2)
+      status = H5Pset_deflate(value_plist, 9);
+#endif
+      
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
       assert(lcpl >= 0);
       assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
