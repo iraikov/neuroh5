@@ -1063,39 +1063,6 @@ NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
 
 
 
-template<class T>
-PyObject *py_build_cell_attr_value (const CELL_IDX_T idx,
-                                    const vector< string >& attr_names,
-                                    const vector< map<CELL_IDX_T, vector<T> > >& attr_maps,
-                                    int npy_type,
-                                    PyObject *attr_dict)
-{
-  size_t num_attrs = attr_maps.size();
-  for (size_t k = 0; k < num_attrs; k++)
-    {
-      const map<CELL_IDX_T, vector<T> > &attr_values = attr_maps[k];
-      auto search = attr_values.find(idx);
-      if (search != attr_values.end())
-        {
-          const vector<T> &v = search->second;
-                                   
-          npy_intp dims[1], ind = 0;
-          dims[0] = v.size();
-          PyObject *py_values = (PyObject *)PyArray_SimpleNew(1, dims, npy_type);
-          T *values_ptr = (T *)PyArray_GetPtr((PyArrayObject *)py_values, &ind);
-          for (size_t i=0; i < v.size(); i++)
-            {
-              values_ptr[i] = v[i];
-            }
-                               
-          PyDict_SetItemString(attr_dict, attr_names[k].c_str(), py_values);
-          Py_DECREF(py_values);
-        }
-    }
-                           
-  return attr_dict;
-}
-
 
 PyObject* py_build_cell_attr_values(const CELL_IDX_T key, 
                                     const NamedAttrMap& attr_map,
