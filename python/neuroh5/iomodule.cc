@@ -315,18 +315,16 @@ PyObject *py_build_edge_attribute_info (const vector< pair<string,string> >& prj
               {
                 for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
                   {
-                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
-                    PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
+                    PyDict_SetItemString(py_prj_ns_attr_info, ns_edge_attr_names[n][t].c_str(), py_attr_index);
                     Py_DECREF(py_attr_key);
                     Py_DECREF(py_attr_index);
 
                     attr_index++;
                   }
               }
-            PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
-            PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
+            PyDict_SetItemStr(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
             Py_DECREF(py_ns_key);
             Py_DECREF(py_prj_ns_attr_info);
           }
@@ -2162,17 +2160,15 @@ extern "C"
               {
                 for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
                   {
-                    PyObject *py_attr_key = PyBytes_FromString(ns_edge_attr_names[n][t].c_str());
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
-                    PyDict_SetItem(py_prj_ns_attr_info, py_attr_key, py_attr_index);
+                    PyDict_SetItemString(py_prj_ns_attr_info, ns_edge_attr_names[n][t].c_str(), py_attr_index);
                     Py_DECREF(py_attr_key);
                     Py_DECREF(py_attr_index);
                     attr_index++;
                   }
               }
-            PyObject *py_ns_key = PyBytes_FromString(attr_namespace.c_str());
-            PyDict_SetItem(py_prj_attr_info, py_ns_key, py_prj_ns_attr_info);
+            PyDict_SetItem(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
             Py_DECREF(py_ns_key);
             Py_DECREF(py_prj_ns_attr_info);
 
