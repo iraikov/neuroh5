@@ -43,7 +43,6 @@ namespace neuroh5
                                      
           if (contraction_map[sp].size() > 1)
             {
-              //if (spp != v) section_members.push_back(spp);
               // creates an entry in the section map for this node
               section_members.push_back(v);
               // creates a new section node in the contraction map
@@ -82,6 +81,12 @@ namespace neuroh5
                   // obtains the neighbors of the next node
                   outs = A.out_neighbors(v);
                 }
+            }
+          // if node is terminal, insert parent to ensure section has more than one node
+          if ((outs.size() == 0) && (contraction_map[s].size() == 1))
+            {
+              if (spp != v)
+                contraction_map[s].insert (contraction_map[s].begin(), spp);
             }
         
           // if the node is a branching point or region change point, recurse to create new section entry
@@ -108,7 +113,6 @@ namespace neuroh5
           
           if (contraction_map[sp].size() > 1)
             {
-              //if (spp != v) section_members.push_back(spp);
               // creates an entry in the section map for this node
               section_members.push_back(v);
               // creates a new section node in the contraction map
@@ -149,6 +153,13 @@ namespace neuroh5
                 }
             }
 
+          // if node is terminal, insert parent to ensure section has more than one node
+          if ((outs.size() == 0) && (contraction_map[s].size() == 1))
+            {
+              if (spp != v)
+                contraction_map[s].insert (contraction_map[s].begin(), spp);
+            }
+          
           // if the node is a branching point, recurse to create new section entry
           if ((outs.size() > 1) || type_change)
             {
@@ -181,7 +192,6 @@ namespace neuroh5
                                      
           if (contraction_map[sp].size() > 1)
             {
-              //if (spp != v) section_members.push_back(spp);
               // creates an entry in the section map for this node
               section_members.push_back(v);
               // creates a new section node in the contraction map
@@ -225,6 +235,13 @@ namespace neuroh5
                   // obtains the neighbors of the next node
                   outs = A.out_neighbors(v);
                 }
+            }
+
+          // if node is terminal, insert parent to ensure section has more than one node
+          if ((outs.size() == 0) && (contraction_map[s].size() == 1))
+            {
+              if (spp != v)
+                contraction_map[s].insert (contraction_map[s].begin(), spp);
             }
         
           // if the node is a branching point or region change point, recurse to create new section entry
@@ -297,6 +314,13 @@ namespace neuroh5
                   // obtains the neighbors of the next node
                   outs = A.out_neighbors(v);
                 }
+            }
+
+          // if node is terminal, insert parent to ensure section has more than one node
+          if ((outs.size() == 0) && (contraction_map[s].size() == 1))
+            {
+              if (spp != v)
+                contraction_map[s].insert (contraction_map[s].begin(), spp);
             }
 
           // if the node is a branching point, recurse to create new section entry
