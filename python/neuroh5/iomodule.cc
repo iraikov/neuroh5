@@ -316,14 +316,12 @@ PyObject *py_build_edge_attribute_info (const vector< pair<string,string> >& prj
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItemString(py_prj_ns_attr_info, ns_edge_attr_names[n][t].c_str(), py_attr_index);
-                    Py_DECREF(py_attr_key);
                     Py_DECREF(py_attr_index);
 
                     attr_index++;
                   }
               }
-            PyDict_SetItemStr(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
-            Py_DECREF(py_ns_key);
+            PyDict_SetItemString(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
             Py_DECREF(py_prj_ns_attr_info);
           }
 
@@ -2239,13 +2237,11 @@ extern "C"
                     PyObject *py_attr_index = PyLong_FromLong(attr_index);
                     
                     PyDict_SetItemString(py_prj_ns_attr_info, ns_edge_attr_names[n][t].c_str(), py_attr_index);
-                    Py_DECREF(py_attr_key);
                     Py_DECREF(py_attr_index);
                     attr_index++;
                   }
               }
-            PyDict_SetItem(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
-            Py_DECREF(py_ns_key);
+            PyDict_SetItemString(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
             Py_DECREF(py_prj_ns_attr_info);
 
           }
@@ -4446,8 +4442,8 @@ extern "C"
           }
       }
     
-    throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
-                 "py_write_cell_attributes: error in MPI barrier on data communicator");
+    //throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
+    //             "py_write_cell_attributes: error in MPI barrier on data communicator");
     throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
                  "py_write_cell_attributes: unable to free data MPI communicator");
     
