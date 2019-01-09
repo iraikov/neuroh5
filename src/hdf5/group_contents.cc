@@ -52,8 +52,11 @@ namespace neuroh5
 
         int rank, size;
 
-        throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-        throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+        throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                     "hdf5::group_contents: unable to obtain MPI communicator size");
+
+        throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                     "hdf5::group_contents: unable to obtain MPI communicator rank");
 
         // MPI rank 0 reads and broadcasts the number of ranges
         hsize_t num_objs;

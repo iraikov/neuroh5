@@ -1537,7 +1537,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
           throw_assert(status == 0,
                        "py_build_edge_tuple_value: unable to append to list");
           
-          PY_DECREF(py_arr);
+          Py_DECREF(py_arr);
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint8_t>(); i++)
         {
@@ -4227,9 +4227,9 @@ extern "C"
       }
 
     int srank, ssize; size_t size, rank;
-    throw_assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS,
+    throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS,
                  "py_bcast_cell_attributes: unable to obtain data communicator size");
-    throw_assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS,
+    throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS,
                  "py_bcast_cell_attributes: unable to obtain data communicator rank");
 
     throw_assert(ssize > 0, "py_bcast_cell_attributes: zero data communicator size");
@@ -4240,7 +4240,9 @@ extern "C"
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    throw_assert (status >= 0);
+    throw_assert (status >= 0,
+                  "py_bcast_cell_attributes: unable to read population labels");
+
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -5204,13 +5206,17 @@ extern "C"
           }
       }
     
-    throw_assert(graph::read_projection_names(comm, string(file_name), prj_names) >= 0);
+    throw_assert(graph::read_projection_names(comm, string(file_name), prj_names) >= 0,
+                 "NeuroH5ProjectionGen: unable to read projection names");
 
     // Read population info to determine total_num_nodes
     throw_assert(cell::read_population_ranges(comm, string(file_name),
-                                        pop_ranges, pop_vector, total_num_nodes) >= 0);
-    throw_assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0);
-    throw_assert(cell::read_population_combos(comm, string(file_name), pop_pairs) >= 0);
+                                              pop_ranges, pop_vector, total_num_nodes) >= 0,
+                 "NeuroH5ProjectionGen: unable to read population ranges");                 
+    throw_assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0,
+                 "NeuroH5ProjectionGen: unable to read population labels");
+    throw_assert(cell::read_population_combos(comm, string(file_name), pop_pairs) >= 0,
+                 "NeuroH5ProjectionGen: unable to read projection combinations");
     
     hsize_t num_blocks = hdf5::num_projection_blocks(comm, string(file_name),
                                                      src_pop_name, dst_pop_name);
@@ -5311,22 +5317,22 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        throw_assert(comm_ptr != NULL);
-        throw_assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL, "NeuroH5TreeGen: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL, "NeuroH5TreeGen: null MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        throw_assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5TreeGen: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        throw_assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5TreeGen: unable to duplicate MPI communicator");
       }
 
     int rank, size;
-    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-
-    throw_assert(size > 0);
+    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                 "NeuroH5TreeGen: unable to obtain MPI communicator size");
+    throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                 "NeuroH5TreeGen: unable to obtain MPI communicator rank");
     
     if ((size > 0) && (io_size > (unsigned int)size))
       io_size = size;
@@ -5347,7 +5353,9 @@ extern "C"
     
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    throw_assert (status >= 0);
+    throw_assert (status >= 0,
+                  "NeuroH5TreeGen: unable to read population labels");
+    
     
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -5368,16 +5376,18 @@ extern "C"
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
     throw_assert(cell::read_population_ranges(comm,
-                                        string(file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
+                                              string(file_name),
+                                              pop_ranges, pop_vector,
+                                              n_nodes) >= 0,
+                 "NeuroH5TreeGen: unable to read population ranges");
     
     vector<CELL_IDX_T> tree_index;
     throw_assert(cell::read_cell_index(comm,
-                                 string(file_name),
-                                 get<1>(pop_labels[pop_idx]),
-                                 hdf5::TREES,
-                                 tree_index) >= 0);
+                                       string(file_name),
+                                       get<1>(pop_labels[pop_idx]),
+                                       hdf5::TREES,
+                                       tree_index) >= 0,
+                 "NeuroH5TreeGen: unable to read cell index");
     
     size_t count = tree_index.size();
     for (size_t i=0; i<tree_index.size(); i++)
@@ -5405,10 +5415,15 @@ extern "C"
     size_t max_local_count=0;
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, comm);
-    throw_assert(status == MPI_SUCCESS);
+    throw_assert(status == MPI_SUCCESS,
+                 "NeuroH5TreeGen: MPI_Allreduce error");
 
-    throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS);
-    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+
+    throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS,
+                 "NeuroH5TreeGen: unable to duplicate MPI communicator");
+
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
+                 "NeuroH5TreeGen: unable to free MPI communicator");
 
     py_ntrg->state->pos             = seq_next;
     py_ntrg->state->count           = count;
@@ -5463,22 +5478,22 @@ extern "C"
     if (py_comm != NULL)
       {
         comm_ptr = PyMPIComm_Get(py_comm);
-        throw_assert(comm_ptr != NULL);
-        throw_assert(*comm_ptr != MPI_COMM_NULL);
+        throw_assert(comm_ptr != NULL, "NeuroH5CellAttrGen: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL, "NeuroH5TreeGen: null MPI communicator");
         status = MPI_Comm_dup(*comm_ptr, &comm);
-        throw_assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
       }
     else
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        throw_assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
       }
 
     int rank, size;
-    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
-
-    throw_assert(size > 0);
+    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                 "NeuroH5CellAttrGen: unable to obtain MPI communicator size");
+    throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                 "NeuroH5CellAttrGen: unable to obtain MPI communicator rank");
     
     if (io_size > (unsigned int)size)
       io_size = size;
@@ -5488,8 +5503,9 @@ extern "C"
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    throw_assert (status >= 0);
-
+    throw_assert (status >= 0,
+                  "NeuroH5CellAttrGen: unable to read population labels");
+    
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
     for (size_t i=0; i<pop_labels.size(); i++)
@@ -5509,21 +5525,26 @@ extern "C"
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
     vector<pop_range_t> pop_vector;
     throw_assert(cell::read_population_ranges(comm,
-                                        string(file_name),
-                                        pop_ranges, pop_vector,
-                                        n_nodes) >= 0);
+                                              string(file_name),
+                                              pop_ranges, pop_vector,
+                                              n_nodes) >= 0,
+                 "NeuroH5CellAttrGen: unable to read population ranges");
+                 
 
     vector< pair<string,AttrKind> > attr_info;
     throw_assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
-                                      get<1>(pop_labels[pop_idx]), attr_info) >= 0);
+                                            get<1>(pop_labels[pop_idx]), attr_info) >= 0,
+                 "NeuroH5CellAttrGen: unable to read cell attributes metadata");
+
     vector<CELL_IDX_T> cell_index;
     if (attr_info.size() > 0)
       {
         throw_assert(cell::read_cell_index(comm,
-                                     string(file_name),
-                                     get<1>(pop_labels[pop_idx]),
-                                     string(attr_namespace) + "/" + attr_info[0].first,
-                                     cell_index) >= 0);
+                                           string(file_name),
+                                           get<1>(pop_labels[pop_idx]),
+                                           string(attr_namespace) + "/" + attr_info[0].first,
+                                           cell_index) >= 0,
+                     "NeuroH5CellAttrGen: unable to read cell index");
       }
     
     size_t count = cell_index.size();
@@ -5550,12 +5571,14 @@ extern "C"
         if ((unsigned int)size <= r) r=0;
       }
     
-    throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS);
+    throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS,
+                 "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
 
     size_t max_local_count=0;
     status = MPI_Allreduce(&(local_count), &max_local_count, 1,
                            MPI_SIZE_T, MPI_MAX, comm);
-    throw_assert(status == MPI_SUCCESS);
+    throw_assert(status == MPI_SUCCESS,
+                 "NeuroH5CellAttrGen: unable to free MPI communicator");
 
     
     py_ntrg->state->pos            = seq_next;
@@ -5586,7 +5609,8 @@ extern "C"
     if (py_ntrg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
-        throw_assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "NeuroH5TreeGen: unable to free MPI communicator");
       }
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
@@ -5598,7 +5622,8 @@ extern "C"
     if (py_ntrg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
-        throw_assert(status == MPI_SUCCESS);
+        throw_assert(status == MPI_SUCCESS,
+                     "NeuroH5CellAttrGen: unable to free MPI communicator");
       }
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
@@ -5631,8 +5656,11 @@ extern "C"
       case seq_next:
         {
           int size, rank;
-          throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
-          throw_assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
+          throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS,
+                       "NeuroH5TreeGen: unable to obtain MPI communicator size");
+          throw_assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS,
+                       "NeuroH5TreeGen: unable to obtain MPI communicator rank");
+
 
           // If the end of the current cache block has been reached,
           // and the iterator has not exceed its locally assigned elements,
@@ -5654,7 +5682,9 @@ extern "C"
                                                  py_ntrg->state->attr_maps,
                                                  py_ntrg->state->cache_index,
                                                  py_ntrg->state->cache_size);
-              throw_assert (status >= 0);
+              throw_assert (status >= 0,
+                            "NeuroH5TreeGen: error in call to cell::scatter_read_trees");
+
 
               if (py_ntrg->state->cache_index < py_ntrg->state->count)
                 {
@@ -5668,7 +5698,9 @@ extern "C"
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
                   int status = MPI_Comm_free(&(py_ntrg->state->comm));
-                  throw_assert(status == MPI_SUCCESS);
+                  throw_assert(status == MPI_SUCCESS,
+                               "NeuroH5TreeGen: unable to free MPI communicator");
+
                   py_ntrg->state->pos = seq_last;
                 }
               else
@@ -5686,7 +5718,9 @@ extern "C"
               CELL_IDX_T key = py_ntrg->state->it_tree->first;
               const neurotree_t &tree = py_ntrg->state->it_tree->second;
               PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps, py_ntrg->state->topology_flag);
-              throw_assert(elem != NULL);
+              throw_assert(elem != NULL,
+                           "NeuroH5TreeGen: invalid tree value");
+
               
               /* Exceptions from PySequence_GetItem are propagated to the caller
                * (elem will be NULL so we also return NULL).
@@ -5702,7 +5736,9 @@ extern "C"
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
               int status = MPI_Comm_free(&(py_ntrg->state->comm));
-              throw_assert(status == MPI_SUCCESS);
+              throw_assert(status == MPI_SUCCESS,
+                           "NeuroH5TreeGen: unable to free MPI communicator");
+
               py_ntrg->state->pos = seq_last;
             }
           else
@@ -5749,8 +5785,10 @@ extern "C"
               (py_ntrg->state->cache_index < py_ntrg->state->count))
             {
               int size, rank;
-              throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS);
-              throw_assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS);
+              throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS,
+                           "NeuroH5CellAttrGen: unable to obtain MPI communicator size");
+              throw_assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS,
+                           "NeuroH5CellAttrGen: unable to obtain MPI communicator rank");
 
               // If the end of the current cache block has been reached,
               // read the next block
@@ -5767,7 +5805,9 @@ extern "C"
                                                            py_ntrg->state->attr_map,
                                                            py_ntrg->state->cache_index,
                                                            py_ntrg->state->cache_size);
-              throw_assert (status >= 0);
+              throw_assert (status >= 0,
+                            "NeuroH5CellAttrGen: error in call to cell::scatter_read_cell_attributes");
+
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
               py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
@@ -5779,7 +5819,9 @@ extern "C"
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
                   int status = MPI_Comm_free(&(py_ntrg->state->comm));
-                  throw_assert(status == MPI_SUCCESS);
+                  throw_assert(status == MPI_SUCCESS,
+                               "NeuroH5CellAttrGen: unable to free MPI communicator");
+
                   py_ntrg->state->attr_map.clear();
                   py_ntrg->state->pos = seq_last;
                 }
@@ -5797,7 +5839,9 @@ extern "C"
               const CELL_IDX_T key = *(py_ntrg->state->it_idx);
               PyObject *elem = py_build_cell_attr_values(key, py_ntrg->state->attr_map,
                                                          py_ntrg->state->attr_names);
-              throw_assert(elem != NULL);
+              throw_assert(elem != NULL,
+                           "NeuroH5CellAttrGen: invalid cell attribute value");
+
               py_ntrg->state->it_idx++;
               py_ntrg->state->seq_index++;
               result = Py_BuildValue("lN", key, elem);
@@ -5811,7 +5855,9 @@ extern "C"
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
               int status = MPI_Comm_free(&(py_ntrg->state->comm));
-              throw_assert(status == MPI_SUCCESS);
+              throw_assert(status == MPI_SUCCESS,
+                           "NeuroH5CellAttrGen: unable to free MPI communicator");
+
               py_ntrg->state->pos = seq_last;
             }
           else
