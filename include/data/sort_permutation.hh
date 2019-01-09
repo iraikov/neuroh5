@@ -17,6 +17,8 @@
 #include <functional>
 #include <numeric>
 
+#include "throw_assert.hh"
+
 namespace neuroh5
 {
   namespace data
@@ -60,7 +62,8 @@ namespace neuroh5
                                     const std::vector<std::size_t>& p)
     {
       std::vector<bool> done(vec.size());
-      assert(vec.size() == p.size());
+      throw_assert(vec.size() == p.size(),
+                   "apply_permutation_in_place: permutation and value vectors have different sizes");
       for (std::size_t i = 0; i < vec.size(); ++i)
         {
           if (done[i])

@@ -3,7 +3,6 @@
 
 #include <hdf5.h>
 
-#include <cassert>
 #include <vector>
 
 #include "neuroh5_types.hh"
@@ -14,6 +13,7 @@
 #include "read_template.hh"
 #include "write_template.hh"
 #include "mpe_seq.hh"
+#include "throw_assert.hh"
 
 
 namespace neuroh5
@@ -212,6 +212,9 @@ namespace neuroh5
                 {
                   auto it = std::find(index.begin(), index.end(), s-pop_start);
                   assert(it != index.end());
+                  throw_assert(it != index.end(),
+                               "read_cell_attribute_selection: unable to find attribute "
+                               << path << " for gid " << s);
 
                   ptrdiff_t pos = it - index.begin();
 
