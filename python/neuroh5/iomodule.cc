@@ -3781,7 +3781,44 @@ extern "C"
     return py_result_tuple;
   }
 
-  
+  PyDoc_STRVAR(
+    scatter_read_cell_attributes_doc,
+    "scatter_read_cell_attributes(file_name, population_name, namespaces, node_rank_map=None, comm=None, io_size=0)\n"
+    "--\n"
+    "\n"
+    "Reads cell attributes for all cell gids contained in the given file and namespaces, using scalable parallel read/scatter."
+    "Each rank will be assigned an equal number of cell gids, with the exception of the last rank if the number of cells is not evenly divisible by the number of ranks. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "namespaces : string list\n"
+    "    The namespaces for which cell attributes will be read.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "io_size : \n"
+    "    Optional number of ranks performing I/O operations. If 0, this number will be equal to the size of the MPI communicator.\n"
+    "\n"
+    "node_rank_map : \n"
+    "    Optional dictionary mapping gid to rank. If None, round-robin assignment will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "Dictionary of the form { namespace: cell_iter }, where: \n"
+    "cell_iter : iterator\n"
+    "   An iterator that returns pairs (gid, attr_dict) where gid is the cell id and attr_dict is a dictionary with attribute key-value pairs. \n"
+    "\n");
+
   static PyObject *py_scatter_read_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status;
@@ -3939,6 +3976,37 @@ extern "C"
     return py_namespace_dict;
   }
 
+  PyDoc_STRVAR(
+    read_cell_attributes_doc,
+    "read_cell_attributes(file_name, population_name, namespace, comm=None)\n"
+    "--\n"
+    "\n"
+    "Reads cell attributes for all cell gids contained in the given file and namespace. "
+    "Each rank will be assigned an equal number of cell gids, with the exception of the last rank if the number of cells is not evenly divisible by the number of ranks. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "namespace : string\n"
+    "    The namespace for which cell attributes will be read.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "cell_iter : iterator\n"
+    "   An iterator that returns pairs (gid, attr_dict) where gid is the cell id and attr_dict is a dictionary with attribute key-value pairs. \n"
+    "\n");
+
   
   static PyObject *py_read_cell_attributes (PyObject *self, PyObject *args, PyObject *kwds)
   {
@@ -4030,6 +4098,40 @@ extern "C"
   }
 
   
+  PyDoc_STRVAR(
+    read_cell_attribute_selection_doc,
+    "read_cell_attribute_selection(file_name, population_name, selection, namespace, comm=None)\n"
+    "--\n"
+    "\n"
+    "Reads cell attributes for the given cell gids from the given file and namespace. "
+    "Each rank will be assigned an equal number of cell gids, with the exception of the last rank if the number of cells is not evenly divisible by the number of ranks. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "selection : int list\n"
+    "    A list of gids to read.\n"
+    "\n"
+    "namespace : string\n"
+    "    The namespace for which cell attributes will be read.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "cell_iter : iterator\n"
+    "   An iterator that returns pairs (gid, attr_dict) where gid is the cell id and attr_dict is a dictionary with attribute key-value pairs. \n"
+    "\n");
+
   static PyObject *py_read_cell_attribute_selection (PyObject *self, PyObject *args, PyObject *kwds)
   {
     herr_t status;
@@ -6182,11 +6284,11 @@ extern "C"
     { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS | METH_KEYWORDS,
       read_cell_attribute_info_doc },
     { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
-      "Reads attributes for a selection of cells." },
+       read_cell_attribute_selection_doc },
     { "read_cell_attributes", (PyCFunction)py_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
-      "Reads additional attributes for the given range of cells." },
+      read_cell_attributes_doc },
     { "scatter_read_cell_attributes", (PyCFunction)py_scatter_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
-      "Reads additional attributes for the given range of cells using scalable parallel read/scatter." },
+      scatter_read_cell_attributes_doc },
     { "bcast_cell_attributes", (PyCFunction)py_bcast_cell_attributes, METH_VARARGS | METH_KEYWORDS,
       "Reads attributes for the given range of cells and broadcasts to all ranks." },
     { "write_cell_attributes", (PyCFunction)py_write_cell_attributes, METH_VARARGS | METH_KEYWORDS,
