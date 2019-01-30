@@ -75,7 +75,7 @@ public:
     }
 
     /// Construct an assertion failure exception
-    AssertionFailureException(const char* expression, const char* file, int line, const std::string& message)
+    AssertionFailureException(const char* expression, const char* file, int line, const std::string& message = "")
         : expression(expression)
         , file(file)
         , line(line)
@@ -143,5 +143,6 @@ public:
 
 /// Assert that EXPRESSION evaluates to true, otherwise raise AssertionFailureException with associated MESSAGE (which may use C++ stream-style message formatting)
 #define throw_assert(EXPRESSION, MESSAGE) if(!(EXPRESSION)) { throw AssertionFailureException(#EXPRESSION, __FILE__, __LINE__, (AssertionFailureException::StreamFormatter() << MESSAGE)); }
+#define throw_assert_nomsg(EXPRESSION) if(!(EXPRESSION)) { throw AssertionFailureException(#EXPRESSION, __FILE__, __LINE__); }
 
 #endif // !defined(INCLUDED__THROW_ASSERT_HPP)

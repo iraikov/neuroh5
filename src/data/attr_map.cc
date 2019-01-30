@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "attr_map.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -260,7 +261,7 @@ namespace neuroh5
       {
         CELL_IDX_T vindex = cell_index[p];
         vector<float>::const_iterator first, last;
-        if (ptr.size() > 0)
+        if (ptr.size() > 1)
           {
             first = value.begin() + ptr[p];
             last  = value.begin() + ptr[p+1];
@@ -271,8 +272,11 @@ namespace neuroh5
             last  = value.end();
           }
         vector<float> v(first, last);
-        float_values[index].insert(make_pair(vindex, v));
-        index_set.insert(vindex);
+        if (v.size() > 0)
+          {
+            float_values[index].insert(make_pair(vindex, v));
+            index_set.insert(vindex);
+          }
       }
     return index;
   }
@@ -288,7 +292,7 @@ namespace neuroh5
       {
         CELL_IDX_T vindex = cell_index[p];
         vector<uint8_t>::const_iterator first, last;
-        if (ptr.size() > 0)
+        if (ptr.size() > 1)
           {
             first = value.begin() + ptr[p];
             last  = value.begin() + ptr[p+1];
@@ -299,8 +303,11 @@ namespace neuroh5
             last  = value.end();
           }
         vector<uint8_t> v(first, last);
-        uint8_values[index].insert(make_pair(vindex, v));
-        index_set.insert(vindex);
+        if (v.size() > 0)
+          {
+            uint8_values[index].insert(make_pair(vindex, v));
+            index_set.insert(vindex);
+          }
       }
     return index;
   }
@@ -315,7 +322,7 @@ namespace neuroh5
       {
         CELL_IDX_T vindex = cell_index[p];
         vector<int8_t>::const_iterator first, last;
-        if (ptr.size() > 0)
+        if (ptr.size() > 1)
           {
             first = value.begin() + ptr[p];
             last  = value.begin() + ptr[p+1];
@@ -326,8 +333,11 @@ namespace neuroh5
             last  = value.end();
           }
         vector<int8_t> v(first, last);
-        int8_values[index].insert(make_pair(vindex, v));
-        index_set.insert(vindex);
+        if (v.size() > 0)
+          {
+            int8_values[index].insert(make_pair(vindex, v));
+            index_set.insert(vindex);
+          }
       }
     return index;
   }
@@ -343,7 +353,7 @@ namespace neuroh5
       {
         CELL_IDX_T vindex = cell_index[p];
         vector<uint16_t>::const_iterator first, last;
-        if (ptr.size() > 0)
+        if (ptr.size() > 1)
           {
             first = value.begin() + ptr[p];
             last  = value.begin() + ptr[p+1];
@@ -354,8 +364,11 @@ namespace neuroh5
             last  = value.end();
           }
         vector<uint16_t> v(first, last);
-        uint16_values[index].insert(make_pair(vindex, v));
-        index_set.insert(vindex);
+        if (v.size() > 0)
+          {
+            uint16_values[index].insert(make_pair(vindex, v));
+            index_set.insert(vindex);
+          }
       }
     return index;
   }
@@ -371,7 +384,7 @@ namespace neuroh5
       {
         CELL_IDX_T vindex = cell_index[p];
         vector<int16_t>::const_iterator first, last;
-        if (ptr.size() > 0)
+        if (ptr.size() > 1)
           {
             first = value.begin() + ptr[p];
             last  = value.begin() + ptr[p+1];
@@ -382,8 +395,11 @@ namespace neuroh5
             last  = value.end();
           }
         vector<int16_t> v(first, last);
-        int16_values[index].insert(make_pair(vindex, v));
-        index_set.insert(vindex);
+        if (v.size() > 0)
+          {
+            int16_values[index].insert(make_pair(vindex, v));
+            index_set.insert(vindex);
+          }
       }
     return index;
   }
@@ -399,7 +415,7 @@ namespace neuroh5
       {
         CELL_IDX_T vindex = cell_index[p];
         vector<uint32_t>::const_iterator first, last;
-        if (ptr.size() > 0)
+        if (ptr.size() > 1)
           {
             first = value.begin() + ptr[p];
             last  = value.begin() + ptr[p+1];
@@ -410,8 +426,11 @@ namespace neuroh5
             last  = value.end();
           }
         vector<uint32_t> v(first, last);
-        uint32_values[index].insert(make_pair(vindex, v));
-        index_set.insert(vindex);
+        if (v.size() > 0)
+          {
+            uint32_values[index].insert(make_pair(vindex, v));
+            index_set.insert(vindex);
+          }
       }
     return index;
   }
@@ -427,7 +446,7 @@ namespace neuroh5
       {
         CELL_IDX_T vindex = cell_index[p];
         vector<int32_t>::const_iterator first, last;
-        if (ptr.size() > 0)
+        if (ptr.size() > 1)
           {
             first = value.begin() + ptr[p];
             last  = value.begin() + ptr[p+1];
@@ -438,8 +457,11 @@ namespace neuroh5
             last  = value.end();
           }
         vector<int32_t> v(first, last);
-        int32_values[index].insert(make_pair(vindex, v));
-        index_set.insert(vindex);
+        if (v.size() > 0)
+          {
+            int32_values[index].insert(make_pair(vindex, v));
+            index_set.insert(vindex);
+          }
       }
     return index;
   }
@@ -832,7 +854,8 @@ namespace neuroh5
   {
     vector<float> result;
     auto attr_it = float_names.find(name);
-    assert(attr_it != float_names.end());
+    throw_assert(attr_it != float_names.end(),
+                 "NamedAttrMap::find_name<float>: attribute " << name << " not found");
     size_t attr_index = attr_it->second;
     auto it = float_values[attr_index].find(index);
     if (it != float_values[attr_index].end())
@@ -848,7 +871,8 @@ namespace neuroh5
   {
     vector<uint8_t> result;
     auto attr_it = uint8_names.find(name);
-    assert(attr_it != uint8_names.end());
+    throw_assert(attr_it != uint8_names.end(),
+                 "NamedAttrMap::find_name<uint8_t>: attribute " << name << " not found");
     size_t attr_index = attr_it->second;
     auto it = uint8_values[attr_index].find(index);
     if (it != uint8_values[attr_index].end())
@@ -864,11 +888,8 @@ namespace neuroh5
   {
     vector<int8_t> result;
     auto attr_it = int8_names.find(name);
-    if (attr_it == int8_names.end())
-      {
-        printf("find_name int8: name = %s\n", name.c_str());
-      }
-    assert(attr_it != int8_names.end());
+    throw_assert(attr_it != int8_names.end(),
+                 "NamedAttrMap::find_name<int8_t>: attribute " << name << " not found");
     size_t attr_index = attr_it->second;
     auto it = int8_values[attr_index].find(index);
     if (it != int8_values[attr_index].end())
@@ -885,7 +906,8 @@ namespace neuroh5
   {
     vector<uint16_t> result;
     auto attr_it = uint16_names.find(name);
-    assert(attr_it != uint16_names.end());
+    throw_assert(attr_it != int16_names.end(),
+                 "NamedAttrMap::find_name<uint16_t>: attribute " << name << " not found");
     size_t attr_index = attr_it->second;
     auto it = uint16_values[attr_index].find(index);
     if (it != uint16_values[attr_index].end())
@@ -901,7 +923,8 @@ namespace neuroh5
   {
     vector<int16_t> result;
     auto attr_it = int16_names.find(name);
-    assert(attr_it != int16_names.end());
+    throw_assert(attr_it != int16_names.end(),
+                 "NamedAttrMap::find_name<int16_t>: attribute " << name << " not found");
     size_t attr_index = attr_it->second;
     auto it = int16_values[attr_index].find(index);
     if (it != int16_values[attr_index].end())
@@ -918,7 +941,8 @@ namespace neuroh5
   {
     vector<uint32_t> result;
     auto attr_it = uint32_names.find(name);
-    assert(attr_it != uint32_names.end());
+    throw_assert(attr_it != uint32_names.end(),
+                 "NamedAttrMap::find_name<uint32_t>: attribute " << name << " not found");
     size_t attr_index = attr_it->second;
     auto it = uint32_values[attr_index].find(index);
     if (it != uint32_values[attr_index].end())
@@ -934,7 +958,8 @@ namespace neuroh5
   {
     vector<int32_t> result;
     auto attr_it = int32_names.find(name);
-    assert(attr_it != int32_names.end());
+    throw_assert(attr_it != int32_names.end(),
+                 "NamedAttrMap::find_name<int32_t>: attribute " << name << " not found");
     size_t attr_index = attr_it->second;
     auto it = int32_values[attr_index].find(index);
     if (it != int32_values[attr_index].end())

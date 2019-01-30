@@ -4,7 +4,7 @@
 ///
 ///  Validate tree structure.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 
@@ -13,6 +13,7 @@
 #include <set>
 
 #include "neuroh5_types.hh"
+#include "throw_assert.hh"
 
 
 using namespace std;
@@ -36,20 +37,20 @@ namespace neuroh5
       const vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
       const vector<SWC_TYPE_T> & swc_types=get<10>(tree);
 
-      assert(src_vector.size() > 0);
-      assert(dst_vector.size() > 0);
-      assert(sections.size() > 0);
+      throw_assert_nomsg(src_vector.size() > 0);
+      throw_assert_nomsg(dst_vector.size() > 0);
+      throw_assert_nomsg(sections.size() > 0);
       
       size_t num_xpoints = xcoords.size();
       size_t num_ypoints = ycoords.size();
       size_t num_zpoints = zcoords.size();
 
-      assert(num_xpoints == num_ypoints);
-      assert(num_xpoints == num_zpoints);
-      assert(num_xpoints == radiuses.size());
-      assert(num_xpoints == layers.size());
-      assert(num_xpoints == parents.size());
-      assert(num_xpoints == swc_types.size());
+      throw_assert_nomsg(num_xpoints == num_ypoints);
+      throw_assert_nomsg(num_xpoints == num_zpoints);
+      throw_assert_nomsg(num_xpoints == radiuses.size());
+      throw_assert_nomsg(num_xpoints == layers.size());
+      throw_assert_nomsg(num_xpoints == parents.size());
+      throw_assert_nomsg(num_xpoints == swc_types.size());
 
       size_t num_nodes = num_xpoints, sections_ptr=1;
 
@@ -68,14 +69,14 @@ namespace neuroh5
                   printf("node_idx = %u\n",node_idx);
                   printf("num_nodes = %lu\n", num_nodes);
                 }
-              assert(node_idx <= num_nodes);
+              throw_assert_nomsg(node_idx <= num_nodes);
               all_section_nodes.insert(node_idx);
               sections_ptr++;
             }
       
         }
   
-      assert(all_section_nodes.size() == num_nodes);
+      throw_assert_nomsg(all_section_nodes.size() == num_nodes);
     }
 
   }

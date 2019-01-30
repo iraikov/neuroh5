@@ -4,13 +4,12 @@
 ///
 ///  Append tree structures to NeuroH5 file.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
 #include <hdf5.h>
 
-#include <cassert>
 #include <vector>
 
 #include "neuroh5_types.hh"
@@ -24,6 +23,7 @@
 #include "cell_attributes.hh"
 #include "compact_optional.hh"
 #include "optional_value.hh"
+#include "throw_assert.hh"
 
 
 namespace neuroh5
@@ -58,8 +58,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       size_t all_attr_size=0, all_sec_size=0,  all_topo_size=0;
       std::vector<size_t> attr_size_vector, sec_size_vector, topo_size_vector;
@@ -77,7 +77,7 @@ namespace neuroh5
       std::vector<size_t> ptr_size_vector;
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_SIZE_T, &ptr_size_vector[0], 1, MPI_SIZE_T, comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert_nomsg(status == MPI_SUCCESS);
 
       size_t block  = tree_list.size();
 
@@ -101,19 +101,19 @@ namespace neuroh5
 
           
           topo_size = src_vector.size();
-          assert(src_vector.size() == topo_size);
-          assert(dst_vector.size() == topo_size);
+          throw_assert_nomsg(src_vector.size() == topo_size);
+          throw_assert_nomsg(dst_vector.size() == topo_size);
 
           topo_ptr.push_back(topo_size+topo_ptr.back());
         
           attr_size = xcoords.size();
-          assert(xcoords.size()  == attr_size);
-          assert(ycoords.size()  == attr_size);
-          assert(zcoords.size()  == attr_size);
-          assert(radiuses.size() == attr_size);
-          assert(layers.size()   == attr_size);
-          assert(parents.size()  == attr_size);
-          assert(swc_types.size()  == attr_size);
+          throw_assert_nomsg(xcoords.size()  == attr_size);
+          throw_assert_nomsg(ycoords.size()  == attr_size);
+          throw_assert_nomsg(zcoords.size()  == attr_size);
+          throw_assert_nomsg(radiuses.size() == attr_size);
+          throw_assert_nomsg(layers.size()   == attr_size);
+          throw_assert_nomsg(parents.size()  == attr_size);
+          throw_assert_nomsg(swc_types.size()  == attr_size);
 
           attr_ptr.push_back(attr_size+attr_ptr.back());
 
@@ -161,11 +161,11 @@ namespace neuroh5
      )
     {
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       size_t block  = tree_list.size();
-      assert(block == 1); // singleton tree set
+      throw_assert_nomsg(block == 1); // singleton tree set
 
       for (size_t i = 0; i < block; i++)
         {
@@ -185,17 +185,17 @@ namespace neuroh5
           const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
 
           topo_size = src_vector.size();
-          assert(src_vector.size() == topo_size);
-          assert(dst_vector.size() == topo_size);
+          throw_assert_nomsg(src_vector.size() == topo_size);
+          throw_assert_nomsg(dst_vector.size() == topo_size);
 
           attr_size = xcoords.size();
-          assert(xcoords.size()  == attr_size);
-          assert(ycoords.size()  == attr_size);
-          assert(zcoords.size()  == attr_size);
-          assert(radiuses.size() == attr_size);
-          assert(layers.size()   == attr_size);
-          assert(parents.size()  == attr_size);
-          assert(swc_types.size()  == attr_size);
+          throw_assert_nomsg(xcoords.size()  == attr_size);
+          throw_assert_nomsg(ycoords.size()  == attr_size);
+          throw_assert_nomsg(zcoords.size()  == attr_size);
+          throw_assert_nomsg(radiuses.size() == attr_size);
+          throw_assert_nomsg(layers.size()   == attr_size);
+          throw_assert_nomsg(parents.size()  == attr_size);
+          throw_assert_nomsg(swc_types.size()  == attr_size);
 
           all_src_vector.insert(all_src_vector.end(),src_vector.begin(),src_vector.end());
           all_dst_vector.insert(all_dst_vector.end(),dst_vector.begin(),dst_vector.end());
@@ -228,13 +228,13 @@ namespace neuroh5
       hsize_t value_size, index_size;
       
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       if (rank == 0)
         {
           hid_t file = hdf5::open_file(comm, file_name);
-          assert(file >= 0);
+          throw_assert_nomsg(file >= 0);
 
           string path;
 
@@ -259,12 +259,12 @@ namespace neuroh5
               sec_size = 0;
               topo_size = 0;
             }
-          assert(hdf5::close_file(file) >= 0);
+          throw_assert_nomsg(hdf5::close_file(file) >= 0);
         }
 
-      assert(MPI_Bcast(&attr_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
-      assert(MPI_Bcast(&sec_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
-      assert(MPI_Bcast(&topo_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&attr_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&sec_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&topo_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
 
       return 0;
     }
@@ -287,8 +287,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       
       std::vector<SEC_PTR_T> sec_ptr;
@@ -306,7 +306,7 @@ namespace neuroh5
 
       if (ptr_type.type == PtrNone)
         {
-          assert(tree_list.size() == 1); // singleton tree set
+          throw_assert_nomsg(tree_list.size() == 1); // singleton tree set
           status = build_singleton_tree_datasets(comm,
                                                  tree_list,
                                                  all_src_vector, all_dst_vector,
@@ -323,7 +323,7 @@ namespace neuroh5
                                        all_xcoords, all_ycoords, all_zcoords, 
                                        all_radiuses, all_layers, all_sections,
                                        all_parents, all_swc_types);
-          assert(status >= 0);
+          throw_assert_nomsg(status >= 0);
         }
       
       status = append_cell_index (comm, file_name, pop_name, hdf5::TREES,

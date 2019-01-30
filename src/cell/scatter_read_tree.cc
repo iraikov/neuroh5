@@ -4,13 +4,12 @@
 ///
 ///  Read and scatter tree structures.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
 #include <hdf5.h>
 
-#include <cassert>
 #include <vector>
 #include <map>
 
@@ -24,6 +23,7 @@
 #include "dataset_num_elements.hh"
 #include "path_names.hh"
 #include "read_template.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -64,13 +64,13 @@ namespace neuroh5
       // MPI group color value used for I/O ranks
       int io_color = 1;
 
-      assert(io_size > 0);
+      throw_assert_nomsg(io_size > 0);
     
       int srank, ssize; size_t rank, size;
-      assert(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
-      assert(srank >= 0);
-      assert(ssize > 0);
+      throw_assert_nomsg(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(srank >= 0);
+      throw_assert_nomsg(ssize > 0);
       rank = srank;
       size = ssize;
 
@@ -81,22 +81,22 @@ namespace neuroh5
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
         
           fapl = H5Pcreate(H5P_FILE_ACCESS);
-          assert(fapl >= 0);
-          assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
+          throw_assert_nomsg(fapl >= 0);
+          throw_assert_nomsg(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
         
           /* Create property list for collective dataset operations. */
           rapl = H5Pcreate (H5P_DATASET_XFER);
           status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
 
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-          assert(file >= 0);
+          throw_assert_nomsg(file >= 0);
           dset_size = hdf5::dataset_num_elements(file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
 
           status = H5Fclose(file);
-          assert(status == 0);
+          throw_assert_nomsg(status == 0);
 
           status = H5Pclose(fapl);
-          assert(status == 0);
+          throw_assert_nomsg(status == 0);
           
           if (numitems > 0)
             {
@@ -157,14 +157,14 @@ namespace neuroh5
           data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
         }
 
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       vector<int> recvcounts, rdispls;
       vector<char> recvbuf;
 
 
-      assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                         recvcounts, rdispls, recvbuf) >= 0);
+      throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                     recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
 
       if (recvbuf.size() > 0)

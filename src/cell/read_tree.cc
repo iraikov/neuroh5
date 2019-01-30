@@ -4,18 +4,18 @@
 ///
 ///  Read tree structures.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
 #include <hdf5.h>
 
-#include <cassert>
 #include <vector>
 
 #include "neuroh5_types.hh"
 #include "cell_attributes.hh"
 #include "attr_map.hh"
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -72,8 +72,8 @@ namespace neuroh5
      )
     {
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       data::NamedAttrMap attr_values;
       

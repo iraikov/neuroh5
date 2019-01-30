@@ -4,7 +4,7 @@
 ///
 ///  Tree contraction routine.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -16,9 +16,6 @@
 #include "ngraph.hh"
 
 #include "neuroh5_types.hh"
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace std;
 using namespace NGraph;

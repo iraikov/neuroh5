@@ -4,7 +4,7 @@
 ///
 ///  Insert points into tree structure.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 
@@ -14,6 +14,7 @@
 #include <set>
 
 #include "neuroh5_types.hh"
+#include "throw_assert.hh"
 
 
 using namespace std;
@@ -53,7 +54,7 @@ namespace neuroh5
 
 
       size_t num_xpoints = xcoords.size();
-      assert(num_xpoints > 0);
+      throw_assert_nomsg(num_xpoints > 0);
       
       COORD_T dst_origin_x = xcoords[0];
       COORD_T dst_origin_y = ycoords[0];
@@ -78,14 +79,14 @@ namespace neuroh5
                   printf("node_idx = %u\n",node_idx);
                   printf("num_nodes = %lu\n", num_nodes);
                 }
-              assert(node_idx <= num_nodes);
+              throw_assert_nomsg(node_idx <= num_nodes);
               all_section_nodes.insert(node_idx);
               sections_ptr++;
             }
       
         }
   
-      assert(all_section_nodes.size() == num_nodes);
+      throw_assert_nomsg(all_section_nodes.size() == num_nodes);
 
       for (auto it = include_src_vector.begin();
            it != include_src_vector.end();
@@ -129,14 +130,14 @@ namespace neuroh5
                   printf("node_idx = %u\n",node_idx);
                   printf("include_num_nodes = %lu\n", include_num_nodes);
                 }
-              assert(node_idx <= include_num_nodes);
+              throw_assert_nomsg(node_idx <= include_num_nodes);
               include_all_section_nodes.insert(node_idx);
               include_sections[sections_ptr] += num_nodes;              
               sections_ptr++;
             }
       
         }
-      assert(include_all_section_nodes.size() == include_num_nodes);
+      throw_assert_nomsg(include_all_section_nodes.size() == include_num_nodes);
       
       for (auto it = include_parents.begin();
            it != include_parents.end();

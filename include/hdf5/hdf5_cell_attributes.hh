@@ -158,6 +158,7 @@ namespace neuroh5
      const std::string&        path,
      const CELL_IDX_T          pop_start,
      const std::vector<CELL_IDX_T>&  selection,
+     std::vector<CELL_IDX_T> & selection_index,
      std::vector<ATTR_PTR_T> & selection_ptr,
      std::vector<T> &          values
      )
@@ -210,8 +211,10 @@ namespace neuroh5
             {
               for (const CELL_IDX_T& s : selection) 
                 {
+                  if (s < pop_start) continue;
                   auto it = std::find(index.begin(), index.end(), s-pop_start);
-                  assert(it != index.end());
+                  if (it == index.end()) continue;
+                  
                   throw_assert(it != index.end(),
                                "read_cell_attribute_selection: unable to find attribute "
                                << path << " for gid " << s);
@@ -224,6 +227,7 @@ namespace neuroh5
                   ranges.push_back(make_pair(value_start, value_block));
                   selection_ptr.push_back(selection_ptr_pos);
                   selection_ptr_pos += value_block;
+                  selection_index.push_back(s);
                 }
               selection_ptr.push_back(selection_ptr_pos);
             }

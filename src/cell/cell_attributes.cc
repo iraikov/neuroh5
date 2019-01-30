@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a cell id.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -23,11 +23,11 @@
 #include "serialize_data.hh"
 #include "serialize_cell_attributes.hh"
 #include "mpe_seq.hh"
+#include "throw_assert.hh"
 
 #include <hdf5.h>
 #include <mpi.h>
 
-#include <cassert>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -72,7 +72,8 @@ namespace neuroh5
         case PtrShared:
           {
             std::string ptr_name;
-            assert (ptr_type.shared_ptr_name.has_value());
+            throw_assert (ptr_type.shared_ptr_name.has_value(),
+                          "size_cell_attributes: shared attribute pointer has no value");
             ptr_name = ptr_type.shared_ptr_name.value();
             ptr_size = hdf5::dataset_num_elements(loc, ptr_name);
           }
@@ -112,19 +113,22 @@ namespace neuroh5
       herr_t ierr;
     
       in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(in_file >= 0);
+      throw_assert(in_file >= 0,
+                   "get_cell_attribute_name_spaces: unable to open file " << file_name);
       out_name_spaces.clear();
     
       string path = "/" + hdf5::POPULATIONS + "/" + pop_name;
 
       hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-      assert(grp >= 0);
+      throw_assert(grp >= 0,
+                   "get_cell_attribute_name_spaces: unable to open group " << path);
 
       hsize_t idx = 0;
       ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                         &name_space_iterate_cb, (void*) &out_name_spaces);
     
-      assert(H5Gclose(grp) >= 0);
+      throw_assert(H5Gclose(grp) >= 0,
+                   "get_cell_attribute_name_spaces: unable to close group " << path);
       ierr = H5Fclose(in_file);
     
       return ierr;
@@ -163,13 +167,15 @@ namespace neuroh5
             }
     
           hid_t ftype = H5Dget_type(dset);
-          assert(ftype >= 0);
+          throw_assert(ftype >= 0,
+                       "cell_attributes_cb: unable to get data set type");
           
           vector< pair<string,AttrKind> >* ptr =
             (vector< pair<string,AttrKind> >*) op_data;
           ptr->push_back(make_pair(name, hdf5::h5type_attr_kind(ftype)));
           
-          assert(H5Dclose(dset) >= 0);
+          throw_assert(H5Dclose(dset) >= 0,
+                       "cell_attributes_cb: unable to close data set");
         }
       
       H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
@@ -197,13 +203,17 @@ namespace neuroh5
       if (hdf5::exists_dataset (in_file, path) > 0)
         {
           hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-          assert(grp >= 0);
+          throw_assert(grp >= 0,
+                       "get_cell_attributes: unable to open group " << path);
+
           
           hsize_t idx = 0;
           ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &cell_attribute_cb, (void*) &out_attributes);
           
-          assert(H5Gclose(grp) >= 0);
+          ierr = H5Gclose(grp);
+          throw_assert(ierr >= 0,
+                       "get_cell_attributes: unable to close group " << path);
         }
       ierr = H5Fclose(in_file);
 
@@ -280,7 +290,6 @@ namespace neuroh5
               break;
             }
 
-          assert(ierr >= 0);
         }
 
       return ierr;
@@ -309,31 +318,39 @@ namespace neuroh5
       status = H5Pset_layout(plist, H5D_CHUNKED);
       assert(status == 0);
       status = H5Pset_chunk(plist, 1, cdims);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "create_cell_attribute_datasets: unable to set chunk size");
       status = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "create_cell_attribute_datasets: unable to set allocation time");
 
 #if H5_VERSION_GE(1,10,2)
       status = H5Pset_deflate(plist, 9);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "create_cell_attribute_datasets: unable to set compression property");
 #endif
       
       hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_layout(value_plist, H5D_CHUNKED);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "create_cell_attribute_datasets: unable to set chunked layout");
       status = H5Pset_chunk(value_plist, 1, value_cdims);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "create_cell_attribute_datasets: unable to set chunk size");
       status = H5Pset_alloc_time(value_plist, H5D_ALLOC_TIME_EARLY);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "create_cell_attribute_datasets: unable to set allocation time");
 
 #if H5_VERSION_GE(1,10,2)
       status = H5Pset_deflate(value_plist, 9);
 #endif
       
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      throw_assert(lcpl >= 0,
+                   "create_cell_attribute_datasets: unable to create link property list");
+      throw_assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0,
+                   "create_cell_attribute_datasets: unable to set create intermediate group property");
     
       if (!(hdf5::exists_dataset (file, ("/" + hdf5::POPULATIONS)) > 0))
         {
@@ -364,27 +381,35 @@ namespace neuroh5
         case IndexOwner:
           {
             mspace = H5Screate_simple(1, &initial_size, maxdims);
-            assert(mspace >= 0);
+            throw_assert(mspace >= 0,
+                         "create_cell_attribute_datasets: unable to create memory space");
+
             dset = H5Dcreate2(file, (attr_path + "/" + hdf5::CELL_INDEX).c_str(),
                               CELL_IDX_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
-            assert(H5Dclose(dset) >= 0);
-            assert(H5Sclose(mspace) >= 0);
+            throw_assert(H5Dclose(dset) >= 0,
+                         "create_cell_attribute_datasets: unable to create data set");
+            throw_assert(H5Sclose(mspace) >= 0,
+                         "create_cell_attribute_datasets: unable to close memory space");
+            
           }
           break;
         case IndexShared:
           {
             dset = H5Dopen2(file, (attr_prefix + "/" + hdf5::CELL_INDEX).c_str(), H5P_DEFAULT);
-            assert(dset >= 0);
+            throw_assert(dset >= 0,
+                         "create_cell_attribute_datasets: unable to open cell index data set");
             status = H5Olink(dset, file, (attr_path + "/" + hdf5::CELL_INDEX).c_str(), H5P_DEFAULT, H5P_DEFAULT);
-            assert(status >= 0);
-            assert(H5Dclose(dset) >= 0);
+            throw_assert(status >= 0,
+                         "create_cell_attribute_datasets: unable to link to shared index data set");
+            throw_assert(H5Dclose(dset) >= 0,
+                         "create_cell_attribute_datasets: unable to close index data set");
           }
           break;
         case IndexNone:
           break;
         }
-
+      
       switch (ptr_type.type)
         {
         case PtrOwner:
@@ -400,47 +425,65 @@ namespace neuroh5
               }
 
             mspace = H5Screate_simple(1, &initial_size, maxdims);
-            assert(mspace >= 0);
+            throw_assert(mspace >= 0,
+                         "create_cell_attribute_datasets: unable to create memory space");
+
             dset = H5Dcreate2(file, (attr_path + "/" + ptr_name).c_str(), ATTR_PTR_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
-            assert(status >= 0);
+            throw_assert(status >= 0,
+                         "create_cell_attribute_datasets: unable to create attribute pointer data set");
             if (ptr_name.compare(hdf5::ATTR_PTR) != 0)
               {
                 status = H5Olink(dset, file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), H5P_DEFAULT, H5P_DEFAULT);
-                assert(status >= 0);
+                throw_assert(status >= 0,
+                         "create_cell_attribute_datasets: unable to link attribute pointer data set");
               }
-            assert(H5Dclose(dset) >= 0);
-            assert(H5Sclose(mspace) >= 0);
+            throw_assert(H5Dclose(dset) >= 0,
+                         "create_cell_attribute_datasets: unable to close pointer data set");
+            throw_assert(H5Sclose(mspace) >= 0,
+                         "create_cell_attribute_datasets: unable to close memory space");
           }
           break;
         case PtrShared:
           {
-            assert(ptr_type.shared_ptr_name.has_value());
+            throw_assert(ptr_type.shared_ptr_name.has_value(),
+                         "create_cell_attribute_datasets: shared pointer data set name has not been set");
+
             dset = H5Dopen2(file, (ptr_type.shared_ptr_name.value()).c_str(), H5P_DEFAULT);
-            assert(dset >= 0);
+            throw_assert(dset >= 0,
+                         "create_cell_attribute_datasets: unable to open shared attribute pointer data set");
             status = H5Olink(dset, file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), H5P_DEFAULT, H5P_DEFAULT);
-            assert(status >= 0);
-            assert(H5Dclose(dset) >= 0);
+            throw_assert(status >= 0,
+                         "create_cell_attribute_datasets: unable to link shared attribute pointer data set");
+            throw_assert(H5Dclose(dset) >= 0,
+                         "create_cell_attribute_datasets: unable to close shared attribute pointer data set");
           }
           break;
         case PtrNone:
           break;
         }
       
-      mspace = H5Screate_simple(1, &initial_size, maxdims);
-      dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_VAL).c_str(), ftype, mspace,
-                        lcpl, value_plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
+    mspace = H5Screate_simple(1, &initial_size, maxdims);
+    dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_VAL).c_str(), ftype, mspace,
+                      lcpl, value_plist, H5P_DEFAULT);
+    throw_assert(H5Dclose(dset) >= 0,
+                 "create_cell_attribute_datasets: unable to close attribute value data set");
+                 
+    throw_assert(H5Sclose(mspace) >= 0,
+                 "create_cell_attribute_datasets: unable to close memory space");
     
-      assert(H5Pclose(lcpl) >= 0);
+    throw_assert(H5Pclose(lcpl) >= 0,
+                 "create_cell_attribute_datasets: unable to close link creation property list");
     
-      status = H5Pclose(plist);
-      assert(status == 0);
-      status = H5Pclose(value_plist);
-      assert(status == 0);
+    status = H5Pclose(plist);
+    throw_assert(status == 0,
+                 "create_cell_attribute_datasets: unable to close property list");
+    status = H5Pclose(value_plist);
     
-    }
+    throw_assert(status == 0,
+                 "create_cell_attribute_datasets: unable to close value property list");
+    
+  }
 
   
     void read_cell_attributes
@@ -458,8 +501,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
       vector< pair<string,AttrKind> > attr_info;
 
@@ -468,9 +511,9 @@ namespace neuroh5
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
+      throw_assert_nomsg(file >= 0);
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
@@ -576,9 +619,9 @@ namespace neuroh5
         }
 
       status = H5Fclose(file);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
     }
 
 
@@ -600,10 +643,10 @@ namespace neuroh5
      )
     {
       int srank, ssize; size_t rank, size;
-      assert(MPI_Comm_size(all_comm, &ssize) >= 0);
-      assert(MPI_Comm_rank(all_comm, &srank) >= 0);
-      assert(ssize > 0);
-      assert(srank >= 0);
+      throw_assert_nomsg(MPI_Comm_size(all_comm, &ssize) >= 0);
+      throw_assert_nomsg(MPI_Comm_rank(all_comm, &srank) >= 0);
+      throw_assert_nomsg(ssize > 0);
+      throw_assert_nomsg(srank >= 0);
       size = ssize;
       rank = srank;
 
@@ -615,7 +658,7 @@ namespace neuroh5
       // MPI group color value used for I/O ranks
       int io_color = 1;
 
-      assert(io_size > 0);
+      throw_assert_nomsg(io_size > 0);
     
       vector<char> sendbuf; 
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
@@ -645,7 +688,7 @@ namespace neuroh5
         }
       MPI_Barrier(io_comm);
       MPI_Barrier(all_comm);
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
     
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
@@ -653,7 +696,7 @@ namespace neuroh5
           num_attrs_bcast[i] = num_attrs[i];
         }
       // 4. Broadcast the number of attributes of each type to all ranks
-      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, all_comm) >= 0);
+      throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, all_comm) >= 0);
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs[i] = num_attrs_bcast[i];
@@ -668,9 +711,9 @@ namespace neuroh5
             sendbuf_size = sendbuf.size();
           }
 
-        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, all_comm) >= 0);
+        throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, all_comm) >= 0);
         sendbuf.resize(sendbuf_size);
-        assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
+        throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) >= 0);
         
         if (rank != 0)
           {
@@ -710,7 +753,7 @@ namespace neuroh5
       // 6. Each ALL_COMM rank sends an attribute set size to
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero)
     
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
+      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
                           &recvcounts[0], 1, MPI_INT, all_comm) >= 0);
     
       // 7. Each ALL_COMM rank accumulates the vector sizes and allocates
@@ -728,7 +771,7 @@ namespace neuroh5
         recvbuf.resize(recvbuf_size);
     
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+      throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                          recvcounts, rdispls, recvbuf) >= 0);
 
     
@@ -762,8 +805,8 @@ namespace neuroh5
 
     
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) >= 0);
-      assert(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
       vector<char> sendrecvbuf; 
       vector< pair<string,AttrKind> > attr_info;
@@ -788,7 +831,7 @@ namespace neuroh5
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
     
       hid_t file;
       if (rank == (unsigned int)root)
@@ -798,7 +841,7 @@ namespace neuroh5
                                               pop_name, attr_info);
         
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-          assert(file >= 0);
+          throw_assert_nomsg(file >= 0);
         
           for (size_t i=0; i<attr_info.size(); i++)
             {
@@ -896,7 +939,7 @@ namespace neuroh5
             
             }
           status = H5Fclose(file);
-          assert(status == 0);
+          throw_assert_nomsg(status == 0);
 
           attr_map.num_attrs(num_attrs);
           attr_map.attr_names(attr_names);
@@ -906,8 +949,8 @@ namespace neuroh5
         }
       MPI_Barrier(io_comm);
       status = H5Pclose(fapl);
-      assert(status == 0);
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(status == 0);
+      throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
       
 
       vector<size_t> num_attrs_bcast(num_attrs.size());
@@ -916,7 +959,7 @@ namespace neuroh5
           num_attrs_bcast[i] = num_attrs[i];
         }
       // Broadcast the number of attributes of each type to all ranks
-      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, root, comm) >= 0);
+      throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, root, comm) >= 0);
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs[i] = num_attrs_bcast[i];
@@ -932,10 +975,10 @@ namespace neuroh5
             sendbuf_size = sendbuf.size();
           }
         
-        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) >= 0);
+        throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm) >= 0);
         
         sendbuf.resize(sendbuf_size);
-        assert(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, root, comm) >= 0);
+        throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf.size(), MPI_CHAR, root, comm) >= 0);
         
         if (rank != (unsigned int)root)
           {
@@ -974,9 +1017,9 @@ namespace neuroh5
         }
 
       size_t sendrecvbuf_size = sendrecvbuf.size();
-      assert(MPI_Bcast(&sendrecvbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&sendrecvbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
       sendrecvbuf.resize(sendrecvbuf_size);
-      assert(MPI_Bcast(&sendrecvbuf[0], sendrecvbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&sendrecvbuf[0], sendrecvbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
 
       if (rank != (unsigned int)root)
         {
@@ -999,34 +1042,29 @@ namespace neuroh5
       herr_t status; 
 
       vector< pair<string,AttrKind> > attr_info;
-      if (selection.size() > 0)
-        return;
-
       status = get_cell_attributes (file_name, name_space,
                                     pop_name, attr_info);
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
+                   "read_cell_attribute_selection: error setting MPI driver for file access");
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
+      throw_assert(file >= 0,
+                   "read_cell_attribute_selection: unable to open file " << file_name);
+
 
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
           vector<ATTR_PTR_T>  ptr;
+          vector<CELL_IDX_T> index;
 
           string attr_name   = attr_info[i].first;
           AttrKind attr_kind = attr_info[i].second;
           size_t attr_size  = attr_kind.size;
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
-          std::vector<CELL_IDX_T> index;
-
-          for (size_t j=0; j<selection.size(); j++)
-            {
-              index.push_back(selection[j]);
-            }
           
           switch (attr_kind.type)
             {
@@ -1035,21 +1073,21 @@ namespace neuroh5
                 {
                   vector<uint32_t> attr_values_uint32;
                   status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, ptr, attr_values_uint32);
+                                                               selection, index, ptr, attr_values_uint32);
                   attr_values.insert(attr_name, index, ptr, attr_values_uint32);
                 }
               else if (attr_size == 2)
                 {
                   vector<uint16_t> attr_values_uint16;
                   status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, ptr, attr_values_uint16);
+                                                               selection, index, ptr, attr_values_uint16);
                   attr_values.insert(attr_name, index, ptr, attr_values_uint16);
                 }
               else if (attr_size == 1)
                 {
                   vector<uint8_t> attr_values_uint8;
                   status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, ptr, attr_values_uint8);
+                                                               selection, index, ptr, attr_values_uint8);
                   attr_values.insert(attr_name, index, ptr, attr_values_uint8);
                 }
               else
@@ -1062,21 +1100,21 @@ namespace neuroh5
                 {
                   vector<int32_t> attr_values_int32;
                   status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, ptr, attr_values_int32);
+                                                               selection, index, ptr, attr_values_int32);
                   attr_values.insert(attr_name, index, ptr, attr_values_int32);
                 }
               else if (attr_size == 2)
                 {
                   vector<int16_t> attr_values_int16;
                   status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, ptr, attr_values_int16);
+                                                               selection, index, ptr, attr_values_int16);
                   attr_values.insert(attr_name, index, ptr, attr_values_int16);
                 }
               else if (attr_size == 1)
                 {
                   vector<int8_t> attr_values_int8;
                   status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, ptr, attr_values_int8);
+                                                               selection, index, ptr, attr_values_int8);
                   attr_values.insert(attr_name, index, ptr, attr_values_int8);
                 }
               else
@@ -1089,7 +1127,7 @@ namespace neuroh5
               {
                 vector<float> attr_values_float;
                 status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                             selection, ptr, attr_values_float);
+                                                             selection, index, ptr, attr_values_float);
                 attr_values.insert(attr_name, index, ptr, attr_values_float);
               }
               break;
@@ -1098,7 +1136,7 @@ namespace neuroh5
                 {
                   vector<uint8_t> attr_values_uint8;
                   status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, ptr, attr_values_uint8);
+                                                               selection, index, ptr, attr_values_uint8);
                   attr_values.insert(attr_name, index, ptr, attr_values_uint8);
                 }
               else
@@ -1114,9 +1152,13 @@ namespace neuroh5
         }
 
       status = H5Fclose(file);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "read_cell_attribute_selection: unable to close file " << file_name);
+
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "read_cell_attribute_selection: unable to close file access property list");
+             
     }
 
 

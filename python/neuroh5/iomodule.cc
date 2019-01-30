@@ -3744,7 +3744,7 @@ extern "C"
                                           pop_ranges, pop_vector,
                                           n_nodes);
     throw_assert(status >= 0,
-                 "py_scatter_read_tree_selection: unable to read population ranges");
+                 "py_read_tree_selection: unable to read population ranges");
 
     vector<neurotree_t> tree_vector;
 
@@ -3752,7 +3752,7 @@ extern "C"
                                         string(pop_name), pop_vector[pop_idx].start,
                                         tree_vector, selection);
     throw_assert (status >= 0,
-                  "py_scatter_read_tree_selection: unable to read trees");
+                  "py_read_tree_selection: unable to read trees");
 
     map <string, NamedAttrMap> attr_maps;
     
@@ -3766,7 +3766,7 @@ extern "C"
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
-                 "py_scatter_read_tree_selection: unable to free MPI communicator");
+                 "py_read_tree_selection: unable to free MPI communicator");
 
 
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
