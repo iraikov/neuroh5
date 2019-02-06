@@ -500,6 +500,7 @@ namespace neuroh5
     {
       herr_t status; 
 
+
       unsigned int rank, size;
       throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
@@ -525,6 +526,7 @@ namespace neuroh5
           size_t attr_size  = attr_kind.size;
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
 
+          
           switch (attr_kind.type)
             {
             case UIntVal:
@@ -557,8 +559,8 @@ namespace neuroh5
                   throw runtime_error("Unsupported integer attribute size");
                 };
               break;
+            case SIntVal:
               {
-              case SIntVal:
                 if (attr_size == 4)
                   {
                     vector<int32_t> attr_values_int32;
@@ -587,17 +589,23 @@ namespace neuroh5
                   {
                     throw runtime_error("Unsupported integer attribute size");
                   };
-                break;
-              case FloatVal:
-                {
-                  vector<float> attr_values_float;
-                  status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                     index, ptr, attr_values_float,
-                                                     offset, numitems);
-                  attr_values.insert(attr_name, index, ptr, attr_values_float);
-                }
-                break;
-              case EnumVal:
+              }
+              break;
+            case FloatVal:
+              {
+                //printf("read_cell_attributes: attr_path: %s; offset = %u numitems = %u\n",
+                //       attr_path.c_str(), offset, numitems);
+                vector<float> attr_values_float;
+                status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
+                                                   index, ptr, attr_values_float,
+                                                   offset, numitems);
+                //printf("read_cell_attributes: attr_path: %s; size(index) = %u size(ptr) = %u\n",
+                //       attr_path.c_str(), index.size(), ptr.size());
+                attr_values.insert(attr_name, index, ptr, attr_values_float);
+              }
+              break;
+            case EnumVal:
+              {
                 if (attr_size == 1)
                   {
                     vector<uint8_t> attr_values_uint8;
@@ -610,11 +618,11 @@ namespace neuroh5
                   {
                     throw runtime_error("Unsupported enumerated attribute size");
                   };
-                break;
-              default:
-                throw runtime_error("Unsupported attribute type");
-                break;
               }
+              break;
+            default:
+              throw runtime_error("Unsupported attribute type");
+              break;
             }
         }
 
@@ -772,7 +780,7 @@ namespace neuroh5
     
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
       throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                         recvcounts, rdispls, recvbuf) >= 0);
+                                                     recvcounts, rdispls, recvbuf) >= 0);
 
     
       sendbuf.clear();
@@ -856,58 +864,62 @@ namespace neuroh5
               switch (attr_kind.type)
                 {
                 case UIntVal:
-                  if (attr_size == 4)
-                    {
-                      vector<uint32_t> attr_map_uint32;
-                      status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                         index, ptr, attr_map_uint32);
-                      attr_map.insert(attr_name, index, ptr, attr_map_uint32);
-                    }
-                  else if (attr_size == 2)
-                    {
-                      vector<uint16_t> attr_map_uint16;
-                      status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                         index, ptr, attr_map_uint16);
-                      attr_map.insert(attr_name, index, ptr, attr_map_uint16);
-                    }
-                  else if (attr_size == 1)
-                    {
-                      vector<uint8_t> attr_map_uint8;
-                      status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                         index, ptr, attr_map_uint8);
-                      attr_map.insert(attr_name, index, ptr, attr_map_uint8);
-                    }
-                  else
-                    {
-                      throw runtime_error("Unsupported integer attribute size");
-                    };
+                  {
+                    if (attr_size == 4)
+                      {
+                        vector<uint32_t> attr_map_uint32;
+                        status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
+                                                           index, ptr, attr_map_uint32);
+                        attr_map.insert(attr_name, index, ptr, attr_map_uint32);
+                      }
+                    else if (attr_size == 2)
+                      {
+                        vector<uint16_t> attr_map_uint16;
+                        status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
+                                                           index, ptr, attr_map_uint16);
+                        attr_map.insert(attr_name, index, ptr, attr_map_uint16);
+                      }
+                    else if (attr_size == 1)
+                      {
+                        vector<uint8_t> attr_map_uint8;
+                        status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
+                                                           index, ptr, attr_map_uint8);
+                        attr_map.insert(attr_name, index, ptr, attr_map_uint8);
+                      }
+                    else
+                      {
+                        throw runtime_error("Unsupported integer attribute size");
+                      };
+                  }
                   break;
                 case SIntVal:
-                  if (attr_size == 4)
-                    {
-                      vector<int32_t> attr_map_int32;
-                      status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                         index, ptr, attr_map_int32);
-                      attr_map.insert(attr_name, index, ptr, attr_map_int32);
-                    }
-                  else if (attr_size == 2)
-                    {
-                      vector<uint16_t> attr_map_int16;
-                      status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                         index, ptr, attr_map_int16);
-                      attr_map.insert(attr_name, index, ptr, attr_map_int16);
-                    }
-                  else if (attr_size == 1)
-                    {
-                      vector<uint8_t> attr_map_int8;
-                      status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                         index, ptr, attr_map_int8);
-                      attr_map.insert(attr_name, index, ptr, attr_map_int8);
-                    }
-                  else
-                    {
-                      throw runtime_error("Unsupported integer attribute size");
-                    };
+                  {
+                    if (attr_size == 4)
+                      {
+                        vector<int32_t> attr_map_int32;
+                        status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
+                                                           index, ptr, attr_map_int32);
+                        attr_map.insert(attr_name, index, ptr, attr_map_int32);
+                      }
+                    else if (attr_size == 2)
+                      {
+                        vector<uint16_t> attr_map_int16;
+                        status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
+                                                           index, ptr, attr_map_int16);
+                        attr_map.insert(attr_name, index, ptr, attr_map_int16);
+                      }
+                    else if (attr_size == 1)
+                      {
+                        vector<uint8_t> attr_map_int8;
+                        status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
+                                                           index, ptr, attr_map_int8);
+                        attr_map.insert(attr_name, index, ptr, attr_map_int8);
+                      }
+                    else
+                      {
+                        throw runtime_error("Unsupported integer attribute size");
+                      };
+                  }
                   break;
                 case FloatVal:
                   {
@@ -918,17 +930,19 @@ namespace neuroh5
                   }
                   break;
                 case EnumVal:
-                  if (attr_size == 1)
-                    {
-                      vector<uint8_t> attr_map_uint8;
-                      status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                         index, ptr, attr_map_uint8);
-                      attr_map.insert(attr_name, index, ptr, attr_map_uint8);
-                    }
-                  else
-                    {
-                      throw runtime_error("Unsupported enumerated attribute size");
-                    };
+                  {
+                    if (attr_size == 1)
+                      {
+                        vector<uint8_t> attr_map_uint8;
+                        status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
+                                                           index, ptr, attr_map_uint8);
+                        attr_map.insert(attr_name, index, ptr, attr_map_uint8);
+                      }
+                    else
+                      {
+                        throw runtime_error("Unsupported enumerated attribute size");
+                      };
+                  }
                   break;
                 default:
                   throw runtime_error("Unsupported attribute type");
@@ -1069,60 +1083,63 @@ namespace neuroh5
           switch (attr_kind.type)
             {
             case UIntVal:
-              if (attr_size == 4)
-                {
-                  vector<uint32_t> attr_values_uint32;
-                  status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, index, ptr, attr_values_uint32);
-                  attr_values.insert(attr_name, index, ptr, attr_values_uint32);
-                }
-              else if (attr_size == 2)
-                {
-                  vector<uint16_t> attr_values_uint16;
-                  status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, index, ptr, attr_values_uint16);
-                  attr_values.insert(attr_name, index, ptr, attr_values_uint16);
-                }
-              else if (attr_size == 1)
-                {
-                  vector<uint8_t> attr_values_uint8;
-                  status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, index, ptr, attr_values_uint8);
-                  attr_values.insert(attr_name, index, ptr, attr_values_uint8);
-                }
-              else
-                {
-                  throw runtime_error("Unsupported integer attribute size");
-                };
+              {
+                if (attr_size == 4)
+                  {
+                    vector<uint32_t> attr_values_uint32;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, attr_values_uint32);
+                    attr_values.insert(attr_name, index, ptr, attr_values_uint32);
+                  }
+                else if (attr_size == 2)
+                  {
+                    vector<uint16_t> attr_values_uint16;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, attr_values_uint16);
+                    attr_values.insert(attr_name, index, ptr, attr_values_uint16);
+                  }
+                else if (attr_size == 1)
+                  {
+                    vector<uint8_t> attr_values_uint8;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, attr_values_uint8);
+                    attr_values.insert(attr_name, index, ptr, attr_values_uint8);
+                  }
+                else
+                  {
+                    throw runtime_error("Unsupported integer attribute size");
+                  };
+              }
               break;
             case SIntVal:
-              if (attr_size == 4)
-                {
-                  vector<int32_t> attr_values_int32;
-                  status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, index, ptr, attr_values_int32);
-                  attr_values.insert(attr_name, index, ptr, attr_values_int32);
-                }
-              else if (attr_size == 2)
-                {
-                  vector<int16_t> attr_values_int16;
-                  status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, index, ptr, attr_values_int16);
-                  attr_values.insert(attr_name, index, ptr, attr_values_int16);
-                }
-              else if (attr_size == 1)
-                {
-                  vector<int8_t> attr_values_int8;
-                  status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, index, ptr, attr_values_int8);
-                  attr_values.insert(attr_name, index, ptr, attr_values_int8);
-                }
-              else
-                {
-                  throw runtime_error("Unsupported integer attribute size");
-                };
+              {
+                if (attr_size == 4)
+                  {
+                    vector<int32_t> attr_values_int32;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, attr_values_int32);
+                    attr_values.insert(attr_name, index, ptr, attr_values_int32);
+                  }
+                else if (attr_size == 2)
+                  {
+                    vector<int16_t> attr_values_int16;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, attr_values_int16);
+                    attr_values.insert(attr_name, index, ptr, attr_values_int16);
+                  }
+                else if (attr_size == 1)
+                  {
+                    vector<int8_t> attr_values_int8;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, attr_values_int8);
+                    attr_values.insert(attr_name, index, ptr, attr_values_int8);
+                  }
+                else
+                  {
+                    throw runtime_error("Unsupported integer attribute size");
+                  };
+              }
               break;
-              
             case FloatVal:
               {
                 vector<float> attr_values_float;
@@ -1132,17 +1149,19 @@ namespace neuroh5
               }
               break;
             case EnumVal:
-              if (attr_size == 1)
-                {
-                  vector<uint8_t> attr_values_uint8;
-                  status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                               selection, index, ptr, attr_values_uint8);
-                  attr_values.insert(attr_name, index, ptr, attr_values_uint8);
-                }
-              else
-                {
-                  throw runtime_error("Unsupported enumerated attribute size");
-                };
+              {
+                if (attr_size == 1)
+                  {
+                    vector<uint8_t> attr_values_uint8;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, attr_values_uint8);
+                    attr_values.insert(attr_name, index, ptr, attr_values_uint8);
+                  }
+                else
+                  {
+                    throw runtime_error("Unsupported enumerated attribute size");
+                  };
+              }
               break;
             default:
               throw runtime_error("Unsupported attribute type");
