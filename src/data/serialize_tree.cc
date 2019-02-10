@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for serializing/deserializing tree structures.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -27,8 +27,7 @@
 #include "cereal/archives/portable_binary.hpp"
 #include "cereal/archives/xml.hpp"
 
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 using namespace std;
 using namespace neuroh5;
@@ -51,7 +50,7 @@ namespace neuroh5
       sendcounts.resize(num_ranks);
 
       int end_rank = num_ranks;
-      assert((int)start_rank < end_rank);
+      throw_assert(start_rank < end_rank, "serialize_rank_tree_map: invalid start rank");
       
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
       // (as opposed to starting at rank 0)
@@ -109,9 +108,11 @@ namespace neuroh5
               int recvsize  = recvcounts[ridx];
               int recvpos   = rdispls[ridx];
               int startpos  = recvpos;
-              assert(recvpos < recvbuf_size);
               map<CELL_IDX_T, neurotree_t> tree_map;
-              
+
+              throw_assert(recvpos < recvbuf_size,
+                           "deserialize_rank_tree_map: invalid buffer displacement");
+
               {
                 string s = string(recvbuf.begin()+startpos, recvbuf.begin()+startpos+recvsize);
                 stringstream ss(s, ios::in | ios::out | ios::binary);
@@ -143,8 +144,9 @@ namespace neuroh5
               int recvsize  = recvcounts[ridx];
               int recvpos   = rdispls[ridx];
               int startpos  = recvpos;
-              assert(recvpos < recvbuf_size);
               map<CELL_IDX_T, neurotree_t> tree_map;
+              throw_assert(recvpos < recvbuf_size,
+                           "deserialize_rank_tree_vector: invalid buffer displacement");
               
               {
                 string s = string(recvbuf.begin()+startpos, recvbuf.begin()+startpos+recvsize);

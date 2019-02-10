@@ -8,7 +8,6 @@
 ///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
-#include <cassert>
 #include <vector>
 #include <map>
 

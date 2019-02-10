@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for serializing/deserializing cell attribute data.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -27,8 +27,7 @@
 #include "cereal/archives/portable_binary.hpp"
 #include "cereal/archives/xml.hpp"
 
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 using namespace std;
 using namespace neuroh5;
@@ -51,8 +50,8 @@ namespace neuroh5
       sendcounts.resize(num_ranks);
 
       int end_rank = (int)num_ranks;
-      assert(end_rank > 0);
-      assert(start_rank < end_rank);
+      throw_assert(end_rank > 0, "serialize_rank_attr_map: zero end rank");
+      throw_assert(start_rank < end_rank, "serialize_rank_attr_map: invalid start rank");
       
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
       // (as opposed to starting at rank 0)
@@ -109,8 +108,11 @@ namespace neuroh5
               int recvsize  = recvcounts[ridx];
               int recvpos   = rdispls[ridx];
               int startpos  = recvpos;
-              assert(recvpos < recvbuf_size);
               AttrMap attr_map;
+
+              throw_assert(recvpos < recvbuf_size,
+                           "deserialize_rank_attr_map: invalid buffer displacement");
+
               
               {
                 string s = string(recvbuf.begin()+startpos,

@@ -8,7 +8,6 @@
 ///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
-#include <cassert>
 #include <vector>
 #include <map>
 
@@ -69,7 +68,6 @@ namespace neuroh5
                             case EdgeMapDst:
                               {
                                 auto it = node_rank_map.find(dst);
-                                //assert(it != node_rank_map.end());
                                 rank_t myrank=0;
                                 if (it == node_rank_map.end())
                                   { myrank = num_dst % num_ranks; }
@@ -103,7 +101,6 @@ namespace neuroh5
                                     NODE_IDX_T src = src_idx[j] + src_start;
                                     rank_t myrank = 0;
                                     auto it = node_rank_map.find(src);
-                                    //assert(it != node_rank_map.end());
                                     if (it == node_rank_map.end())
                                       { myrank = src % num_ranks; }
                                     else

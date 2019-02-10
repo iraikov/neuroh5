@@ -8,7 +8,6 @@
 ///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
-#include <cassert>
 #include <vector>
 #include <map>
 
@@ -16,6 +15,7 @@
 #include "attr_val.hh"
 #include "attr_map.hh"
 #include "rank_range.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -51,7 +51,8 @@ namespace neuroh5
                 {
                   printf("index %u not in node rank map\n", index);
                 }
-              assert(it != node_rank_map.end());
+              throw_assert(it != node_rank_map.end(),
+                           "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -66,7 +67,8 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const vector<uint8_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert(it != node_rank_map.end(),
+                           "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -81,7 +83,8 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const vector<int8_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert(it != node_rank_map.end(),
+                           "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -96,7 +99,8 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const vector<uint16_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert(it != node_rank_map.end(),
+                           "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -111,7 +115,8 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const vector<int16_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert(it != node_rank_map.end(),
+                           "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -126,7 +131,8 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const vector<uint32_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert(it != node_rank_map.end(),
+                           "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -141,7 +147,8 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const vector<int32_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert(it != node_rank_map.end(),
+                           "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);

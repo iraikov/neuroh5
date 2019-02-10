@@ -8,7 +8,6 @@
 ///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
-#include <cassert>
 #include <vector>
 #include <map>
 
@@ -16,6 +15,7 @@
 #include "attr_map.hh"
 #include "cell_attributes.hh"
 #include "rank_range.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -51,7 +51,9 @@ namespace neuroh5
             {
               printf("gid %d not found in node rank map\n", gid);
             }
-          assert(it != node_rank_map.end());
+          throw_assert(it != node_rank_map.end(),
+                       "append_rank_tree_map: index not found in node rank map");
+
           dst_rank = it->second;
           
           neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sections,
