@@ -103,6 +103,16 @@ void build_node_rank_map (PyObject *py_node_rank_map,
     }
 }
 
+PyObject* PyStr_FromCString(const char *string)
+{
+#if PY_MAJOR_VERSION >= 3
+  return PyUnicode_FromString(string);
+#else
+  return PyBytes_FromString(string);
+#endif
+  
+}
+
 template<class T>
 void py_array_to_vector (PyObject *pyval,
                          vector<T>& value_vector)
@@ -2246,8 +2256,8 @@ extern "C"
 
           }
         PyObject *py_prj_key = PyTuple_New(2);
-        PyTuple_SetItem(py_prj_key, 0, PyBytes_FromString(prj_names[p].first.c_str()));
-        PyTuple_SetItem(py_prj_key, 1, PyBytes_FromString(prj_names[p].second.c_str()));
+        PyTuple_SetItem(py_prj_key, 0, PyStr_FromCString(prj_names[p].first.c_str()));
+        PyTuple_SetItem(py_prj_key, 1, PyStr_FromCString(prj_names[p].second.c_str()));
         PyDict_SetItem(py_attribute_info, py_prj_key, py_prj_attr_info);
         Py_DECREF(py_prj_key);
         Py_DECREF(py_prj_attr_info);
@@ -2690,7 +2700,7 @@ extern "C"
     PyObject *py_population_names = PyList_New(0);
     for (size_t i=0; i<pop_names.size(); i++)
       {
-        PyObject *name = PyBytes_FromString(pop_names[i].c_str());
+        PyObject *name = PyStr_FromCString(pop_names[i].c_str());
         PyList_Append(py_population_names, name);
         Py_DECREF(name);
       }
@@ -2939,7 +2949,7 @@ extern "C"
               {
                 for (const string& name : it_ns.second)
                   {
-                    PyObject *py_name = PyBytes_FromString(name.c_str());
+                    PyObject *py_name = PyStr_FromCString(name.c_str());
                     PyObject *py_cell_index = PyList_New(0);
                     PyObject *py_info_tuple = PyTuple_New(2);
 
@@ -2964,7 +2974,7 @@ extern "C"
               {
                 for (const string& name : it_ns.second)
                   {
-                    PyObject *py_name = PyBytes_FromString(name.c_str());
+                    PyObject *py_name = PyStr_FromCString(name.c_str());
                     status = PyList_Append(py_attribute_infos, py_name);
                     throw_assert(status == 0,
                                  "py_read_cell_attribute_info: list append error");
@@ -3171,8 +3181,8 @@ extern "C"
         for (auto name_pair: prj_names)
           {
             PyObject *py_pairval = PyTuple_New(2);
-            PyTuple_SetItem(py_pairval, 0, PyBytes_FromString(name_pair.first.c_str()));
-            PyTuple_SetItem(py_pairval, 1, PyBytes_FromString(name_pair.second.c_str()));
+            PyTuple_SetItem(py_pairval, 0, PyStr_FromCString(name_pair.first.c_str()));
+            PyTuple_SetItem(py_pairval, 1, PyStr_FromCString(name_pair.second.c_str()));
             status = PyList_Append(py_result, py_pairval);
             throw_assert(status == 0,
                          "py_read_projection_names: unable to append to list");
