@@ -113,6 +113,16 @@ PyObject* PyStr_FromCString(const char *string)
   
 }
 
+const char* PyStr_ToCString(PyObject *string)
+{
+#if PY_MAJOR_VERSION >= 3
+  return PyUnicode_AsUTF8AndSize(string, NULL);
+#else
+  return PyBytes_AsString(string);
+#endif
+  
+}
+
 template<class T>
 void py_array_to_vector (PyObject *pyval,
                          vector<T>& value_vector)
@@ -196,7 +206,7 @@ void build_cell_attr_value_maps (PyObject *idx_values,
 
           npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
 
-          string attr_name = string(PyBytes_AsString(attr_key));
+          string attr_name = string(PyStr_ToCString(attr_key));
           if (attr_names.size() < (size_t)attr_idx+1)
             {
               attr_names.push_back(attr_name);
@@ -403,7 +413,7 @@ void build_edge_map (PyObject *py_edge_values,
           throw_assert(PyBytes_Check(py_attr_namespace),
                        "build_edge_map: namespace is not a string");
 
-          char *str = PyBytes_AsString (py_attr_namespace);
+          const char *str = PyStr_ToCString (py_attr_namespace);
           string attr_namespace = string(str);
                                    
           attr_names[attr_namespace].resize(AttrMap::num_attr_types);
@@ -415,7 +425,7 @@ void build_edge_map (PyObject *py_edge_values,
               throw_assert((py_attr_key != Py_None) && (py_attr_values != Py_None),
                            "build_edge_map: invalid attribute dictionary");
 
-              string attr_name = string(PyBytes_AsString(py_attr_key));
+              string attr_name = string(PyStr_ToCString(py_attr_key));
 
               npy_type = PyArray_TYPE((PyArrayObject *)py_attr_values);
 
@@ -438,7 +448,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint32];
-                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint32][idx].compare(string(PyStr_ToCString(py_attr_key))) == 0,
                                      "build_edge_map: uint32 attribute name mismatch");
 
                       }
@@ -459,7 +469,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint16];
-                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint16][idx].compare(string(PyStr_ToCString(py_attr_key))) == 0,
                                      "build_edge_map: uint16 attribute name mismatch");
                       }
                                              
@@ -479,7 +489,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_uint8];
-                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_uint8][idx].compare(string(PyStr_ToCString(py_attr_key))) == 0,
                                      "build_edge_map: uint8 attribute name mismatch");
                       }
                                              
@@ -499,7 +509,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int32];
-                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int32][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int32][idx].compare(string(PyStr_ToCString(py_attr_key))) == 0,
                                      "build_edge_map: int32 attribute name mismatch");
                       }
                                              
@@ -519,7 +529,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int16];
-                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int16][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int16][idx].compare(string(PyStr_ToCString(py_attr_key))) == 0,
                                      "build_edge_map: attribute name mismatch");
 
                       }
@@ -540,7 +550,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_int8];
-                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int8][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_int8][idx].compare(string(PyStr_ToCString(py_attr_key))) == 0,
                                      "build_edge_map: int8 attribute name mismatch");
                       }
                                              
@@ -560,7 +570,7 @@ void build_edge_map (PyObject *py_edge_values,
                     else
                       {
                         size_t idx = attr_type_idx[AttrMap::attr_index_float];
-                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_float][idx].compare(string(PyBytes_AsString(py_attr_key))) == 0,
+                        throw_assert(attr_names[attr_namespace][AttrMap::attr_index_float][idx].compare(string(PyStr_ToCString(py_attr_key))) == 0,
                                      "build_edge_map: float attribute name mismatch");
 
                       }
@@ -601,7 +611,7 @@ void build_edge_maps (PyObject *py_edge_dict,
       throw_assert(PyBytes_Check(py_dst_dict_key),
                    "build_edge_maps: non-string key in edge dictionary");
 
-      string dst_pop_name = string(PyBytes_AsString (py_dst_dict_key));
+      string dst_pop_name = string(PyStr_ToCString (py_dst_dict_key));
       PyObject *py_src_dict_key, *py_src_dict_value;
       Py_ssize_t src_dict_pos = 0;
 
@@ -612,7 +622,7 @@ void build_edge_maps (PyObject *py_edge_dict,
           throw_assert(PyBytes_Check(py_src_dict_key),
                        "build_edge_maps: non-string key in edge dictionary");
           
-          string src_pop_name = string(PyBytes_AsString (py_src_dict_key));
+          string src_pop_name = string(PyStr_ToCString (py_src_dict_key));
 
           edge_map_t edge_map;
           map <string, vector< vector <string> > > attr_names;
@@ -1916,7 +1926,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             edge_attr_name_spaces.push_back(string(str));
           }
       }
@@ -2051,8 +2061,8 @@ extern "C"
             PyObject *pyval = PyList_GetItem(py_prj_names, (Py_ssize_t)i);
             PyObject *p1    = PyTuple_GetItem(pyval, 0);
             PyObject *p2    = PyTuple_GetItem(pyval, 1);
-            char *s1        = PyBytes_AsString (p1);
-            char *s2        = PyBytes_AsString (p2);
+            const char *s1        = PyStr_ToCString (p1);
+            const char *s2        = PyStr_ToCString (p2);
             prj_names.push_back(make_pair(string(s1), string(s2)));
           }
       }
@@ -2070,7 +2080,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             edge_attr_name_spaces.push_back(string(str));
           }
         sort(edge_attr_name_spaces.begin(), edge_attr_name_spaces.end());
@@ -2208,7 +2218,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             edge_attr_name_spaces.push_back(string(str));
           }
       }
@@ -2365,7 +2375,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             edge_attr_name_spaces.push_back(string(str));
           }
       }
@@ -2800,7 +2810,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_pop_names); i++)
           {
             PyObject *pyval = PyList_GetItem(py_pop_names, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             pop_names.push_back(string(str));
           }
       }
@@ -3304,7 +3314,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -3520,7 +3530,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -3708,7 +3718,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -3895,7 +3905,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             if (str != NULL)
               {
                 attr_name_spaces.push_back(string(str));
@@ -5272,7 +5282,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }
@@ -5417,7 +5427,7 @@ extern "C"
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
-            char *str = PyBytes_AsString (pyval);
+            const char *str = PyStr_ToCString (pyval);
             attr_name_spaces.push_back(string(str));
           }
       }

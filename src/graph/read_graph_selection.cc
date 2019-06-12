@@ -5,7 +5,7 @@
 ///  Top-level functions for reading specified subsets of graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -14,9 +14,7 @@
 #include "cell_populations.hh"
 #include "read_projection_selection.hh"
 #include "read_graph_selection.hh"
-
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 using namespace neuroh5::data;
 using namespace std;
@@ -41,18 +39,21 @@ namespace neuroh5
     {
       int status = 0;
       int rank, size;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS, "unable to obtain MPI communicator size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "unable to obtain MPI communicator rank");
       
       // read the population info
       vector<pop_range_t> pop_vector;
       vector< pair<pop_t, string> > pop_labels;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
       set< pair<pop_t, pop_t> > pop_pairs;
-      assert(cell::read_population_combos(comm, file_name, pop_pairs) >= 0);
-      assert(cell::read_population_ranges
-             (comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
-      assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0);
+      throw_assert(cell::read_population_combos(comm, file_name, pop_pairs) >= 0,
+                   "unable to read valid projection combination");
+      throw_assert(cell::read_population_ranges
+                   (comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0,
+                   "unable to read population ranges");
+      throw_assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0,
+                   "unable to read population labels");
 
       // read the edges
       for (size_t i = 0; i < prj_names.size(); i++)
@@ -80,7 +81,8 @@ namespace neuroh5
                   dst_pop_set = true;
                 }
             }
-          assert(dst_pop_set && src_pop_set);
+          throw_assert(dst_pop_set && src_pop_set,
+                       "unable to determine destination or source population");
       
           NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
           NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
@@ -90,13 +92,14 @@ namespace neuroh5
                          " dst_start = ", dst_start,
                          " src_start = ", src_start);
 
-          assert(graph::read_projection_selection
-                 (comm, file_name, pop_ranges, pop_pairs,
-                  src_pop_name, dst_pop_name, 
-                  src_start, dst_start, edge_attr_name_spaces, 
-                  selection, prj_vector, edge_attr_names_vector,
-                  local_prj_num_nodes,
-                  local_prj_num_edges, total_prj_num_edges) >= 0);
+          throw_assert(graph::read_projection_selection
+                       (comm, file_name, pop_ranges, pop_pairs,
+                        src_pop_name, dst_pop_name, 
+                        src_start, dst_start, edge_attr_name_spaces, 
+                        selection, prj_vector, edge_attr_names_vector,
+                        local_prj_num_nodes,
+                        local_prj_num_edges, total_prj_num_edges) >= 0,
+                       "error in read_projection_selection");
 
           mpi::MPI_DEBUG(comm, "read_graph: projection ", i, " has a total of ", total_prj_num_edges, " edges");
           
@@ -107,7 +110,8 @@ namespace neuroh5
       size_t sum_local_num_edges = 0;
       status = MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
                           MPI_SIZE_T, MPI_SUM, 0, MPI_COMM_WORLD);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS,
+                   "error in MPI_Reduce");
 
       return 0;
     }

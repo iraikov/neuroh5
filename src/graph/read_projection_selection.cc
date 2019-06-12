@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file read_projection.cc
+///  @file read_projection_selection.cc
 ///
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
@@ -17,13 +17,11 @@
 #include "validate_selection_edge_list.hh"
 #include "append_edge_map_selection.hh"
 #include "mpi_debug.hh"
+#include "throw_assert.hh"
 
 #include <iostream>
 #include <sstream>
 #include <string>
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace std;
 
@@ -57,9 +55,10 @@ namespace neuroh5
      )
     {
       herr_t ierr = 0;
-      unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      int rank, size;
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS, "unable to obtain MPI communicator size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "unable to obtain MPI communicator rank");
+
       
       DST_PTR_T edge_base, edge_count;
       vector<NODE_IDX_T> selection_dst_idx;
@@ -69,17 +68,19 @@ namespace neuroh5
       vector< pair<hsize_t,hsize_t> > src_idx_ranges;
         
       mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name);
-      assert(hdf5::read_projection_dataset_selection(comm, file_name, src_pop_name, dst_pop_name,
-                                                     src_start, dst_start, selection, edge_base,
-                                                     selection_dst_idx, selection_dst_ptr, src_idx_ranges,
-                                                     src_idx, total_num_edges) >= 0);
+      throw_assert(hdf5::read_projection_dataset_selection(comm, file_name, src_pop_name, dst_pop_name,
+                                                           src_start, dst_start, selection, edge_base,
+                                                           selection_dst_idx, selection_dst_ptr, src_idx_ranges,
+                                                           src_idx, total_num_edges) >= 0,
+                   "error in read_projection_dataset_selection");
       
       mpi::MPI_DEBUG(comm, "read_projection_selection: validating projection ", src_pop_name, " -> ", dst_pop_name);
       
       // validate the edges
-      assert(validate_selection_edge_list(src_start, dst_start, selection_dst_idx,
-                                          selection_dst_ptr, src_idx, pop_ranges, pop_pairs) ==
-             true);
+      throw_assert(validate_selection_edge_list(src_start, dst_start, selection_dst_idx,
+                                                selection_dst_ptr, src_idx, pop_ranges, pop_pairs) ==
+                   true,
+                   "error in validating edge list"); 
       
       edge_count = src_idx.size();
       local_num_edges = edge_count;
@@ -89,13 +90,15 @@ namespace neuroh5
         {
           vector< pair<string,AttrKind> > edge_attr_info;
           
-          assert(graph::get_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
-                                            attr_namespace, edge_attr_info) >= 0);
+          throw_assert(graph::get_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
+                                                  attr_namespace, edge_attr_info) >= 0,
+                       "unable to obtain edge attributes");
           
-          assert(graph::read_all_edge_attribute_selection
-                 (comm, file_name, src_pop_name, dst_pop_name, attr_namespace,
-                  edge_base, edge_count, selection_dst_idx, selection_dst_ptr, src_idx_ranges,
-                  edge_attr_info, edge_attr_map[attr_namespace]) >= 0);
+          throw_assert(graph::read_all_edge_attribute_selection
+                       (comm, file_name, src_pop_name, dst_pop_name, attr_namespace,
+                        edge_base, edge_count, selection_dst_idx, selection_dst_ptr, src_idx_ranges,
+                        edge_attr_info, edge_attr_map[attr_namespace]) >= 0,
+                       "error in read_all_edge_attribute_selection");
 
           edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
         }
@@ -105,15 +108,17 @@ namespace neuroh5
       edge_map_t prj_edge_map;
       // append to the vectors representing a projection (sources,
       // destinations, edge attributes)
-      assert(data::append_edge_map_selection(dst_start, src_start, selection_dst_idx, selection_dst_ptr,
-                                             src_idx, attr_namespaces, edge_attr_map,
-                                             local_prj_num_edges, prj_edge_map,
-                                             EdgeMapDst) >= 0);
+      throw_assert(data::append_edge_map_selection(dst_start, src_start, selection_dst_idx, selection_dst_ptr,
+                                                   src_idx, attr_namespaces, edge_attr_map,
+                                                   local_prj_num_edges, prj_edge_map,
+                                                   EdgeMapDst) >= 0,
+                   "error in append_edge_map_selection");
       local_num_nodes = prj_edge_map.size();
       
       // ensure that all edges in the projection have been read and
       // appended to edge_list
-      assert(local_prj_num_edges == edge_count);
+      throw_assert(local_prj_num_edges == edge_count,
+                   "mismatch in projection edge count");
 
       prj_vector.push_back(prj_edge_map);
       edge_attr_names_vector.push_back (edge_attr_names);
