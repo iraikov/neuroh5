@@ -123,6 +123,16 @@ const char* PyStr_ToCString(PyObject *string)
   
 }
 
+bool PyStr_Check(PyObject *string)
+{
+#if PY_MAJOR_VERSION >= 3
+  return PyUnicode_Check(string);
+#else
+  return PyBytes_Check(string);
+#endif
+  
+}
+
 template<class T>
 void py_array_to_vector (PyObject *pyval,
                          vector<T>& value_vector)
@@ -410,7 +420,7 @@ void build_edge_map (PyObject *py_edge_values,
           Py_ssize_t attr_pos = 0;
           size_t attr_idx = 0;
 
-          throw_assert(PyBytes_Check(py_attr_namespace),
+          throw_assert(PyStr_Check(py_attr_namespace),
                        "build_edge_map: namespace is not a string");
 
           const char *str = PyStr_ToCString (py_attr_namespace);
@@ -608,7 +618,7 @@ void build_edge_maps (PyObject *py_edge_dict,
                    "build_edge_maps: invalid key in edge dictionary");
       throw_assert(py_dst_dict_value != Py_None,
                    "build_edge_maps: invalid value in edge dictionary");
-      throw_assert(PyBytes_Check(py_dst_dict_key),
+      throw_assert(PyStr_Check(py_dst_dict_key),
                    "build_edge_maps: non-string key in edge dictionary");
 
       string dst_pop_name = string(PyStr_ToCString (py_dst_dict_key));
@@ -619,7 +629,7 @@ void build_edge_maps (PyObject *py_edge_dict,
         {
           throw_assert(py_src_dict_key != Py_None,
                        "build_edge_maps: invalid key in edge dictionary");
-          throw_assert(PyBytes_Check(py_src_dict_key),
+          throw_assert(PyStr_Check(py_src_dict_key),
                        "build_edge_maps: non-string key in edge dictionary");
           
           string src_pop_name = string(PyStr_ToCString (py_src_dict_key));
@@ -4272,11 +4282,13 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     const string default_namespace = "Attributes";
-    char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
+    char *file_name_arg, *pop_name_arg, *attr_namespace_arg = (char *)default_namespace.c_str();
     NamedAttrMap attr_values;
+
+
     
     static const char *kwlist[] = {
-                                   "file_name",
+      "file_name",
                                    "pop_name",
                                    "root",
                                    "namespace",
@@ -4284,8 +4296,13 @@ extern "C"
                                    NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssk|sO", (char **)kwlist,
-                                     &file_name, &pop_name, &root, &attr_namespace, &py_comm))
+                                     &file_name_arg, &pop_name_arg, &root, &attr_namespace_arg, 
+                                     &py_comm))
       return NULL;
+
+    string file_name = string(file_name_arg);
+    string pop_name = string(pop_name_arg);
+    string attr_namespace = string(attr_namespace_arg);
 
     MPI_Comm comm;
 
