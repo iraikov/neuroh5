@@ -47,7 +47,7 @@ namespace neuroh5
      const string&    file_name,
      const string&    src_pop_name,
      const string&    dst_pop_name,
-     const map <string, vector <vector <string> > >& edge_attr_names,
+     const edge_attr_index_t& edge_attr_index,
      const edge_map_t&  input_edge_map
      )
     {
@@ -87,12 +87,14 @@ namespace neuroh5
                                           pop_ranges, pop_vector, pop_num_nodes) >= 0);
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
 
-      if(getenv("NEUROH5_MPI_DEBUG") != NULL &&  (rank == 0))
-        {
-          volatile  int i=0;
-          while(i==0) { /*  change  ’i’ in the  debugger  */ };
-        };
-      MPI_Barrier(MPI_COMM_WORLD);
+      { // FIXME: only for debugging
+        if(getenv("NEUROH5_MPI_DEBUG") != NULL &&  (rank == 0))
+          {
+            volatile  int i=0;
+            while(i==0) { /*  change  ’i’ in the  debugger  */ };
+          };
+        MPI_Barrier(MPI_COMM_WORLD);
+      }
       
       for (size_t i=0; i< pop_labels.size(); i++)
         {
@@ -332,7 +334,7 @@ namespace neuroh5
           append_projection (file, src_pop_name, dst_pop_name,
                              src_start, src_end, dst_start, dst_end,
                              num_unpacked_edges, prj_edge_map,
-                             edge_attr_names);
+                             edge_attr_index);
 
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);

@@ -4,7 +4,7 @@
 ///
 ///  Functions for storing attributes in vectors of different types.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #ifndef ATTR_VAL_HH
@@ -130,6 +130,69 @@ namespace neuroh5
         size_t index;
         index = int32_values.size();
         int32_values.push_back(value);
+        return index;
+      }
+
+      size_t insert (const std::vector<float> &value, size_t index)
+      {
+        throw_assert(index < float_values.size().
+                     "AttrVal::insert: invalid index for insertion in float value vector");
+
+        float_values[index] = value;
+        return index;
+      }
+
+      size_t insert (const std::vector<uint8_t> &value, size_t index)
+      {
+        throw_assert(index < uint8_values.size().
+                     "AttrVal::insert: invalid index for insertion in uint8 value vector");
+
+        uint8_values[index] = value;
+        return index;
+      }
+
+      size_t insert (const std::vector<int8_t> &value, size_t index)
+      {
+        throw_assert(index < int8_values.size().
+                     "AttrVal::insert: invalid index for insertion in int8 value vector");
+
+        int8_values[index] = value;
+        return index;
+      }
+
+      size_t insert (const std::vector<uint16_t> &value, size_t index)
+      {
+        throw_assert(index < uint16_values.size().
+                     "AttrVal::insert: invalid index for insertion in uint16 value vector");
+
+        uint16_values[index] = value;
+        return index;
+      }
+
+      size_t insert (const std::vector<int16_t> &value, size_t index)
+      {
+        throw_assert(index < int16_values.size().
+                     "AttrVal::insert: invalid index for insertion in int16 value vector");
+
+        int16_values[index] = value;
+        return index;
+      }
+
+      size_t insert (const std::vector<uint32_t> &value, size_t index)
+      {
+        throw_assert(index < uint32_values.size().
+                     "AttrVal::insert: invalid index for insertion in uint32 value vector");
+
+        uint32_values[index] = value;
+        return index;
+      }
+
+      size_t insert (const std::vector<int32_t> &value, size_t index)
+      {
+        throw_assert(index < int32_values.size().
+                     "AttrVal::insert: invalid index for insertion in int32 value vector");
+
+        int32_values[index] = value;
         return index;
       }
 

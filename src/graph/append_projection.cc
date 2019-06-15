@@ -488,7 +488,7 @@ namespace neuroh5
      const NODE_IDX_T&         dst_end,
      const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
-     const map<string, vector < vector<string> > >& edge_attr_names,
+     const edge_ns_attr_index_t& edge_attr_index,
      const hsize_t             chunk_size,
      const hsize_t             block_size,
      const bool collective
@@ -752,10 +752,10 @@ namespace neuroh5
       vector <string> edge_attr_name_spaces;
       map <string, data::NamedAttrVal> edge_attr_map;
 
-      for (auto const& iter : edge_attr_names)
+      for (auto const& iter : edge_attr_index)
         {
           const string & attr_namespace = iter.first;
-          const vector <vector <string> >& attr_names = iter.second;
+          const vector <map <string, size_t> >& attr_index = iter.second.second;
 
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           

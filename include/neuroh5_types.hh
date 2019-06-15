@@ -201,6 +201,8 @@ namespace neuroh5
   typedef std::map<rank_t, edge_map_t> rank_edge_map_t;
   
   typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
+
+  typedef map <string, pair <size_t, vector < map < string, size_t > > > > edge_ns_attr_index_t;
   
 // In-memory HDF5 datatype of attribute pointers
 #define ATTR_PTR_H5_NATIVE_T H5T_NATIVE_UINT64
