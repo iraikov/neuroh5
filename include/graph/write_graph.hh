@@ -29,7 +29,7 @@ namespace neuroh5
      const std::string&    file_name,
      const std::string&    src_pop_name,
      const std::string&    dst_pop_name,
-     const std::map <std::string, std::vector<std::vector<std::string> > >& edge_attr_names,
+     const edge_ns_attr_index_t& edge_attr_index,
      const edge_map_t&  input_edge_map
      );
 

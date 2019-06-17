@@ -24,7 +24,8 @@ namespace neuroh5
                                    const string &src_pop_name,
                                    const string &dst_pop_name,
                                    const map <string, data::NamedAttrVal>& edge_attr_map,
-                                   const map <string, vector < vector <string> > >& edge_attr_names)
+                                   const edge_attr_index_t& edge_attr_index)
+
     {
       for (auto const& iter : edge_attr_map)
         {
@@ -52,7 +53,7 @@ namespace neuroh5
      const NODE_IDX_T&         dst_end,
      const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
-     const map<string, vector < vector <string> > >& edge_attr_names,
+     const edge_attr_index_t& edge_attr_index,
      hsize_t                   cdim,
      hsize_t                   block_size,
      const bool collective

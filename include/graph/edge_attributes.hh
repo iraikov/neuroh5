@@ -312,16 +312,22 @@ namespace neuroh5
                                     const string &src_pop_name,
                                     const string &dst_pop_name,
                                     const map <string, data::NamedAttrVal>& edge_attr_map,
-                                    const map <string, vector < vector <string> > >& edge_attr_names)
+                                    const edge_ns_attr_index_t& edge_attr_index)
+
     {
       for (auto const& iter : edge_attr_map)
         {
           const string& attr_namespace = iter.first;
           const data::NamedAttrVal& edge_attr_values = iter.second;
           
-          for (size_t i=0; i<edge_attr_values.size_attr_vec<T>(); i++)
+          auto ns_it = edge_attr_index.find(attr_namespace);
+          assert(ns_it != edge_attr_index.end());
+          
+          const vector <map <string, size_t> >& attr_index = ns_it->second;
+
+          for (size_t i=0; i<edge_attr_index.size_attr_vec<T>(); i++)
             {
-              const string& attr_name = edge_attr_names.at(attr_namespace)[data::AttrVal::attr_type_index<T>()][i];
+              const string& attr_name = attr_index[data::AttrVal::attr_type_index<T>()][i];
               graph::append_edge_attribute<T>(file, src_pop_name, dst_pop_name, attr_namespace, attr_name, edge_attr_values.attr_vec<T>(i));
             }
         }

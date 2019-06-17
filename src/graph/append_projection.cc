@@ -759,13 +759,13 @@ namespace neuroh5
 
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           
-          edge_attr_values.float_values.resize(attr_names[data::AttrVal::attr_index_float].size());
-          edge_attr_values.uint8_values.resize(attr_names[data::AttrVal::attr_index_uint8].size());
-          edge_attr_values.uint16_values.resize(attr_names[data::AttrVal::attr_index_uint16].size());
-          edge_attr_values.uint32_values.resize(attr_names[data::AttrVal::attr_index_uint32].size());
-          edge_attr_values.int8_values.resize(attr_names[data::AttrVal::attr_index_int8].size());
-          edge_attr_values.int16_values.resize(attr_names[data::AttrVal::attr_index_int16].size());
-          edge_attr_values.int32_values.resize(attr_names[data::AttrVal::attr_index_int32].size());
+          edge_attr_values.float_values.resize(attr_index[data::AttrVal::attr_index_float].size());
+          edge_attr_values.uint8_values.resize(attr_index[data::AttrVal::attr_index_uint8].size());
+          edge_attr_values.uint16_values.resize(attr_index[data::AttrVal::attr_index_uint16].size());
+          edge_attr_values.uint32_values.resize(attr_index[data::AttrVal::attr_index_uint32].size());
+          edge_attr_values.int8_values.resize(attr_index[data::AttrVal::attr_index_int8].size());
+          edge_attr_values.int16_values.resize(attr_index[data::AttrVal::attr_index_int16].size());
+          edge_attr_values.int32_values.resize(attr_index[data::AttrVal::attr_index_int32].size());
 
           edge_attr_name_spaces.push_back(attr_namespace);
         }
@@ -785,19 +785,19 @@ namespace neuroh5
             }
 	}
       append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
-                                       edge_attr_map, edge_attr_names);
+                                       edge_attr_map, edge_attr_index);
       append_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_names);
+                                         edge_attr_map, edge_attr_index);
       append_edge_attribute_map<uint16_t>(file, src_pop_name, dst_pop_name,
-                                          edge_attr_map, edge_attr_names);
+                                          edge_attr_map, edge_attr_index);
       append_edge_attribute_map<uint32_t>(file, src_pop_name, dst_pop_name,
-                                          edge_attr_map, edge_attr_names);
+                                          edge_attr_map, edge_attr_index);
       append_edge_attribute_map<int8_t>(file, src_pop_name, dst_pop_name,
-                                        edge_attr_map, edge_attr_names);
+                                        edge_attr_map, edge_attr_index);
       append_edge_attribute_map<int16_t>(file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_names);
+                                         edge_attr_map, edge_attr_index);
       append_edge_attribute_map<int32_t>(file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_names);
+                                         edge_attr_map, edge_attr_index);
         
       // clean-up
 

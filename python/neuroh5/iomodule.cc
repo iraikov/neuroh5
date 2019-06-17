@@ -396,7 +396,6 @@ void get_edge_ns_attr_index (PyObject *py_edge_values,
         {
           PyObject *py_attr_key, *py_attr_values;
           Py_ssize_t attr_pos = 0;
-          size_t attr_idx = 0;
 
           throw_assert(PyStr_Check(py_attr_namespace),
                        "build_edge_map: namespace is not a string");
@@ -467,7 +466,7 @@ void get_edge_ns_attr_index (PyObject *py_edge_values,
       
       size_t attr_ns_index = distance(ns_first, ns_it);
       vector < map < string, size_t > > attr_indexes(AttrMap::num_attr_types);
-      attr_index[attr_namespace] = make_pair(attr_ns_index, attr_indexes);
+      ns_attr_index[attr_namespace] = make_pair(attr_ns_index, attr_indexes);
       
       for (auto attr_vector_it = attr_vector.cbegin();
            attr_vector_it != attr_vector.cend();
@@ -490,7 +489,7 @@ void get_edge_ns_attr_index (PyObject *py_edge_values,
 
 
 void build_edge_map (PyObject *py_edge_values,
-                     const ns_attr_index_t& ns_attr_index,
+                     const edge_ns_attr_index_t& ns_attr_index,
                      edge_map_t& edge_map)
 {
   PyObject *py_edge_key, *py_edge_value;
@@ -545,6 +544,12 @@ void build_edge_map (PyObject *py_edge_values,
                                    
           data::AttrVal edge_attr_values;
 
+          auto ns_it = ns_attr_index.find(attr_namespace);
+          throw_assert(ns_it != ns_attr_index.end(),
+                       "build_edge_map: namespace mismatch");
+
+          const vector < map < string, size_t > >& attr_index = ns_it->second.second;
+
           while (PyDict_Next(py_attr_namespace_value, &attr_pos, &py_attr_key, &py_attr_values))
             {
               throw_assert((py_attr_key != Py_None) && (py_attr_values != Py_None),
@@ -566,11 +571,13 @@ void build_edge_map (PyObject *py_edge_values,
                 {
                 case NPY_UINT32:
                   {
-                    auto it = ns_attr_index[attr_namespace][AttrMap::attr_index_uint32][attr_name];
-                    throw_assert(it != ns_attr_index[attr_namespace][AttrMap::attr_index_uint32].end(),
+
+                    auto it = attr_index[AttrMap::attr_index_uint32].find(attr_name);
+
+                    throw_assert(it != attr_index[AttrMap::attr_index_uint32].end(),
                                  "build_edge_map: uint32 attribute name mismatch");
                     
-                    size_t idx = *it;
+                    size_t idx = it->second;
                     py_array_to_vector<uint32_t>(py_attr_values, attr_values_uint32);
                     throw_assert(attr_values_uint32.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of uint32 attributes");
@@ -579,11 +586,11 @@ void build_edge_map (PyObject *py_edge_values,
                   }
                 case NPY_UINT16:
                   {
-                    auto it = ns_attr_index[attr_namespace][AttrMap::attr_index_uint16][attr_name];
-                    throw_assert(it != ns_attr_index[attr_namespace][AttrMap::attr_index_uint16].end(),
+                    auto it = attr_index[AttrMap::attr_index_uint16].find(attr_name);
+                    throw_assert(it != attr_index[AttrMap::attr_index_uint16].end(),
                                  "build_edge_map: uint16 attribute name mismatch");
                     
-                    size_t idx = *it;
+                    size_t idx = it->second;
                     py_array_to_vector<uint16_t>(py_attr_values, attr_values_uint16);
                     throw_assert(attr_values_uint16.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of uint16 attributes");
@@ -592,11 +599,11 @@ void build_edge_map (PyObject *py_edge_values,
                   }
                 case NPY_UINT8:
                   {
-                    auto it = ns_attr_index[attr_namespace][AttrMap::attr_index_uint8][attr_name];
-                    throw_assert(it != ns_attr_index[attr_namespace][AttrMap::attr_index_uint8].end(),
+                    auto it = attr_index[AttrMap::attr_index_uint8].find(attr_name);
+                    throw_assert(it != attr_index[AttrMap::attr_index_uint8].end(),
                                  "build_edge_map: uint8 attribute name mismatch");
                     
-                    size_t idx = *it;
+                    size_t idx = it->second;
                     py_array_to_vector<uint8_t>(py_attr_values, attr_values_uint8);
                     throw_assert(attr_values_uint8.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of uint8 attributes");
@@ -605,11 +612,11 @@ void build_edge_map (PyObject *py_edge_values,
                   }
                 case NPY_INT32:
                   {
-                    auto it = ns_attr_index[attr_namespace][AttrMap::attr_index_int32][attr_name];
-                    throw_assert(it != ns_attr_index[attr_namespace][AttrMap::attr_index_int32].end(),
+                    auto it = attr_index[AttrMap::attr_index_int32].find(attr_name);
+                    throw_assert(it != attr_index[AttrMap::attr_index_int32].end(),
                                  "build_edge_map: int32 attribute name mismatch");
                     
-                    size_t idx = *it;
+                    size_t idx = it->second;
                     py_array_to_vector<int32_t>(py_attr_values, attr_values_int32);
                     throw_assert(attr_values_int32.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of int32 attributes");
@@ -618,11 +625,11 @@ void build_edge_map (PyObject *py_edge_values,
                   }
                 case NPY_INT16:
                   {
-                    auto it = ns_attr_index[attr_namespace][AttrMap::attr_index_int16][attr_name];
-                    throw_assert(it != ns_attr_index[attr_namespace][AttrMap::attr_index_int16].end(),
+                    auto it = attr_index[AttrMap::attr_index_int16].find(attr_name);
+                    throw_assert(it != attr_index[AttrMap::attr_index_int16].end(),
                                  "build_edge_map: int16 attribute name mismatch");
                     
-                    size_t idx = *it;
+                    size_t idx = it->second;
                     py_array_to_vector<int16_t>(py_attr_values, attr_values_int16);
                     throw_assert(attr_values_int16.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of int16 attributes");
@@ -631,11 +638,11 @@ void build_edge_map (PyObject *py_edge_values,
                   }
                 case NPY_INT8:
                   {
-                    auto it = ns_attr_index[attr_namespace][AttrMap::attr_index_int8][attr_name];
-                    throw_assert(it != ns_attr_index[attr_namespace][AttrMap::attr_index_int8].end(),
+                    auto it = attr_index[AttrMap::attr_index_int8].find(attr_name);
+                    throw_assert(it != attr_index[AttrMap::attr_index_int8].end(),
                                  "build_edge_map: int8 attribute name mismatch");
 
-                    size_t idx = *it;
+                    size_t idx = it->second;
                     py_array_to_vector<int8_t>(py_attr_values, attr_values_int8);
                     throw_assert(attr_values_int8.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of int8 attributes");
@@ -644,11 +651,11 @@ void build_edge_map (PyObject *py_edge_values,
                   }
                 case NPY_FLOAT:
                   {
-                    auto it = ns_attr_index[attr_namespace][AttrMap::attr_index_float][attr_name];
-                    throw_assert(it != ns_attr_index[attr_namespace][AttrMap::attr_index_int8].end(),
+                    auto it = attr_index[AttrMap::attr_index_float].find(attr_name);
+                    throw_assert(it != attr_index[AttrMap::attr_index_float].end(),
                                  "build_edge_map: float attribute name mismatch");
 
-                    size_t idx = *it;
+                    size_t idx = it->second;
                     py_array_to_vector<float>(py_attr_values, attr_values_float);
                     throw_assert(attr_values_float.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of float attributes");
@@ -669,7 +676,7 @@ void build_edge_map (PyObject *py_edge_values,
 }
 
 void build_edge_maps (PyObject *py_edge_dict,
-                      map <string, map <string, pair <ns_attr_index_t, edge_map_t> > >& edge_maps)
+                      map <string, map <string, pair <edge_ns_attr_index_t, edge_map_t> > >& edge_maps)
 {
   PyObject *py_dst_dict_key, *py_dst_dict_value;
   Py_ssize_t dst_dict_pos = 0;
@@ -2594,13 +2601,13 @@ extern "C"
     string src_pop_name = string(src_pop_name_arg);
     string dst_pop_name = string(dst_pop_name_arg);
     
-    map <string, vector <vector <string> > > edge_attr_names;
     edge_map_t edge_map;
-    
-    build_edge_map(edge_values, edge_attr_names, edge_map);
+    edge_ns_attr_index_t edge_ns_attr_index;
+
+    build_edge_map(edge_values, edge_ns_attr_index, edge_map);
 
     status = graph::write_graph(comm, io_size, file_name, src_pop_name, dst_pop_name,
-                                edge_attr_names, edge_map);
+                                edge_ns_attr_index, edge_map);
     throw_assert(status >= 0,
                  "py_write_graph: unable to write graph");
 
