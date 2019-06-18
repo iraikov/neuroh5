@@ -56,7 +56,7 @@ namespace neuroh5
      const string&    file_name,
      const string&    src_pop_name,
      const string&    dst_pop_name,
-     const edge_ns_attr_index_t& edge_attr_index,
+     const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
      const edge_map_t&  input_edge_map
      )
     {
@@ -282,7 +282,7 @@ namespace neuroh5
           
           write_projection (file, src_pop_name, dst_pop_name,
                             src_start, src_end, dst_start, dst_end,
-                            num_unpacked_edges, prj_edge_map, edge_attr_names);
+                            num_unpacked_edges, prj_edge_map, edge_attr_index);
           
           assert(H5Fclose(file) >= 0);
           assert(H5Pclose(fapl) >= 0);

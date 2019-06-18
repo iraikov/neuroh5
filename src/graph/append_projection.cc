@@ -488,7 +488,7 @@ namespace neuroh5
      const NODE_IDX_T&         dst_end,
      const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
-     const edge_ns_attr_index_t& edge_attr_index,
+     const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
      const hsize_t             chunk_size,
      const hsize_t             block_size,
      const bool collective
@@ -755,17 +755,17 @@ namespace neuroh5
       for (auto const& iter : edge_attr_index)
         {
           const string & attr_namespace = iter.first;
-          const vector <map <string, size_t> >& attr_index = iter.second.second;
+          const data::AttrIndex& attr_index  = iter.second.second;
 
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
-          
-          edge_attr_values.float_values.resize(attr_index[data::AttrVal::attr_index_float].size());
-          edge_attr_values.uint8_values.resize(attr_index[data::AttrVal::attr_index_uint8].size());
-          edge_attr_values.uint16_values.resize(attr_index[data::AttrVal::attr_index_uint16].size());
-          edge_attr_values.uint32_values.resize(attr_index[data::AttrVal::attr_index_uint32].size());
-          edge_attr_values.int8_values.resize(attr_index[data::AttrVal::attr_index_int8].size());
-          edge_attr_values.int16_values.resize(attr_index[data::AttrVal::attr_index_int16].size());
-          edge_attr_values.int32_values.resize(attr_index[data::AttrVal::attr_index_int32].size());
+
+          edge_attr_values.float_values.resize(attr_index.size_attr_index<float>());
+          edge_attr_values.uint8_values.resize(attr_index.size_attr_index<uint8_t>());
+          edge_attr_values.uint16_values.resize(attr_index.size_attr_index<uint16_t>());
+          edge_attr_values.uint32_values.resize(attr_index.size_attr_index<uint32_t>());
+          edge_attr_values.int8_values.resize(attr_index.size_attr_index<int8_t>());
+          edge_attr_values.int16_values.resize(attr_index.size_attr_index<int16_t>());
+          edge_attr_values.int32_values.resize(attr_index.size_attr_index<int32_t>());
 
           edge_attr_name_spaces.push_back(attr_namespace);
         }

@@ -31,6 +31,7 @@
 
 #include "ngraph.hh"
 #include "attr_val.hh"
+#include "attr_index.hh"
 #include "compact_optional.hh"
 #include "optional_value.hh"
 
@@ -202,7 +203,6 @@ namespace neuroh5
   
   typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
 
-  typedef map <string, pair <size_t, vector < map < string, size_t > > > > edge_ns_attr_index_t;
   
 // In-memory HDF5 datatype of attribute pointers
 #define ATTR_PTR_H5_NATIVE_T H5T_NATIVE_UINT64

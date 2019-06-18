@@ -19,28 +19,6 @@ namespace neuroh5
   {
 
 
-    template <class T>
-    void write_edge_attribute_map (hid_t file,
-                                   const string &src_pop_name,
-                                   const string &dst_pop_name,
-                                   const map <string, data::NamedAttrVal>& edge_attr_map,
-                                   const edge_attr_index_t& edge_attr_index)
-
-    {
-      for (auto const& iter : edge_attr_map)
-        {
-          const string& attr_namespace = iter.first;
-          const data::NamedAttrVal& edge_attr_values = iter.second;
-          
-          for (size_t i=0; i<edge_attr_values.size_attr_vec<T>(); i++)
-            {
-              const string& attr_name = edge_attr_names.at(attr_namespace)[data::AttrVal::attr_type_index<T>()][i];
-              string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
-              graph::write_edge_attribute<T>(file, path, edge_attr_values.attr_vec<T>(i));
-            }
-        }
-    }
-
     
     void write_projection
     (
@@ -53,7 +31,7 @@ namespace neuroh5
      const NODE_IDX_T&         dst_end,
      const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
-     const edge_attr_index_t& edge_attr_index,
+     const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
      hsize_t                   cdim,
      hsize_t                   block_size,
      const bool collective
@@ -422,20 +400,20 @@ namespace neuroh5
       vector <string> edge_attr_name_spaces;
       map <string, data::NamedAttrVal> edge_attr_map;
 
-      for (auto const& iter : edge_attr_names)
+      for (auto const& iter : edge_attr_index)
         {
           const string & attr_namespace = iter.first;
-          const vector <vector <string> >& attr_names = iter.second;
+          const data::AttrIndex& attr_index  = iter.second.second;
 
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
           
-          edge_attr_values.float_values.resize(attr_names[data::AttrVal::attr_index_float].size());
-          edge_attr_values.uint8_values.resize(attr_names[data::AttrVal::attr_index_uint8].size());
-          edge_attr_values.uint16_values.resize(attr_names[data::AttrVal::attr_index_uint16].size());
-          edge_attr_values.uint32_values.resize(attr_names[data::AttrVal::attr_index_uint32].size());
-          edge_attr_values.int8_values.resize(attr_names[data::AttrVal::attr_index_int8].size());
-          edge_attr_values.int16_values.resize(attr_names[data::AttrVal::attr_index_int16].size());
-          edge_attr_values.int32_values.resize(attr_names[data::AttrVal::attr_index_int32].size());
+          edge_attr_values.float_values.resize(attr_index.size_attr_index<float>());
+          edge_attr_values.uint8_values.resize(attr_index.size_attr_index<uint8_t>());
+          edge_attr_values.uint16_values.resize(attr_index.size_attr_index<uint16_t>());
+          edge_attr_values.uint32_values.resize(attr_index.size_attr_index<uint32_t>());
+          edge_attr_values.int8_values.resize(attr_index.size_attr_index<int8_t>());
+          edge_attr_values.int16_values.resize(attr_index.size_attr_index<int16_t>());
+          edge_attr_values.int32_values.resize(attr_index.size_attr_index<int32_t>());
 
           edge_attr_name_spaces.push_back(attr_namespace);
         }
@@ -459,19 +437,19 @@ namespace neuroh5
 	}
 
       write_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
-                                      edge_attr_map, edge_attr_names);
+                                      edge_attr_map, edge_attr_index);
       write_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,
-                                        edge_attr_map, edge_attr_names);
+                                        edge_attr_map, edge_attr_index);
       write_edge_attribute_map<uint16_t>(file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_names);
+                                         edge_attr_map, edge_attr_index);
       write_edge_attribute_map<uint32_t>(file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_names);
+                                         edge_attr_map, edge_attr_index);
       write_edge_attribute_map<int8_t>(file, src_pop_name, dst_pop_name,
-                                       edge_attr_map, edge_attr_names);
+                                       edge_attr_map, edge_attr_index);
       write_edge_attribute_map<int16_t>(file, src_pop_name, dst_pop_name,
-                                        edge_attr_map, edge_attr_names);
+                                        edge_attr_map, edge_attr_index);
       write_edge_attribute_map<int32_t>(file, src_pop_name, dst_pop_name,
-                                        edge_attr_map, edge_attr_names);
+                                        edge_attr_map, edge_attr_index);
       
       // clean-up
       assert(H5Pclose(dcpl) >= 0);

@@ -240,6 +240,40 @@ namespace neuroh5
 
       return 0;
     }
+
+    template <class T>
+    void write_edge_attribute_map (hid_t file,
+                                   const string &src_pop_name,
+                                   const string &dst_pop_name,
+                                   const map <string, data::NamedAttrVal>& edge_attr_map,
+                                   const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index)
+
+
+    {
+      for (auto const& iter : edge_attr_map)
+        {
+          const string& attr_namespace = iter.first;
+          const data::NamedAttrVal& edge_attr_values = iter.second;
+
+          auto ns_it = edge_attr_index.find(attr_namespace);
+          if (ns_it != edge_attr_index.end())
+            {
+              const data::AttrIndex& attr_index = ns_it->second.second;
+              const std::vector<std::string>& attr_names = attr_index.attr_names<T>();
+              
+              for (const std::string& attr_name: attr_names)
+                {
+                  size_t i = attr_index.attr_index<T>(attr_name);
+                  string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
+                  graph::write_edge_attribute<T>(file, path, edge_attr_values.attr_vec<T>(i));
+                }
+            }
+          else
+            {
+              throw std::runtime_error("write_edge_attribute_map: namespace mismatch");
+            }
+        }
+    }
     
     template <typename T>
     herr_t append_edge_attribute
@@ -312,24 +346,31 @@ namespace neuroh5
                                     const string &src_pop_name,
                                     const string &dst_pop_name,
                                     const map <string, data::NamedAttrVal>& edge_attr_map,
-                                    const edge_ns_attr_index_t& edge_attr_index)
+                                    const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index)
 
     {
       for (auto const& iter : edge_attr_map)
         {
           const string& attr_namespace = iter.first;
           const data::NamedAttrVal& edge_attr_values = iter.second;
-          
-          auto ns_it = edge_attr_index.find(attr_namespace);
-          assert(ns_it != edge_attr_index.end());
-          
-          const vector <map <string, size_t> >& attr_index = ns_it->second;
 
-          for (size_t i=0; i<edge_attr_index.size_attr_vec<T>(); i++)
+          auto ns_it = edge_attr_index.find(attr_namespace);
+          if (ns_it != edge_attr_index.end())
             {
-              const string& attr_name = attr_index[data::AttrVal::attr_type_index<T>()][i];
-              graph::append_edge_attribute<T>(file, src_pop_name, dst_pop_name, attr_namespace, attr_name, edge_attr_values.attr_vec<T>(i));
+              const data::AttrIndex& attr_index = ns_it->second.second;
+              const std::vector<std::string>& attr_names = attr_index.attr_names<T>();
+              
+              for (const std::string& attr_name: attr_names)
+                {
+                  size_t i = attr_index.attr_index<T>(attr_name);
+                  graph::append_edge_attribute<T>(file, src_pop_name, dst_pop_name, attr_namespace, attr_name, edge_attr_values.attr_vec<T>(i));
+                }
             }
+          else
+            {
+              throw std::runtime_error("append_edge_attribute_map: namespace mismatch");
+            }
+
         }
     }
 
