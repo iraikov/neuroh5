@@ -491,8 +491,7 @@ void build_edge_map (PyObject *py_edge_values,
 
       Py_ssize_t attr_namespace_pos = 0;
       PyObject *py_attr_namespace, *py_attr_namespace_value;
-      vector <data::AttrVal> edge_attr_vector;
-
+      vector <data::AttrVal> edge_attr_vector(edge_attr_index.size());
       vector<NODE_IDX_T>  adj_values;
 
       npy_type = PyArray_TYPE((PyArrayObject *)py_adj_values);
@@ -529,6 +528,7 @@ void build_edge_map (PyObject *py_edge_values,
           throw_assert(ns_it != edge_attr_index.end(),
                        "build_edge_map: namespace mismatch");
 
+          const size_t ns_index = ns_it->second.first;
           const AttrIndex& attr_index = ns_it->second.second;
 
           while (PyDict_Next(py_attr_namespace_value, &attr_pos, &py_attr_key, &py_attr_values))
@@ -556,6 +556,7 @@ void build_edge_map (PyObject *py_edge_values,
                     py_array_to_vector<uint32_t>(py_attr_values, attr_values_uint32);
                     throw_assert(attr_values_uint32.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of uint32 attributes");
+                    edge_attr_values.resize<uint32_t>(attr_index.size_attr_index<uint32_t>());
                     edge_attr_values.insert(attr_values_uint32, idx);
                     break;
                   }
@@ -565,6 +566,7 @@ void build_edge_map (PyObject *py_edge_values,
                     py_array_to_vector<uint16_t>(py_attr_values, attr_values_uint16);
                     throw_assert(attr_values_uint16.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of uint16 attributes");
+                    edge_attr_values.resize<uint16_t>(attr_index.size_attr_index<uint16_t>());
                     edge_attr_values.insert(attr_values_uint16, idx);
                     break;
                   }
@@ -574,6 +576,7 @@ void build_edge_map (PyObject *py_edge_values,
                     py_array_to_vector<uint8_t>(py_attr_values, attr_values_uint8);
                     throw_assert(attr_values_uint8.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of uint8 attributes");
+                    edge_attr_values.resize<uint8_t>(attr_index.size_attr_index<uint8_t>());
                     edge_attr_values.insert(attr_values_uint8, idx);
                     break;
                   }
@@ -583,6 +586,7 @@ void build_edge_map (PyObject *py_edge_values,
                     py_array_to_vector<int32_t>(py_attr_values, attr_values_int32);
                     throw_assert(attr_values_int32.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of int32 attributes");
+                    edge_attr_values.resize<int32_t>(attr_index.size_attr_index<int32_t>());
                     edge_attr_values.insert(attr_values_int32, idx);
                     break;
                   }
@@ -592,6 +596,7 @@ void build_edge_map (PyObject *py_edge_values,
                     py_array_to_vector<int16_t>(py_attr_values, attr_values_int16);
                     throw_assert(attr_values_int16.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of int16 attributes");
+                    edge_attr_values.resize<int16_t>(attr_index.size_attr_index<int16_t>());
                     edge_attr_values.insert(attr_values_int16, idx);
                     break;
                   }
@@ -601,6 +606,7 @@ void build_edge_map (PyObject *py_edge_values,
                     py_array_to_vector<int8_t>(py_attr_values, attr_values_int8);
                     throw_assert(attr_values_int8.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of int8 attributes");
+                    edge_attr_values.resize<int8_t>(attr_index.size_attr_index<int8_t>());
                     edge_attr_values.insert(attr_values_int8, idx);
                     break;
                   }
@@ -610,6 +616,7 @@ void build_edge_map (PyObject *py_edge_values,
                     py_array_to_vector<float>(py_attr_values, attr_values_float);
                     throw_assert(attr_values_float.size() == num_edges,
                                  "build_edge_map: mismatch in number of edges and number of float attributes");
+                    edge_attr_values.resize<float>(attr_index.size_attr_index<float>());
                     edge_attr_values.insert(attr_values_float, idx);
                     break;
                   }
@@ -620,29 +627,26 @@ void build_edge_map (PyObject *py_edge_values,
               attr_idx = attr_idx+1;
             }
                                    
-          edge_attr_vector.push_back(edge_attr_values);
+          edge_attr_vector[ns_index] = edge_attr_values;
         }
       edge_map.insert(make_pair(node_idx, make_tuple (adj_values, edge_attr_vector)));
     }
 }
 
-void build_edge_maps (PyObject *py_edge_dict,
-                      map <string, map <string, pair <map <string, pair <size_t, AttrIndex > >,
-                                                      edge_map_t> > >& edge_maps)
-{
+
+void build_edge_attr_indexes (PyObject *py_edge_dict, map <string, pair <size_t, AttrIndex > >& edge_attr_index)
+{ 
   PyObject *py_dst_dict_key, *py_dst_dict_value;
   Py_ssize_t dst_dict_pos = 0;
-
-  map <string, pair <size_t, AttrIndex > > edge_attr_index;
 
   while (PyDict_Next(py_edge_dict, &dst_dict_pos, &py_dst_dict_key, &py_dst_dict_value))
     {
       throw_assert(py_dst_dict_key != Py_None,
-                   "build_edge_maps: invalid key in edge dictionary");
+                   "build_edge_indexes: invalid key in edge dictionary");
       throw_assert(py_dst_dict_value != Py_None,
-                   "build_edge_maps: invalid value in edge dictionary");
+                   "build_edge_indexes: invalid value in edge dictionary");
       throw_assert(PyStr_Check(py_dst_dict_key),
-                   "build_edge_maps: non-string key in edge dictionary");
+                   "build_edge_indexes: non-string key in edge dictionary");
       PyObject *py_src_dict_key, *py_src_dict_value;
       Py_ssize_t src_dict_pos = 0;
       
@@ -658,6 +662,20 @@ void build_edge_maps (PyObject *py_edge_dict,
           
       break;
     }
+  
+}
+
+void build_edge_maps (int rank, PyObject *py_edge_dict,
+                      map <string, map <string, pair <map <string, pair <size_t, AttrIndex > >,
+                                                      edge_map_t> > >& edge_maps)
+{
+  PyObject *py_dst_dict_key, *py_dst_dict_value;
+  Py_ssize_t dst_dict_pos = 0;
+
+  map <string, pair <size_t, AttrIndex > > edge_attr_index;
+
+  build_edge_attr_indexes(py_edge_dict, edge_attr_index);
+
   
   while (PyDict_Next(py_edge_dict, &dst_dict_pos, &py_dst_dict_key, &py_dst_dict_value))
     {
@@ -2645,7 +2663,7 @@ extern "C"
         
         map <string, map <string, pair <map <string, pair <size_t, AttrIndex > >, edge_map_t> > > edge_maps;
         
-        build_edge_maps (py_edge_dict, edge_maps);
+        build_edge_maps (rank, py_edge_dict, edge_maps);
 
         for (auto const& dst_edge_map_item : edge_maps)
           {
@@ -2656,6 +2674,7 @@ extern "C"
                 const string & src_pop_name = edge_map_item.first;
                 const map <string, pair <size_t, AttrIndex > >& edge_attr_index = edge_map_item.second.first; 
                 const edge_map_t & edge_map = edge_map_item.second.second; 
+
                 status = graph::append_graph(data_comm, io_size, file_name, src_pop_name, dst_pop_name,
                                              edge_attr_index, edge_map);
                 throw_assert(status >= 0,

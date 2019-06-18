@@ -87,14 +87,6 @@ namespace neuroh5
                                           pop_ranges, pop_vector, pop_num_nodes) >= 0);
       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
 
-      { // FIXME: only for debugging
-        if(getenv("NEUROH5_MPI_DEBUG") != NULL &&  (rank == 0))
-          {
-            volatile  int i=0;
-            while(i==0) { /*  change  ’i’ in the  debugger  */ };
-          };
-        MPI_Barrier(MPI_COMM_WORLD);
-      }
       
       for (size_t i=0; i< pop_labels.size(); i++)
         {

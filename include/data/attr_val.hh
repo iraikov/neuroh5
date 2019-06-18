@@ -205,7 +205,8 @@ namespace neuroh5
       void append (AttrVal a)
       {
         throw_assert(float_values.size()  == a.float_values.size(),
-                     "AttrVal::append: float value vectors are of different sizes");
+                     "AttrVal::append: float value vectors are of different sizes: " 
+                     << float_values.size() << " " << a.float_values.size());
         throw_assert(uint8_values.size()  == a.uint8_values.size(),
                      "AttrVal::append: uint8 value vectors are of different sizes");
         throw_assert(uint16_values.size() == a.uint16_values.size(),

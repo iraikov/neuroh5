@@ -139,7 +139,7 @@ namespace neuroh5
           }
         else
           {
-            throw std::runtime_error("AttrIndex.size_attr_index: unknown type");
+            return 0;
           }
       }
       
@@ -155,10 +155,6 @@ namespace neuroh5
               {
                 output.push_back(item_it->first);
               }
-          }
-        else
-          {
-            throw std::runtime_error("AttrIndex.attr_names: unknown type");
           }
         return output;
       }

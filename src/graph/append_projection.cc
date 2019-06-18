@@ -12,8 +12,10 @@
 #include "mpi_debug.hh"
 
 #include <algorithm>
-#include <cassert>
 #include <map>
+#include <cassert>
+#include <cstdlib>
+#include <cstdio>
 
 using namespace std;
 
@@ -757,15 +759,15 @@ namespace neuroh5
           const string & attr_namespace = iter.first;
           const data::AttrIndex& attr_index  = iter.second.second;
 
-          data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
+          data::NamedAttrVal& edge_attr = edge_attr_map[attr_namespace];
 
-          edge_attr_values.float_values.resize(attr_index.size_attr_index<float>());
-          edge_attr_values.uint8_values.resize(attr_index.size_attr_index<uint8_t>());
-          edge_attr_values.uint16_values.resize(attr_index.size_attr_index<uint16_t>());
-          edge_attr_values.uint32_values.resize(attr_index.size_attr_index<uint32_t>());
-          edge_attr_values.int8_values.resize(attr_index.size_attr_index<int8_t>());
-          edge_attr_values.int16_values.resize(attr_index.size_attr_index<int16_t>());
-          edge_attr_values.int32_values.resize(attr_index.size_attr_index<int32_t>());
+          edge_attr.float_values.resize(attr_index.size_attr_index<float>());
+          edge_attr.uint8_values.resize(attr_index.size_attr_index<uint8_t>());
+          edge_attr.uint16_values.resize(attr_index.size_attr_index<uint16_t>());
+          edge_attr.uint32_values.resize(attr_index.size_attr_index<uint32_t>());
+          edge_attr.int8_values.resize(attr_index.size_attr_index<int8_t>());
+          edge_attr.int16_values.resize(attr_index.size_attr_index<int16_t>());
+          edge_attr.int32_values.resize(attr_index.size_attr_index<int32_t>());
 
           edge_attr_name_spaces.push_back(attr_namespace);
         }
