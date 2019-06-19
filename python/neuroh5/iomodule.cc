@@ -156,7 +156,6 @@ void py_array_to_vector (PyObject *pyval,
 template<class T>
 void append_value_map (CELL_IDX_T idx,
                        PyObject *pyval,
-                       size_t attr_pos,
                        map<CELL_IDX_T, vector<T> >& all_attr_values)
 {
   npy_intp *dims, ind = 0;
@@ -178,16 +177,14 @@ void append_value_map (CELL_IDX_T idx,
 }
 
 
-
 void build_cell_attr_value_maps (PyObject *idx_values,
-\                                 vector< map<string, size_t> >& attr_type_index_map,
-      std::map<std::type_index,       std::map<std::type_index,                                  vector<map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
-                                 vector<map<CELL_IDX_T, vector<uint16_t>>>& all_attr_values_uint16,
-                                 vector<map<CELL_IDX_T, vector<uint8_t>>>& all_attr_values_uint8,
-                                 vector<map<CELL_IDX_T, vector<int32_t>>>& all_attr_values_int32,
-                                 vector<map<CELL_IDX_T, vector<int16_t>>>& all_attr_values_int16,
-                                 vector<map<CELL_IDX_T, vector<int8_t>>>& all_attr_values_int8,
-                                 vector<map<CELL_IDX_T, vector<float>>>& all_attr_values_float)
+                                 map<string, map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
+                                 map<string, map<CELL_IDX_T, vector<uint16_t>>>& all_attr_values_uint16,
+                                 map<string, map<CELL_IDX_T, vector<uint8_t>>>& all_attr_values_uint8,
+                                 map<string, map<CELL_IDX_T, vector<int32_t>>>& all_attr_values_int32,
+                                 map<string, map<CELL_IDX_T, vector<int16_t>>>& all_attr_values_int16,
+                                 map<string, map<CELL_IDX_T, vector<int8_t>>>& all_attr_values_int8,
+                                 map<string, map<CELL_IDX_T, vector<float>>>& all_attr_values_float)
 {
   PyObject *idx_key, *idx_value;
   Py_ssize_t idx_pos = 0;
@@ -202,9 +199,6 @@ void build_cell_attr_value_maps (PyObject *idx_values,
 
       PyObject *attr_key, *attr_values;
       Py_ssize_t attr_pos = 0;
-      size_t attr_idx = 0;
-      vector<size_t> attr_type_idx(AttrMap::num_attr_types);
-      attr_type_index_map.resize(AttrMap::num_attr_types);
                         
       while (PyDict_Next(idx_value, &attr_pos, &attr_key, &attr_values))
         {
@@ -214,112 +208,56 @@ void build_cell_attr_value_maps (PyObject *idx_values,
             }
 
           npy_type = PyArray_TYPE((PyArrayObject *)attr_values);
-
           string attr_name = string(PyStr_ToCString(attr_key));
-          if (attr_names.size() < (size_t)attr_idx+1)
-            {
-              attr_names.push_back(attr_name);
-              attr_types.push_back(npy_type);
-            }
-          else
-            {
-              throw_assert((attr_names[attr_idx] == attr_name) && (attr_types[attr_idx] == npy_type),
-                           "build_cell_attr_value_maps: mismatch in attribute order");
-
-            }
-
                                      
           switch (npy_type)
             {
             case NPY_UINT32:
               {
-                if (all_attr_values_uint32.size() < (size_t)attr_type_idx[AttrMap::attr_index_uint32]+1)
-                  {
-                    all_attr_values_uint32.resize(attr_type_idx[AttrMap::attr_index_uint32]+1);
-                  }
-                append_value_map<uint32_t> (idx, attr_values, attr_idx,
-                                            all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]]);
-                attr_type_index_map[AttrMap::attr_index_uint32][attr_name] = attr_type_idx[AttrMap::attr_index_uint32];
-                attr_type_idx[AttrMap::attr_index_uint32]++;
+                append_value_map<uint32_t> (idx, attr_values,
+                                            all_attr_values_uint32[attr_name]);
                 break;
               }
             case NPY_INT32:
               {
-                if (all_attr_values_int32.size() < (size_t)attr_type_idx[AttrMap::attr_index_int32]+1)
-                  {
-                    all_attr_values_int32.resize(attr_type_idx[AttrMap::attr_index_int32]+1);
-                  }
-                append_value_map<int32_t> (idx, attr_values, attr_idx,
-                                           all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]]);
-                attr_type_index_map[AttrMap::attr_index_int32][attr_name] = attr_type_idx[AttrMap::attr_index_int32];
-                attr_type_idx[AttrMap::attr_index_int32]++;
+                append_value_map<int32_t> (idx, attr_values, 
+                                           all_attr_values_int32[attr_name]);
                 break;
               }
             case NPY_UINT16:
               {
-                if (all_attr_values_uint16.size() < (size_t)attr_type_idx[AttrMap::attr_index_uint16]+1)
-                  {
-                    all_attr_values_uint16.resize(attr_type_idx[AttrMap::attr_index_uint16]+1);
-                  }
-                append_value_map<uint16_t> (idx, attr_values, attr_idx,
-                                            all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]]);
-                attr_type_index_map[AttrMap::attr_index_uint16][attr_name] = attr_type_idx[AttrMap::attr_index_uint16];
-                attr_type_idx[AttrMap::attr_index_uint16]++;
+                append_value_map<uint16_t> (idx, attr_values, 
+                                            all_attr_values_uint16[attr_name]);
                 break;
               }
             case NPY_INT16:
               {
-                if (all_attr_values_int16.size() < (size_t)attr_type_idx[AttrMap::attr_index_int16]+1)
-                  {
-                    all_attr_values_int16.resize(attr_type_idx[AttrMap::attr_index_int16]+1);
-                  }
-                append_value_map<int16_t> (idx, attr_values, attr_idx,
-                                           all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]]);
-                attr_type_index_map[AttrMap::attr_index_int16][attr_name] = attr_type_idx[AttrMap::attr_index_int16];
-                attr_type_idx[AttrMap::attr_index_int16]++;
+                append_value_map<int16_t> (idx, attr_values, 
+                                           all_attr_values_int16[attr_name]);
                 break;
               }
             case NPY_UINT8:
               {
-                if (all_attr_values_uint8.size() < (size_t)attr_type_idx[AttrMap::attr_index_uint8]+1)
-                  {
-                    all_attr_values_uint8.resize(attr_type_idx[AttrMap::attr_index_uint8]+1);
-                  }
-                append_value_map<uint8_t> (idx, attr_values, attr_idx,
-                                           all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]]);
-                attr_type_index_map[AttrMap::attr_index_uint8][attr_name] = attr_type_idx[AttrMap::attr_index_uint8];
-                attr_type_idx[AttrMap::attr_index_uint8]++;
+                append_value_map<uint8_t> (idx, attr_values, 
+                                           all_attr_values_uint8[attr_name]);
                 break;
               }
             case NPY_INT8:
               {
-                if (all_attr_values_int8.size() < (size_t)attr_type_idx[AttrMap::attr_index_int8]+1)
-                  {
-                    all_attr_values_int8.resize(attr_type_idx[AttrMap::attr_index_int8]+1);
-                  }
-                append_value_map<int8_t> (idx, attr_values, attr_idx,
-                                          all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]]);
-                attr_type_index_map[AttrMap::attr_index_int8][attr_name] = attr_type_idx[AttrMap::attr_index_int8];
-                attr_type_idx[AttrMap::attr_index_int8]++;
+                append_value_map<int8_t> (idx, attr_values, 
+                                          all_attr_values_int8[attr_name]);
                 break;
               }
             case NPY_FLOAT:
               {
-                if (all_attr_values_float.size() < (size_t)attr_type_idx[AttrMap::attr_index_float]+1)
-                  {
-                    all_attr_values_float.resize(attr_type_idx[AttrMap::attr_index_float]+1);
-                  }
-                append_value_map<float> (idx, attr_values, attr_idx,
-                                         all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]]);
-                attr_type_index_map[AttrMap::attr_index_float][attr_name] = attr_type_idx[AttrMap::attr_index_float];
-                attr_type_idx[AttrMap::attr_index_float]++;
+                append_value_map<float> (idx, attr_values, 
+                                         all_attr_values_float[attr_name]);
                 break;
               }
             default:
               throw runtime_error("Unsupported attribute type");
               break;
             }
-          attr_idx = attr_idx+1;
         }
     }
 }
@@ -4548,21 +4486,15 @@ extern "C"
     
         int npy_type=0;
         
-        vector<string> attr_names;
-        vector<int> attr_types;
-        
-        vector < map <CELL_IDX_T, vector<uint32_t> > > all_attr_values_uint32;
-        vector < map <CELL_IDX_T, vector<int32_t> > >  all_attr_values_int32;
-        vector < map <CELL_IDX_T, vector<uint16_t> > > all_attr_values_uint16;
-        vector < map <CELL_IDX_T, vector<int16_t> > >  all_attr_values_int16;
-        vector < map <CELL_IDX_T, vector<uint8_t> > >  all_attr_values_uint8;
-        vector < map <CELL_IDX_T, vector<int8_t> > >   all_attr_values_int8;
-        vector < map <CELL_IDX_T, vector<float> > >    all_attr_values_float;
+        map <string, map <CELL_IDX_T, vector< uint32_t >>> all_attr_values_uint32;
+        map <string, map <CELL_IDX_T, vector< int32_t >>>  all_attr_values_int32;
+        map <string, map <CELL_IDX_T, vector< uint16_t >>> all_attr_values_uint16;
+        map <string, map <CELL_IDX_T, vector< int16_t >>>  all_attr_values_int16;
+        map <string, map <CELL_IDX_T, vector< uint8_t >>>  all_attr_values_uint8;
+        map <string, map <CELL_IDX_T, vector< int8_t >>>   all_attr_values_int8;
+        map <string, map <CELL_IDX_T, vector< float >>>    all_attr_values_float;
         
         build_cell_attr_value_maps(idx_values,
-                                   attr_names,
-                                   attr_types,
-                                   attr_type_index_map,
                                    all_attr_values_uint32,
                                    all_attr_values_uint16,
                                    all_attr_values_uint8,
@@ -4572,76 +4504,51 @@ extern "C"
                                    all_attr_values_float);
         
         const data::optional_hid dflt_data_type;
-        size_t attr_idx=0;
-        vector<size_t> attr_type_idx(AttrMap::num_attr_types);
-        for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
+
+        for(auto it = all_attr_values_float.cbegin(); it != all_attr_values_float.cend(); ++it)
           {
-            const string attr_name = *it;
-            npy_type=attr_types[attr_idx];
-            
-            switch (npy_type)
-              {
-              case NPY_UINT32:
-                {
-                  cell::write_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                            attr_name, all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
-                                                            dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_uint32]++;
-                  break;
-                }
-              case NPY_UINT16:
-                {
-                  cell::write_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                            attr_name, all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
-                                                            dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_uint16]++;
-                  break;
-                }
-              case NPY_UINT8:
-                {
-                  cell::write_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                           attr_name, all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
-                                                           dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_uint8]++;
-                  break;
-                }
-              case NPY_INT32:
-                {
-                  cell::write_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                           attr_name, all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
-                                                           dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_int32]++;
-                  break;
-                }
-              case NPY_INT16:
-                {
-                  cell::write_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                           attr_name, all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
-                                                           dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_int16]++;
-                  break;
-                }
-              case NPY_INT8:
-                {
-                  cell::write_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                          attr_name, all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
-                                                          dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_int8]++;
-                  break;
-                }
-              case NPY_FLOAT:
-                {
-                  cell::write_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                         attr_name, all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
-                                                         dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_float]++;
-                  break;
-                }
-              default:
-                throw runtime_error("Unsupported attribute type");
-                break;
-              }
+            const string& attr_name = it->first;
+            cell::write_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                   attr_name, it->second, dflt_data_type);
           }
+        for(auto it = all_attr_values_uint32.cbegin(); it != all_attr_values_uint32.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::write_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, dflt_data_type);
+          }
+        for(auto it = all_attr_values_uint16.cbegin(); it != all_attr_values_uint16.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::write_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, dflt_data_type);
+          }
+        for(auto it = all_attr_values_uint8.cbegin(); it != all_attr_values_uint8.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::write_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, dflt_data_type);
+          }
+        for(auto it = all_attr_values_int32.cbegin(); it != all_attr_values_int32.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::write_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, dflt_data_type);
+          }
+        for(auto it = all_attr_values_int16.cbegin(); it != all_attr_values_int16.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::write_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, dflt_data_type);
+          }
+        for(auto it = all_attr_values_int8.cbegin(); it != all_attr_values_int8.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::write_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                    attr_name, it->second, dflt_data_type);
+          }
+
+        
       }
     
     //throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
@@ -4790,18 +4697,15 @@ extern "C"
         vector<string> attr_names;
         vector<int> attr_types;
         
-        map<string, < map<CELL_IDX_T, vector<uint32_t> >>> all_attr_values_uint32;
-        map<string, < map<CELL_IDX_T, vector<int32_t> >>> all_attr_values_int32;
-        map<string, < map<CELL_IDX_T, vector<uint16_t> >>> all_attr_values_uint16;
-        map<string, < map<CELL_IDX_T, vector<int16_t> >>> all_attr_values_int16;
-        map<string, < map<CELL_IDX_T, vector<uint8_t> >>>  all_attr_values_uint8;
-        map<string, < map<CELL_IDX_T, vector<int8_t> >>>  all_attr_values_int8;
-        map<string, < map<CELL_IDX_T, vector<float> >>>  all_attr_values_float;
+        map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+        map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
+        map<string, map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+        map<string, map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
+        map<string, map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+        map<string, map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
+        map<string, map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
 
         build_cell_attr_value_maps(idx_values,
-                                   attr_names,
-                                   attr_types,
-                                   attr_type_index_map,
                                    all_attr_values_uint32,
                                    all_attr_values_uint16,
                                    all_attr_values_uint8,
@@ -4826,76 +4730,50 @@ extern "C"
         MPI_Barrier(data_comm);
 
         const data::optional_hid dflt_data_type;
-        size_t attr_idx=0;
-        vector<size_t> attr_type_idx(AttrMap::num_attr_types);
-        for(auto it = attr_names.begin(); it != attr_names.end(); ++it, attr_idx++) 
+        
+        for(auto it = all_attr_values_float.cbegin(); it != all_attr_values_float.cend(); ++it)
           {
-            const string attr_name = *it;
-            npy_type=attr_types[attr_idx];
-
-            switch (npy_type)
-              {
-              case NPY_UINT32:
-                {
-                  cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
-                                                             all_attr_values_uint32[attr_type_idx[AttrMap::attr_index_uint32]],
-                                                             io_size, dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_uint32]++;
-                  break;
-                }
-              case NPY_INT32:
-                {
-                  cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
-                                                            all_attr_values_int32[attr_type_idx[AttrMap::attr_index_int32]],
-                                                            io_size, dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_int32]++;
-                  break;
-                }
-              case NPY_UINT16:
-                {
-                  cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
-                                                             all_attr_values_uint16[attr_type_idx[AttrMap::attr_index_uint16]],
-                                                             io_size, dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_uint16]++;
-                  break;
-                }
-              case NPY_INT16:
-                {
-                  cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
-                                                            all_attr_values_int16[attr_type_idx[AttrMap::attr_index_int16]],
-                                                            io_size, dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_int16]++;
-                  break;
-                }
-              case NPY_UINT8:
-                {
-                  cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
-                                                            all_attr_values_uint8[attr_type_idx[AttrMap::attr_index_uint8]],
-                                                            io_size, dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_uint8]++;
-                  break;
-                }
-              case NPY_INT8:
-                {
-                  cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
-                                                           all_attr_values_int8[attr_type_idx[AttrMap::attr_index_int8]],
-                                                           io_size, dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_int8]++;
-                  break;
-                }
-              case NPY_FLOAT:
-                {
-                  cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
-                                                          all_attr_values_float[attr_type_idx[AttrMap::attr_index_float]],
-                                                          io_size, dflt_data_type);
-                  attr_type_idx[AttrMap::attr_index_float]++;
-                  break;
-                }
-              default:
-                throw runtime_error("Unsupported attribute type");
-                break;
-              }
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                    attr_name, it->second, io_size, dflt_data_type);
           }
+        for(auto it = all_attr_values_uint32.cbegin(); it != all_attr_values_uint32.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                       attr_name, it->second, io_size, dflt_data_type);
+          }
+        for(auto it = all_attr_values_uint16.cbegin(); it != all_attr_values_uint16.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, io_size, dflt_data_type);
+          }
+        for(auto it = all_attr_values_uint8.cbegin(); it != all_attr_values_uint8.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, io_size, dflt_data_type);
+          }
+        for(auto it = all_attr_values_int32.cbegin(); it != all_attr_values_int32.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, io_size, dflt_data_type);
+          }
+        for(auto it = all_attr_values_int16.cbegin(); it != all_attr_values_int16.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, io_size, dflt_data_type);
+          }
+        for(auto it = all_attr_values_int8.cbegin(); it != all_attr_values_int8.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, io_size, dflt_data_type);
+          }
+
 
       }
     
@@ -5038,21 +4916,15 @@ extern "C"
                                               n_nodes) >= 0,
                  "py_append_cell_trees: unable to read population ranges");
     
-    vector<string> attr_names;
-    vector<int> attr_types;
-    
-    vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-    vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
-    vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-    vector< map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
-    vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-    vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
-    vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
-
+    map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+    map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
+    map<string, map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+    map<string, map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
+    map<string, map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+    map<string, map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
+    map<string, map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
     
     build_cell_attr_value_maps(idx_values,
-                               attr_names,
-                               attr_types,
                                all_attr_values_uint32,
                                all_attr_values_uint16,
                                all_attr_values_uint8,
@@ -5061,61 +4933,49 @@ extern "C"
                                all_attr_values_int8,
                                all_attr_values_float);
 
-    map<string, size_t>::iterator it;
-    
-    it = attr_type_index_map[AttrMap::attr_index_float].find("x");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end(),
+    auto xcoord_map_it = all_attr_values_float.find("x");
+    throw_assert(xcoord_map_it != all_attr_values_float.end(),
                  "py_append_cell_trees: input data has no x array");
-    size_t xcoord_index = it->second;
-    it = attr_type_index_map[AttrMap::attr_index_float].find("y");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end(),
+    auto ycoord_map_it = all_attr_values_float.find("y");
+    throw_assert(ycoord_map_it != all_attr_values_float.end(),
                  "py_append_cell_trees: input data has no y array");
-    size_t ycoord_index = it->second;
-    it = attr_type_index_map[AttrMap::attr_index_float].find("z");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end(),
+    auto zcoord_map_it = all_attr_values_float.find("z");
+    throw_assert(zcoord_map_it != all_attr_values_float.end(),
                  "py_append_cell_trees: input data has no z array");
-    size_t zcoord_index = it->second;
-    it = attr_type_index_map[AttrMap::attr_index_float].find("radius");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_float].end(),
+    auto radius_map_it = all_attr_values_float.find("radius");
+    throw_assert(radius_map_it != all_attr_values_float.end(),
                  "py_append_cell_trees: input data has no radius array");
-    size_t radius_index = it->second;
-    it = attr_type_index_map[AttrMap::attr_index_int8].find("layer");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_int8].end(),
+    auto layer_map_it = all_attr_values_int8.find("layer");
+    throw_assert(layer_map_it != all_attr_values_int8.end(),
                  "py_append_cell_trees: input data has no layer array");
-    size_t layer_index = it->second;
-    it = attr_type_index_map[AttrMap::attr_index_int32].find("parent");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_int32].end(),
+    auto parent_map_it = all_attr_values_int32.find("parent");
+    throw_assert(parent_map_it != all_attr_values_int32.end(),
                  "py_append_cell_trees: input data has no parent array");
-    size_t parent_index = it->second;
-    it = attr_type_index_map[AttrMap::attr_index_int8].find("swc_type");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_int8].end(),
+    auto swc_type_map_it = all_attr_values_int8.find("swc_type");
+    throw_assert(swc_type_map_it != all_attr_values_int8.end(),
                  "py_append_cell_trees: input data has no int8 array");
-    size_t swc_type_index = it->second;
-    it = attr_type_index_map[AttrMap::attr_index_uint16].find("sections");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end(),
+    auto sections_map_it = all_attr_values_uint16.find("sections");
+    throw_assert(sections_map_it != all_attr_values_uint16.end(),
                  "py_append_cell_trees: input data has no sections array");
-    size_t sections_index = it->second; 
-    it = attr_type_index_map[AttrMap::attr_index_uint16].find("src");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end(),
+    auto src_map_it = all_attr_values_uint16.find("src");
+    throw_assert(src_map_it != all_attr_values_uint16.end(),
                  "py_append_cell_trees: input data has no src array");
-    size_t src_index = it->second; 
-    it = attr_type_index_map[AttrMap::attr_index_uint16].find("dst");
-    throw_assert(it != attr_type_index_map[AttrMap::attr_index_uint16].end(),
+    auto dst_map_it = all_attr_values_uint16.find("dst");
+    throw_assert(dst_map_it != all_attr_values_uint16.end(),
                  "py_append_cell_trees: input data has no dst array");
-    size_t dst_index = it->second; 
     
     vector<neurotree_t> tree_vector;
 
-    map<CELL_IDX_T, vector<float> >& xcoord_values = all_attr_values_float[xcoord_index];
-    map<CELL_IDX_T, vector<float> >& ycoord_values = all_attr_values_float[ycoord_index];
-    map<CELL_IDX_T, vector<float> >& zcoord_values = all_attr_values_float[zcoord_index];
-    map<CELL_IDX_T, vector<float> >& radius_values = all_attr_values_float[radius_index];
-    map<CELL_IDX_T, vector<int32_t> >& parent_values = all_attr_values_int32[parent_index];
-    map<CELL_IDX_T, vector<uint16_t> >& src_values = all_attr_values_uint16[src_index];
-    map<CELL_IDX_T, vector<uint16_t> >& dst_values = all_attr_values_uint16[dst_index];
-    map<CELL_IDX_T, vector<uint16_t> >& sections_values = all_attr_values_uint16[sections_index];
-    map<CELL_IDX_T, vector<int8_t> >& layer_values = all_attr_values_int8[layer_index];
-    map<CELL_IDX_T, vector<int8_t> >& swc_type_values = all_attr_values_int8[swc_type_index];
+    map<CELL_IDX_T, vector<float> >& xcoord_values = xcoord_map_it->second;
+    map<CELL_IDX_T, vector<float> >& ycoord_values = ycoord_map_it->second;
+    map<CELL_IDX_T, vector<float> >& zcoord_values = zcoord_map_it->second;
+    map<CELL_IDX_T, vector<float> >& radius_values = radius_map_it->second;
+    map<CELL_IDX_T, vector<int32_t> >& parent_values = parent_map_it->second;
+    map<CELL_IDX_T, vector<uint16_t> >& src_values = src_map_it->second;
+    map<CELL_IDX_T, vector<uint16_t> >& dst_values = dst_map_it->second;
+    map<CELL_IDX_T, vector<uint16_t> >& sections_values = sections_map_it->second;
+    map<CELL_IDX_T, vector<int8_t> >& layer_values = layer_map_it->second;
+    map<CELL_IDX_T, vector<int8_t> >& swc_type_values = swc_type_map_it->second;
 
 
     auto sections_it  = sections_values.begin();
