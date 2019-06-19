@@ -178,11 +178,10 @@ void append_value_map (CELL_IDX_T idx,
 }
 
 
+
 void build_cell_attr_value_maps (PyObject *idx_values,
-                                 vector<string>& attr_names,
-                                 vector<int>& attr_types,
-                                 vector< map<string, size_t> >& attr_type_index_map,
-                                 vector<map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
+\                                 vector< map<string, size_t> >& attr_type_index_map,
+      std::map<std::type_index,       std::map<std::type_index,                                  vector<map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
                                  vector<map<CELL_IDX_T, vector<uint16_t>>>& all_attr_values_uint16,
                                  vector<map<CELL_IDX_T, vector<uint8_t>>>& all_attr_values_uint8,
                                  vector<map<CELL_IDX_T, vector<int32_t>>>& all_attr_values_int32,
@@ -4551,7 +4550,6 @@ extern "C"
         
         vector<string> attr_names;
         vector<int> attr_types;
-        vector< map<string, size_t> > attr_type_index_map;
         
         vector < map <CELL_IDX_T, vector<uint32_t> > > all_attr_values_uint32;
         vector < map <CELL_IDX_T, vector<int32_t> > >  all_attr_values_int32;
@@ -4791,15 +4789,14 @@ extern "C"
     
         vector<string> attr_names;
         vector<int> attr_types;
-        vector< map<string, size_t> > attr_type_index_map;
         
-        vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-        vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
-        vector< map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-        vector< map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
-        vector< map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-        vector< map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
-        vector< map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
+        map<string, < map<CELL_IDX_T, vector<uint32_t> >>> all_attr_values_uint32;
+        map<string, < map<CELL_IDX_T, vector<int32_t> >>> all_attr_values_int32;
+        map<string, < map<CELL_IDX_T, vector<uint16_t> >>> all_attr_values_uint16;
+        map<string, < map<CELL_IDX_T, vector<int16_t> >>> all_attr_values_int16;
+        map<string, < map<CELL_IDX_T, vector<uint8_t> >>>  all_attr_values_uint8;
+        map<string, < map<CELL_IDX_T, vector<int8_t> >>>  all_attr_values_int8;
+        map<string, < map<CELL_IDX_T, vector<float> >>>  all_attr_values_float;
 
         build_cell_attr_value_maps(idx_values,
                                    attr_names,
@@ -5043,7 +5040,6 @@ extern "C"
     
     vector<string> attr_names;
     vector<int> attr_types;
-    vector< map<string, size_t> > attr_type_index_map;
     
     vector< map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
     vector< map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
@@ -5057,7 +5053,6 @@ extern "C"
     build_cell_attr_value_maps(idx_values,
                                attr_names,
                                attr_types,
-                               attr_type_index_map,
                                all_attr_values_uint32,
                                all_attr_values_uint16,
                                all_attr_values_uint8,
