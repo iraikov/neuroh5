@@ -135,15 +135,19 @@ namespace neuroh5
      )
     {
       int status;
-      assert(index.size() == attr_ptr.size()-1);
+      throw_assert(index.size() == attr_ptr.size()-1,
+                   "append_cell_attribute: mismatch between sizes of cell index and attribute pointer");
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
       int size, rank;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator rank");
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
+                   "append_cell_attribute: HDF5 mpio error");
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 
       size_t nslots;  /* Number of slots in the 
@@ -158,7 +162,8 @@ namespace neuroh5
       
       
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
+      throw_assert(file >= 0,
+                   "append_cell_attribute: HDF5 file open error");
 
       T dummy;
       hid_t ftype;
@@ -168,7 +173,8 @@ namespace neuroh5
         }
       else
         ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0,
+                   "append_cell_attribute: unable to infer HDF5 data type");
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
@@ -192,9 +198,9 @@ namespace neuroh5
                                      data_type, index_type, ptr_type);
     
       status = H5Fclose(file);
-      assert(status == 0);
+      throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file");
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file properties list");
     }
 
 
@@ -257,9 +263,9 @@ namespace neuroh5
       // Determine number of values for each rank
       vector<uint32_t> sendbuf_num_values(size, value_map.size());
       vector<uint32_t> recvbuf_num_values(size);
-      assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
-                           &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
-             == MPI_SUCCESS);
+      throw_assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
+                                 &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
+                   == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
       sendbuf_num_values.clear();
 
       // Determine local value size and offset
@@ -271,9 +277,9 @@ namespace neuroh5
         }
       vector<uint32_t> sendbuf_size_values(size, local_value_size);
       vector<uint32_t> recvbuf_size_values(size);
-      assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
-                           &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
-             == MPI_SUCCESS);
+      throw_assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
+                                 &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
+                   == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
       sendbuf_size_values.clear();
     
       // Create gid, attr_ptr, value arrays
@@ -329,9 +335,10 @@ namespace neuroh5
 
       T dummy;
       MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
-      assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
-                           &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
-                           comm) == MPI_SUCCESS);
+      throw_assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
+                                 &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
+                                 comm) == MPI_SUCCESS,
+             "append_cell_attribute_map: error in MPI_Alltoallv");
       value_vector.clear();
     
       vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
@@ -361,9 +368,10 @@ namespace neuroh5
       vector<ATTR_PTR_T> attr_ptr_recvbuf(ptr_recvbuf_size);
     
       // Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
-                           &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
-                           comm) == MPI_SUCCESS);
+      throw_assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
+                                 &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
+                                 comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Alltoallv");
       if ((rank < io_size_value) && (attr_ptr_recvbuf.size() > 0))
         {
           attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
@@ -413,9 +421,10 @@ namespace neuroh5
 
       vector<CELL_IDX_T> gid_recvbuf(idx_recvbuf_size);
     
-      assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
-                           &gid_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_CELL_IDX_T,
-                           comm) == MPI_SUCCESS);
+      throw_assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
+                                 &gid_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_CELL_IDX_T,
+                                 comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Alltoallv");
       index_vector.clear();
       idx_sendcounts.clear();
       idx_sdispls.clear();
@@ -449,9 +458,12 @@ namespace neuroh5
                                    chunk_size, value_chunk_size, cache_size);
         }
       
-      assert(MPI_Barrier(io_comm) == MPI_SUCCESS);
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-      assert(MPI_Barrier(comm) == MPI_SUCCESS);
+      throw_assert(MPI_Barrier(io_comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Barrier");
+      throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Comm_free");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Barrier");
     }
 
 

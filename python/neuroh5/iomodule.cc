@@ -190,6 +190,9 @@ void build_cell_attr_value_maps (PyObject *idx_values,
   Py_ssize_t idx_pos = 0;
   int npy_type=0;
                            
+  throw_assert(PyDict_Check(idx_values),
+               "build_cell_attr_value_maps: invalid idx_values dictionary");
+
   while (PyDict_Next(idx_values, &idx_pos, &idx_key, &idx_value))
     {
       throw_assert((idx_key != Py_None) && (idx_value != Py_None),
@@ -4623,6 +4626,7 @@ extern "C"
     Py_ssize_t dict_size = PyDict_Size(idx_values);
     int data_color = 2;
 
+
     MPI_Comm data_comm;
     // In cases where some ranks do not have any data to write, split
     // the communicator, so that collective operations can be executed
@@ -4654,7 +4658,7 @@ extern "C"
           }
         throw_assert(io_size <= size,
                      "py_append_cell_attributes: invalid I/O size");
-    
+
         string file_name      = string(file_name_arg);
         string pop_name       = string(pop_name_arg);
         string attr_namespace = string(namespace_arg);

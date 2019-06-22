@@ -266,17 +266,20 @@ namespace neuroh5
      )
     {
       int status;
-      assert(index.size() == attr_ptr.size()-1);
+      throw_assert(index.size() == attr_ptr.size()-1,
+                   "append_cell_attribute: mismatch of sizes of cell index and attribute pointer");
       std::vector<ATTR_PTR_T>  local_attr_ptr;
 
       hid_t file = H5Iget_file_id(loc);
-      assert(file >= 0);
+      throw_assert(file >= 0,
+                   "append_cell_attribute: invalid file handle");
 
       // get the I/O communicator
       MPI_Comm comm;
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
-      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0,
+                   "append_cell_attribute: unable to obtain MPI I/O communicator");
     
       int ssize, srank; size_t size, rank;
       assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
@@ -291,7 +294,8 @@ namespace neuroh5
       std::vector<uint64_t> index_size_vector;
       index_size_vector.resize(size);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Allgather");
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
       hsize_t local_ptr_size;
@@ -314,13 +318,13 @@ namespace neuroh5
       std::vector<uint64_t> ptr_size_vector;
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS, "append_cell_attribute: error in MPI_Allgather");
     
       hsize_t local_value_size = value.size();
       std::vector<uint64_t> value_size_vector;
       value_size_vector.resize(size);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS, "append_cell_attribute: error in MPI_Allgather");
       
       T dummy;
       hid_t ftype;
@@ -328,10 +332,10 @@ namespace neuroh5
         ftype = data_type.value();
       else
         ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0, "append_cell_attribute: unable to infer HDF5 datatype");
 
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-      assert(mtype >= 0);
+      throw_assert(mtype >= 0, "append_cell_attribute: unable to obtain native HDF5 datatype");
 
       // create datasets
       hsize_t ptr_size=0, index_size=0, value_size=0;
@@ -428,7 +432,7 @@ namespace neuroh5
         }
 
       status = H5Fclose (file);
-      assert(status >= 0);
+      throw_assert(status >= 0, "append_cell_attribute: unable to close HDF5 file");
     
       assert(H5Tclose(mtype) >= 0);
       status = H5Pclose(wapl);
@@ -437,11 +441,13 @@ namespace neuroh5
       assert(status == 0);
 
       status = MPI_Comm_free(&comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
         {
           status = MPI_Info_free(&info);
-          assert(status == MPI_SUCCESS);
+          throw_assert(status == MPI_SUCCESS,
+                       "append_cell_attribute: error in MPI_Info_free");
         
         }
     }
