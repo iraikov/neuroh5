@@ -20,6 +20,7 @@
 #include "serialize_edge.hh"
 #include "serialize_data.hh"
 #include "append_rank_edge_map.hh"
+#include "range_sample.hh"
 #include "mpi_debug.hh"
 
 #include <cstdio>
@@ -67,8 +68,14 @@ namespace neuroh5
       assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
       assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+
       // Am I an I/O rank?
-      if (rank < io_size)
+      if (is_io_rank)
         {
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
@@ -96,7 +103,7 @@ namespace neuroh5
 
           mpi::MPI_DEBUG(all_comm, "scatter_read_projection: ", src_pop_name, " -> ", dst_pop_name, "\n");
 
-          if (rank < (int)io_size)
+          if (is_io_rank)
             {
               DST_BLK_PTR_T block_base;
               DST_PTR_T edge_base, edge_count;
@@ -179,7 +186,7 @@ namespace neuroh5
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: packed ", num_packed_edges,
                         " edges from projection ", src_pop_name, " -> ", dst_pop_name);
 
-            } // rank < io_size
+            } // is_io_rank
 
           MPI_Barrier(all_comm);
           MPI_Barrier(io_comm);
