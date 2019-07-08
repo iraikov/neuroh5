@@ -93,6 +93,7 @@ setup(
                       'src/data/append_edge_map_selection.cc',
                       'src/data/append_rank_attr_map.cc',
                       'src/data/tokenize.cc',
+                      'src/data/range_sample.cc',
                       'src/cell/read_tree.cc',
                       'src/cell/cell_populations.cc',
                       'src/cell/validate_tree.cc',
