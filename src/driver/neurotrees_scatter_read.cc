@@ -386,6 +386,8 @@ int main(int argc, char** argv)
   
   for (size_t i = 0; i<pop_names.size(); i++)
     {
+      if (rank == 0)
+        printf("reading population %s...\n", pop_names[i].c_str());
       status = cell::scatter_read_trees (all_comm, input_file_name, io_size,
                                          attr_name_spaces, node_rank_map,
                                          pop_names[i], pop_vector[i].start,

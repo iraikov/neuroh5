@@ -32,6 +32,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 using namespace neuroh5;
@@ -671,7 +672,16 @@ namespace neuroh5
       vector<char> sendbuf; 
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
-      if (srank < io_size)
+      
+      vector<size_t> rank_range(size); set<size_t> io_rank_set;
+      std::iota(rank_range.begin(), rank_range.end(), 0);
+      std::sample(rank_range.begin(), rank_range.end(), std::inserter(io_rank_set, io_rank_set.end())
+                  io_size, std::mt19937{std::random_device{}()});
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+
+      if (is_io_rank)
         {
           // Am I an I/O rank?
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
