@@ -15,11 +15,9 @@
 ##PBS -m bea
 ### Set umask so users in my group can read job stdout and stderr files
 #PBS -W umask=0027
-### Get darsan profile data
-#PBS -lgres=darshan
 
-module swap PrgEnv-intel PrgEnv-gnu
-module load cray-hdf5-parallel
+module load bwpy/2.0.1
+module load bwpy-mpi
 
 set -x
 
