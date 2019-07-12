@@ -43,7 +43,7 @@ else:
                         "-I"+MPI4PY_INCDIR,
                         "-Iinclude", "-Iinclude/cell", "-Iinclude/graph", "-Iinclude/ngraph",
                         "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5",
-                        "-g", "-O0"]
+                        "-g"]
     extra_link_args = ["-L"+HDF5_LIBDIR]
     if MPI_LIBDIR != "":
         extra_link_args = extra_link_args + ["-L"+MPI_LIBDIR]
@@ -93,6 +93,7 @@ setup(
                       'src/data/append_edge_map_selection.cc',
                       'src/data/append_rank_attr_map.cc',
                       'src/data/tokenize.cc',
+                      'src/data/range_sample.cc',
                       'src/cell/read_tree.cc',
                       'src/cell/cell_populations.cc',
                       'src/cell/validate_tree.cc',

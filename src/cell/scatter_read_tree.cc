@@ -17,6 +17,7 @@
 #include "attr_map.hh"
 #include "cell_attributes.hh"
 #include "rank_range.hh"
+#include "range_sample.hh"
 #include "append_rank_tree_map.hh"
 #include "alltoallv_template.hh"
 #include "serialize_tree.hh"
@@ -52,7 +53,7 @@ namespace neuroh5
      size_t numitems = 0
      )
     {
-      herr_t status; hid_t fapl=-1, rapl=-1, file=-1;
+      herr_t status; hid_t fapl=-1, file=-1;
       vector< pair<hsize_t,hsize_t> > ranges;
       size_t dset_size, read_size; hsize_t start=0, end=0, block=0;
     
@@ -66,7 +67,7 @@ namespace neuroh5
 
       throw_assert_nomsg(io_size > 0);
     
-      int srank, ssize; size_t rank, size;
+      int srank, ssize; size_t rank, size, io_rank;
       throw_assert_nomsg(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
       throw_assert_nomsg(srank >= 0);
@@ -74,20 +75,26 @@ namespace neuroh5
       rank = srank;
       size = ssize;
 
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+
       // Am I an I/O rank?
-      if (srank < io_size)
+      if (is_io_rank)
         {
-          MPI_Comm_split(all_comm,io_color,rank,&io_comm);
+          throw_assert(MPI_Comm_split(all_comm,io_color,rank,&io_comm) == MPI_SUCCESS,
+                       "scatter_read_trees: error in MPI_Comm_split");
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+          throw_assert_nomsg(MPI_Comm_rank(io_comm, &srank) == MPI_SUCCESS);
+          io_rank = srank;
         
           fapl = H5Pcreate(H5P_FILE_ACCESS);
           throw_assert_nomsg(fapl >= 0);
           throw_assert_nomsg(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
         
           /* Create property list for collective dataset operations. */
-          rapl = H5Pcreate (H5P_DATASET_XFER);
-          status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
-
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
           throw_assert_nomsg(file >= 0);
           dset_size = hdf5::dataset_num_elements(file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
@@ -119,7 +126,7 @@ namespace neuroh5
               // determine which blocks of block_ptr are read by which I/O rank
               mpi::rank_ranges(read_size, io_size, ranges);
               
-              start = ranges[rank].first + offset;
+              start = ranges[io_rank].first + offset;
               end   = start + ranges[rank].second;
 
               block = end - start + 1;
@@ -139,7 +146,7 @@ namespace neuroh5
       sendcounts.resize(size,0);
       sdispls.resize(size,0);
 
-      if (block > 0)
+      if (is_io_rank)
         {
           map <rank_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
 

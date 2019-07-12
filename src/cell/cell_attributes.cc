@@ -22,6 +22,7 @@
 #include "alltoallv_template.hh"
 #include "serialize_data.hh"
 #include "serialize_cell_attributes.hh"
+#include "range_sample.hh"
 #include "mpe_seq.hh"
 #include "throw_assert.hh"
 
@@ -671,7 +672,13 @@ namespace neuroh5
       vector<char> sendbuf; 
       vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
-      if (srank < io_size)
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+
+      if (is_io_rank)
         {
           // Am I an I/O rank?
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);

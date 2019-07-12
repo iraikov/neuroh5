@@ -9,14 +9,12 @@
 
 #include <mpi.h>
 
-#include <cassert>
 #include <vector>
 #include <map>
 
 #include "mpi_debug.hh"
-
+#include "throw_assert.hh"
 #include "neuroh5_types.hh"
-
 #include "attr_map.hh"
 
 using namespace std;
@@ -38,11 +36,10 @@ namespace neuroh5
                           vector<int>& rdispls,
                           vector<T>& recvbuf)
     {
-
       int ssize; size_t size;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS,
+                   "alltoallv: unable to obtain size of MPI communicator")
 
-      assert(ssize > 0);
       size = ssize;
 
       
@@ -55,10 +52,14 @@ namespace neuroh5
       // 1. Each ALL_COMM rank sends a data size to every other rank and
       //    creates sendcounts and sdispls arrays
 
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                          &recvcounts[0], 1, MPI_INT, comm) == MPI_SUCCESS);
-
-    
+      {
+        int status;
+        status = MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
+                              &recvcounts[0], 1, MPI_INT, comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "alltoallv: error in MPI_Alltoallv: status: " << status);
+      }
+        
       // 2. Each rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
       
@@ -73,16 +74,22 @@ namespace neuroh5
       recvbuf.resize(recvbuf_size, 0);
 
       size_t global_recvbuf_size=0;
-      assert(MPI_Allreduce(&recvbuf_size, &global_recvbuf_size, 1, MPI_SIZE_T, MPI_SUM,
-                           comm) == MPI_SUCCESS);
-
+      {
+        int status;
+        status = MPI_Allreduce(&recvbuf_size, &global_recvbuf_size, 1, MPI_SIZE_T, MPI_SUM,
+                               comm);
+        throw_assert (status == MPI_SUCCESS, "error in MPI_Allreduce: status = " << status);
+      }
       if (global_recvbuf_size > 0)
         {
-      
+          int status;
+
           // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-          assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,
-                               &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,
-                               comm) == MPI_SUCCESS);
+          status = MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,
+                                 &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,
+                                 comm);
+          throw_assert (status == MPI_SUCCESS, "error in MPI_Alltoallv: status = " << status);
+                        
         }
 
       return 0;

@@ -286,8 +286,10 @@ int main(int argc, char** argv)
   vector <string> txt_input_file_names;
   string hdf5_input_file_name, hdf5_input_dsetpath;
   map < string, vector <size_t> > num_edge_attrs;
-  map<string, vector< vector<string> > > edge_attr_names;
+  map <string, data::AttrSet> attr_set_map;
+
   MPI_Comm all_comm;
+
   
   assert(MPI_Init(&argc, &argv) >= 0);
 
@@ -350,8 +352,34 @@ int main(int argc, char** argv)
             num_edge_attrs[attr_namespace].resize(data::AttrVal::num_attr_types);
             for (auto & attr_name : attr_names)
               {
-                edge_attr_names[attr_namespace][attr_index].push_back(attr_name);
+                //edge_attr_names[attr_namespace][attr_index].push_back(attr_name);
                 num_edge_attrs[attr_namespace][attr_index]++;
+                switch (attr_index)
+                  {
+                  case data::AttrMap::attr_index_float:
+                    attr_set_map[attr_namespace].add<float>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_uint8:
+                    attr_set_map[attr_namespace].add<uint8_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_uint16:
+                    attr_set_map[attr_namespace].add<uint16_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_uint32:
+                    attr_set_map[attr_namespace].add<uint32_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_int8:
+                    attr_set_map[attr_namespace].add<int8_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_int16:
+                    attr_set_map[attr_namespace].add<int16_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_int32:
+                    attr_set_map[attr_namespace].add<int32_t>(attr_name);
+                    break;
+                  default:
+                    throw_err("Unknown type index");
+                  }
               }
 
             optflag_attr_names=0;
@@ -439,8 +467,34 @@ int main(int argc, char** argv)
             num_edge_attrs[attr_namespace].resize(data::AttrVal::num_attr_types);
             for (auto & attr_name : attr_names)
               {
-                edge_attr_names[attr_namespace][attr_index].push_back(attr_name);
+                //edge_attr_names[attr_namespace][attr_index].push_back(attr_name);
                 num_edge_attrs[attr_namespace][attr_index]++;
+                switch (attr_index)
+                  {
+                  case data::AttrMap::attr_index_float:
+                    attr_set_map[attr_namespace].add<float>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_uint8:
+                    attr_set_map[attr_namespace].add<uint8_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_uint16:
+                    attr_set_map[attr_namespace].add<uint16_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_uint32:
+                    attr_set_map[attr_namespace].add<uint32_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_int8:
+                    attr_set_map[attr_namespace].add<int8_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_int16:
+                    attr_set_map[attr_namespace].add<int16_t>(attr_name);
+                    break;
+                  case data::AttrMap::attr_index_int32:
+                    attr_set_map[attr_namespace].add<int32_t>(attr_name);
+                    break;
+                  default:
+                    throw_err("Unknown type index");
+                  }
               }
 
             optflag_attr_names=0;
@@ -484,7 +538,6 @@ int main(int argc, char** argv)
       print_usage_full(argv);
       exit(1);
     }
-
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
   vector<pair <pop_t, string> > pop_labels;
@@ -588,11 +641,27 @@ int main(int argc, char** argv)
 
   if (syn_idx.size() > 0)
     {
+      attr_set_map["Attributes"].add<uint32_t>("syn_id");
+    }
+
+  map <string, pair <size_t, data::AttrIndex > > edge_attr_index;
+  map <string, data::AttrSet>::const_iterator ns_first = attr_set_map.cbegin();
+  for (auto ns_it=attr_set_map.cbegin(); ns_it != attr_set_map.cend(); ++ns_it)
+    {
+      const string& attr_namespace = ns_it->first;
+      const data::AttrSet& attr_set = ns_it->second;
+      size_t attr_ns_index = distance(ns_first, ns_it);
+      data::AttrIndex attr_index(attr_set);
+      edge_attr_index[attr_namespace] = make_pair(attr_ns_index, attr_index);
+    }
+  
+
+  if (syn_idx.size() > 0)
+    {
       status = append_syn_adj_map (src_range, src_offset, dst_offset,
                                    dst_idx, src_idx_ptr, src_idx,
                                    syn_idx_ptr, syn_idx,
                                    num_edges, edge_map);
-      edge_attr_names["Attributes"][data::AttrVal::attr_index_uint32].push_back("syn_id");
     }
   else
     {
@@ -604,7 +673,7 @@ int main(int argc, char** argv)
 
   status = graph::write_graph (all_comm, io_size, output_file_name,
                                src_pop_name, dst_pop_name,
-                               edge_attr_names, edge_map);
+                               edge_attr_index, edge_map);
 
   MPI_Comm_free(&all_comm);
   

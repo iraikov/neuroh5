@@ -9,7 +9,7 @@
 namespace neuroh5
 {
 
-  static bool debug_enabled = false;
+  static bool debug_enabled = true;
   
   inline void DEBUG(){}
   
