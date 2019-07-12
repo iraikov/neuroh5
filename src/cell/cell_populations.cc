@@ -19,6 +19,7 @@
 #include "serialize_data.hh"
 #include "path_names.hh"
 #include "throw_assert.hh"
+#include "exists_group.hh"
 
 #define MAX_POP_NAME_LEN 1024
 
@@ -71,23 +72,27 @@ namespace neuroh5
           throw_assert_nomsg(file >= 0);
           
           hsize_t num_populations;
-          grp = H5Gopen(file, hdf5::POPULATIONS.c_str(), H5P_DEFAULT);
-          throw_assert_nomsg(grp >= 0);
-          throw_assert_nomsg(H5Gget_num_objs(grp, &num_populations)>=0);
-
-          hsize_t idx = 0;
-          vector<string> op_data;
-          throw_assert_nomsg(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                            &iterate_cb, (void*)&op_data ) >= 0);
-        
-          throw_assert_nomsg(op_data.size() == num_populations);
-        
-          for (size_t i = 0; i < op_data.size(); ++i)
+          if (hdf5::exists_group(file, hdf5::POPULATIONS.c_str()))
             {
-              pop_names.push_back(op_data[i]);
-            }
+              grp = H5Gopen(file, hdf5::POPULATIONS.c_str(), H5P_DEFAULT);
+              throw_assert_nomsg(grp >= 0);
+              throw_assert_nomsg(H5Gget_num_objs(grp, &num_populations)>=0);
+              
+              hsize_t idx = 0;
+              vector<string> op_data;
+              throw_assert_nomsg(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                                            &iterate_cb, (void*)&op_data ) >= 0);
+              
+              throw_assert_nomsg(op_data.size() == num_populations);
+              
+              for (size_t i = 0; i < op_data.size(); ++i)
+                {
+                  pop_names.push_back(op_data[i]);
+                }
         
-          throw_assert_nomsg(H5Gclose(grp) >= 0);
+              throw_assert_nomsg(H5Gclose(grp) >= 0);
+            }
+          
           throw_assert_nomsg(H5Fclose(file) >= 0);
         }
 
@@ -305,25 +310,28 @@ namespace neuroh5
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           throw_assert_nomsg(file >= 0);
 
-          grp_h5types = H5Gopen2(file, hdf5::H5_TYPES.c_str(), H5P_DEFAULT);
-          throw_assert_nomsg(grp_h5types >= 0);
-
-          pop_labels_type = H5Topen(grp_h5types, hdf5::POP_LABELS.c_str(), H5P_DEFAULT);
-          throw_assert_nomsg(pop_labels_type >= 0);
-
-          size_t num_labels = H5Tget_nmembers(pop_labels_type);
-          throw_assert_nomsg(num_labels > 0);
-
-          for (size_t i=0; i<num_labels; i++)
+          if (hdf5::exists_group(file, hdf5::H5_TYPES.c_str()))
             {
-              char namebuf[MAX_POP_NAME_LEN];
-              ierr = H5Tenum_nameof(pop_labels_type, &i, namebuf, MAX_POP_NAME_LEN);
-              pop_name_vector.push_back(string(namebuf));
-              throw_assert_nomsg(ierr >= 0);
+              grp_h5types = H5Gopen2(file, hdf5::H5_TYPES.c_str(), H5P_DEFAULT);
+              throw_assert_nomsg(grp_h5types >= 0);
+              
+              pop_labels_type = H5Topen(grp_h5types, hdf5::POP_LABELS.c_str(), H5P_DEFAULT);
+              throw_assert_nomsg(pop_labels_type >= 0);
+              
+              size_t num_labels = H5Tget_nmembers(pop_labels_type);
+              throw_assert_nomsg(num_labels > 0);
+              
+              for (size_t i=0; i<num_labels; i++)
+                {
+                  char namebuf[MAX_POP_NAME_LEN];
+                  ierr = H5Tenum_nameof(pop_labels_type, &i, namebuf, MAX_POP_NAME_LEN);
+                  pop_name_vector.push_back(string(namebuf));
+                  throw_assert_nomsg(ierr >= 0);
+                }
+              
+              throw_assert_nomsg(H5Tclose(pop_labels_type) >= 0);
+              throw_assert_nomsg(H5Gclose(grp_h5types) >= 0);
             }
-            
-          throw_assert_nomsg(H5Tclose(pop_labels_type) >= 0);
-          throw_assert_nomsg(H5Gclose(grp_h5types) >= 0);
           throw_assert_nomsg(H5Fclose(file) >= 0);
             
         }
