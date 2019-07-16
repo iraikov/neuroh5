@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -40,10 +41,10 @@ namespace neuroh5
 
         // make hyperslab selection
         hid_t fspace = H5Dget_space(dset);
-        assert(fspace >= 0);
+        throw_assert(fspace >= 0, "error in H5Dget_space");
         hsize_t one = 1;
         hid_t mspace = H5Screate_simple(1, &len, NULL);
-        assert(mspace >= 0);
+        throw_assert(mspace >= 0, "error in H5Screate_simple");
 
         if (len > 0)
           {
@@ -61,7 +62,7 @@ namespace neuroh5
           }
 
         ierr = H5Dwrite(dset, ntype, mspace, fspace, wapl, &v[0]);
-        assert(ierr >= 0);
+        throw_assert(ierr >= 0, "write_template: error in H5Dwrite");
 
         assert(H5Dclose(dset) >= 0);
         assert(H5Sclose(mspace) >= 0);
