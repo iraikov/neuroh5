@@ -20,6 +20,7 @@
 #include "attr_map.hh"
 #include "compact_optional.hh"
 #include "optional_value.hh"
+#include "range_sample.hh"
 #include "throw_assert.hh"
 
 namespace neuroh5
@@ -242,6 +243,13 @@ namespace neuroh5
 	{
 	  io_size_value = io_size;
 	}
+
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size_value, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+
       
       vector< pair<hsize_t,hsize_t> > ranges;
       mpi::rank_ranges(size, io_size_value, ranges);
@@ -254,7 +262,7 @@ namespace neuroh5
             {
               if (ranges[i].first <= r)
                 {
-                  io_dests[r] = i;
+                  io_dests[r] = *std::next(io_rank_set.begin(), i);
                   break;
                 }
             }
@@ -311,7 +319,7 @@ namespace neuroh5
 
     
       // Compute size of values to receive for all I/O rank
-      if (rank < io_size_value)
+      if (is_io_rank)
         {
           for (size_t s=0; s<size; s++)
             {
@@ -345,7 +353,7 @@ namespace neuroh5
       ptr_sendcounts[io_dests[rank]] = attr_ptr.size();
 
       // Compute number of values to receive for all I/O rank
-      if (rank < io_size_value)
+      if (is_io_rank)
         {
           for (size_t s=0; s<size; s++)
             {
@@ -372,7 +380,7 @@ namespace neuroh5
                                  &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
                                  comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Alltoallv");
-      if ((rank < io_size_value) && (attr_ptr_recvbuf.size() > 0))
+      if ((is_io_rank) && (attr_ptr_recvbuf.size() > 0))
         {
           attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
         }
@@ -399,7 +407,7 @@ namespace neuroh5
       idx_sendcounts[io_dests[rank]] = index_vector.size();
 
       // Compute number of values to receive for all I/O rank
-      if (rank < io_size_value)
+      if (is_io_rank)
         {
           for (size_t s=0; s<size; s++)
             {
@@ -438,7 +446,7 @@ namespace neuroh5
       int io_color = 1, color;
     
       // Am I an I/O rank?
-      if (rank < io_size_value)
+      if (is_io_rank)
         {
           color = io_color;
         }
@@ -449,7 +457,7 @@ namespace neuroh5
       MPI_Comm_split(comm,color,rank,&io_comm);
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
-      if (rank < io_size_value)
+      if (is_io_rank)
         {
           append_cell_attribute<T>(io_comm, file_name,
                                    attr_namespace, pop_name, pop_start, attr_name,
