@@ -108,7 +108,9 @@ namespace neuroh5
       void insert_map1 (vector <map <CELL_IDX_T, std::vector<T> > >& a,
                         const vector <map <CELL_IDX_T, std::vector<T> > >& b)
       {
-        throw_assert(a.size() == b.size(), "AttrMap::insert_map1: maps are of different sizes");
+        throw_assert(a.size() == b.size(), 
+                     "AttrMap::insert_map1: maps are of different sizes: size a = " <<
+                     a.size() << " size b = " << b.size());
         for (size_t i=0; i<a.size(); i++)
           {
             a[i].insert(b[i].cbegin(), b[i].cend());
