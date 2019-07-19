@@ -4394,8 +4394,15 @@ extern "C"
     PyObject *idx_values;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
+    const unsigned long default_cache_size = 4*1024*1024;
+    const unsigned long default_chunk_size = 4000;
+    const unsigned long default_value_chunk_size = 4000;
     const string default_namespace = "Attributes";
     char *file_name_arg, *pop_name_arg, *namespace_arg = (char *)default_namespace.c_str();
+    unsigned long io_size = 0;
+    unsigned long chunk_size = default_chunk_size;
+    unsigned long value_chunk_size = default_value_chunk_size;
+    unsigned long cache_size = default_cache_size;
     herr_t status;
     
     static const char *kwlist[] = {
@@ -4404,11 +4411,17 @@ extern "C"
                                    "values",
                                    "namespace",
                                    "comm",
+                                   "io_size",
+                                   "chunk_size",
+                                   "value_chunk_size",
+                                   "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sO", (char **)kwlist,
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOkkkk", (char **)kwlist,
                                      &file_name_arg, &pop_name_arg, &idx_values,
-                                     &namespace_arg, &py_comm))
+                                     &namespace_arg, &py_comm, 
+                                     &io_size, &chunk_size, &value_chunk_size, &cache_size))
       return NULL;
 
     string file_name = string(file_name_arg);
@@ -4454,6 +4467,21 @@ extern "C"
 
     if (dict_size > 0)
       {
+        int srank, ssize; size_t size;
+        throw_assert(MPI_Comm_size(data_comm, &ssize) == MPI_SUCCESS,
+                     "py_write_cell_attributes: unable to obtain data communicator size");
+        throw_assert(MPI_Comm_rank(data_comm, &srank) == MPI_SUCCESS,
+                     "py_write_cell_attributes: unable to obtain data communicator rank");
+        throw_assert(ssize > 0, "py_write_cell_attributes: zero data communicator size");
+        throw_assert(srank >= 0, "py_write_cell_attributes: invalid data communicator rank");
+        size = ssize;
+
+        if ((io_size == 0) || (io_size > size))
+          {
+            io_size = size;
+          }
+        throw_assert(io_size <= size,
+                     "py_write_cell_attributes: invalid I/O size");
 
         vector<pair <pop_t, string> > pop_labels;
         status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
@@ -4512,43 +4540,43 @@ extern "C"
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                   attr_name, it->second, dflt_data_type);
+                                                   attr_name, it->second, io_size, dflt_data_type);
           }
         for(auto it = all_attr_values_uint32.cbegin(); it != all_attr_values_uint32.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, dflt_data_type);
+                                                      attr_name, it->second, io_size, dflt_data_type);
           }
         for(auto it = all_attr_values_uint16.cbegin(); it != all_attr_values_uint16.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, dflt_data_type);
+                                                      attr_name, it->second, io_size, dflt_data_type);
           }
         for(auto it = all_attr_values_uint8.cbegin(); it != all_attr_values_uint8.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, dflt_data_type);
+                                                     attr_name, it->second, io_size, dflt_data_type);
           }
         for(auto it = all_attr_values_int32.cbegin(); it != all_attr_values_int32.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, dflt_data_type);
+                                                     attr_name, it->second, io_size, dflt_data_type);
           }
         for(auto it = all_attr_values_int16.cbegin(); it != all_attr_values_int16.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, dflt_data_type);
+                                                     attr_name, it->second, io_size, dflt_data_type);
           }
         for(auto it = all_attr_values_int8.cbegin(); it != all_attr_values_int8.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                    attr_name, it->second, dflt_data_type);
+                                                    attr_name, it->second, io_size, dflt_data_type);
           }
 
         
