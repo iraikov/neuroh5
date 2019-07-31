@@ -519,14 +519,16 @@ namespace neuroh5
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
-          vector<CELL_IDX_T>  index;
-          vector<ATTR_PTR_T>  ptr;
+          vector<CELL_IDX_T>  index, value_index;
+          vector<ATTR_PTR_T>  ptr, value_ptr;
 
           string attr_name  = attr_info[i].first;
           AttrKind attr_kind = attr_info[i].second;
           size_t attr_size  = attr_kind.size;
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
 
+          status = hdf5::read_cell_index_ptr(comm, file, attr_path, pop_start, index, ptr);
+ 
           
           switch (attr_kind.type)
             {
@@ -535,9 +537,10 @@ namespace neuroh5
                 {
                   vector<uint32_t> attr_values_uint32;
                   status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                     index, ptr, attr_values_uint32,
+                                                     index, ptr, value_index, value_ptr,
+                                                     attr_values_uint32,
                                                      offset, numitems);
-                  attr_values.insert(attr_name, index, ptr, attr_values_uint32);
+                  attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint32);
                 }
               else if (attr_size == 2)
                 {
@@ -868,6 +871,8 @@ namespace neuroh5
               size_t attr_size  = attr_kind.size;
               string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
 
+              status = hdf5::read_cell_index_ptr(comm, file, attr_path, pop_start, index, ptr);
+          
               switch (attr_kind.type)
                 {
                 case UIntVal:
@@ -1086,6 +1091,9 @@ namespace neuroh5
           AttrKind attr_kind = attr_info[i].second;
           size_t attr_size  = attr_kind.size;
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
+
+          status = hdf5::read_cell_index_ptr(comm, file, attr_path, pop_start, index, ptr);
+                    
           
           switch (attr_kind.type)
             {
