@@ -22,6 +22,24 @@ namespace neuroh5
   namespace data
   {
 
+    template<typename T>
+    void append_values_map(std::map < CELL_IDX_T, std::vector <T> >& values_map,
+                           CELL_IDX_T vindex,
+                           typename vector<T>::const_iterator first,
+                           typename vector<T>::const_iterator last)
+    {
+      auto values_it = values_map.find(vindex);
+      if (values_it == values_map.end())
+        {
+          vector<T> v(first, last);
+          values_map.insert(make_pair(vindex, v));
+        }
+      else
+        {
+          values_it->second.insert(std::end(values_it->second), first, last);
+        }
+    }
+
     struct AttrMap
     {
       

@@ -22,6 +22,8 @@ namespace neuroh5
   namespace data
   {
 
+
+    
   template<>
   const map< CELL_IDX_T, vector<float> >& AttrMap::attr_map<float> (size_t i) const
   {
@@ -271,8 +273,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
-        vector<float> v(first, last);
-        float_values[index].insert(make_pair(vindex, v));
+        append_values_map(float_values[index], vindex, first, last);
         index_set.insert(vindex);
       }
     return index;
@@ -299,8 +300,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
-        vector<uint8_t> v(first, last);
-        uint8_values[index].insert(make_pair(vindex, v));
+        append_values_map(uint8_values[index], vindex, first, last);
         index_set.insert(vindex);
       }
     return index;
@@ -326,8 +326,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
-        vector<int8_t> v(first, last);
-        int8_values[index].insert(make_pair(vindex, v));
+        append_values_map(int8_values[index], vindex, first, last);
         index_set.insert(vindex);
       }
     return index;
@@ -354,8 +353,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
-        vector<uint16_t> v(first, last);
-        uint16_values[index].insert(make_pair(vindex, v));
+        append_values_map(uint16_values[index], vindex, first, last);
         index_set.insert(vindex);
       }
     return index;
@@ -382,8 +380,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
-        vector<int16_t> v(first, last);
-        int16_values[index].insert(make_pair(vindex, v));
+        append_values_map(int16_values[index], vindex, first, last);
         index_set.insert(vindex);
       }
     return index;
@@ -410,8 +407,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
-        vector<uint32_t> v(first, last);
-        uint32_values[index].insert(make_pair(vindex, v));
+        append_values_map(uint32_values[index], vindex, first, last);
         index_set.insert(vindex);
       }
     return index;
@@ -438,8 +434,7 @@ namespace neuroh5
             first = value.begin();
             last  = value.end();
           }
-        vector<int32_t> v(first, last);
-        int32_values[index].insert(make_pair(vindex, v));
+        append_values_map(int32_values[index], vindex, first, last);
         index_set.insert(vindex);
       }
     return index;
