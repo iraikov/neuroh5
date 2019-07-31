@@ -16,7 +16,7 @@ namespace neuroh5
     
     int exists_dataset
     (
-     hid_t  file,
+     hid_t  loc,
      const std::string& path
      );
   }

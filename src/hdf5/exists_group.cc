@@ -18,7 +18,7 @@ namespace neuroh5
      *****************************************************************************/
     int exists_group
     (
-     hid_t  file,
+     hid_t  loc,
      const string& path
      )
     {
@@ -29,8 +29,15 @@ namespace neuroh5
       
       for (string value : tokens)
         {
-          ppath = ppath + delim + value;
-          status = H5Lexists (file, ppath.c_str(), H5P_DEFAULT);
+          if (ppath.empty())
+            {
+              ppath = value;
+            }
+          else
+            {
+              ppath = ppath + delim + value;
+            }
+          status = H5Lexists (loc, ppath.c_str(), H5P_DEFAULT);
           if (status <= 0)
             break;
         }

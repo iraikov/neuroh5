@@ -3,11 +3,12 @@
 
 #include <hdf5.h>
 
-#include <cassert>
 #include <vector>
 #include <utility>
+#include <cstdio>
 
 #include "exists_dataset.hh"
+#include "throw_assert.hh"
 
 
 namespace neuroh5
@@ -33,16 +34,20 @@ namespace neuroh5
       if (ierr > 0)
 	{
 	  hid_t mspace = H5Screate_simple(1, &len, NULL);
-	  assert(mspace >= 0);
+	  throw_assert(mspace >= 0,
+                       "hdf5::read: error in H5Screate_simple");
 	  ierr = H5Sselect_all(mspace);
-	  assert(ierr >= 0);
+	  throw_assert(ierr >= 0,
+                       "hdf5::read: error in H5Sselect_all");
 
 	  hid_t dset = H5Dopen(loc, name.c_str(), H5P_DEFAULT);
-	  assert(dset >= 0);
+	  throw_assert(dset >= 0,
+                       "hdf5::read: error in H5Dopen");
     
 	  // make hyperslab selection
 	  hid_t fspace = H5Dget_space(dset);
-	  assert(fspace >= 0);
+	  throw_assert(fspace >= 0,
+                       "hdf5::read: error in H5Dget_space");
 	  hsize_t one = 1;
 	  if (len > 0)
 	    {
@@ -52,14 +57,18 @@ namespace neuroh5
 	    {
 	      ierr = H5Sselect_none(fspace);
 	    }
-	  assert(ierr >= 0);
+	  throw_assert(ierr >= 0,
+                       "hdf5::read: error in H5Sselect_hyperslab");
+	  ierr = H5Dread(dset, ntype, mspace, fspace, rapl, v.data());
+	  throw_assert(ierr >= 0,
+                       "hdf5::read: error in H5Dread");
 	  
-	  ierr = H5Dread(dset, ntype, mspace, fspace, rapl, &v[0]);
-	  assert(ierr >= 0);
-	  
-	  assert(H5Dclose(dset) >= 0);
-	  assert(H5Sclose(fspace) >= 0);
-	  assert(H5Sclose(mspace) >= 0);
+	  throw_assert(H5Dclose(dset) >= 0,
+                       "hdf5::read: error in H5Dclose");
+	  throw_assert(H5Sclose(fspace) >= 0,
+                       "hdf5::read: error in H5Sclose");
+	  throw_assert(H5Sclose(mspace) >= 0,
+                       "hdf5::read: error in H5Sclose");
 	}
     
       return ierr;
@@ -92,42 +101,51 @@ namespace neuroh5
           
           len += count;
         }
-      assert(coords.size() == len);
+      throw_assert(coords.size() == len,
+                   "hdf5::read_selection: mismatch in coordinate length");
       herr_t ierr = 0;
 
       ierr = exists_dataset (loc, name.c_str());
       if (ierr > 0)
 	{
-
 	  hid_t mspace = H5Screate_simple(1, &len, NULL);
-	  assert(mspace >= 0);
+	  throw_assert(mspace >= 0,
+                       "hdf5::read_selection: error in H5Screate_simple");
 	  ierr = H5Sselect_all(mspace);
-	  assert(ierr >= 0);
+	  throw_assert(ierr >= 0,
+                       "hdf5::read_selection: error in H5Sselect_all");
 
 	  hid_t dset = H5Dopen(loc, name.c_str(), H5P_DEFAULT);
-	  assert(dset >= 0);
+	  throw_assert(dset >= 0,
+                       "hdf5::read_selection: error in H5Dopen");
 	  
 	  // make hyperslab selection
 	  hid_t fspace = H5Dget_space(dset);
-	  assert(fspace >= 0);
+	  throw_assert(fspace >= 0,
+                       "hdf5::read_selection: error in H5Dget_space");
 	  
 	  if (len > 0)
 	    {
-	      ierr = H5Sselect_elements (fspace, H5S_SELECT_SET, len, (const hsize_t *)&coords[0]);
+	      ierr = H5Sselect_elements (fspace, H5S_SELECT_SET, len, (const hsize_t *)coords.data());
 	    }
 	  else
 	    {
 	      ierr = H5Sselect_none(fspace);
 	    }
-	  assert(ierr >= 0);
+	  throw_assert(ierr >= 0,
+                       "hdf5::read_selection: error in H5Sselect_elements");
 
           v.resize(len);
-	  ierr = H5Dread(dset, ntype, mspace, fspace, rapl, &v[0]);
-	  assert(ierr >= 0);
+	  ierr = H5Dread(dset, ntype, mspace, fspace, rapl, v.data());
+	  throw_assert(ierr >= 0,
+                       "hdf5::read_selection: error in H5Dread");
 	  
-	  assert(H5Dclose(dset) >= 0);
-	  assert(H5Sclose(fspace) >= 0);
-	  assert(H5Sclose(mspace) >= 0);
+	  throw_assert(H5Dclose(dset) >= 0,
+                       "hdf5::read_selection: error in H5Dclose");
+	  throw_assert(H5Sclose(fspace) >= 0,
+                       "hdf5::read_selection: error in H5Sclose");
+	  throw_assert(H5Sclose(mspace) >= 0,
+                       "hdf5::read_selection: error in H5Sclose");
 	}
     
       return ierr;
