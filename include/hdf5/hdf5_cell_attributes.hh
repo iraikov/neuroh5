@@ -351,11 +351,7 @@ namespace neuroh5
       // write to datasets
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-      if (size > 1)
-        {
-          status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
-        }
-
+      status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
 
       switch (index_type)
         {
