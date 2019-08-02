@@ -120,17 +120,21 @@ namespace neuroh5
       out_name_spaces.clear();
     
       string path = "/" + hdf5::POPULATIONS + "/" + pop_name;
+      if (hdf5::exists_group (in_file, path) > 0)
+        {
 
-      hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-      throw_assert(grp >= 0,
-                   "get_cell_attribute_name_spaces: unable to open group " << path);
+          hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+          throw_assert(grp >= 0,
+                       "get_cell_attribute_name_spaces: unable to open group " << path);
+          
+          hsize_t idx = 0;
+          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &name_space_iterate_cb, (void*) &out_name_spaces);
+          
+          throw_assert(H5Gclose(grp) >= 0,
+                       "get_cell_attribute_name_spaces: unable to close group " << path);
+        }
 
-      hsize_t idx = 0;
-      ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                        &name_space_iterate_cb, (void*) &out_name_spaces);
-    
-      throw_assert(H5Gclose(grp) >= 0,
-                   "get_cell_attribute_name_spaces: unable to close group " << path);
       ierr = H5Fclose(in_file);
     
       return ierr;
