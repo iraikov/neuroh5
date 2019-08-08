@@ -2514,6 +2514,8 @@ extern "C"
     edge_map_t edge_map;
     map <string, pair <size_t, AttrIndex > > edge_attr_index;
 
+    build_edge_attr_indexes(py_edge_dict, edge_attr_index);
+
     build_edge_map(edge_values, edge_attr_index, edge_map);
 
     status = graph::write_graph(comm, io_size, file_name, src_pop_name, dst_pop_name,
