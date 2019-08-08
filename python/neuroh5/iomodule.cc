@@ -6294,7 +6294,7 @@ extern "C"
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
     { "read_graph_selection", (PyCFunction)py_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads graph connectivity in Destination Block Sparse format." },
-    { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS,
+    { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS | METH_KEYWORDS,
       "Writes graph connectivity in Destination Block Sparse format." },
     { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,
       "Appends graph connectivity in Destination Block Sparse format." },
