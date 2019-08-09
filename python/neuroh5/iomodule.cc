@@ -2514,7 +2514,7 @@ extern "C"
     edge_map_t edge_map;
     map <string, pair <size_t, AttrIndex > > edge_attr_index;
 
-    build_edge_attr_indexes(py_edge_dict, edge_attr_index);
+    build_edge_attr_indexes(edge_values, edge_attr_index);
 
     build_edge_map(edge_values, edge_attr_index, edge_map);
 
