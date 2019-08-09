@@ -5459,7 +5459,15 @@ extern "C"
     for (size_t i = 0; i < tree_index.size(); i++)
       {
         if ((unsigned int)rank == r) local_count++;
-        py_ntrg->state->node_rank_map.insert(make_pair(tree_index[i], r++));
+        auto it = py_ntrg->state->node_rank_map.find(tree_index[i]);
+        if (it == py_ntrg->state->node_rank_map.end())
+          {
+            py_ntrg->state->node_rank_map.insert(make_pair(tree_index[i], r++));
+          }
+        else
+          {
+            throw_err("NeuroH5TreeGen: tree generator requires unique index set");
+          }
         if ((unsigned int)size <= r) r=0;
       }
     
@@ -5619,7 +5627,15 @@ extern "C"
     for (size_t i = 0; i < cell_index.size(); i++)
       {
         if ((unsigned int)rank == r) local_count++;
-        py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
+        auto it = py_ntrg->state->node_rank_map.find(cell_index[i]);
+        if (it == py_ntrg->state->node_rank_map.end())
+          {
+            py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
+          }
+        else
+          {
+            throw_err("NeuroH5CellAttrGen: cell attribute generator requires a unique index set");
+          }
         if ((unsigned int)size <= r) r=0;
       }
     
