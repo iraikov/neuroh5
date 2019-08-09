@@ -1,6 +1,6 @@
 import sys
 from mpi4py import MPI
-from neuroh5.io import read_population_ranges, read_population_names, NeuroH5CellAttrGen
+from neuroh5.io import read_population_ranges, read_population_names, read_cell_attributes
 import numpy as np
 import click
 
@@ -17,7 +17,7 @@ script_name = 'test_read_coords.py'
 
 @click.command()
 @click.option("--coords-path", required=True, type=click.Path(exists=True, file_okay=True, dir_okay=False))
-@click.option("--coords-namespace", type=str, default='Sorted Coordinates')
+@click.option("--coords-namespace", type=str, default='Coordinates')
 @click.option("--io-size", type=int, default=-1)
 def main(coords_path, coords_namespace, io_size):
 
@@ -25,28 +25,22 @@ def main(coords_path, coords_namespace, io_size):
     rank = comm.rank
     size = comm.size
 
-    print 'Allocated %i ranks' % size
+    print ('Allocated %i ranks' % size)
 
     population_ranges = read_population_ranges(coords_path)[0]
-
-    print population_ranges
+    print (population_ranges)
     
     soma_coords = {}
     for population in population_ranges.keys():
-        (population_start, _) = population_ranges[population]
 
-        for cell_gid, attr_dict in NeuroH5CellAttrGen(coords_path, population, io_size=io_size,
-                                                       namespace=coords_namespace):
+        it = read_cell_attributes(coords_path, population, namespace=coords_namespace)
 
-            if cell_gid is None:
-                print 'Rank %i cell gid is None' % rank
-            else:
-                coords_dict = attr_dict[coords_namespace]
+        for cell_gid, coords_dict in it:
 
-                cell_u = coords_dict['U Coordinate']
-                cell_v = coords_dict['V Coordinate']
+            cell_u = coords_dict['U Coordinate']
+            cell_v = coords_dict['V Coordinate']
                 
-                print 'Rank %i: gid = %i u = %f v = %f' % (rank, cell_gid, cell_u, cell_v)
+            print ('Rank %i: gid = %i u = %f v = %f' % (rank, cell_gid, cell_u, cell_v))
 
 
 if __name__ == '__main__':

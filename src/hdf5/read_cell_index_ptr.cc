@@ -12,8 +12,8 @@
 #include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
 #include "read_template.hh"
+#include "exists_group.hh"
 #include "path_names.hh"
-#include "rank_range.hh"
 #include "throw_assert.hh"
 
 #include <iostream>
@@ -33,23 +33,19 @@ namespace neuroh5
 
     herr_t read_cell_index_ptr
     (
-     MPI_Comm                  comm,
      const hid_t&              loc,
      const std::string&        path,
-     const CELL_IDX_T          pop_start,
      std::vector<CELL_IDX_T> & index,
-     std::vector<ATTR_PTR_T> & ptr
+     std::vector<ATTR_PTR_T> & ptr,
+     bool collective
      )
     {
       herr_t status = 0;
 
-      int size, rank;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
       status = exists_group (loc, path.c_str());
       throw_assert(status > 0,
-                   "read_cell_index_ptr: group does not exist");
+                   "read_cell_index_ptr: group " << path << " does not exist");
       
       hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
       
@@ -57,7 +53,12 @@ namespace neuroh5
         {
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
-          status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+          if (collective)
+            {
+              status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+              throw_assert(status >= 0,
+                           "read_cell_index_ptr: error in H5Pset_dxpl_mpio");
+            }
           
           string index_path = path + "/" + CELL_INDEX;
           string ptr_path = path + "/" + ATTR_PTR;
@@ -66,10 +67,6 @@ namespace neuroh5
           index.resize(dset_size);
           status = read<NODE_IDX_T> (loc, index_path, 0, dset_size,
                                      NODE_IDX_H5_NATIVE_T, index, rapl);
-          for (size_t i=0; i<index.size(); i++)
-            {
-              index[i] += pop_start;
-            }
 
           // read pointer
           status = exists_dataset (loc, ptr_path);

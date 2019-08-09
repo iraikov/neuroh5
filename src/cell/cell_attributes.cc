@@ -102,6 +102,7 @@ namespace neuroh5
       return 0;
     }
 
+
     
     herr_t get_cell_attribute_name_spaces
     (
@@ -119,17 +120,21 @@ namespace neuroh5
       out_name_spaces.clear();
     
       string path = "/" + hdf5::POPULATIONS + "/" + pop_name;
+      if (hdf5::exists_group (in_file, path) > 0)
+        {
 
-      hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
-      throw_assert(grp >= 0,
-                   "get_cell_attribute_name_spaces: unable to open group " << path);
+          hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+          throw_assert(grp >= 0,
+                       "get_cell_attribute_name_spaces: unable to open group " << path);
+          
+          hsize_t idx = 0;
+          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &name_space_iterate_cb, (void*) &out_name_spaces);
+          
+          throw_assert(H5Gclose(grp) >= 0,
+                       "get_cell_attribute_name_spaces: unable to close group " << path);
+        }
 
-      hsize_t idx = 0;
-      ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                        &name_space_iterate_cb, (void*) &out_name_spaces);
-    
-      throw_assert(H5Gclose(grp) >= 0,
-                   "get_cell_attribute_name_spaces: unable to close group " << path);
       ierr = H5Fclose(in_file);
     
       return ierr;
@@ -183,6 +188,65 @@ namespace neuroh5
       return 0;
     }
 
+
+    // Callback for H5Literate
+    static herr_t cell_attribute_index_ptr_cb
+    (
+     hid_t             grp,
+     const char*       name,
+     const H5L_info_t* info,
+     void*             op_data
+     )
+    {
+      herr_t ierr;
+      
+      /* Save old error handler */
+      H5E_auto2_t error_handler;
+      void *client_data;
+      H5Eget_auto(H5E_DEFAULT, &error_handler, &client_data);
+      
+      /* Turn off error handling */
+      H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+ 
+      ierr = H5Gget_objinfo (grp, name, 0, NULL);
+      if (ierr == 0)
+        {
+          string value_path = string(name) + "/" + hdf5::ATTR_VAL;
+
+          /* Restore previous error handler */
+          hid_t dset = H5Dopen2(grp, value_path.c_str(), H5P_DEFAULT);
+          if (dset < 0) // skip the link, if this is not a dataset
+            {
+              H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
+              return 0;
+            }
+    
+          H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
+          
+          hid_t ftype = H5Dget_type(dset);
+          throw_assert(ftype >= 0,
+                       "cell_attributes_cb: unable to get data set type");
+          
+          vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > >* ptr =
+            (vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > >*) op_data;
+
+
+          vector<CELL_IDX_T> attr_index; vector<ATTR_PTR_T> attr_ptr;
+          string attr_path = string(name);
+          ierr = hdf5::read_cell_index_ptr(grp, attr_path, attr_index, attr_ptr);
+          throw_assert(ierr >= 0,
+                       "cell_attributes_index_ptr_cb: error in hdf5::read_cell_index_ptr");
+
+          ptr->push_back(make_tuple(name, hdf5::h5type_attr_kind(ftype), attr_index, attr_ptr));
+          
+          throw_assert(H5Dclose(dset) >= 0,
+                       "cell_attributes_cb: unable to close data set");
+        }
+      
+      H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
+      return 0;
+    }
+
   
     herr_t get_cell_attributes
     (
@@ -220,7 +284,57 @@ namespace neuroh5
 
       return ierr;
     }
-  
+
+
+    herr_t get_cell_attributes_index_ptr
+    (
+     const string&                 file_name,
+     const string&                 name_space,
+     const string&                 pop_name,
+     const CELL_IDX_T&             pop_start,
+     vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > >& out_attributes
+     )
+    {
+      hid_t in_file;
+      herr_t ierr;
+    
+      in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+      assert(in_file >= 0);
+      out_attributes.clear();
+    
+      string path = hdf5::cell_attribute_prefix(name_space, pop_name);
+
+      if (hdf5::exists_dataset (in_file, path) > 0)
+        {
+          hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+          throw_assert(grp >= 0,
+                       "get_cell_attributes_index_ptr: unable to open group " << path);
+
+          
+          hsize_t idx = 0;
+          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &cell_attribute_index_ptr_cb, (void*) &out_attributes);
+
+          for (size_t i=0; i<out_attributes.size(); i++)
+            {
+              vector<CELL_IDX_T>& index  = get<2>(out_attributes[i]);
+                
+              for (size_t j=0; j<index.size(); j++)
+                {
+                  index[j] += pop_start;
+                }
+            }
+          
+          ierr = H5Gclose(grp);
+          throw_assert(ierr >= 0,
+                       "get_cell_attributes_index_ptr: unable to close group " << path);
+        }
+      
+      ierr = H5Fclose(in_file);
+      return ierr;
+    }
+
+    
 
     herr_t num_cell_attributes
     (
@@ -501,15 +615,38 @@ namespace neuroh5
     {
       herr_t status; 
 
-
       unsigned int rank, size;
       throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
-      vector< pair<string,AttrKind> > attr_info;
+      vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
 
-      status = get_cell_attributes (file_name, name_space,
-                                    pop_name, attr_info);
+      if (rank == 0)
+        {
+          status = get_cell_attributes_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
+          throw_assert(status == 0,
+                       "read_cell_attributes: error in get_cell_attributes_index_ptr");
+        }
+      // Broadcast the attribute names, types, indices, and pointers
+      {
+        vector<char> sendbuf; size_t sendbuf_size=0;
+        if (rank == 0)
+          {
+            data::serialize_data(attr_info, sendbuf);
+            sendbuf_size = sendbuf.size();
+          }
+
+        throw_assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS,
+                     "read_cell_attributes: error in MPI_Bcast");
+        sendbuf.resize(sendbuf_size);
+        throw_assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS,
+                     "read_cell_attributes: error in MPI_Bcast");
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(sendbuf, attr_info);
+          }
+      }
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -519,16 +656,16 @@ namespace neuroh5
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
-          vector<CELL_IDX_T>  index, value_index;
-          vector<ATTR_PTR_T>  ptr, value_ptr;
+          vector<CELL_IDX_T>  value_index;
+          vector<ATTR_PTR_T>  value_ptr;
 
-          string attr_name  = attr_info[i].first;
-          AttrKind attr_kind = attr_info[i].second;
+          string attr_name  = get<0>(attr_info[i]);
+          AttrKind attr_kind = get<1>(attr_info[i]);
           size_t attr_size  = attr_kind.size;
+          const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
+          const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
+          
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
-
-          status = hdf5::read_cell_index_ptr(comm, file, attr_path, pop_start, index, ptr);
- 
           
           switch (attr_kind.type)
             {
@@ -546,17 +683,17 @@ namespace neuroh5
                 {
                   vector<uint16_t> attr_values_uint16;
                   status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                     index, ptr, attr_values_uint16,
+                                                     index, ptr, value_index, value_ptr, attr_values_uint16,
                                                      offset, numitems);
-                  attr_values.insert(attr_name, index, ptr, attr_values_uint16);
+                  attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint16);
                 }
               else if (attr_size == 1)
                 {
                   vector<uint8_t> attr_values_uint8;
                   status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                     index, ptr, attr_values_uint8,
+                                                     index, ptr, value_index, value_ptr, attr_values_uint8,
                                                      offset, numitems);
-                  attr_values.insert(attr_name, index, ptr, attr_values_uint8);
+                  attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
                 }
               else
                 {
@@ -569,25 +706,25 @@ namespace neuroh5
                   {
                     vector<int32_t> attr_values_int32;
                     status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                       index, ptr, attr_values_int32,
+                                                       index, ptr, value_index, value_ptr, attr_values_int32,
                                                        offset, numitems);
-                    attr_values.insert(attr_name, index, ptr, attr_values_int32);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int32);
                   }
                 else if (attr_size == 2)
                   {
                     vector<int16_t> attr_values_int16;
                     status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                       index, ptr, attr_values_int16,
+                                                       index, ptr, value_index, value_ptr, attr_values_int16,
                                                        offset, numitems);
-                    attr_values.insert(attr_name, index, ptr, attr_values_int16);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int16);
                   }
                 else if (attr_size == 1)
                   {
                     vector<int8_t> attr_values_int8;
                     status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                       index, ptr, attr_values_int8,
+                                                       index, ptr, value_index, value_ptr, attr_values_int8,
                                                        offset, numitems);
-                    attr_values.insert(attr_name, index, ptr, attr_values_int8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int8);
                   }
                 else
                   {
@@ -597,15 +734,11 @@ namespace neuroh5
               break;
             case FloatVal:
               {
-                //printf("read_cell_attributes: attr_path: %s; offset = %u numitems = %u\n",
-                //       attr_path.c_str(), offset, numitems);
                 vector<float> attr_values_float;
                 status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                   index, ptr, attr_values_float,
+                                                   index, ptr, value_index, value_ptr, attr_values_float,
                                                    offset, numitems);
-                //printf("read_cell_attributes: attr_path: %s; size(index) = %u size(ptr) = %u\n",
-                //       attr_path.c_str(), index.size(), ptr.size());
-                attr_values.insert(attr_name, index, ptr, attr_values_float);
+                attr_values.insert(attr_name, value_index, value_ptr, attr_values_float);
               }
               break;
             case EnumVal:
@@ -614,9 +747,9 @@ namespace neuroh5
                   {
                     vector<uint8_t> attr_values_uint8;
                     status = hdf5::read_cell_attribute(comm, file, attr_path, pop_start,
-                                                       index, ptr, attr_values_uint8,
+                                                       index, ptr, value_index, value_ptr, attr_values_uint8,
                                                        offset, numitems);
-                    attr_values.insert(attr_name, index, ptr, attr_values_uint8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
                   }
                 else
                   {
@@ -827,7 +960,15 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
       vector<char> sendrecvbuf; 
-      vector< pair<string,AttrKind> > attr_info;
+      vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
+
+      if (rank == (unsigned int)root)
+        {
+          status = get_cell_attributes_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
+          throw_assert(status == 0,
+                       "read_cell_attributes: error in get_cell_attributes_index_ptr");
+        }
+
 
       vector< size_t > num_attrs;
       num_attrs.resize(data::AttrMap::num_attr_types);
@@ -855,24 +996,22 @@ namespace neuroh5
       if (rank == (unsigned int)root)
         {
 
-          status = cell::get_cell_attributes (file_name, name_space,
-                                              pop_name, attr_info);
-        
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
           throw_assert_nomsg(file >= 0);
         
           for (size_t i=0; i<attr_info.size(); i++)
             {
-              vector<CELL_IDX_T>  index;
-              vector<ATTR_PTR_T>  ptr;
+              vector<CELL_IDX_T>  value_index;
+              vector<ATTR_PTR_T>  value_ptr;
             
-              string attr_name   = attr_info[i].first;
-              AttrKind attr_kind = attr_info[i].second;
+              string attr_name  = get<0>(attr_info[i]);
+              AttrKind attr_kind = get<1>(attr_info[i]);
               size_t attr_size  = attr_kind.size;
+              const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
+              const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
+
               string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
 
-              status = hdf5::read_cell_index_ptr(comm, file, attr_path, pop_start, index, ptr);
-          
               switch (attr_kind.type)
                 {
                 case UIntVal:
@@ -881,22 +1020,25 @@ namespace neuroh5
                       {
                         vector<uint32_t> attr_map_uint32;
                         status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                           index, ptr, attr_map_uint32);
-                        attr_map.insert(attr_name, index, ptr, attr_map_uint32);
+                                                           index, ptr, value_index, value_ptr,
+                                                           attr_map_uint32);
+                        attr_map.insert(attr_name, value_index, value_ptr, attr_map_uint32);
                       }
                     else if (attr_size == 2)
                       {
                         vector<uint16_t> attr_map_uint16;
                         status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                           index, ptr, attr_map_uint16);
-                        attr_map.insert(attr_name, index, ptr, attr_map_uint16);
+                                                           index, ptr, value_index, value_ptr,
+                                                           attr_map_uint16);
+                        attr_map.insert(attr_name, value_index, value_ptr, attr_map_uint16);
                       }
                     else if (attr_size == 1)
                       {
                         vector<uint8_t> attr_map_uint8;
                         status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                           index, ptr, attr_map_uint8);
-                        attr_map.insert(attr_name, index, ptr, attr_map_uint8);
+                                                           index, ptr, value_index, value_ptr,
+                                                           attr_map_uint8);
+                        attr_map.insert(attr_name, value_index, value_ptr, attr_map_uint8);
                       }
                     else
                       {
@@ -910,22 +1052,25 @@ namespace neuroh5
                       {
                         vector<int32_t> attr_map_int32;
                         status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                           index, ptr, attr_map_int32);
-                        attr_map.insert(attr_name, index, ptr, attr_map_int32);
+                                                           index, ptr, value_index, value_ptr,
+                                                           attr_map_int32);
+                        attr_map.insert(attr_name, value_index, value_ptr, attr_map_int32);
                       }
                     else if (attr_size == 2)
                       {
                         vector<uint16_t> attr_map_int16;
                         status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                           index, ptr, attr_map_int16);
-                        attr_map.insert(attr_name, index, ptr, attr_map_int16);
+                                                           index, ptr, value_index, value_ptr,
+                                                           attr_map_int16);
+                        attr_map.insert(attr_name, value_index, value_ptr, attr_map_int16);
                       }
                     else if (attr_size == 1)
                       {
                         vector<uint8_t> attr_map_int8;
                         status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                           index, ptr, attr_map_int8);
-                        attr_map.insert(attr_name, index, ptr, attr_map_int8);
+                                                           index, ptr, value_index, value_ptr,
+                                                           attr_map_int8);
+                        attr_map.insert(attr_name, value_index, value_ptr, attr_map_int8);
                       }
                     else
                       {
@@ -937,8 +1082,9 @@ namespace neuroh5
                   {
                     vector<float> attr_map_float;
                     status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                      index, ptr, attr_map_float);
-                    attr_map.insert(attr_name, index, ptr, attr_map_float);
+                                                       index, ptr, value_index, value_ptr,
+                                                       attr_map_float);
+                    attr_map.insert(attr_name, value_index, value_ptr, attr_map_float);
                   }
                   break;
                 case EnumVal:
@@ -947,8 +1093,9 @@ namespace neuroh5
                       {
                         vector<uint8_t> attr_map_uint8;
                         status = hdf5::read_cell_attribute(io_comm, file, attr_path, pop_start,
-                                                           index, ptr, attr_map_uint8);
-                        attr_map.insert(attr_name, index, ptr, attr_map_uint8);
+                                                           index, ptr, value_index, value_ptr,
+                                                           attr_map_uint8);
+                        attr_map.insert(attr_name, value_index, value_ptr, attr_map_uint8);
                       }
                     else
                       {
@@ -1066,10 +1213,38 @@ namespace neuroh5
      )
     {
       herr_t status; 
+      unsigned int rank, size;
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
-      vector< pair<string,AttrKind> > attr_info;
-      status = get_cell_attributes (file_name, name_space,
-                                    pop_name, attr_info);
+      vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
+
+      if (rank == 0)
+        {
+          status = get_cell_attributes_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
+          throw_assert(status == 0,
+                       "read_cell_attributes: error in get_cell_attributes_index_ptr");
+        }
+      // Broadcast the attribute names, types, indices, and pointers
+      {
+        vector<char> sendbuf; size_t sendbuf_size=0;
+        if (rank == 0)
+          {
+            data::serialize_data(attr_info, sendbuf);
+            sendbuf_size = sendbuf.size();
+          }
+
+        throw_assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS,
+                     "read_cell_attributes: error in MPI_Bcast");
+        sendbuf.resize(sendbuf_size);
+        throw_assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS,
+                     "read_cell_attributes: error in MPI_Bcast");
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(sendbuf, attr_info);
+          }
+      }
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -1084,16 +1259,16 @@ namespace neuroh5
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
-          vector<ATTR_PTR_T>  ptr;
-          vector<CELL_IDX_T> index;
+          vector<ATTR_PTR_T> value_ptr;
+          vector<CELL_IDX_T> value_index;
 
-          string attr_name   = attr_info[i].first;
-          AttrKind attr_kind = attr_info[i].second;
+          string attr_name  = get<0>(attr_info[i]);
+          AttrKind attr_kind = get<1>(attr_info[i]);
           size_t attr_size  = attr_kind.size;
+          const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
+          const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
 
-          status = hdf5::read_cell_index_ptr(comm, file, attr_path, pop_start, index, ptr);
-                    
           
           switch (attr_kind.type)
             {
@@ -1103,22 +1278,25 @@ namespace neuroh5
                   {
                     vector<uint32_t> attr_values_uint32;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, attr_values_uint32);
-                    attr_values.insert(attr_name, index, ptr, attr_values_uint32);
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_uint32);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint32);
                   }
                 else if (attr_size == 2)
                   {
                     vector<uint16_t> attr_values_uint16;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, attr_values_uint16);
-                    attr_values.insert(attr_name, index, ptr, attr_values_uint16);
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_uint16);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint16);
                   }
                 else if (attr_size == 1)
                   {
                     vector<uint8_t> attr_values_uint8;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, attr_values_uint8);
-                    attr_values.insert(attr_name, index, ptr, attr_values_uint8);
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_uint8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
                   }
                 else
                   {
@@ -1132,22 +1310,25 @@ namespace neuroh5
                   {
                     vector<int32_t> attr_values_int32;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, attr_values_int32);
-                    attr_values.insert(attr_name, index, ptr, attr_values_int32);
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_int32);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int32);
                   }
                 else if (attr_size == 2)
                   {
                     vector<int16_t> attr_values_int16;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, attr_values_int16);
-                    attr_values.insert(attr_name, index, ptr, attr_values_int16);
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_int16);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int16);
                   }
                 else if (attr_size == 1)
                   {
                     vector<int8_t> attr_values_int8;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, attr_values_int8);
-                    attr_values.insert(attr_name, index, ptr, attr_values_int8);
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_int8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int8);
                   }
                 else
                   {
@@ -1159,8 +1340,9 @@ namespace neuroh5
               {
                 vector<float> attr_values_float;
                 status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                             selection, index, ptr, attr_values_float);
-                attr_values.insert(attr_name, index, ptr, attr_values_float);
+                                                             selection, index, ptr, value_index, value_ptr,
+                                                             attr_values_float);
+                attr_values.insert(attr_name, value_index, value_ptr, attr_values_float);
               }
               break;
             case EnumVal:
@@ -1169,8 +1351,9 @@ namespace neuroh5
                   {
                     vector<uint8_t> attr_values_uint8;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, attr_values_uint8);
-                    attr_values.insert(attr_name, index, ptr, attr_values_uint8);
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_uint8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
                   }
                 else
                   {

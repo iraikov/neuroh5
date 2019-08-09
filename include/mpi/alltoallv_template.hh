@@ -1,10 +1,10 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file bcast_string_vector.cc
+///  @file alltoallv_template.hh
 ///
 ///  Function for sending data via MPI Alltoallv.
 ///
-///  Copyright (C) 2017 Project Neurograph.
+///  Copyright (C) 2017-2019 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
