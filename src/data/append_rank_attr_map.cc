@@ -47,10 +47,6 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const vector<float> &v = element.second;
               auto it = node_rank_map.find(index);
-              if(it == node_rank_map.end())
-                {
-                  printf("index %u not in node rank map\n", index);
-                }
               throw_assert(it != node_rank_map.end(),
                            "append_rank_attr_map: index not found in node rank map");
               size_t dst_rank = it->second;

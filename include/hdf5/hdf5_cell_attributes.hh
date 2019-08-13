@@ -185,23 +185,22 @@ namespace neuroh5
                 {
                   if (s < pop_start) continue;
                   auto it = std::find(index.begin(), index.end(), s);
-                  if (it == index.end()) continue;
-                  
-                  throw_assert(it != index.end(),
-                               "read_cell_attribute_selection: unable to find attribute "
-                               << path << " for gid " << s);
+                  while (it != index.end())
+                    {
+                      ptrdiff_t pos = it - index.begin();
+                      hsize_t value_start=ptr[pos];
+                      hsize_t value_block=ptr[pos+1]-value_start;
 
-                  ptrdiff_t pos = it - index.begin();
+                      ranges.push_back(make_pair(value_start, value_block));
+                      selection_ptr.push_back(selection_ptr_pos);
+                      selection_ptr_pos += value_block;
+                      selection_index.push_back(s);
 
-                  hsize_t value_start=ptr[pos];
-                  hsize_t value_block=ptr[pos+1]-value_start;
-
-                  ranges.push_back(make_pair(value_start, value_block));
+                      ++it;
+                      it = std::find(it, index.end(), s);
+                    }
                   selection_ptr.push_back(selection_ptr_pos);
-                  selection_ptr_pos += value_block;
-                  selection_index.push_back(s);
                 }
-              selection_ptr.push_back(selection_ptr_pos);
             }
           
           // read values
