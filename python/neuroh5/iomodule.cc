@@ -2494,32 +2494,67 @@ extern "C"
 
       }
 
-    int rank, size;
-    status = MPI_Comm_size(comm, &size);
-    throw_assert(status == MPI_SUCCESS,
-                 "py_write_graph: unable to obtain size of MPI communicator");
-    status = MPI_Comm_rank(comm, &rank);
-    throw_assert(status == MPI_SUCCESS,
-                 "py_write_graph: unable to obtain rank of MPI communicator");
-
-    if (io_size == 0)
+    Py_ssize_t dict_size = PyDict_Size(edge_values);
+    int data_color = 2;
+    
+    MPI_Comm data_comm;
+    // In cases where some ranks do not have any data to write, split
+    // the communicator, so that collective operations can be executed
+    // only on the ranks that do have data.
+    if (dict_size > 0)
       {
-        io_size = size;
+        MPI_Comm_split(comm,data_color,0,&data_comm);
       }
-    
-    string file_name = string(file_name_arg);
-    string src_pop_name = string(src_pop_name_arg);
-    string dst_pop_name = string(dst_pop_name_arg);
-    
-    edge_map_t edge_map;
-    map <string, pair <size_t, AttrIndex > > edge_attr_index;
+    else
+      {
+        MPI_Comm_split(comm,0,0,&data_comm);
+      }
+    MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
-    build_edge_map(edge_values, edge_attr_index, edge_map);
+    if (dict_size > 0)
+      {
+        int rank, size;
+        status = MPI_Comm_size(data_comm, &size);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_write_graph: unable to obtain size of MPI communicator");
+        status = MPI_Comm_rank(data_comm, &rank);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_write_graph: unable to obtain rank of MPI communicator");
+        
+        if (io_size == 0)
+          {
+            io_size = size;
+          }
+    
+        string file_name = string(file_name_arg);
+        string src_pop_name = string(src_pop_name_arg);
+        string dst_pop_name = string(dst_pop_name_arg);
+        
+        edge_map_t edge_map;
+        map <string, pair <size_t, AttrIndex > > edge_attr_index;
+        
+        get_edge_attr_index (edge_values, edge_attr_index);
+        
+        build_edge_map(edge_values, edge_attr_index, edge_map);
+        
+        status = graph::write_graph(data_comm, io_size, file_name, src_pop_name, dst_pop_name,
+                                    edge_attr_index, edge_map);
+        throw_assert(status >= 0,
+                     "py_write_graph: unable to write graph");
+      }
 
-    status = graph::write_graph(comm, io_size, file_name, src_pop_name, dst_pop_name,
-                                edge_attr_index, edge_map);
-    throw_assert(status >= 0,
-                 "py_write_graph: unable to write graph");
+    status = MPI_Barrier(data_comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_write_graph: barrier error");
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_write_graph: barrier error");
+    status = MPI_Comm_free(&data_comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_write_graph: unable to free MPI communicator");
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_write_graph: unable to free MPI communicator");
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -5457,7 +5492,15 @@ extern "C"
     for (size_t i = 0; i < tree_index.size(); i++)
       {
         if ((unsigned int)rank == r) local_count++;
-        py_ntrg->state->node_rank_map.insert(make_pair(tree_index[i], r++));
+        auto it = py_ntrg->state->node_rank_map.find(tree_index[i]);
+        if (it == py_ntrg->state->node_rank_map.end())
+          {
+            py_ntrg->state->node_rank_map.insert(make_pair(tree_index[i], r++));
+          }
+        else
+          {
+            throw_err("NeuroH5TreeGen: tree generator requires unique index set");
+          }
         if ((unsigned int)size <= r) r=0;
       }
     
@@ -5617,7 +5660,15 @@ extern "C"
     for (size_t i = 0; i < cell_index.size(); i++)
       {
         if ((unsigned int)rank == r) local_count++;
-        py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
+        auto it = py_ntrg->state->node_rank_map.find(cell_index[i]);
+        if (it == py_ntrg->state->node_rank_map.end())
+          {
+            py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
+          }
+        else
+          {
+            throw_err("NeuroH5CellAttrGen: cell attribute generator requires a unique index set");
+          }
         if ((unsigned int)size <= r) r=0;
       }
     
@@ -6294,7 +6345,7 @@ extern "C"
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
     { "read_graph_selection", (PyCFunction)py_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
       "Reads graph connectivity in Destination Block Sparse format." },
-    { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS,
+    { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS | METH_KEYWORDS,
       "Writes graph connectivity in Destination Block Sparse format." },
     { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,
       "Appends graph connectivity in Destination Block Sparse format." },

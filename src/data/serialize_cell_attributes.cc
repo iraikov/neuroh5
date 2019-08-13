@@ -13,6 +13,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <fstream>
 #include <string>
@@ -80,8 +81,7 @@ namespace neuroh5
                 oarchive(attr_map); // Write the data to the archive
                 
               } // archive goes out of scope, ensuring all contents are flushed
-              string sstr = ss.str();
-              copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
+              copy(istream_iterator<char>(ss), istream_iterator<char>(), back_inserter(sendbuf));
               
               sendpos = sendbuf.size();
             }

@@ -406,7 +406,7 @@ namespace neuroh5
           const data::AttrIndex& attr_index  = iter.second.second;
 
           data::NamedAttrVal& edge_attr_values = edge_attr_map[attr_namespace];
-          
+
           edge_attr_values.float_values.resize(attr_index.size_attr_index<float>());
           edge_attr_values.uint8_values.resize(attr_index.size_attr_index<uint8_t>());
           edge_attr_values.uint16_values.resize(attr_index.size_attr_index<uint16_t>());
@@ -429,6 +429,7 @@ namespace neuroh5
               size_t ni=0;
               for (auto & attr_values : a)
                 {
+                  assert(ni < edge_attr_name_spaces.size());
                   const string & attr_namespace = edge_attr_name_spaces[ni];
                   edge_attr_map[attr_namespace].append(attr_values);
                   ni++;

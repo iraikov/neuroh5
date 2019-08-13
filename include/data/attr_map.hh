@@ -4,7 +4,7 @@
 ///
 ///  Functions for storing attributes in vectors of different types.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #ifndef ATTR_MAP_HH
@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <typeindex>
 
 #include "throw_assert.hh"
 #include "neuroh5_types.hh"
@@ -36,7 +37,8 @@ namespace neuroh5
         }
       else
         {
-          values_it->second.insert(std::end(values_it->second), first, last);
+          vector<T>& v = values_it->second;
+          values_it->second.insert(std::end(v), first, last);
         }
     }
 
@@ -53,6 +55,7 @@ namespace neuroh5
       static const size_t attr_index_int32  = 6;
       
       std::set<CELL_IDX_T> index_set;
+
       std::vector <std::map < CELL_IDX_T, std::vector <float> > >    float_values;
       std::vector <std::map < CELL_IDX_T, std::vector <uint8_t> > >  uint8_values;
       std::vector <std::map < CELL_IDX_T, std::vector <int8_t> > >   int8_values;
@@ -98,29 +101,113 @@ namespace neuroh5
                 uint32_values,
                 int32_values); // serialize things by passing them to the archive
       }
-
-      template<class T>
-      size_t insert (const std::vector<CELL_IDX_T> &index,
-                     const std::vector<ATTR_PTR_T> &ptr,
-                     const std::vector<T> &value);
-      template<class T>
-      size_t insert (const size_t index,
-                     const CELL_IDX_T &cell_index,
-                     const std::vector<T> &value);
-
       
       template<class T>
       const std::map<CELL_IDX_T, std::vector<T> >& attr_map (size_t i) const; 
       template<class T>
+      std::map<CELL_IDX_T, std::vector<T> >& attr_map (size_t i);
+      
+      template<class T>
       const vector< std::map<CELL_IDX_T, std::vector<T> > >& attr_maps () const; 
+      template<class T>
+      vector< std::map<CELL_IDX_T, std::vector<T> > >& attr_maps (); 
 
       void num_attrs (vector<size_t> &v) const;
 
       template<class T>
-      size_t num_attr () const;
+      size_t num_attr () const
+      {
+        const std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        return value_map.size();
+      }
 
       template<class T>
-      const vector<vector<T>> find (CELL_IDX_T index) const;
+      size_t insert (const std::vector<CELL_IDX_T> &cell_index,
+                     const std::vector<ATTR_PTR_T> &ptr,
+                     const std::vector<T> &value)
+      {
+        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        size_t attr_index = value_map.size();
+        value_map.resize(max(value_map.size(), attr_index+1));
+        for (size_t p=0; p<cell_index.size(); p++)
+          {
+            CELL_IDX_T vindex = cell_index[p];
+            typename std::vector<T>::const_iterator first, last;
+            if (ptr.size() > 1)
+              {
+                first = value.begin() + ptr[p];
+                last  = value.begin() + ptr[p+1];
+              }
+            else
+              {
+                first = value.begin();
+                last  = value.end();
+              }
+            append_values_map(value_map[attr_index], vindex, first, last);
+            index_set.insert(vindex);
+          }
+        return index;
+      }
+
+
+      template<class T>
+      size_t insert (const size_t attr_index,
+                     const std::vector<CELL_IDX_T> &cell_index,
+                     const std::vector<ATTR_PTR_T> &ptr,
+                     const std::vector<T> &value)
+      {
+        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        value_map.resize(max(value_map.size(), attr_index+1));
+        for (size_t p=0; p<cell_index.size(); p++)
+          {
+            CELL_IDX_T vindex = cell_index[p];
+            typename vector<T>::const_iterator first, last;
+            if (ptr.size() > 1)
+              {
+                first = value.begin() + ptr[p];
+                last  = value.begin() + ptr[p+1];
+              }
+            else
+              {
+                first = value.begin();
+                last  = value.end();
+              }
+            append_values_map(value_map[attr_index], vindex, first, last);
+            index_set.insert(vindex);
+          }
+        return attr_index;
+      }
+
+      
+      template<class T>
+      size_t insert (const size_t attr_index,
+                     const CELL_IDX_T &cell_index,
+                     const std::vector<T> &value)
+      {
+        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& attr_values = attr_maps<T>();
+        attr_values.resize(max(attr_values.size(), attr_index+1));
+        attr_values[attr_index].insert(make_pair(cell_index, value));
+        index_set.insert(cell_index);
+        return attr_index;
+      }
+
+      
+
+      template<class T>
+      const vector<vector<T>> find (CELL_IDX_T index) const
+      {
+        const std::vector <std::map<CELL_IDX_T, std::vector<T> > >& attr_values = attr_maps<T>();
+        vector< vector<T> > result;
+        for (size_t i=0; i<attr_values.size(); i++)
+          {
+            auto it = attr_values[i].find(index);
+            if (it != attr_values[i].end())
+              {
+                result.push_back(it->second);
+              }
+          }
+        return result;
+      }
 
       template<class T>
       void insert_map1 (vector <map <CELL_IDX_T, std::vector<T> > >& a,
@@ -226,34 +313,80 @@ namespace neuroh5
     struct NamedAttrMap : AttrMap
     {
 
-      std::map<std::string, size_t> float_names;
-      std::map<std::string, size_t> uint8_names;
-      std::map<std::string, size_t> int8_names;
-      std::map<std::string, size_t> uint16_names;
-      std::map<std::string, size_t> int16_names;
-      std::map<std::string, size_t> uint32_names;
-      std::map<std::string, size_t> int32_names;
+      std::map<std::type_index, std::map <std::string, size_t> > attr_name_map;
 
       template<class T>
-      const std::map< std::string, size_t> & attr_name_map() const; 
-
+      void attr_names_type (std::vector<std::string> &output) const
+      {
+        auto type_it = attr_name_map.find(std::type_index(typeid(T)));
+        if (type_it != attr_name_map.cend())
+          {
+            
+            const map< string, size_t> &attr_names = type_it->second;
+            output.resize(attr_names.size());
+            for (auto element : attr_names)
+              {
+                output[element.second] = element.first;
+              }
+          }
+      }
+      
       void attr_names (std::vector<std::vector<std::string> > &) const; 
 
       template<class T>
-      void insert_name (std::string, size_t); 
+      size_t insert_name (std::string name)
+      {
+        std::map <std::string, size_t>& name_map = this->attr_name_map[std::type_index(typeid(T))];
+        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        size_t index = 0;
+        if (name_map.count(name) == 0)
+          {
+            index = name_map.size();
+            name_map.insert(make_pair(name, index));
+            value_map.resize(max(value_map.size(), index+1));
+          }
+        else
+          {
+            auto it = name_map.find(name);
+            index = it->second;
+          }
+
+        return index;
+      }
 
       template<class T>
-      size_t insert (std::string name,
-                     const std::vector<CELL_IDX_T> &index,
+      size_t insert (std::string name, 
+                     const std::vector<CELL_IDX_T> &cell_index,
                      const std::vector<ATTR_PTR_T> &ptr,
-                     const std::vector<T> &value);
-      template<class T>
-      size_t insert (const size_t index,
-                     const CELL_IDX_T &cell_index,
-                     const std::vector<T> &value);
+                     const std::vector<T> &value)
+      {
+        size_t attr_index = insert_name<T>(name);
+        AttrMap::insert(attr_index, cell_index, ptr, value);
+        return attr_index;
+      }
 
       template<class T>
-      const vector<T> find_name (const std::string& name, CELL_IDX_T& index);
+      const vector<T> find_name (const std::string& name, CELL_IDX_T& index)
+      {
+        vector<T> result;
+        auto type_it = attr_name_map.find(std::type_index(typeid(T)));
+        if (type_it != this->attr_name_map.cend())
+          {
+            const std::map <std::string, size_t>& name_map = type_it->second;
+
+            auto attr_it = name_map.find(name);
+            throw_assert(attr_it != name_map.end(),
+                         "NamedAttrMap::find_name: attribute " << name << " not found");
+            size_t attr_index = attr_it->second;
+            std::map<CELL_IDX_T, std::vector<T> >& value_map = attr_map<T>(attr_index);
+            auto it = value_map.find(index);
+            if (it != value_map.end())
+              {
+                result = it->second;
+              }
+          }
+        return result;
+      }
 
     };
   }

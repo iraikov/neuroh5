@@ -140,13 +140,6 @@ namespace neuroh5
           ierr = H5Fclose (file);
           throw_assert_nomsg(ierr == 0);
 
-          // Ensure that every cell index is unique
-          std::set<CELL_IDX_T> index_set;
-          for (size_t i=0; i<cell_index.size(); i++)
-            {
-              index_set.insert(cell_index[i]);
-            }
-          throw_assert_nomsg(cell_index.size() == index_set.size());
         }
       
       uint32_t numitems = cell_index.size();

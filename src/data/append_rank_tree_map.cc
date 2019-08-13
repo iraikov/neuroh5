@@ -5,7 +5,7 @@
 ///
 ///  Populates a mapping between ranks and tree values.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2019 Project NeuroH5.
 //==============================================================================
 
 #include <vector>

@@ -620,12 +620,26 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
       vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
+      map<CELL_IDX_T, rank_t> node_rank_map;
 
       if (rank == 0)
         {
           status = get_cell_attributes_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
           throw_assert(status == 0,
                        "read_cell_attributes: error in get_cell_attributes_index_ptr");
+          // round-robin node to rank assignment from file
+          if (attr_info.size() > 0)
+            {
+              const vector<CELL_IDX_T>& index  = get<2>(attr_info[0]);
+              for (size_t i = 0; i < index.size(); i++)
+                {
+                  auto it = node_rank_map.find(index[i]);
+                  if (it == node_rank_map.end())
+                    {
+                      node_rank_map.insert(make_pair(index[i], i%size));
+                    }
+                }
+            }
         }
       // Broadcast the attribute names, types, indices, and pointers
       {
@@ -645,6 +659,26 @@ namespace neuroh5
         if (rank != 0)
           {
             data::deserialize_data(sendbuf, attr_info);
+          }
+      }
+      // Broadcast the node rank map
+      {
+        vector<char> sendbuf; size_t sendbuf_size=0;
+        if (rank == 0)
+          {
+            data::serialize_data(node_rank_map, sendbuf);
+            sendbuf_size = sendbuf.size();
+          }
+
+        throw_assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS,
+                     "read_cell_attributes: error in MPI_Bcast");
+        sendbuf.resize(sendbuf_size);
+        throw_assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS,
+                     "read_cell_attributes: error in MPI_Bcast");
+        
+        if (rank != 0)
+          {
+            data::deserialize_data(sendbuf, node_rank_map);
           }
       }
 
@@ -767,6 +801,8 @@ namespace neuroh5
       throw_assert_nomsg(status == 0);
       status = H5Pclose(fapl);
       throw_assert_nomsg(status == 0);
+
+
     }
 
 
@@ -874,31 +910,31 @@ namespace neuroh5
       
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
         {
-          attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i],i);
+          attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint8]; i++)
         {
-          attr_map.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i],i);
+          attr_map.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int8]; i++)
         {
-          attr_map.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i],i);
+          attr_map.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint16]; i++)
         {
-          attr_map.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i],i);
+          attr_map.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int16]; i++)
         {
-          attr_map.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i],i);
+          attr_map.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint32]; i++)
         {
-          attr_map.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i],i);
+          attr_map.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int32]; i++)
         {
-          attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i],i);
+          attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
         }
     
       // 6. Each ALL_COMM rank sends an attribute set size to
@@ -1162,31 +1198,31 @@ namespace neuroh5
       
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
         {
-          attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i],i);
+          attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint8]; i++)
         {
-          attr_map.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i],i);
+          attr_map.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int8]; i++)
         {
-          attr_map.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i],i);
+          attr_map.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint16]; i++)
         {
-          attr_map.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i],i);
+          attr_map.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int16]; i++)
         {
-          attr_map.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i],i);
+          attr_map.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint32]; i++)
         {
-          attr_map.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i],i);
+          attr_map.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int32]; i++)
         {
-          attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i],i);
+          attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
         }
 
       size_t sendrecvbuf_size = sendrecvbuf.size();

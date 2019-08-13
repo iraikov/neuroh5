@@ -656,31 +656,31 @@ namespace neuroh5
       
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
         {
-          attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i],i);
+          attr_map.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint8]; i++)
         {
-          attr_map.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i],i);
+          attr_map.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int8]; i++)
         {
-          attr_map.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i],i);
+          attr_map.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint16]; i++)
         {
-          attr_map.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i],i);
+          attr_map.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int16]; i++)
         {
-          attr_map.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i],i);
+          attr_map.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint32]; i++)
         {
-          attr_map.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i],i);
+          attr_map.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i]);
         }
       for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int32]; i++)
         {
-          attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i],i);
+          attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
         }
     
       // 6. Each ALL_COMM rank sends an attribute set size to

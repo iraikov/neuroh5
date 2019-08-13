@@ -173,12 +173,12 @@ namespace neuroh5
               }
             else
               {
-                throw std::runtime_error("AttrIndex.attr_index: unknown attribute");
+                throw std::runtime_error("AttrIndex::attr_index: unknown attribute");
               }
           }
         else
           {
-            throw std::runtime_error("AttrIndex.attr_index: unknown type");
+            throw std::runtime_error("AttrIndex::attr_index: unknown type");
           }
       }
       
