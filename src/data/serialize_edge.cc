@@ -82,7 +82,7 @@ namespace neuroh5
                 oarchive(edge_map); // Write the data to the archive
                 
               } // archive goes out of scope, ensuring all contents are flushed
-              string sstr = ss.str();
+              const string& sstr = ss.str();
               copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
               
               for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
@@ -118,7 +118,7 @@ namespace neuroh5
         
       } // archive goes out of scope, ensuring all contents are flushed
       
-      string sstr = ss.str();
+      const string& sstr = ss.str();
       copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
 
     }

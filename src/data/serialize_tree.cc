@@ -79,7 +79,7 @@ namespace neuroh5
                 oarchive(tree_map); // Write the data to the archive
                 
               } // archive goes out of scope, ensuring all contents are flushed
-              string sstr = ss.str();
+              const string& sstr = ss.str();
               copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
               
               sendpos = sendbuf.size();

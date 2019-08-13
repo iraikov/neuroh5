@@ -55,7 +55,7 @@ namespace neuroh5
         
       } // archive goes out of scope, ensuring all contents are flushed
       
-      string sstr = ss.str();
+      const string& sstr = ss.str();
       copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
 
     }
