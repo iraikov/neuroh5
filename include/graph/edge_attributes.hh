@@ -235,7 +235,7 @@ namespace neuroh5
           assert(MPI_Info_free(&info) == MPI_SUCCESS);
         }
 
-      assert(H5Pclose (file) >= 0);
+      assert(H5Fclose (file) >= 0);
       assert(H5Pclose (fapl) >= 0);
 
       return 0;

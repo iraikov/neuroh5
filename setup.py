@@ -43,7 +43,7 @@ else:
                         "-I"+MPI4PY_INCDIR,
                         "-Iinclude", "-Iinclude/cell", "-Iinclude/graph", "-Iinclude/ngraph",
                         "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5",
-                        "-g", "-O0"]
+                        "-g"]
     extra_link_args = ["-L"+HDF5_LIBDIR]
     if MPI_LIBDIR != "":
         extra_link_args = extra_link_args + ["-L"+MPI_LIBDIR]

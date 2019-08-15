@@ -199,8 +199,8 @@ namespace neuroh5
                       ++it;
                       it = std::find(it, index.end(), s);
                     }
-                  selection_ptr.push_back(selection_ptr_pos);
                 }
+              selection_ptr.push_back(selection_ptr_pos);
             }
           
           // read values
