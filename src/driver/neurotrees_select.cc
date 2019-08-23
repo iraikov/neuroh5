@@ -4,7 +4,7 @@
 ///
 ///  Program for selecting tree subsets.
 ///
-///  Copyright (C) 2016-2018 Project Neurotrees.
+///  Copyright (C) 2016-2019 Project Neurotrees.
 //==============================================================================
 
 
@@ -293,13 +293,14 @@ int main(int argc, char** argv)
   // Read in selection indices
   set<CELL_IDX_T> tree_selection;
   map<CELL_IDX_T, CELL_IDX_T> selection_map;
+  set<string> attr_mask;
 
   {
     data::NamedAttrMap selection_attr_map;
-    cell::bcast_cell_attributes (all_comm, 0, input_file_name, selection_namespace, pop_name,
-                                 pop_start, selection_attr_map);
+    cell::bcast_cell_attributes (all_comm, 0, input_file_name, selection_namespace, attr_mask,
+                                 pop_name, pop_start, selection_attr_map);
 
-    auto name_map = selection_attr_map.attr_name_map<uint32_t>();
+    auto name_map = selection_attr_map.attr_name_map[typeid(uint32_t)];
     auto const& name_it = name_map.find(selection_attr);
     assert(name_it != name_map.end());
     size_t newgid_attr_index = name_it->second;
@@ -630,6 +631,7 @@ int main(int argc, char** argv)
                                                     pop_name, pop_start,
                                                     attr_names[data::AttrMap::attr_index_float][i],
                                                     subset_float_values[i],
+                                                    io_size,
                                                     dflt_data_type,
                                                     IndexOwner,
                                                     CellPtr(PtrOwner),
@@ -645,6 +647,7 @@ int main(int argc, char** argv)
                                                       pop_name, pop_start,
                                                       attr_names[data::AttrMap::attr_index_uint8][i],
                                                       subset_uint8_values[i],
+                                                      io_size,
                                                       dflt_data_type,
                                                       IndexOwner,
                                                       CellPtr(PtrOwner),
@@ -660,6 +663,7 @@ int main(int argc, char** argv)
                                                      pop_name, pop_start,
                                                      attr_names[data::AttrMap::attr_index_int8][i],
                                                      subset_int8_values[i],
+                                                     io_size,
                                                      dflt_data_type,
                                                      IndexOwner,
                                                      CellPtr(PtrOwner),
@@ -675,6 +679,7 @@ int main(int argc, char** argv)
                                                        pop_name, pop_start,
                                                        attr_names[data::AttrMap::attr_index_uint16][i],
                                                        subset_uint16_values[i],
+                                                       io_size,
                                                        dflt_data_type,
                                                        IndexOwner,
                                                        CellPtr(PtrOwner),
@@ -690,6 +695,7 @@ int main(int argc, char** argv)
                                                        pop_name, pop_start,
                                                        attr_names[data::AttrMap::attr_index_uint32][i],
                                                        subset_uint32_values[i],
+                                                       io_size,
                                                        dflt_data_type,
                                                        IndexOwner,
                                                        CellPtr(PtrOwner),
@@ -706,6 +712,7 @@ int main(int argc, char** argv)
                                                       pop_name, pop_start,
                                                       attr_names[data::AttrMap::attr_index_int32][i],
                                                       subset_int32_values[i],
+                                                      io_size,
                                                       dflt_data_type,
                                                       IndexOwner,
                                                       CellPtr(PtrOwner),

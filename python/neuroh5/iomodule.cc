@@ -3318,6 +3318,7 @@ extern "C"
   {
     int status; int topology_flag=1; 
     PyObject *py_comm = NULL;
+    PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
     PyObject *py_attr_name_spaces=NULL;
@@ -3326,16 +3327,39 @@ extern "C"
                                    "file_name",
                                    "population_name",
                                    "comm",
+                                   "mask",
                                    "namespaces",
                                    "topology",
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOi", (char **)kwlist,
-                                     &file_name, &pop_name, &py_comm, 
-                                     &py_attr_name_spaces,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOi", (char **)kwlist,
+                                     &file_name, &pop_name, &py_comm, &py_mask, 
+                                     &py_attr_name_spaces, 
                                      &topology_flag))
       return NULL;
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_read_trees: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
 
     MPI_Comm comm;
 
@@ -3417,7 +3441,7 @@ extern "C"
       {
         data::NamedAttrMap attr_map;
         cell::read_cell_attributes(comm, string(file_name), 
-                                   attr_namespace, pop_name,
+                                   attr_namespace, attr_mask, pop_name,
                                    pop_vector[pop_idx].start, attr_map);
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
@@ -3882,6 +3906,9 @@ extern "C"
     "node_rank_map : \n"
     "    Optional dictionary mapping gid to rank. If None, round-robin assignment will be used.\n"
     "\n"
+    "mask : set of string\n"
+    "    Optional set of attributes to be read. If not set, all attributes in the namespace will be read.\n"
+    "\n"
     "Returns\n"
     "-------\n"
     "Dictionary of the form { namespace: cell_iter }, where: \n"
@@ -3893,6 +3920,7 @@ extern "C"
   {
     int status;
     PyObject *py_comm = NULL;
+    PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size = 0;
     char *file_name, *pop_name;
@@ -3905,16 +3933,39 @@ extern "C"
                                    "file_name",
                                    "pop_name",
                                    "comm",
+                                   "mask",
                                    "node_rank_map",
                                    "namespaces",
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOk", (char **)kwlist,
-                                     &file_name, &pop_name, &py_comm, 
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOOk", (char **)kwlist,
+                                     &file_name, &pop_name, &py_comm, &py_mask, 
                                      &py_node_rank_map, &py_attr_name_spaces,
                                      &io_size))
       return NULL;
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_scatter_read_cell_attributes: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
 
     MPI_Comm comm;
 
@@ -4019,6 +4070,7 @@ extern "C"
                                                      string(file_name),
                                                      io_size,
                                                      attr_name_space,
+                                                     attr_mask,
                                                      node_rank_map,
                                                      string(pop_name),
                                                      pop_vector[pop_idx].start,
@@ -4071,6 +4123,9 @@ extern "C"
     "comm : MPI communicator\n"
     "    Optional MPI communicator. If None, the world communicator will be used.\n"
     "\n"
+    "mask : set of string\n"
+    "    Optional set of attributes to be read. If not set, all attributes in the namespace will be read.\n"
+    "\n"
     "Returns\n"
     "-------\n"
     "cell_iter : iterator\n"
@@ -4083,6 +4138,7 @@ extern "C"
     herr_t status;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
+    PyObject *py_mask = NULL;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
     
@@ -4091,12 +4147,35 @@ extern "C"
                                    "pop_name",
                                    "namespace",
                                    "comm",
+                                   "mask",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|sO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|sOO", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace,
-                                     &py_comm))
+                                     &py_comm, &py_mask))
       return NULL;
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_read_cell_attributes: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
 
     MPI_Comm comm;
 
@@ -4150,7 +4229,7 @@ extern "C"
 
     NamedAttrMap attr_values;
     cell::read_cell_attributes (comm,
-                                string(file_name), string(attr_namespace),
+                                (file_name), string(attr_namespace), attr_mask,
                                 string(pop_name), pop_vector[pop_idx].start,
                                 attr_values);
     vector<vector<string>> attr_names;
@@ -4220,7 +4299,7 @@ extern "C"
                                    "comm",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sO)", (char **)kwlist,
                                      &file_name, &pop_name, &py_selection,
                                      &attr_namespace, &py_comm))
       return NULL;
@@ -5221,6 +5300,7 @@ extern "C"
     MPI_Comm comm;
     vector<pop_range_t> pop_vector;
     string attr_namespace;
+    set <string> attr_mask;
     NamedAttrMap attr_map;
     vector< vector <string> > attr_names;
     set<CELL_IDX_T>::const_iterator it_idx;
@@ -5570,6 +5650,7 @@ extern "C"
   {
     int status;
     PyObject *py_comm = NULL;
+    PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size=1, cache_size=100;
     const string default_namespace = "Attributes";
@@ -5580,14 +5661,37 @@ extern "C"
                                    "pop_name",
                                    "namespace",
                                    "comm",
+                                   "mask",
                                    "io_size",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOki", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOOki", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace,
-                                     &py_comm, &io_size, &cache_size))
+                                     &py_comm, &py_mask, &io_size, &cache_size))
       return NULL;
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_read_trees: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
 
     MPI_Comm comm;
 
@@ -5719,6 +5823,7 @@ extern "C"
     py_ntrg->state->comm_size      = size;
     py_ntrg->state->cache_size     = cache_size;
     py_ntrg->state->attr_namespace = string(attr_namespace);
+    py_ntrg->state->attr_mask      = attr_mask;
 
     NamedAttrMap attr_map;
     py_ntrg->state->attr_map  = attr_map;
@@ -5923,6 +6028,7 @@ extern "C"
                                                            py_ntrg->state->file_name,
                                                            py_ntrg->state->io_size,
                                                            py_ntrg->state->attr_namespace,
+                                                           py_ntrg->state->attr_mask,
                                                            py_ntrg->state->node_rank_map,
                                                            py_ntrg->state->pop_name,
                                                            py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,

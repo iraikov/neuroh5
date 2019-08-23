@@ -607,6 +607,7 @@ namespace neuroh5
      MPI_Comm      comm,
      const string& file_name,
      const string& name_space,
+     const set<string>& attr_mask,
      const string& pop_name,
      const CELL_IDX_T& pop_start,
      data::NamedAttrMap& attr_values,
@@ -701,6 +702,9 @@ namespace neuroh5
           const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
           
           string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
+
+          if ((attr_mask.size() > 0) && (attr_mask.count(attr_name) == 0))
+            continue;
           
           switch (attr_kind.type)
             {
@@ -813,6 +817,7 @@ namespace neuroh5
      const string                 &file_name,
      const int                     io_size,
      const string                 &attr_name_space,
+     const set<string>            &attr_mask,
      // A vector that maps nodes to compute ranks
      const map<CELL_IDX_T, rank_t> &node_rank_map,
      const string                 &pop_name,
@@ -860,7 +865,7 @@ namespace neuroh5
           map <rank_t, data::AttrMap > rank_attr_map;
           {
             data::NamedAttrMap  attr_values;
-            read_cell_attributes(io_comm, file_name, attr_name_space, pop_name, pop_start,
+            read_cell_attributes(io_comm, file_name, attr_name_space, attr_mask, pop_name, pop_start,
                                  attr_values, offset, numitems * size);
             data::append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
             attr_values.num_attrs(num_attrs);

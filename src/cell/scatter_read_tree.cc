@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
@@ -152,8 +153,9 @@ namespace neuroh5
 
           {
             data::NamedAttrMap attr_values;
-
-            read_cell_attributes (io_comm, file_name, hdf5::TREES,
+            set <string> attr_mask;
+            
+            read_cell_attributes (io_comm, file_name, hdf5::TREES, attr_mask,
                                   pop_name, pop_start, attr_values,
                                   offset, numitems * size);
 
@@ -184,8 +186,10 @@ namespace neuroh5
       for (string attr_name_space : attr_name_spaces)
         {
           data::NamedAttrMap attr_map;
+          set <string> attr_mask;
+
           scatter_read_cell_attributes(all_comm, file_name, io_size,
-                                       attr_name_space, node_rank_map,
+                                       attr_name_space, attr_mask, node_rank_map,
                                        pop_name, pop_start, attr_map,
                                        offset, numitems);
           attr_maps.insert(make_pair(attr_name_space, attr_map));

@@ -11,6 +11,7 @@
 #include <hdf5.h>
 
 #include <vector>
+#include <set>
 
 #include "neuroh5_types.hh"
 #include "cell_attributes.hh"
@@ -76,8 +77,9 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       data::NamedAttrMap attr_values;
+      set<string> attr_mask;
       
-      read_cell_attributes (comm, file_name, hdf5::TREES,
+      read_cell_attributes (comm, file_name, hdf5::TREES, attr_mask,
                             pop_name, pop_start, attr_values,
                             offset, numitems);
 
