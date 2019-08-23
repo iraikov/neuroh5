@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <set>
 
 #include <hdf5.h>
 #include <mpi.h>
@@ -105,9 +106,10 @@ namespace neuroh5
     (
      MPI_Comm               comm,
      const int              root,
-     const string&          file_name,
-     const string&          name_space,
-     const string&          pop_name,
+     const std::string&          file_name,
+     const std::string&          name_space,
+     const std::set<std::string>&     attr_mask,
+     const std::string&          pop_name,
      const CELL_IDX_T&       pop_start,
      data::NamedAttrMap&    attr_values,
      size_t offset = 0,

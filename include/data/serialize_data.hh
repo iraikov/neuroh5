@@ -31,10 +31,7 @@
 #include "cereal/types/memory.hpp"
 #include "cereal/types/utility.hpp"
 
-
 #include "cereal/archives/binary.hpp"
-#include "cereal/archives/portable_binary.hpp"
-#include "cereal/archives/xml.hpp"
 
 using namespace std;
 using namespace neuroh5;
@@ -50,7 +47,7 @@ namespace neuroh5
     {
       std::stringstream ss(ios::in | ios::out | ios::binary);
       {
-        cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive
+        cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
         oarchive(data); // Write the data to the archive
         
       } // archive goes out of scope, ensuring all contents are flushed
@@ -66,10 +63,10 @@ namespace neuroh5
                            T& data)
     {
       {
-        string s = string(recvbuf.begin(), recvbuf.end());
+        const string& s = string(recvbuf.begin(), recvbuf.end());
         stringstream ss(s, ios::in | ios::out | ios::binary);
         
-        cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
+        cereal::BinaryInputArchive iarchive(ss); // Create an input archive
         
         iarchive(data); // Read the data from the archive
       }

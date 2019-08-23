@@ -24,8 +24,6 @@
 #include <vector>
 
 #include "cereal/archives/binary.hpp"
-#include "cereal/archives/portable_binary.hpp"
-#include "cereal/archives/xml.hpp"
 
 #include "throw_assert.hh"
 
@@ -75,7 +73,7 @@ namespace neuroh5
               const map<CELL_IDX_T, neurotree_t>& tree_map = it1->second;
               {
                 
-                cereal::PortableBinaryOutputArchive oarchive(ss); // Create an output archive
+                cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
                 oarchive(tree_map); // Write the data to the archive
                 
               } // archive goes out of scope, ensuring all contents are flushed
@@ -114,10 +112,10 @@ namespace neuroh5
                            "deserialize_rank_tree_map: invalid buffer displacement");
 
               {
-                string s = string(recvbuf.begin()+startpos, recvbuf.begin()+startpos+recvsize);
+                const string& s = string(recvbuf.begin()+startpos, recvbuf.begin()+startpos+recvsize);
                 stringstream ss(s, ios::in | ios::out | ios::binary);
 
-                cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
+                cereal::BinaryInputArchive iarchive(ss); // Create an input archive
                 
                 iarchive(tree_map); // Read the data from the archive
               }
@@ -149,10 +147,10 @@ namespace neuroh5
                            "deserialize_rank_tree_vector: invalid buffer displacement");
               
               {
-                string s = string(recvbuf.begin()+startpos, recvbuf.begin()+startpos+recvsize);
+                const string& s = string(recvbuf.begin()+startpos, recvbuf.begin()+startpos+recvsize);
                 stringstream ss(s, ios::in | ios::out | ios::binary);
 
-                cereal::PortableBinaryInputArchive iarchive(ss); // Create an input archive
+                cereal::BinaryInputArchive iarchive(ss); // Create an input archive
                 
                 iarchive(tree_map); // Read the data from the archive
               }

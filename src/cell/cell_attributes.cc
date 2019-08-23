@@ -33,6 +33,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <set>
 
 using namespace std;
 using namespace neuroh5;
@@ -58,7 +59,7 @@ namespace neuroh5
         {
         case PtrOwner:
           {
-            std::string ptr_name;
+            string ptr_name;
             if (ptr_type.shared_ptr_name.has_value())
               {
                 ptr_name = ptr_type.shared_ptr_name.value();
@@ -72,7 +73,7 @@ namespace neuroh5
           break;
         case PtrShared:
           {
-            std::string ptr_name;
+            string ptr_name;
             throw_assert (ptr_type.shared_ptr_name.has_value(),
                           "size_cell_attributes: shared attribute pointer has no value");
             ptr_name = ptr_type.shared_ptr_name.value();
@@ -529,7 +530,7 @@ namespace neuroh5
         {
         case PtrOwner:
           {
-            std::string ptr_name;
+            string ptr_name;
             if (ptr_type.shared_ptr_name.has_value())
               {
                 ptr_name = ptr_type.shared_ptr_name.value();
@@ -981,6 +982,7 @@ namespace neuroh5
      const int     root,
      const string& file_name,
      const string& name_space,
+     const set<string>& attr_mask,
      const string& pop_name,
      const CELL_IDX_T& pop_start,
      data::NamedAttrMap& attr_map,
@@ -989,14 +991,15 @@ namespace neuroh5
      )
     {
       herr_t status; 
-
-    
+      
       unsigned int rank, size;
       throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
       vector<char> sendrecvbuf; 
       vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
+
+      attr_map.clear();
 
       if (rank == (unsigned int)root)
         {
@@ -1048,6 +1051,9 @@ namespace neuroh5
 
               string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
 
+              if ((attr_mask.size() > 0) && (attr_mask.count(attr_name) == 0))
+                continue;
+              
               switch (attr_kind.type)
                 {
                 case UIntVal:
@@ -1229,7 +1235,6 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Bcast(&sendrecvbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
       sendrecvbuf.resize(sendrecvbuf_size);
       throw_assert_nomsg(MPI_Bcast(&sendrecvbuf[0], sendrecvbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
-
       if (rank != (unsigned int)root)
         {
           data::deserialize_data(sendrecvbuf, attr_map);

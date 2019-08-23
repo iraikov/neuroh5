@@ -4320,6 +4320,7 @@ extern "C"
     herr_t status;
     unsigned long root;
     PyObject *py_comm = NULL;
+    PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
     const string default_namespace = "Attributes";
     char *file_name_arg, *pop_name_arg, *attr_namespace_arg = (char *)default_namespace.c_str();
@@ -4327,22 +4328,44 @@ extern "C"
 
 
     
-    static const char *kwlist[] = {
-      "file_name",
+    static const char *kwlist[] = {"file_name",
                                    "pop_name",
                                    "root",
                                    "namespace",
                                    "comm",
+                                   "mask",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssk|sO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssk|sOO", (char **)kwlist,
                                      &file_name_arg, &pop_name_arg, &root, &attr_namespace_arg, 
-                                     &py_comm))
+                                     &py_comm, &py_mask))
       return NULL;
 
     string file_name = string(file_name_arg);
     string pop_name = string(pop_name_arg);
     string attr_namespace = string(attr_namespace_arg);
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_bcast_cell_attributes: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
 
     MPI_Comm comm;
 
@@ -4407,8 +4430,8 @@ extern "C"
                  "py_bcast_cell_attributes: unable to read population ranges");
 
     cell::bcast_cell_attributes (comm, (int)root,
-                                 string(file_name), string(attr_namespace),
-                                 string(pop_name), pop_vector[pop_idx].start,
+                                 file_name, attr_namespace, attr_mask, 
+                                 pop_name, pop_vector[pop_idx].start,
                                  attr_values);
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_bcast_cell_attributes: unable to free MPI communicator");
