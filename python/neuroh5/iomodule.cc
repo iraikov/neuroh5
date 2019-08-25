@@ -3648,6 +3648,13 @@ extern "C"
     map<CELL_IDX_T, neurotree_t> tree_map;
     map<string, NamedAttrMap> attr_maps;
 
+    if((getenv("MPI_DEBUG") != NULL) &&  (rank == 0))
+      {
+        volatile  int i=0;
+        while(i==0) { /*  change  ’i’ in the  debugger  */ }
+      }
+    MPI_Barrier(comm);
+
     status = cell::scatter_read_trees (comm, string(file_name),
                                        io_size, attr_name_spaces,
                                        node_rank_map, string(pop_name),
