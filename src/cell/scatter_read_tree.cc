@@ -64,7 +64,7 @@ namespace neuroh5
 
       throw_assert_nomsg(io_size > 0);
     
-      int srank, ssize; size_t rank, size, io_rank;
+      int srank, ssize; size_t rank=0, size=0, io_rank;
       throw_assert_nomsg(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
       throw_assert_nomsg(srank >= 0);
@@ -94,6 +94,7 @@ namespace neuroh5
     
       sendcounts.resize(size,0);
       sdispls.resize(size,0);
+      sendbuf.resize(0);
 
       if (is_io_rank)
         {
@@ -119,6 +120,13 @@ namespace neuroh5
       {
         vector<int> recvcounts, rdispls;
         vector<char> recvbuf;
+
+        if((getenv("MPI_DEBUG") != NULL) &&  (rank == 0))
+          {
+            volatile  int i=0;
+            while(i==0) { /*  change  ’i’ in the  debugger  */ }
+          }
+        MPI_Barrier(all_comm);
 
         throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                        recvcounts, rdispls, recvbuf) >= 0);

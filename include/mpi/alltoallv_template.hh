@@ -46,12 +46,6 @@ namespace neuroh5
       rank = srank;
       size = ssize;
 
-      if((getenv("MPI_DEBUG") != NULL) &&  (rank == 0))
-        {
-          volatile  int i=0;
-          while(i==0) { /*  change  ’i’ in the  debugger  */ }
-        }
-      MPI_Barrier(comm);
       
     /***************************************************************************
      * Send MPI packed data with Alltoallv 
