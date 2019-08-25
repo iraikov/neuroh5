@@ -50,8 +50,8 @@ namespace neuroh5
      const CELL_IDX_T                 pop_start,
      map<CELL_IDX_T, neurotree_t>    &tree_map,
      map<string, data::NamedAttrMap> &attr_maps,
-     size_t offset = 0,
-     size_t numitems = 0
+     size_t offset,
+     size_t numitems
      )
     {
       vector<char> sendbuf; 
