@@ -21,112 +21,112 @@ namespace neuroh5
   {
 
     template<>
-    const size_t AttrVal::attr_type_index<float> () 
+    size_t AttrVal::attr_type_index<float> () 
     {
       return AttrVal::attr_index_float;
     }
     template<>
-    const size_t AttrVal::attr_type_index<uint8_t> ()
+    size_t AttrVal::attr_type_index<uint8_t> ()
     {
       return AttrVal::attr_index_uint8;
     }
     template<>
-    const size_t AttrVal::attr_type_index<uint16_t> () 
+    size_t AttrVal::attr_type_index<uint16_t> () 
     {
       return AttrVal::attr_index_uint16;
     }
     template<>
-    const size_t AttrVal::attr_type_index<uint32_t> () 
+    size_t AttrVal::attr_type_index<uint32_t> () 
     {
       return AttrVal::attr_index_uint32;
     }
     template<>
-    const size_t AttrVal::attr_type_index<int8_t> () 
+    size_t AttrVal::attr_type_index<int8_t> () 
     {
       return AttrVal::attr_index_int8;
     }
     template<>
-    const size_t AttrVal::attr_type_index<int16_t> ()
+    size_t AttrVal::attr_type_index<int16_t> ()
     {
       return AttrVal::attr_index_int16;
     }
     template<>
-    const size_t AttrVal::attr_type_index<int32_t> ()
+    size_t AttrVal::attr_type_index<int32_t> ()
     {
       return AttrVal::attr_index_int32;
     }
     
     template<>
-    const size_t AttrVal::size_attr_vec<float> () const
+    size_t AttrVal::size_attr_vec<float> () const
     {
       return this->float_values.size();
     }
     template<>
-    const size_t AttrVal::size_attr_vec<uint8_t> () const
+    size_t AttrVal::size_attr_vec<uint8_t> () const
     {
       return this->uint8_values.size();
     }
     template<>
-    const size_t AttrVal::size_attr_vec<int8_t> () const
+    size_t AttrVal::size_attr_vec<int8_t> () const
     {
       return this->int8_values.size();
     }
     template<>
-    const size_t AttrVal::size_attr_vec<uint16_t> () const
+    size_t AttrVal::size_attr_vec<uint16_t> () const
     {
       return this->uint16_values.size();
     }
     template<>
-    const size_t AttrVal::size_attr_vec<int16_t> () const
+    size_t AttrVal::size_attr_vec<int16_t> () const
     {
       return this->int16_values.size();
     }
     template<>
-    const size_t AttrVal::size_attr_vec<uint32_t> () const
+    size_t AttrVal::size_attr_vec<uint32_t> () const
     {
       return this->uint32_values.size();
     }
     template<>
-    const size_t AttrVal::size_attr_vec<int32_t> () const
+    size_t AttrVal::size_attr_vec<int32_t> () const
     {
       return this->int32_values.size();
     }
 
     template<>
-    const void AttrVal::resize<float> (size_t size)
+    void AttrVal::resize<float> (size_t size)
     {
       float_values.resize(size);
     }
 
     template<>
-    const void AttrVal::resize<uint8_t> (size_t size)
+    void AttrVal::resize<uint8_t> (size_t size)
     {
       uint8_values.resize(size);
     }
     template<>
-    const void AttrVal::resize<int8_t> (size_t size)
+    void AttrVal::resize<int8_t> (size_t size)
     {
       int8_values.resize(size);
     }
 
     template<>
-    const void AttrVal::resize<uint16_t> (size_t size)
+    void AttrVal::resize<uint16_t> (size_t size)
     {
       uint16_values.resize(size);
     }
     template<>
-    const void AttrVal::resize<int16_t> (size_t size)
+    void AttrVal::resize<int16_t> (size_t size)
     {
       int16_values.resize(size);
     }
 
     template<>
-    const void AttrVal::resize<uint32_t> (size_t size)
+    void AttrVal::resize<uint32_t> (size_t size)
     {
       uint32_values.resize(size);
     }
     template<>
-    const void AttrVal::resize<int32_t> (size_t size)
+    void AttrVal::resize<int32_t> (size_t size)
     {
       int32_values.resize(size);
     }
