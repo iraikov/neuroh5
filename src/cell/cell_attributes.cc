@@ -873,7 +873,6 @@ namespace neuroh5
           }
 
           data::serialize_rank_attr_map (size, rank, rank_attr_map, sendcounts, sendbuf, sdispls);
-          printf("rank %d: sendbuf.size = %lu\n", rank, sendbuf.size());
         }
       else
         {
@@ -964,7 +963,6 @@ namespace neuroh5
       if (recvbuf_size > 0)
         recvbuf.resize(recvbuf_size);
 
-      printf("rank %d: recvbuf_size = %lu\n", rank, recvbuf_size);
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
       throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                      recvcounts, rdispls, recvbuf) >= 0);

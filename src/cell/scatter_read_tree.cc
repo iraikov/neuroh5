@@ -50,14 +50,10 @@ namespace neuroh5
      const CELL_IDX_T                 pop_start,
      map<CELL_IDX_T, neurotree_t>    &tree_map,
      map<string, data::NamedAttrMap> &attr_maps,
-     size_t offset = 0,
-     size_t numitems = 0
+     size_t offset ,
+     size_t numitems
      )
     {
-      herr_t status; hid_t fapl=-1, file=-1;
-      vector< pair<hsize_t,hsize_t> > ranges;
-      size_t dset_size, read_size; hsize_t start=0, end=0, block=0;
-    
       vector<char> sendbuf; 
       vector<int> sendcounts, sdispls;
     
@@ -90,59 +86,11 @@ namespace neuroh5
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
           throw_assert_nomsg(MPI_Comm_rank(io_comm, &srank) == MPI_SUCCESS);
           io_rank = srank;
-        
-          fapl = H5Pcreate(H5P_FILE_ACCESS);
-          throw_assert_nomsg(fapl >= 0);
-          throw_assert_nomsg(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
-        
-          /* Create property list for collective dataset operations. */
-          file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-          throw_assert_nomsg(file >= 0);
-          dset_size = hdf5::dataset_num_elements(file, hdf5::cell_attribute_path(hdf5::TREES, string(pop_name), hdf5::CELL_INDEX));
-
-          status = H5Fclose(file);
-          throw_assert_nomsg(status == 0);
-
-          status = H5Pclose(fapl);
-          throw_assert_nomsg(status == 0);
-          
-          if (numitems > 0)
-            {
-              if (offset < dset_size)
-                {
-                  read_size = min(numitems*size, dset_size-offset);
-                }
-              else
-                {
-                  read_size = 0;
-                }
-            }
-          else
-            {
-              read_size = dset_size;
-            }
-
-          if (read_size > 0)
-            {
-              // determine which blocks of block_ptr are read by which I/O rank
-              mpi::rank_ranges(read_size, io_size, ranges);
-              
-              start = ranges[io_rank].first + offset;
-              end   = start + ranges[rank].second;
-
-              block = end - start + 1;
-            }
-          else
-            {
-              block = 0;
-            }
-
         }
       else
         {
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      MPI_Barrier(all_comm);
     
       sendcounts.resize(size,0);
       sdispls.resize(size,0);
@@ -164,24 +112,25 @@ namespace neuroh5
           }
 
           data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
+          printf("rank %d: rank_tree_map size = %lu sendbuf.size = %lu\n", 
+                 rank, rank_tree_map.size(), sendbuf.size());
         }
 
+      MPI_Barrier(all_comm);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
-      vector<int> recvcounts, rdispls;
-      vector<char> recvbuf;
+      {
+        vector<int> recvcounts, rdispls;
+        vector<char> recvbuf;
 
-
-      throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                                     recvcounts, rdispls, recvbuf) >= 0);
-      sendbuf.clear();
-
-      if (recvbuf.size() > 0)
-        {
-          data::deserialize_rank_tree_map (size, recvbuf, recvcounts, rdispls, tree_map);
-        }
-      recvbuf.clear();
-
+        throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                       recvcounts, rdispls, recvbuf) >= 0);
+        
+        if (recvbuf.size() > 0)
+          {
+            data::deserialize_rank_tree_map (size, recvbuf, recvcounts, rdispls, tree_map);
+          }
+      }
 
       for (string attr_name_space : attr_name_spaces)
         {
