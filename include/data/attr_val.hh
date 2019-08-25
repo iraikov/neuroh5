@@ -63,13 +63,13 @@ namespace neuroh5
       }
 
       template<class T>
-      static const size_t attr_type_index ();
+      static size_t attr_type_index ();
 
       template<class T>
-      const size_t size_attr_vec () const;
+      size_t size_attr_vec () const;
 
       template<class T>
-      const void resize (size_t size);
+      void resize (size_t size);
       
       template<class T>
       const std::vector<T>& attr_vec (size_t i) const; 
