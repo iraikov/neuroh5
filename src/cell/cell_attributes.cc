@@ -611,8 +611,8 @@ namespace neuroh5
      const string& pop_name,
      const CELL_IDX_T& pop_start,
      data::NamedAttrMap& attr_values,
-     size_t offset = 0,
-     size_t numitems = 0
+     size_t offset,
+     size_t numitems
      )
     {
       herr_t status; 
@@ -1003,8 +1003,6 @@ namespace neuroh5
 
       vector<char> sendrecvbuf; 
       vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
-
-      attr_map.clear();
 
       if (rank == (unsigned int)root)
         {

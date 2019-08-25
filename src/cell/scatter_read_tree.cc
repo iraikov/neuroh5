@@ -107,6 +107,9 @@ namespace neuroh5
                                   pop_name, pop_start, attr_values,
                                   offset, numitems * size);
 
+            printf("rank %d: attr_values.index_set.size = %lu\n",
+                   rank, attr_values.index_set.size());
+            
             
             data::append_rank_tree_map(attr_values, node_rank_map, rank_tree_map);
           }
