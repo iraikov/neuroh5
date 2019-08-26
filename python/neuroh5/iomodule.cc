@@ -3739,6 +3739,7 @@ extern "C"
   {
     int status; int topology_flag=1;
     PyObject *py_comm = NULL;
+    PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
     PyObject *py_attr_name_spaces=NULL;
@@ -3750,18 +3751,41 @@ extern "C"
                                    "pop_name",
                                    "selection",
                                    "comm",
+                                   "mask",
                                    "namespaces",
                                    "topology",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOi", (char **)kwlist,
                                      &file_name, &pop_name,
                                      &py_selection, &py_comm, 
-                                     &py_attr_name_spaces,
+                                     &py_attr_name_spaces, &py_mask,
                                      &topology_flag))
       return NULL;
     throw_assert(PyList_Check(py_selection) > 0,
                  "py_read_tree_selection: unable to read tree selection");
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_read_trees: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
 
     MPI_Comm comm;
 
@@ -3854,8 +3878,8 @@ extern "C"
       {
         data::NamedAttrMap attr_map;
         cell::read_cell_attribute_selection(comm, string(file_name), 
-                                            attr_namespace, pop_name,
-                                            pop_vector[pop_idx].start,
+                                            attr_namespace, attr_mask,
+                                            pop_name, pop_vector[pop_idx].start,
                                             selection, attr_map);
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
@@ -4285,6 +4309,7 @@ extern "C"
   {
     herr_t status;
     PyObject *py_comm = NULL;
+    PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
@@ -4297,12 +4322,37 @@ extern "C"
                                    "selection",
                                    "namespace",
                                    "comm",
+                                   "mask",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sO)", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOO", (char **)kwlist,
                                      &file_name, &pop_name, &py_selection,
-                                     &attr_namespace, &py_comm))
+                                     &attr_namespace, &py_comm, &py_mask))
       return NULL;
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_read_trees: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
+
+    
     MPI_Comm comm;
 
     if (py_comm != NULL)
@@ -4377,7 +4427,7 @@ extern "C"
       }
 
     NamedAttrMap attr_values;
-    cell::read_cell_attribute_selection (comm, string(file_name), string(attr_namespace),
+    cell::read_cell_attribute_selection (comm, string(file_name), string(attr_namespace), attr_mask,
                                          string(pop_name), pop_vector[pop_idx].start,
                                          selection, attr_values);
     vector<vector<string>> attr_names;
