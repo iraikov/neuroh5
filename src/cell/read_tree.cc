@@ -103,8 +103,9 @@ namespace neuroh5
      )
     {
       data::NamedAttrMap attr_values;
+      set<string> attr_mask;
       
-      read_cell_attribute_selection (comm, file_name, hdf5::TREES,
+      read_cell_attribute_selection (comm, file_name, hdf5::TREES, attr_mask,
                                      pop_name, pop_start, 
                                      selection, attr_values);
 

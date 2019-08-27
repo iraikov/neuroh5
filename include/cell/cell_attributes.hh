@@ -79,6 +79,7 @@ namespace neuroh5
      MPI_Comm         comm,
      const string& file_name,
      const string& name_space,
+     const set<string>& attr_mask,
      const string& pop_name,
      const CELL_IDX_T& pop_start,
      const std::vector<CELL_IDX_T>&  selection,
