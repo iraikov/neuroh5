@@ -121,13 +121,6 @@ namespace neuroh5
         vector<int> recvcounts, rdispls;
         vector<char> recvbuf;
 
-        if((getenv("MPI_DEBUG") != NULL) &&  (rank == 0))
-          {
-            volatile  int i=0;
-            while(i==0) { /*  change  ’i’ in the  debugger  */ }
-          }
-        MPI_Barrier(all_comm);
-
         throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                        recvcounts, rdispls, recvbuf) >= 0);
         
