@@ -17,6 +17,7 @@
 
 #include <vector>
 #include <map>
+#include <algorithm>
 #include <utility>
 
 namespace neuroh5

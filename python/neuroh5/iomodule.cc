@@ -2342,6 +2342,7 @@ extern "C"
     PyObject *py_selection=NULL;
     PyObject *py_attr_name_spaces=NULL;
     PyObject *py_comm = NULL;
+    PyObject *py_prj_names = NULL;
     MPI_Comm *comm_ptr  = NULL;
     vector <NODE_IDX_T> selection;
     size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
@@ -2351,13 +2352,15 @@ extern "C"
                                    "selection",
                                    "namespaces",
                                    "comm",
+                                   "projections",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|OO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|OOO", (char **)kwlist,
                                      &input_file_name,
                                      &py_selection, 
                                      &py_attr_name_spaces,
-                                     &py_comm))
+                                     &py_comm,
+                                     &py_prj_names))
       return NULL;
 
     PyObject *py_prj_dict = PyDict_New();
@@ -2404,10 +2407,24 @@ extern "C"
           }
       }
 
-    status = graph::read_projection_names(comm, input_file_name, prj_names);
-    throw_assert(status >= 0,
-                 "py_read_graph_selection: unable to read projection names");
-    
+    if (py_prj_names != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_prj_names); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_prj_names, (Py_ssize_t)i);
+            PyObject *p1    = PyTuple_GetItem(pyval, 0);
+            PyObject *p2    = PyTuple_GetItem(pyval, 1);
+            const char *s1        = PyStr_ToCString (p1);
+            const char *s2        = PyStr_ToCString (p2);
+            prj_names.push_back(make_pair(string(s1), string(s2)));
+          }
+      }
+    else
+      {
+        status = graph::read_projection_names(comm, input_file_name, prj_names);
+        throw_assert(status >= 0,
+                     "py_read_graph_selection: unable to read projection names");
+      }
 
     graph::read_graph_selection(comm, std::string(input_file_name), edge_attr_name_spaces,
                                 prj_names, selection, prj_vector, edge_attr_name_vector,

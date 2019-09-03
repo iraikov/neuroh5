@@ -68,6 +68,7 @@ namespace neuroh5
       vector< pair<hsize_t,hsize_t> > src_idx_ranges;
         
       mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name);
+      mpi::MPI_DEBUG(comm, "read_projection_selection: ", " selection of size ", selection.size());
       throw_assert(hdf5::read_projection_dataset_selection(comm, file_name, src_pop_name, dst_pop_name,
                                                            src_start, dst_start, selection, edge_base,
                                                            selection_dst_idx, selection_dst_ptr, src_idx_ranges,

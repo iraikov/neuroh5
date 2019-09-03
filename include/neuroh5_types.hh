@@ -146,7 +146,7 @@ namespace neuroh5
   #define MPI_NODE_IDX_T    MPI_UINT32_T 
   #define MPI_PARENT_NODE_IDX_T MPI_INT32_T 
   #define MPI_ATTR_PTR_T    MPI_UINT64_T 
-  
+
   // population type
   typedef uint16_t pop_t;
   

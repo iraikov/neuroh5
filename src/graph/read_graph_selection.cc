@@ -38,80 +38,109 @@ namespace neuroh5
      )
     {
       int status = 0;
-      int rank, size;
-      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS, "unable to obtain MPI communicator size");
-      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "unable to obtain MPI communicator rank");
-      
-      // read the population info
-      vector<pop_range_t> pop_vector;
-      vector< pair<pop_t, string> > pop_labels;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      set< pair<pop_t, pop_t> > pop_pairs;
-      throw_assert(cell::read_population_combos(comm, file_name, pop_pairs) >= 0,
-                   "unable to read valid projection combination");
-      throw_assert(cell::read_population_ranges
-                   (comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0,
-                   "unable to read population ranges");
-      throw_assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0,
-                   "unable to read population labels");
 
-      // read the edges
-      for (size_t i = 0; i < prj_names.size(); i++)
+      size_t selection_size = selection.size();
+      int data_color = 2;
+      
+      MPI_Comm data_comm;
+      // In cases where some ranks do not have any data to write, split
+      // the communicator, so that collective operations can be executed
+      // only on the ranks that do have data.
+      if (selection_size > 0)
         {
-          size_t local_prj_num_nodes;
-          size_t local_prj_num_edges;
-          size_t total_prj_num_edges;
+          MPI_Comm_split(comm,data_color,0,&data_comm);
+        }
+      else
+        {
+          MPI_Comm_split(comm,0,0,&data_comm);
+        }
+      MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
-          //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
+      if (selection_size > 0)
+        {
+          int rank=-1, size=-1;
 
-          string src_pop_name = prj_names[i].first, dst_pop_name = prj_names[i].second;
-          uint32_t dst_pop_idx = 0, src_pop_idx = 0;
-          bool src_pop_set = false, dst_pop_set = false;
-      
-          for (size_t i=0; i< pop_labels.size(); i++)
-            {
-              if (src_pop_name == get<1>(pop_labels[i]))
-                {
-                  src_pop_idx = get<0>(pop_labels[i]);
-                  src_pop_set = true;
-                }
-              if (dst_pop_name == get<1>(pop_labels[i]))
-                {
-                  dst_pop_idx = get<0>(pop_labels[i]);
-                  dst_pop_set = true;
-                }
-            }
-          throw_assert(dst_pop_set && src_pop_set,
-                       "unable to determine destination or source population");
-      
-          NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
-          NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
-
-          mpi::MPI_DEBUG(comm, "read_graph: src_pop_name = ", src_pop_name,
-                         " dst_pop_name = ", dst_pop_name,
-                         " dst_start = ", dst_start,
-                         " src_start = ", src_start);
-
-          throw_assert(graph::read_projection_selection
-                       (comm, file_name, pop_ranges, pop_pairs,
-                        src_pop_name, dst_pop_name, 
-                        src_start, dst_start, edge_attr_name_spaces, 
-                        selection, prj_vector, edge_attr_names_vector,
-                        local_prj_num_nodes,
-                        local_prj_num_edges, total_prj_num_edges) >= 0,
-                       "error in read_projection_selection");
-
-          mpi::MPI_DEBUG(comm, "read_graph: projection ", i, " has a total of ", total_prj_num_edges, " edges");
+          throw_assert(MPI_Comm_size(data_comm, &size) == MPI_SUCCESS, "unable to obtain MPI communicator size");
+          throw_assert(MPI_Comm_rank(data_comm, &rank) == MPI_SUCCESS, "unable to obtain MPI communicator rank");
           
-          total_num_edges = total_num_edges + total_prj_num_edges;
-          local_num_edges = local_num_edges + local_prj_num_edges;
+          // read the population info
+          vector<pop_range_t> pop_vector;
+          vector< pair<pop_t, string> > pop_labels;
+          map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+          set< pair<pop_t, pop_t> > pop_pairs;
+          throw_assert(cell::read_population_combos(data_comm, file_name, pop_pairs) >= 0,
+                       "unable to read valid projection combination");
+          throw_assert(cell::read_population_ranges
+                       (data_comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0,
+                       "unable to read population ranges");
+          throw_assert(cell::read_population_labels(data_comm, file_name, pop_labels) >= 0,
+                       "unable to read population labels");
+
+          // read the edges
+          for (size_t i = 0; i < prj_names.size(); i++)
+            {
+              size_t local_prj_num_nodes=0;
+              size_t local_prj_num_edges=0;
+              size_t total_prj_num_edges=0;
+              
+              //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
+              
+              string src_pop_name = prj_names[i].first, dst_pop_name = prj_names[i].second;
+              uint32_t dst_pop_idx = 0, src_pop_idx = 0;
+              bool src_pop_set = false, dst_pop_set = false;
+              
+              for (size_t p=0; p< pop_labels.size(); p++)
+                {
+                  if (src_pop_name == get<1>(pop_labels[p]))
+                    {
+                      src_pop_idx = get<0>(pop_labels[p]);
+                      src_pop_set = true;
+                    }
+                  if (dst_pop_name == get<1>(pop_labels[p]))
+                    {
+                      dst_pop_idx = get<0>(pop_labels[p]);
+                      dst_pop_set = true;
+                    }
+                }
+              throw_assert(dst_pop_set && src_pop_set,
+                           "unable to determine destination or source population");
+              
+              NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
+              NODE_IDX_T dst_end = pop_vector[dst_pop_idx].start + pop_vector[dst_pop_idx].count;
+              NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
+
+              mpi::MPI_DEBUG(data_comm, "read_graph_selection: src_pop_name = ", src_pop_name,
+                             " dst_pop_name = ", dst_pop_name,
+                             " dst_start = ", dst_start,
+                             " src_start = ", src_start);
+
+              throw_assert(graph::read_projection_selection
+                           (data_comm, file_name, pop_ranges, pop_pairs,
+                            src_pop_name, dst_pop_name, 
+                            src_start, dst_start, edge_attr_name_spaces, 
+                            selection, prj_vector, edge_attr_names_vector,
+                            local_prj_num_nodes,
+                            local_prj_num_edges, total_prj_num_edges) >= 0,
+                           "error in read_projection_selection");
+
+              mpi::MPI_DEBUG(data_comm, "read_graph_selection: projection ", i, 
+                             " has a total of ", total_prj_num_edges, " edges");
+          
+              total_num_edges = total_num_edges + total_prj_num_edges;
+              local_num_edges = local_num_edges + local_prj_num_edges;
+            }
+
+          size_t sum_local_num_edges = 0;
+          status = MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
+                              MPI_SIZE_T, MPI_SUM, 0, data_comm);
+          throw_assert(status == MPI_SUCCESS,
+                       "error in MPI_Reduce");
         }
 
-      size_t sum_local_num_edges = 0;
-      status = MPI_Reduce(&local_num_edges, &sum_local_num_edges, 1,
-                          MPI_SIZE_T, MPI_SUM, 0, MPI_COMM_WORLD);
-      throw_assert(status == MPI_SUCCESS,
-                   "error in MPI_Reduce");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "error in MPI_Barrier");
+      throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
+                   "error in MPI_Comm_free");
 
       return 0;
     }
