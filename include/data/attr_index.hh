@@ -51,7 +51,7 @@ namespace neuroh5
       }
 
       template<class T>
-      const size_t attr_type_index ()
+      size_t attr_type_index ()
       {
         auto first = this->attr_name_map.begin();
         auto entry = this->attr_name_map[std::type_index(typeid(T))];
@@ -59,7 +59,7 @@ namespace neuroh5
       }
 
       template<class T>
-      const size_t size_attr_names () 
+      size_t size_attr_names () 
       {
         return this->attr_name_map[std::type_index(typeid(T))].size();
       }
@@ -122,7 +122,7 @@ namespace neuroh5
       }
 
       template<class T>
-      const size_t attr_type_index ()
+      size_t attr_type_index ()
       {
         auto first = this->attr_name_map.begin();
         auto entry = this->attr_name_map[std::type_index(typeid(T))];
@@ -130,7 +130,7 @@ namespace neuroh5
       }
 
       template<class T>
-      const size_t size_attr_index () const
+      size_t size_attr_index () const
       {
         auto type_it = this->attr_name_map.find(std::type_index(typeid(T)));
         if (type_it != this->attr_name_map.cend())
@@ -160,7 +160,7 @@ namespace neuroh5
       }
       
       template<class T>
-      const size_t attr_index (const std::string attr_name) const
+      size_t attr_index (const std::string attr_name) const
       {
         auto type_it  = this->attr_name_map.find(std::type_index(typeid(T)));
         if (type_it != this->attr_name_map.cend())

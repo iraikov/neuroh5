@@ -36,10 +36,14 @@ namespace neuroh5
                           vector<int>& rdispls,
                           vector<T>& recvbuf)
     {
-      int ssize; size_t size;
+      int srank, ssize; size_t rank, size;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS,
-                   "alltoallv: unable to obtain size of MPI communicator")
-
+                   "alltoallv: unable to obtain size of MPI communicator");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS,
+                   "alltoallv: unable to obtain rank of MPI communicator");
+      throw_assert_nomsg(srank >= 0);
+      throw_assert_nomsg(ssize > 0);
+      rank = srank;
       size = ssize;
 
       
