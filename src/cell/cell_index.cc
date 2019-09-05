@@ -86,9 +86,7 @@ namespace neuroh5
 
               ierr = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
               throw_assert_nomsg(ierr == 0);
-#if H5_VERSION_GE(1,10,2)
-              H5Pset_deflate(plist, 9);
-#endif              
+
               hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
               throw_assert_nomsg(lcpl >= 0);
               throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
@@ -99,10 +97,10 @@ namespace neuroh5
                                       mspace, lcpl, plist, H5P_DEFAULT);
               throw_assert_nomsg(H5Dclose(dset) >= 0);
               throw_assert_nomsg(H5Sclose(mspace) >= 0);
-              
-              ierr = H5Fclose (file);
-              throw_assert_nomsg(ierr == 0);
             }
+              
+          ierr = H5Fclose (file);
+          throw_assert_nomsg(ierr == 0);
         }
 
       return ierr;

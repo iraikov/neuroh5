@@ -325,9 +325,10 @@ namespace neuroh5
                                        all_parents, all_swc_types);
           throw_assert_nomsg(status >= 0);
         }
-      
-      status = append_cell_index (comm, file_name, pop_name, hdf5::TREES,
-                                  all_index_vector);
+
+            
+      throw_assert_nomsg(append_cell_index (comm, file_name, pop_name, hdf5::TREES,
+                                            all_index_vector) == 0);
 
       const data::optional_hid dflt_data_type;
       const data::optional_hid coord_data_type(COORD_H5_NATIVE_T);
@@ -338,7 +339,7 @@ namespace neuroh5
 
       string attr_ptr_owner_path = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD) + "/" + hdf5::ATTR_PTR;
       string sec_ptr_owner_path  = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC) + "/" + hdf5::SEC_PTR;
-      
+
       append_cell_attribute (comm, file_name, hdf5::TREES, pop_name, pop_start, hdf5::X_COORD,
                              all_index_vector, attr_ptr, all_xcoords,
                              coord_data_type, IndexShared,
@@ -381,7 +382,6 @@ namespace neuroh5
                              all_index_vector, sec_ptr, all_sections,
                              section_data_type, IndexShared,
                              CellPtr (PtrOwner, hdf5::SEC_PTR));
-
 
         
       return 0;

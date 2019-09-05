@@ -340,6 +340,7 @@ int main(int argc, char** argv)
   status = cell::append_trees(all_comm, output_file_name, pop_name, 0, tree_list);
   assert(status == 0);
 
+  MPI_Barrier(all_comm);
   MPI_Comm_free(&all_comm);
   
   MPI_Finalize();

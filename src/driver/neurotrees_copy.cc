@@ -13,7 +13,6 @@
 #include <mpi.h>
 #include <hdf5.h>
 #include <getopt.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h>
@@ -36,6 +35,7 @@
 #include "create_file_toplevel.hh"
 #include "exists_tree_h5types.hh"
 #include "copy_tree_h5types.hh"
+#include "throw_assert.hh"
 
 
 using namespace std;
@@ -64,7 +64,12 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 
 void print_usage_full(char** argv)
 {
-  printf("Usage: %s hdf-file population-name src-id dest-id...\n\n", argv[0]);
+  cout << "Usage: " << string(argv[0]) << " [OPTIONS] <HDF FILE> <POPULATION> <SRC ID> <DEST ID>..." << endl <<
+    "Options:" << endl <<
+    "-h               Print this help" << endl <<
+    "--fill           Copy the given source id to all cell ids in the population" << endl <<
+    "--output FILE    Specify output file " << endl <<
+    endl;
 }
 
 
@@ -83,13 +88,16 @@ int main(int argc, char** argv)
   vector<neurotree_t> input_tree_vec, output_tree_vec;
   MPI_Comm all_comm;
   
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "error in MPI_Init");
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
   int rank, size;
-  assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS,
+               "error in MPI_Comm_size");
+  throw_assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS,
+               "error in MPI_Comm_size");
 
   int optflag_fill         = 0;
   int optflag_output       = 0;
@@ -176,13 +184,15 @@ int main(int argc, char** argv)
   size_t n_nodes;
   
   // Read population info
-  assert(cell::read_population_ranges(all_comm, input_filename,
-                                      pop_ranges, pop_vector,
-                                      n_nodes) >= 0);
+  throw_assert(cell::read_population_ranges(all_comm, input_filename,
+                                            pop_ranges, pop_vector,
+                                            n_nodes) >= 0,
+               "error in read_population_ranges");
 
   vector<pair <pop_t, string> > pop_labels;
-  status = cell::read_population_labels(all_comm, input_filename, pop_labels);
-  assert (status >= 0);
+  throw_assert (cell::read_population_labels(all_comm, input_filename, pop_labels) >= 0,
+                "error in read_population_labels");
+                
   
   // Determine index of population to be read
   size_t pop_idx=0; bool pop_idx_set=false;
@@ -201,11 +211,12 @@ int main(int argc, char** argv)
 
   CELL_IDX_T pop_start = pop_vector[pop_idx].start;
   
-  status = cell::read_trees (all_comm, input_filename,
-                             pop_name, pop_start,
-                             input_tree_vec);
-  assert(status >= 0);
-  assert(input_tree_vec.size() > 0);
+  throw_assert(cell::read_trees (all_comm, input_filename,
+                                 pop_name, pop_start,
+                                 input_tree_vec) >= 0,
+               "error in read_trees");
+  throw_assert(input_tree_vec.size() > 0,
+               "empty list of input trees");
   
   for_each(input_tree_vec.cbegin(),
            input_tree_vec.cend(),
@@ -237,16 +248,17 @@ int main(int argc, char** argv)
         
       target_gid_list.clear();
       for (size_t i=0; i<pop_vector[pop_idx].count; i++)
+        //for (size_t i=0; i<2000; i++)
         {
           if (i != source_gid-pop_start)
             {
-              target_gid_list.push_back(i);
+              target_gid_list.push_back(i+pop_start);
             }
           else
             {
               if (include_source_gid)
                 {
-                  target_gid_list.push_back(i);
+                  target_gid_list.push_back(i+pop_start);
                 }
             }
         }
@@ -261,9 +273,10 @@ int main(int argc, char** argv)
   for (size_t i=start, ii=0; i<end; i++, ii++)
     {
       CELL_IDX_T gid = target_gid_list[i];
-      printf("Task %d: Output id %u\n", rank, gid);
+      CELL_IDX_T id = gid-pop_start;
+      printf("Task %d: Output local id %u (global id %u)\n", rank, id, gid);
 
-      neurotree_t tree = make_tuple(gid,
+      neurotree_t tree = make_tuple(id,
                                     src_vector, dst_vector, sections,
                                     xcoords, ycoords, zcoords,
                                     radiuses, layers, parents,
@@ -277,39 +290,39 @@ int main(int argc, char** argv)
     {
       vector <string> groups;
       groups.push_back (hdf5::POPULATIONS);
-      status = hdf5::create_file_toplevel (all_comm, output_filename, groups);
+      throw_assert(hdf5::create_file_toplevel (all_comm, output_filename, groups) == 0,
+                   "error in create_file_toplevel");
     }
-  assert(status == 0);
 
-  // TODO; create separate functions for opening HDF5 file for reading and writing
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-  assert(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
-  hid_t output_file = H5Fopen(output_filename.c_str(), H5F_ACC_RDWR, fapl);
-  assert(output_file >= 0);
-      
-  if (!hdf5::exists_tree_h5types(output_file))
+  if (rank == 0)
     {
-      hid_t input_file = H5Fopen(input_filename.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(input_file >= 0);
-      status = hdf5::copy_tree_h5types(input_file, output_file);
-      status = H5Fclose (input_file);
-      assert(status == 0);
+      // TODO; create separate functions for opening HDF5 file for reading and writing
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      throw_assert(fapl >= 0, "unable to create file access property list");
+      hid_t output_file = H5Fopen(output_filename.c_str(), H5F_ACC_RDWR, fapl);
+      throw_assert(output_file >= 0, "unable to open output file");
+      
+      if (!hdf5::exists_tree_h5types(output_file))
+        {
+          hid_t input_file = H5Fopen(input_filename.c_str(), H5F_ACC_RDONLY, fapl);
+          throw_assert(input_file >= 0, "unable to open input file");
+          status = hdf5::copy_tree_h5types(input_file, output_file);
+          throw_assert(H5Fclose (input_file) == 0,
+                       "unable to close input file");
+        }
+
+      throw_assert(H5Pclose (fapl) == 0, "unable to close file access property list");
+      throw_assert(H5Fclose (output_file) == 0,
+                   "unable to close output file");
     }
-
-  assert(status == 0);
-  status = H5Pclose (fapl);
-  assert(status == 0);
-  status = H5Fclose (output_file);
-  assert(status == 0);
-
   MPI_Barrier(all_comm);
 
-  status = cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_vec);
-  assert(status == 0);
+  throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_vec) == 0,
+               "error in append_trees");
 
+  MPI_Barrier(all_comm);
   MPI_Comm_free(&all_comm);
-  
+
   MPI_Finalize();
   
   return status;
