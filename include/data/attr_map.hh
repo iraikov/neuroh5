@@ -388,6 +388,12 @@ namespace neuroh5
         return result;
       }
 
+      void clear()
+      {
+        attr_name_map.clear();
+        AttrMap::clear();
+      }
+
     };
   }
 }

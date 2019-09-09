@@ -259,7 +259,8 @@ namespace neuroh5
                         }
                       else
                         {
-                          throw runtime_error("read_projection_dataset_selection: destination index "+s+
+                          throw runtime_error(string("read_projection_dataset_selection: destination index ")+
+                                              std::to_string(s)+
                                               string(" not found in destination index dataset ")+
                                               hdf5::edge_attribute_path(src_pop_name, dst_pop_name, 
                                                                         hdf5::EDGES, hdf5::DST_PTR));
