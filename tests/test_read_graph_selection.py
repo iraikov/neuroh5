@@ -427,11 +427,15 @@ gid_set = [131075, 262149, 655366, 655371, 699053, 131089, 18, 786461, 655392, 3
 
 gid_range = sorted([ gid for gid in gid_set if gid % size == rank ])
 print("rank %i: gid_range = %s" % (rank, str(gid_range)))
-connectivity_file_path='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/DG_GC_connections_20190717_compressed.h5'
-(graph, a) = read_graph_selection(connectivity_file_path, selection=gid_range, \
+connectivity_file_path='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/DG_Connections_Full_Scale_20190824.h5'
+(graph, a) = read_graph_selection(connectivity_file_path, selection=gid_range, projections=[('MPP', 'GC'), ('MC', 'GC'), ('BC', 'GC')],
                                   comm=comm, namespaces=['Synapses', 'Connections'])
 
 for dst, edges in graph['GC']['MPP']:
     presyn_gids, _ = edges
     print("rank %d: %d %s edges for node %d" % (rank, len(presyn_gids), "MPP", dst))
+
+for dst, edges in graph['GC']['MC']:
+    presyn_gids, _ = edges
+    print("rank %d: %d %s edges for node %d" % (rank, len(presyn_gids), "MC", dst))
 

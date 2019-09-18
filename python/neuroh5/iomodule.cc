@@ -5015,11 +5015,11 @@ extern "C"
     
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
                  "py_append_cell_attributes: error in MPI barrier on data communicator");
-    throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
-                 "py_append_cell_attributes: unable to free data MPI communicator");
-    
     throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                  "py_append_cell_attributes: error in MPI barrier");
+
+    throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
+                 "py_append_cell_attributes: unable to free data MPI communicator");
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_append_cell_attributes: unable to free MPI communicator");
     

@@ -67,14 +67,18 @@ namespace neuroh5
       map<string, data::NamedAttrVal> edge_attr_map;
       vector< pair<hsize_t,hsize_t> > src_idx_ranges;
         
-      mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name);
-      mpi::MPI_DEBUG(comm, "read_projection_selection: ", " selection of size ", selection.size());
+      mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name, " : "
+                     "selection of size ", selection.size());
       throw_assert(hdf5::read_projection_dataset_selection(comm, file_name, src_pop_name, dst_pop_name,
                                                            src_start, dst_start, selection, edge_base,
                                                            selection_dst_idx, selection_dst_ptr, src_idx_ranges,
                                                            src_idx, total_num_edges) >= 0,
                    "error in read_projection_dataset_selection");
       
+      mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name, " :", 
+                     " size of destination index is ", selection_dst_idx.size(),
+                     " size of destination pointer is ", selection_dst_ptr.size(),
+                     "; total_num_edges is ", total_num_edges);
       mpi::MPI_DEBUG(comm, "read_projection_selection: validating projection ", src_pop_name, " -> ", dst_pop_name);
       
       // validate the edges
@@ -115,6 +119,9 @@ namespace neuroh5
                                                    EdgeMapDst) >= 0,
                    "error in append_edge_map_selection");
       local_num_nodes = prj_edge_map.size();
+
+      mpi::MPI_DEBUG(comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name, " :", 
+                     " local_num_nodes =  ", local_num_nodes);
       
       // ensure that all edges in the projection have been read and
       // appended to edge_list
