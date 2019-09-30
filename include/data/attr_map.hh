@@ -146,7 +146,7 @@ namespace neuroh5
             append_values_map(value_map[attr_index], vindex, first, last);
             index_set.insert(vindex);
           }
-        return index;
+        return attr_index;
       }
 
 
