@@ -261,14 +261,11 @@ namespace neuroh5
              rapl
              );
           assert(ierr >= 0);
-              
-          assert(H5Fclose(file) >= 0);
-          assert(H5Pclose(fapl) >= 0);
-          ierr = H5Pclose(rapl);
-          assert(ierr == 0);
-          
-        }
 
+        }
+      assert(H5Fclose(file) >= 0);
+      assert(H5Pclose(fapl) >= 0);
+      assert(H5Pclose(rapl) >= 0);
 
       return ierr;
     }
