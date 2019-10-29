@@ -81,12 +81,6 @@ namespace neuroh5
       total_num_edges = hdf5::dataset_num_elements
         (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX));
 
-      /* Create property list for collective dataset operations. */
-      hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
-      if (collective)
-        {
-          ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
-        }
 
       vector< pair<hsize_t,hsize_t> > bins;
       hsize_t read_blocks = 0;
@@ -107,6 +101,13 @@ namespace neuroh5
       
       if (read_blocks > 0)
         {
+          /* Create property list for collective dataset operations. */
+          hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+          if (collective)
+            {
+              ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+            }
+
           // determine which blocks of block_ptr are read by which rank
           mpi::rank_ranges(read_blocks, size, bins);
 
@@ -262,10 +263,10 @@ namespace neuroh5
              );
           assert(ierr >= 0);
 
+          assert(H5Pclose(rapl) >= 0);
         }
       assert(H5Fclose(file) >= 0);
       assert(H5Pclose(fapl) >= 0);
-      assert(H5Pclose(rapl) >= 0);
 
       return ierr;
     }
