@@ -185,6 +185,7 @@ namespace neuroh5
         }
 
       throw_assert_nomsg(MPI_Bcast(&num_pairs, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      v.resize(2*num_pairs);
       throw_assert_nomsg(MPI_Bcast(&v[0], (int)2*num_pairs, MPI_UINT16_T, 0, comm) == MPI_SUCCESS);
 
       // populate the set
