@@ -471,12 +471,12 @@ namespace neuroh5
                                    chunk_size, value_chunk_size, cache_size);
         }
       
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Barrier");
       throw_assert(MPI_Barrier(io_comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Comm_free");
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Barrier");
     }
 
 
