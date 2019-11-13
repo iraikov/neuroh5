@@ -42,7 +42,7 @@ def main(coords_path, coords_namespace, io_size):
             cell_v = coords_dict['V Coordinate']
                 
             print ('Rank %i: gid = %i u = %f v = %f' % (rank, cell_gid, cell_u, cell_v))
-
+    
 
 if __name__ == '__main__':
     main(args=sys.argv[(list_find(lambda s: s.find(script_name) != -1,sys.argv)+1):])

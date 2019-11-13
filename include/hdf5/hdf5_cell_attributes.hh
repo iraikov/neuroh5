@@ -214,7 +214,7 @@ namespace neuroh5
               
           values.resize(selection_ptr_pos);
           status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
-          
+
           status = H5Pclose(rapl);
           assert(status == 0);
           
