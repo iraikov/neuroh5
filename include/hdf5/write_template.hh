@@ -3,7 +3,6 @@
 
 #include "hdf5.h"
 
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -31,12 +30,15 @@ namespace neuroh5
         herr_t ierr = 0;
 
         hid_t dset = H5Dopen2(loc, name.c_str(), H5P_DEFAULT);
-        assert(dset >= 0);
+        throw_assert(dset >= 0,
+                     "write: unable to open dataset " << name);
 
         if (newsize > 0)
           {
             ierr = H5Dset_extent (dset, &newsize);
-            assert(ierr >= 0);
+            throw_assert(ierr >= 0,
+                         "write: unable to set extent on dataset "
+                         << name << " to " << newsize);
           }
 
         // make hyperslab selection
@@ -49,16 +51,25 @@ namespace neuroh5
         if (len > 0)
           {
             ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL, &one, &len);
-            assert(ierr >= 0);
+            throw_assert(ierr >= 0,
+                         "write: unable to select hyperslab "
+                         << start << ":" << len << " from dataset " << name);
             ierr = H5Sselect_all(mspace);
-            assert(ierr >= 0);
+            throw_assert(ierr >= 0,
+                         "write: error in H5Sselect_all "
+                          << " on dataset " << name);
+
           }
         else
           {
             ierr = H5Sselect_none(fspace);
-            assert(ierr >= 0);
+            throw_assert(ierr >= 0,
+                         "write: error in H5Sselect_none"
+                          << " on dataset " << name);
             ierr = H5Sselect_none(mspace);
-            assert(ierr >= 0);
+            throw_assert(ierr >= 0,
+                         "write: error in H5Sselect_none"
+                          << " on dataset " << name);
           }
 
         ierr = H5Dwrite(dset, ntype, mspace, fspace, wapl, &v[0]);
@@ -66,11 +77,12 @@ namespace neuroh5
 	  {
 	    H5Eprint2(H5E_DEFAULT, stdout);
 	  }
-        throw_assert(ierr >= 0, "write_template: error in H5Dwrite");
+        throw_assert(ierr >= 0, "write_template: error in H5Dwrite on dataset "
+                     << name << " length: " << len);
 
-        assert(H5Dclose(dset) >= 0);
-        assert(H5Sclose(mspace) >= 0);
-        assert(H5Sclose(fspace) >= 0);
+        throw_assert_nomsg(H5Dclose(dset) >= 0);
+        throw_assert_nomsg(H5Sclose(mspace) >= 0);
+        throw_assert_nomsg(H5Sclose(fspace) >= 0);
 
         return ierr;
       }
