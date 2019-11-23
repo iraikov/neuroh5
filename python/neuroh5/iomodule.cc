@@ -70,6 +70,33 @@ using namespace std;
 using namespace neuroh5;
 using namespace neuroh5::data;
 
+struct Intern {
+
+  map<string, char *> string_map;
+  
+  char *add(const std::string &s)
+  {
+    char *str;
+    auto sm_it = string_map.find(s);
+    if (sm_it != string_map.end())
+      {
+        str = sm_it->second;
+      }
+    else
+      {
+        size_t n = s.size();
+        str = (char *)malloc(n+1);
+        throw_assert_nomsg(str != NULL);
+        s.copy(str, n);
+        str[n] = 0;
+        string_map.insert(make_pair(s, str));
+      }
+    return str;
+  }
+};
+
+Intern attr_name_intern;
+
 void throw_err(char const* err_message)
 {
   fprintf(stderr, "Error: %s\n", err_message);
@@ -1134,9 +1161,9 @@ NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
 
 
 
-PyObject* py_build_cell_attr_values(const CELL_IDX_T key, 
-                                    const NamedAttrMap& attr_map,
-                                    const vector <vector<string> >& attr_names)
+PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key, 
+                                         const NamedAttrMap& attr_map,
+                                         const vector <vector<string> >& attr_names)
 {
   PyObject *py_attrval = PyDict_New();
   npy_intp dims[1];
@@ -1260,6 +1287,197 @@ PyObject* py_build_cell_attr_values(const CELL_IDX_T key,
   return py_attrval;
 }
 
+PyTypeObject* py_build_cell_attr_struct_type(const NamedAttrMap& attr_map,
+                                             const vector <vector<string> >& attr_names,
+                                             vector<PyStructSequence_Field> struct_descr_fields)
+{
+    PyStructSequence_Desc descr;
+    
+    PyTypeObject* structseq_type = NULL;
+
+    if (attr_map.index_set.size() > 0)
+      {
+        CELL_IDX_T key = *attr_map.index_set.begin();
+        
+        const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
+        const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+        const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+        const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+        const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+        const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+        const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+
+        for (size_t i=0; i<float_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_float][i]);
+            char *attr_type = attr_name_intern.add(string("float"));
+            struct_descr_fields.push_back((PyStructSequence_Field){attr_name, attr_type});
+          }
+        for (size_t i=0; i<uint8_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_uint8][i].c_str());
+            char *attr_type = attr_name_intern.add(string("uint8"));
+            struct_descr_fields.push_back((PyStructSequence_Field){attr_name, attr_type});
+          }
+        for (size_t i=0; i<int8_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_int8][i].c_str());
+            char *attr_type = attr_name_intern.add(string("int8"));
+            struct_descr_fields.push_back((PyStructSequence_Field){attr_name, attr_type});
+          }
+        for (size_t i=0; i<uint16_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_uint16][i].c_str());
+            char *attr_type = attr_name_intern.add(string("uint16"));
+            struct_descr_fields.push_back((PyStructSequence_Field){attr_name, attr_type});
+          }
+        for (size_t i=0; i<int16_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_int16][i].c_str());
+            char *attr_type = attr_name_intern.add(string("int16"));
+            struct_descr_fields.push_back((PyStructSequence_Field){attr_name, attr_type});
+          }
+        for (size_t i=0; i<uint32_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_uint32][i].c_str());
+            char *attr_type = attr_name_intern.add(string("uint32"));
+            struct_descr_fields.push_back((PyStructSequence_Field){attr_name, attr_type});
+          }
+        for (size_t i=0; i<int32_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_int32][i].c_str());
+            char *attr_type = attr_name_intern.add(string("int32"));
+            struct_descr_fields.push_back((PyStructSequence_Field){attr_name, attr_type});
+          }
+
+        struct_descr_fields.push_back((PyStructSequence_Field){NULL, NULL});
+        
+        descr.name = attr_name_intern.add("neuroh5_cell_attributes");
+        descr.doc = NULL;
+        descr.fields = &struct_descr_fields[0];
+        descr.n_in_sequence = struct_descr_fields.size()-1;
+        
+        structseq_type = PyStructSequence_NewType(&descr);
+        structseq_type->tp_flags |= Py_TPFLAGS_HEAPTYPE;
+        throw_assert_nomsg(structseq_type != NULL);
+        throw_assert_nomsg(PyType_Check(structseq_type));
+      }
+    
+    return structseq_type;
+}
+
+
+PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key, 
+                                           const NamedAttrMap& attr_map,
+                                           const vector <vector<string> >& attr_names,
+                                           PyTypeObject* struct_type)
+{
+  npy_intp dims[1];
+  npy_intp ind = 0;
+
+  
+
+  PyObject* py_attrval = PyStructSequence_New(struct_type);
+  throw_assert_nomsg(py_attrval != NULL);
+  
+  const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
+  const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+  const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+  const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+  const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+  const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+  const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+
+  size_t attr_pos = 0;
+  for (size_t i=0; i<float_attrs.size(); i++)
+    {
+      const vector<float> &attr_value = float_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+      float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+
+      PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
+  for (size_t i=0; i<uint8_attrs.size(); i++)
+    {
+      const vector<uint8_t> &attr_value = uint8_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
+      uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
+    }
+                           
+  for (size_t i=0; i<int8_attrs.size(); i++)
+    {
+      const vector<int8_t> &attr_value = int8_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
+      int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
+    }
+                           
+  for (size_t i=0; i<uint16_attrs.size(); i++)
+    {
+      const vector<uint16_t> &attr_value = uint16_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
+  for (size_t i=0; i<uint32_attrs.size(); i++)
+    {
+      const vector<uint32_t> &attr_value = uint32_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
+      uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
+    }
+                           
+  for (size_t i=0; i<int32_attrs.size(); i++)
+    {
+      const vector<int32_t> &attr_value = int32_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
+      int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
+  //Py_DECREF(py_attrval);
+  
+  return py_attrval;
+}
+
 
 /* NeuroH5CellAttrIterState - in-memory cell attribute iterator instance.
  *
@@ -1273,6 +1491,9 @@ typedef struct {
   vector< vector <string> > attr_names;
   NamedAttrMap attr_map;
   set<CELL_IDX_T>::const_iterator it_idx;
+  bool return_struct;
+  PyTypeObject* struct_type;
+  vector<PyStructSequence_Field> struct_descr_fields;
                            
 } NeuroH5CellAttrIterState;
 
@@ -1290,6 +1511,7 @@ PyObject* NeuroH5CellAttrIter_iter(PyObject *self)
 
 static void NeuroH5CellAttrIter_dealloc(PyNeuroH5CellAttrIterState *py_state)
 {
+  Py_DECREF(py_state->state->struct_type);
   delete py_state->state;
   Py_TYPE(py_state)->tp_free(py_state);
 }
@@ -1301,9 +1523,19 @@ PyObject* NeuroH5CellAttrIter_iternext(PyObject *self)
   if (py_state->state->it_idx != py_state->state->attr_map.index_set.cend())
     {
       const CELL_IDX_T key = *(py_state->state->it_idx);
-
-      PyObject *attrval = py_build_cell_attr_values(key, py_state->state->attr_map,
-                                                    py_state->state->attr_names);
+      PyObject *attrval;
+      if (py_state->state->return_struct)
+        {
+          attrval = py_build_cell_attr_values_struct(key, py_state->state->attr_map,
+                                                     py_state->state->attr_names,
+                                                     py_state->state->struct_type);
+        }
+      else
+        {
+          attrval = py_build_cell_attr_values_dict(key, py_state->state->attr_map,
+                                                   py_state->state->attr_names);
+        }
+      
       throw_assert(attrval != NULL,
                    "NeuroH5CellAttrIter: invalid attribute value");
 
@@ -1360,7 +1592,8 @@ static PyTypeObject PyNeuroH5CellAttrIter_Type = {
 static PyObject *
 NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
                             const vector< vector <string> >& attr_names,
-                            const NamedAttrMap& attr_map)
+                            const NamedAttrMap& attr_map,
+                            const bool return_struct)
 
 {
 
@@ -1374,14 +1607,15 @@ NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
     }
 
   p->state = new NeuroH5CellAttrIterState();
-
   p->state->seq_index     = 0;
   p->state->count         = attr_map.index_set.size();
   p->state->attr_map      = attr_map;
   p->state->attr_namespace = attr_namespace;
   p->state->attr_names    = attr_names;
   p->state->it_idx        = p->state->attr_map.index_set.cbegin();
-                           
+  p->state->struct_type   = py_build_cell_attr_struct_type(attr_map, attr_names, p->state->struct_descr_fields);
+  p->state->return_struct = return_struct;
+  
   return (PyObject *)p;
 }
 
@@ -3972,7 +4206,8 @@ extern "C"
     PyObject *py_attr_name_spaces=NULL;
     map<CELL_IDX_T, rank_t> node_rank_map;
     vector <string> attr_name_spaces;
-
+    int return_struct = 0;
+    
     static const char *kwlist[] = {
                                    "file_name",
                                    "pop_name",
@@ -3981,12 +4216,13 @@ extern "C"
                                    "node_rank_map",
                                    "namespaces",
                                    "io_size",
+                                   "return_struct",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOOk", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOOkp", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, &py_mask, 
                                      &py_node_rank_map, &py_attr_name_spaces,
-                                     &io_size))
+                                     &io_size, &return_struct))
       return NULL;
 
     set<string> attr_mask;
@@ -4129,7 +4365,8 @@ extern "C"
 
         PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_name_space,
                                                             attr_names,
-                                                            attr_map);
+                                                            attr_map,
+                                                            return_struct>0);
         
         PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_idx_iter);
         Py_DECREF(py_idx_iter);
@@ -4185,6 +4422,7 @@ extern "C"
     PyObject *py_mask = NULL;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
+    int return_struct = 0;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -4192,11 +4430,12 @@ extern "C"
                                    "namespace",
                                    "comm",
                                    "mask",
+                                   "return_struct",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|sOO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|sOOp", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace,
-                                     &py_comm, &py_mask))
+                                     &py_comm, &py_mask, &return_struct))
       return NULL;
 
     set<string> attr_mask;
@@ -4284,7 +4523,8 @@ extern "C"
 
     PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
                                                         attr_names,
-                                                        attr_values);
+                                                        attr_values,
+                                                        return_struct>0);
         
     
     return py_idx_iter;
@@ -4335,6 +4575,7 @@ extern "C"
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
     PyObject *py_selection = NULL;
     vector <CELL_IDX_T> selection;
+    int return_struct = 0;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -4343,11 +4584,13 @@ extern "C"
                                    "namespace",
                                    "comm",
                                    "mask",
+                                   "return_struct",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOOp", (char **)kwlist,
                                      &file_name, &pop_name, &py_selection,
-                                     &attr_namespace, &py_comm, &py_mask))
+                                     &attr_namespace, &py_comm, &py_mask,
+                                     &return_struct))
       return NULL;
 
     set<string> attr_mask;
@@ -4457,7 +4700,8 @@ extern "C"
 
     PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
                                                         attr_names,
-                                                        attr_values);
+                                                        attr_values,
+                                                        return_struct>0);
         
     
     return py_idx_iter;
@@ -4474,7 +4718,7 @@ extern "C"
     const string default_namespace = "Attributes";
     char *file_name_arg, *pop_name_arg, *attr_namespace_arg = (char *)default_namespace.c_str();
     NamedAttrMap attr_values;
-
+    int return_struct = 0;
 
     
     static const char *kwlist[] = {"file_name",
@@ -4483,11 +4727,12 @@ extern "C"
                                    "namespace",
                                    "comm",
                                    "mask",
+                                   "return_struct",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssk|sOO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssk|sOOp", (char **)kwlist,
                                      &file_name_arg, &pop_name_arg, &root, &attr_namespace_arg, 
-                                     &py_comm, &py_mask))
+                                     &py_comm, &py_mask, &return_struct))
       return NULL;
 
     string file_name = string(file_name_arg);
@@ -4590,7 +4835,8 @@ extern "C"
 
     PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
                                                         attr_names,
-                                                        attr_values);
+                                                        attr_values,
+                                                        return_struct>0);
         
     return py_idx_iter;
   }
@@ -5375,6 +5621,9 @@ extern "C"
     vector< vector <string> > attr_names;
     set<CELL_IDX_T>::const_iterator it_idx;
     map <CELL_IDX_T, rank_t> node_rank_map;
+    PyTypeObject* struct_type;
+    vector<PyStructSequence_Field> struct_descr_fields;
+    bool return_struct;
     
   } NeuroH5CellAttrGenState;
   
@@ -5725,7 +5974,8 @@ extern "C"
     unsigned long io_size=1, cache_size=100;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
-
+    int return_struct;
+    
     static const char *kwlist[] = {
                                    "file_name",
                                    "pop_name",
@@ -5734,11 +5984,13 @@ extern "C"
                                    "mask",
                                    "io_size",
                                    "cache_size",
+                                   "return_struct",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOOki", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOOkib", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace,
-                                     &py_comm, &py_mask, &io_size, &cache_size))
+                                     &py_comm, &py_mask, &io_size, &cache_size,
+                                     &return_struct))
       return NULL;
 
     set<string> attr_mask;
@@ -5894,7 +6146,9 @@ extern "C"
     py_ntrg->state->cache_size     = cache_size;
     py_ntrg->state->attr_namespace = string(attr_namespace);
     py_ntrg->state->attr_mask      = attr_mask;
-
+    py_ntrg->state->struct_type    = NULL;
+    py_ntrg->state->return_struct  = return_struct>0;
+    
     NamedAttrMap attr_map;
     py_ntrg->state->attr_map  = attr_map;
     py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
@@ -5918,6 +6172,7 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
+    Py_DECREF(py_ntrg->state->struct_type);
     if (py_ntrg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
@@ -6111,6 +6366,12 @@ extern "C"
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
               py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
+              if (py_ntrg->state->struct_type == NULL)
+                {
+                  py_ntrg->state->struct_type = py_build_cell_attr_struct_type(py_ntrg->state->attr_map,
+                                                                               py_ntrg->state->attr_names,
+                                                                               py_ntrg->state->struct_descr_fields);
+                }
             }
 
 
@@ -6137,8 +6398,20 @@ extern "C"
           else
             {
               const CELL_IDX_T key = *(py_ntrg->state->it_idx);
-              PyObject *elem = py_build_cell_attr_values(key, py_ntrg->state->attr_map,
-                                                         py_ntrg->state->attr_names);
+              PyObject *elem;
+
+              if (py_ntrg->state->return_struct)
+                {
+                  elem = py_build_cell_attr_values_struct(key, py_ntrg->state->attr_map,
+                                                          py_ntrg->state->attr_names,
+                                                          py_ntrg->state->struct_type);
+                }
+              else
+                {
+                  elem = py_build_cell_attr_values_dict(key, py_ntrg->state->attr_map,
+                                                        py_ntrg->state->attr_names);
+                }
+              
               throw_assert(elem != NULL,
                            "NeuroH5CellAttrGen: invalid cell attribute value");
 
