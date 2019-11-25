@@ -1353,12 +1353,11 @@ PyTypeObject* py_build_cell_attr_struct_type(const NamedAttrMap& attr_map,
         struct_descr_fields.push_back((PyStructSequence_Field){NULL, NULL});
         
         descr.name = attr_name_intern.add("neuroh5_cell_attributes");
-        descr.doc = NULL;
+        descr.doc = "NeuroH5 cell attributes";
         descr.fields = &struct_descr_fields[0];
         descr.n_in_sequence = struct_descr_fields.size()-1;
         
         structseq_type = PyStructSequence_NewType(&descr);
-        structseq_type->tp_flags |= Py_TPFLAGS_HEAPTYPE;
         throw_assert_nomsg(structseq_type != NULL);
         throw_assert_nomsg(PyType_Check(structseq_type));
       }
@@ -6172,7 +6171,7 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
-    Py_DECREF(py_ntrg->state->struct_type);
+    Py_XDECREF(py_ntrg->state->struct_type);
     if (py_ntrg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
