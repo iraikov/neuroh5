@@ -3,17 +3,14 @@
 #SBATCH -J neuroh5_scatter_read_trees_test           # Job name
 #SBATCH -o ./scatter_read_trees_test.o%j       # Name of stdout output file
 #SBATCH -e ./scatter_read_trees_test.e%j       # Name of stderr error file
-#SBATCH -p normal      # Queue (partition) name
-#SBATCH -N 128             # Total # of nodes 
-#SBATCH -n 7168            # Total # of mpi tasks
+#SBATCH -p development      # Queue (partition) name
+#SBATCH -N 40             # Total # of nodes 
+#SBATCH -n 2240           # Total # of mpi tasks
 #SBATCH -t 00:15:00        # Run time (hh:mm:ss)
 #SBATCH --mail-user=ivan.g.raikov@gmail.com
 #SBATCH --mail-type=all    # Send email at begin and end of job
 
-module unload python2 
-module swap intel intel/18.0.5
-module load python3
-module load phdf5/1.8.16
+module load phdf5
 
 set -x
 
