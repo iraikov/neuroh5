@@ -724,25 +724,21 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       PyObject *py_section_node_map = PyDict_New();
       PyObject *py_section_key; PyObject *py_section_nodes;
       set<NODE_IDX_T> marked_nodes;
-      size_t num_sections = sections[sections_ptr++];
-      size_t sum_section_nodes = 0;
+      size_t num_sections = sections[sections_ptr];
+      sections_ptr++;
       while (sections_ptr < sections.size())
         {
           vector<NODE_IDX_T> section_nodes;
-          size_t num_section_nodes = sections[sections_ptr++];
-          sum_section_nodes += num_section_nodes;
-          throw_assert(sum_section_nodes <= num_nodes,
-                       "py_build_tree_value: invalid section number of nodes");
+          size_t num_section_nodes = sections[sections_ptr];
           npy_intp nodes_dims[1], nodes_ind = 0;
           nodes_dims[0]    = num_section_nodes;
           py_section_key   = PyLong_FromLong((long)section_idx);
           py_section_nodes = (PyObject *)PyArray_SimpleNew(1, nodes_dims, NPY_UINT32);
           NODE_IDX_T *section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
+          sections_ptr++;
           for (size_t p = 0; p < num_section_nodes; p++)
             {
-              throw_assert(sections_ptr < sections.size(),
-                           "py_build_tree_value: invalid section pointer value");
-              NODE_IDX_T node_idx = sections[sections_ptr++];
+              NODE_IDX_T node_idx = sections[sections_ptr];
               throw_assert(node_idx <= num_nodes,
                            "py_build_tree_value: invalid node index in tree");
 
@@ -752,6 +748,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                   section_vector_ptr[node_idx] = section_idx;
                   marked_nodes.insert(node_idx);
                 }
+              sections_ptr++;
             }
           PyDict_SetItem(py_section_node_map, py_section_key, py_section_nodes);
           Py_DECREF(py_section_nodes);
@@ -759,7 +756,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           section_idx++;
         }
       throw_assert(section_idx == num_sections,
-                   "py_build_tree_value: invalid section index");
+                   "py_build_tree_value: invalid section index in tree");
 
       npy_intp topology_dims[1];
       topology_dims[0] = src_vector.size();
