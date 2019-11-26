@@ -23,7 +23,7 @@ if sys.platform == 'darwin':
                           "-I"+NUMPY_INCDIR,
                           "-I"+MPI4PY_INCDIR,
                           "-Iinclude", "-Iinclude/cell", "-Iinclude/graph", "-Iinclude/ngraph",
-                          "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5",
+                          "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5", "-Ipython/neuroh5",
                           "-g"]
     extra_link_args=["-L"+HDF5_LIBDIR, "-L"+MPI_LIBDIR]
     libraries = [HDF5_LIB, MPI_LIB]
@@ -42,7 +42,7 @@ else:
                         "-I"+NUMPY_INCDIR,
                         "-I"+MPI4PY_INCDIR,
                         "-Iinclude", "-Iinclude/cell", "-Iinclude/graph", "-Iinclude/ngraph",
-                        "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5",
+                        "-Iinclude/data", "-Iinclude/mpi", "-Iinclude/hdf5", "-Ipython/neuroh5",
                           "-g"]
     extra_link_args = ["-L"+HDF5_LIBDIR]
     if MPI_LIBDIR != "":

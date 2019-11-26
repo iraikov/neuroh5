@@ -66,9 +66,17 @@
 #define Py_TPFLAGS_HAVE_ITER ((Py_ssize_t)0)
 #endif
 
+#if (PY_MAJOR_VERSION > 3) || ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 8))
+#define  HAS_STRUCT_SEQUENCE 1
+#else
+#define  HAS_STRUCT_SEQUENCE 0
+#endif
+
 using namespace std;
 using namespace neuroh5;
 using namespace neuroh5::data;
+
+enum return_type {return_dict, return_struct, return_tuple};
 
 struct Intern {
 
@@ -1287,6 +1295,191 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
   return py_attrval;
 }
 
+
+
+PyObject* py_build_cell_attr_tuple_info(const NamedAttrMap& attr_map,
+                                        const vector <vector<string> >& attr_names)
+{
+    PyObject* py_tuple_fields_dict = PyDict_New();
+    
+    if (attr_map.index_set.size() > 0)
+      {
+        CELL_IDX_T key = *attr_map.index_set.begin();
+        
+        const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
+        const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+        const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+        const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+        const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+        const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+        const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+
+        size_t attr_pos = 0;
+        for (size_t i=0; i<float_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_float][i]);
+            PyObject *py_attr_index = PyLong_FromLong(attr_pos++);
+            PyDict_SetItemString(py_tuple_fields_dict, attr_name, py_attr_index);
+          }
+        for (size_t i=0; i<uint8_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_uint8][i].c_str());
+            PyObject *py_attr_index = PyLong_FromLong(attr_pos++);
+            PyDict_SetItemString(py_tuple_fields_dict, attr_name, py_attr_index);
+
+          }
+        for (size_t i=0; i<int8_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_int8][i].c_str());
+            PyObject *py_attr_index = PyLong_FromLong(attr_pos++);
+            PyDict_SetItemString(py_tuple_fields_dict, attr_name, py_attr_index);
+          }
+        for (size_t i=0; i<uint16_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_uint16][i].c_str());
+            PyObject *py_attr_index = PyLong_FromLong(attr_pos++);
+            PyDict_SetItemString(py_tuple_fields_dict, attr_name, py_attr_index);
+
+          }
+        for (size_t i=0; i<int16_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_int16][i].c_str());
+            PyObject *py_attr_index = PyLong_FromLong(attr_pos++);
+            PyDict_SetItemString(py_tuple_fields_dict, attr_name, py_attr_index);
+
+          }
+        for (size_t i=0; i<uint32_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_uint32][i].c_str());
+            PyObject *py_attr_index = PyLong_FromLong(attr_pos++);
+            PyDict_SetItemString(py_tuple_fields_dict, attr_name, py_attr_index);
+
+          }
+        for (size_t i=0; i<int32_attrs.size(); i++)
+          {
+            char *attr_name = attr_name_intern.add(attr_names[AttrMap::attr_index_int32][i].c_str());
+            PyObject *py_attr_index = PyLong_FromLong(attr_pos++);
+            PyDict_SetItemString(py_tuple_fields_dict, attr_name, py_attr_index);
+
+          }
+      }
+
+    return py_tuple_fields_dict;
+}
+
+PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key, 
+                                          const NamedAttrMap& attr_map,
+                                          const vector <vector<string> >& attr_names)
+{
+  npy_intp dims[1];
+  npy_intp ind = 0;
+  
+  const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
+  const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+  const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+  const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+  const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+  const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+  const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+
+  size_t n_elements = 0;
+  for (size_t i=0; i<attr_names.size(); i++)
+    {
+      n_elements += attr_names[i].size();
+    }
+  
+  PyObject* py_attrval = PyTuple_New(n_elements);
+  throw_assert_nomsg(py_attrval != NULL);
+
+  size_t attr_pos = 0;
+  for (size_t i=0; i<float_attrs.size(); i++)
+    {
+      const vector<float> &attr_value = float_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+      float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+
+      PyTuple_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
+  for (size_t i=0; i<uint8_attrs.size(); i++)
+    {
+      const vector<uint8_t> &attr_value = uint8_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
+      uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyTuple_SetItem(py_attrval, attr_pos++, py_value);
+    }
+                           
+  for (size_t i=0; i<int8_attrs.size(); i++)
+    {
+      const vector<int8_t> &attr_value = int8_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
+      int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyTuple_SetItem(py_attrval, attr_pos++, py_value);
+    }
+                           
+  for (size_t i=0; i<uint16_attrs.size(); i++)
+    {
+      const vector<uint16_t> &attr_value = uint16_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyTuple_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
+  for (size_t i=0; i<uint32_attrs.size(); i++)
+    {
+      const vector<uint32_t> &attr_value = uint32_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
+      uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyTuple_SetItem(py_attrval, attr_pos++, py_value);
+    }
+                           
+  for (size_t i=0; i<int32_attrs.size(); i++)
+    {
+      const vector<int32_t> &attr_value = int32_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
+      int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyTuple_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
+  return py_attrval;
+}
+
+
 PyTypeObject* py_build_cell_attr_struct_type(const NamedAttrMap& attr_map,
                                              const vector <vector<string> >& attr_names,
                                              vector<PyStructSequence_Field> struct_descr_fields)
@@ -1360,7 +1553,10 @@ PyTypeObject* py_build_cell_attr_struct_type(const NamedAttrMap& attr_map,
         structseq_type = PyStructSequence_NewType(&descr);
         throw_assert_nomsg(structseq_type != NULL);
         throw_assert_nomsg(PyType_Check(structseq_type));
+        throw_assert_nomsg(PyType_FastSubclass(structseq_type, Py_TPFLAGS_TUPLE_SUBCLASS));
       }
+
+    //Py_INCREF(structseq_type);
     
     return structseq_type;
 }
@@ -1472,8 +1668,6 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
 
-  //Py_DECREF(py_attrval);
-  
   return py_attrval;
 }
 
@@ -1490,7 +1684,7 @@ typedef struct {
   vector< vector <string> > attr_names;
   NamedAttrMap attr_map;
   set<CELL_IDX_T>::const_iterator it_idx;
-  bool return_struct;
+  return_type return_tp;
   PyTypeObject* struct_type;
   vector<PyStructSequence_Field> struct_descr_fields;
                            
@@ -1510,7 +1704,9 @@ PyObject* NeuroH5CellAttrIter_iter(PyObject *self)
 
 static void NeuroH5CellAttrIter_dealloc(PyNeuroH5CellAttrIterState *py_state)
 {
+#if HAS_STRUCT_SEQUENCE
   Py_DECREF(py_state->state->struct_type);
+#endif
   delete py_state->state;
   Py_TYPE(py_state)->tp_free(py_state);
 }
@@ -1522,17 +1718,23 @@ PyObject* NeuroH5CellAttrIter_iternext(PyObject *self)
   if (py_state->state->it_idx != py_state->state->attr_map.index_set.cend())
     {
       const CELL_IDX_T key = *(py_state->state->it_idx);
-      PyObject *attrval;
-      if (py_state->state->return_struct)
+      PyObject *attrval = NULL;
+      switch (py_state->state->return_tp)
         {
+        case return_struct:
           attrval = py_build_cell_attr_values_struct(key, py_state->state->attr_map,
                                                      py_state->state->attr_names,
                                                      py_state->state->struct_type);
-        }
-      else
-        {
+          break;
+        case return_tuple:
+          attrval = py_build_cell_attr_values_tuple(key, py_state->state->attr_map,
+                                                    py_state->state->attr_names);
+          break;
+        case return_dict:
           attrval = py_build_cell_attr_values_dict(key, py_state->state->attr_map,
                                                    py_state->state->attr_names);
+          break;
+          
         }
       
       throw_assert(attrval != NULL,
@@ -1592,7 +1794,7 @@ static PyObject *
 NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
                             const vector< vector <string> >& attr_names,
                             const NamedAttrMap& attr_map,
-                            const bool return_struct)
+                            const return_type return_tp)
 
 {
 
@@ -1612,8 +1814,13 @@ NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
   p->state->attr_namespace = attr_namespace;
   p->state->attr_names    = attr_names;
   p->state->it_idx        = p->state->attr_map.index_set.cbegin();
-  p->state->struct_type   = py_build_cell_attr_struct_type(attr_map, attr_names, p->state->struct_descr_fields);
-  p->state->return_struct = return_struct;
+#if HAS_STRUCT_SEQUENCE
+  if (return_tp == return_struct)
+    {
+      p->state->struct_type   = py_build_cell_attr_struct_type(attr_map, attr_names, p->state->struct_descr_fields);
+    }
+#endif
+  p->state->return_tp = return_tp;
   
   return (PyObject *)p;
 }
@@ -4205,7 +4412,8 @@ extern "C"
     PyObject *py_attr_name_spaces=NULL;
     map<CELL_IDX_T, rank_t> node_rank_map;
     vector <string> attr_name_spaces;
-    int return_struct = 0;
+    char *return_type_arg;
+    return_type return_tp = return_dict;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -4215,17 +4423,30 @@ extern "C"
                                    "node_rank_map",
                                    "namespaces",
                                    "io_size",
-                                   "return_struct",
+                                   "return_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOOkp", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOOks", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, &py_mask, 
                                      &py_node_rank_map, &py_attr_name_spaces,
-                                     &io_size, &return_struct))
+                                     &io_size, &return_type_arg))
       return NULL;
 
-    set<string> attr_mask;
+    if (return_type_arg != NULL)
+      {
+        string return_type_str = string(return_type_arg);
+        if (return_type_str == "dict")
+          return_tp = return_dict;
+        if (return_type_str == "tuple")
+          return_tp = return_tuple;
+#if HAS_STRUCT_SEQUENCE
+        if (return_type_str == "struct")
+          return_tp = return_struct;
+#endif
+      }
 
+    set<string> attr_mask;
+    
     if (py_mask != NULL)
       {
         throw_assert(PySet_Check(py_mask),
@@ -4362,13 +4583,25 @@ extern "C"
         vector<vector<string>> attr_names;
         attr_map.attr_names(attr_names);
 
-        PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_name_space,
-                                                            attr_names,
-                                                            attr_map,
-                                                            return_struct>0);
-        
-        PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_idx_iter);
-        Py_DECREF(py_idx_iter);
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_name_space,
+                                                                  attr_names,
+                                                                  attr_map,
+                                                                  return_tp);
+
+        if (return_tp == return_tuple)
+          {
+            PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_map, attr_names);
+            PyObject *py_result_tuple = PyTuple_New(2);
+            PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
+            PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
+            PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_result_tuple);
+            Py_DECREF(py_result_tuple);
+          }
+        else
+          {
+            PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_cell_attr_iter);
+            Py_DECREF(py_cell_attr_iter);
+          }
       }
     status = MPI_Comm_free(&comm);
     throw_assert(status == MPI_SUCCESS,
@@ -4421,7 +4654,8 @@ extern "C"
     PyObject *py_mask = NULL;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
-    int return_struct = 0;
+    char *return_type_arg;
+    return_type return_tp = return_dict;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -4429,16 +4663,31 @@ extern "C"
                                    "namespace",
                                    "comm",
                                    "mask",
-                                   "return_struct",
+                                   "return_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|sOOp", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|sOOs", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace,
-                                     &py_comm, &py_mask, &return_struct))
+                                     &py_comm, &py_mask, &return_type_arg))
       return NULL;
 
-    set<string> attr_mask;
+    
+    if (return_type_arg != NULL)
+      {
+        string return_type_str = string(return_type_arg);
+        if (return_type_str == "dict")
+          return_tp = return_dict;
+        if (return_type_str == "tuple")
+          return_tp = return_tuple;
+#if HAS_STRUCT_SEQUENCE
+        if (return_type_str == "struct")
+          return_tp = return_struct;
+#endif
 
+      }
+    
+    set<string> attr_mask;
+    
     if (py_mask != NULL)
       {
         throw_assert(PySet_Check(py_mask),
@@ -4520,13 +4769,24 @@ extern "C"
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_read_cell_attributes: unable to free MPI communicator");
 
-    PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
-                                                        attr_names,
-                                                        attr_values,
-                                                        return_struct>0);
-        
+    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                              attr_names,
+                                                              attr_values,
+                                                              return_tp);
+
+    if (return_tp == return_tuple)
+      {
+        PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
+        PyObject *py_result_tuple = PyTuple_New(2);
+        PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
+        PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
+        return py_result_tuple;
+      }
+    else
+      {
+        return py_cell_attr_iter;
+      }
     
-    return py_idx_iter;
   }
 
   
@@ -4574,7 +4834,8 @@ extern "C"
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
     PyObject *py_selection = NULL;
     vector <CELL_IDX_T> selection;
-    int return_struct = 0;
+    return_type return_tp = return_dict;
+    char *return_type_arg;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -4583,15 +4844,28 @@ extern "C"
                                    "namespace",
                                    "comm",
                                    "mask",
-                                   "return_struct",
+                                   "return_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOOp", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOOs", (char **)kwlist,
                                      &file_name, &pop_name, &py_selection,
                                      &attr_namespace, &py_comm, &py_mask,
-                                     &return_struct))
+                                     &return_type_arg))
       return NULL;
 
+    if (return_type_arg != NULL)
+      {
+        string return_type_str = string(return_type_arg);
+        if (return_type_str == "dict")
+          return_tp = return_dict;
+        if (return_type_str == "tuple")
+          return_tp = return_tuple;
+#if HAS_STRUCT_SEQUENCE
+        if (return_type_str == "struct")
+          return_tp = return_struct;
+#endif
+      }
+    
     set<string> attr_mask;
 
     if (py_mask != NULL)
@@ -4697,13 +4971,23 @@ extern "C"
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_read_cell_attribute_selection: unable to free MPI communicator");
 
-    PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
-                                                        attr_names,
-                                                        attr_values,
-                                                        return_struct>0);
-        
-    
-    return py_idx_iter;
+    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                              attr_names,
+                                                              attr_values,
+                                                              return_tp);
+
+    if (return_tp == return_tuple)
+      {
+        PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
+        PyObject *py_result_tuple = PyTuple_New(2);
+        PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
+        PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
+        return py_result_tuple;
+      }
+    else
+      {
+        return py_cell_attr_iter;
+      }
   }
 
   
@@ -4717,7 +5001,8 @@ extern "C"
     const string default_namespace = "Attributes";
     char *file_name_arg, *pop_name_arg, *attr_namespace_arg = (char *)default_namespace.c_str();
     NamedAttrMap attr_values;
-    int return_struct = 0;
+    char *return_type_arg;
+    return_type return_tp = return_dict;
 
     
     static const char *kwlist[] = {"file_name",
@@ -4726,14 +5011,27 @@ extern "C"
                                    "namespace",
                                    "comm",
                                    "mask",
-                                   "return_struct",
+                                   "return_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssk|sOOp", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssk|sOOs", (char **)kwlist,
                                      &file_name_arg, &pop_name_arg, &root, &attr_namespace_arg, 
-                                     &py_comm, &py_mask, &return_struct))
+                                     &py_comm, &py_mask, &return_type_arg))
       return NULL;
 
+    if (return_type_arg != NULL)
+      {
+        string return_type_str = string(return_type_arg);
+        if (return_type_str == "dict")
+          return_tp = return_dict;
+        if (return_type_str == "tuple")
+          return_tp = return_tuple;
+#if HAS_STRUCT_SEQUENCE
+        if (return_type_str == "struct")
+          return_tp = return_struct;
+#endif
+      }
+    
     string file_name = string(file_name_arg);
     string pop_name = string(pop_name_arg);
     string attr_namespace = string(attr_namespace_arg);
@@ -4832,12 +5130,24 @@ extern "C"
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
-    PyObject *py_idx_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
-                                                        attr_names,
-                                                        attr_values,
-                                                        return_struct>0);
+    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                              attr_names,
+                                                              attr_values,
+                                                              return_tp);
         
-    return py_idx_iter;
+    if (return_tp == return_tuple)
+      {
+        PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
+        PyObject *py_result_tuple = PyTuple_New(2);
+        PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
+        PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
+        return py_result_tuple;
+      }
+    else
+      {
+        return py_cell_attr_iter;
+      }
+
   }
 
   
@@ -5622,7 +5932,8 @@ extern "C"
     map <CELL_IDX_T, rank_t> node_rank_map;
     PyTypeObject* struct_type;
     vector<PyStructSequence_Field> struct_descr_fields;
-    bool return_struct;
+    PyObject *tuple_index_info;
+    return_type return_tp;
     
   } NeuroH5CellAttrGenState;
   
@@ -5969,11 +6280,13 @@ extern "C"
     int status;
     PyObject *py_comm = NULL;
     PyObject *py_mask = NULL;
+    PyObject *py_tuple_index_dict = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size=1, cache_size=100;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
-    int return_struct;
+    return_type return_tp = return_dict;
+    char *return_type_arg;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -5983,15 +6296,29 @@ extern "C"
                                    "mask",
                                    "io_size",
                                    "cache_size",
-                                   "return_struct",
+                                   "return_type",
+                                   "tuple_index_dict",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOOkib", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOOkisO", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace,
                                      &py_comm, &py_mask, &io_size, &cache_size,
-                                     &return_struct))
+                                     &return_type_arg, &py_tuple_index_dict))
       return NULL;
 
+    if (return_type_arg != NULL)
+      {
+        string return_type_str = string(return_type_arg);
+        if (return_type_str == "dict")
+          return_tp = return_dict;
+        if (return_type_str == "tuple")
+          return_tp = return_tuple;
+#if HAS_STRUCT_SEQUENCE
+        if (return_type_str == "struct")
+          return_tp = return_struct;
+#endif
+      }
+    
     set<string> attr_mask;
 
     if (py_mask != NULL)
@@ -6146,7 +6473,8 @@ extern "C"
     py_ntrg->state->attr_namespace = string(attr_namespace);
     py_ntrg->state->attr_mask      = attr_mask;
     py_ntrg->state->struct_type    = NULL;
-    py_ntrg->state->return_struct  = return_struct>0;
+    py_ntrg->state->return_tp      = return_tp;
+    py_ntrg->state->tuple_index_info = NULL;
     
     NamedAttrMap attr_map;
     py_ntrg->state->attr_map  = attr_map;
@@ -6171,7 +6499,10 @@ extern "C"
   static void
   neuroh5_cell_attr_gen_dealloc(PyNeuroH5CellAttrGenState *py_ntrg)
   {
+#if HAS_STRUCT_SEQUENCE
     Py_XDECREF(py_ntrg->state->struct_type);
+#endif
+    Py_XDECREF(py_ntrg->state->tuple_index_info);
     if (py_ntrg->state->pos == seq_next)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
@@ -6365,12 +6696,20 @@ extern "C"
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
               py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
-              if (py_ntrg->state->struct_type == NULL)
+              if ((py_ntrg->state->return_tp == return_tuple) && (py_ntrg->state->tuple_index_info == NULL))
+                {
+                  py_ntrg->state->tuple_index_info = py_build_cell_attr_tuple_info(py_ntrg->state->attr_map,
+                                                                                   py_ntrg->state->attr_names);
+                }
+              
+#if HAS_STRUCT_SEQUENCE
+              if ((py_ntrg->state->return_tp == return_struct) && (py_ntrg->state->struct_type == NULL))
                 {
                   py_ntrg->state->struct_type = py_build_cell_attr_struct_type(py_ntrg->state->attr_map,
                                                                                py_ntrg->state->attr_names,
                                                                                py_ntrg->state->struct_descr_fields);
                 }
+#endif
             }
 
 
@@ -6397,18 +6736,31 @@ extern "C"
           else
             {
               const CELL_IDX_T key = *(py_ntrg->state->it_idx);
-              PyObject *elem;
+              PyObject *elem = NULL;
 
-              if (py_ntrg->state->return_struct)
+              switch (py_ntrg->state->return_tp)
                 {
+                case return_dict:
+                  elem = py_build_cell_attr_values_dict(key, py_ntrg->state->attr_map,
+                                                        py_ntrg->state->attr_names);
+                  break;
+#if HAS_STRUCT_SEQUENCE
+                case return_struct:
                   elem = py_build_cell_attr_values_struct(key, py_ntrg->state->attr_map,
                                                           py_ntrg->state->attr_names,
                                                           py_ntrg->state->struct_type);
-                }
-              else
-                {
-                  elem = py_build_cell_attr_values_dict(key, py_ntrg->state->attr_map,
-                                                        py_ntrg->state->attr_names);
+                  break;
+#endif                  
+                case return_tuple:
+                  {
+                    PyObject *py_cell_attr_elem = py_build_cell_attr_values_tuple(key, py_ntrg->state->attr_map,
+                                                                                  py_ntrg->state->attr_names);
+
+                    elem = PyTuple_New(2);
+                    PyTuple_SetItem(elem, 0, py_cell_attr_elem);
+                    PyTuple_SetItem(elem, 1, py_ntrg->state->tuple_index_info);
+                    Py_INCREF(py_ntrg->state->tuple_index_info);
+                  }
                 }
               
               throw_assert(elem != NULL,
