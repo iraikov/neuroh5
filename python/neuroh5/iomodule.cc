@@ -4409,7 +4409,7 @@ extern "C"
     PyObject *py_attr_name_spaces=NULL;
     map<CELL_IDX_T, rank_t> node_rank_map;
     vector <string> attr_name_spaces;
-    char *return_type_arg;
+    char *return_type_arg = NULL;
     return_type return_tp = return_dict;
     
     static const char *kwlist[] = {
@@ -4651,7 +4651,7 @@ extern "C"
     PyObject *py_mask = NULL;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
-    char *return_type_arg;
+    char *return_type_arg = NULL;
     return_type return_tp = return_dict;
     
     static const char *kwlist[] = {
@@ -4832,7 +4832,7 @@ extern "C"
     PyObject *py_selection = NULL;
     vector <CELL_IDX_T> selection;
     return_type return_tp = return_dict;
-    char *return_type_arg;
+    char *return_type_arg = NULL;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -4998,7 +4998,7 @@ extern "C"
     const string default_namespace = "Attributes";
     char *file_name_arg, *pop_name_arg, *attr_namespace_arg = (char *)default_namespace.c_str();
     NamedAttrMap attr_values;
-    char *return_type_arg;
+    char *return_type_arg = NULL;
     return_type return_tp = return_dict;
 
     
@@ -6283,7 +6283,7 @@ extern "C"
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
     return_type return_tp = return_dict;
-    char *return_type_arg;
+    char *return_type_arg = NULL;
     
     static const char *kwlist[] = {
                                    "file_name",
