@@ -313,17 +313,20 @@ PyObject *py_build_edge_attribute_info (const vector< pair<string,string> >& prj
           {
             PyObject *py_prj_ns_attr_info  = PyDict_New();
             int attr_index=0;
-            const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
-            for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
+            if (edge_attr_name_vector[p].find(attr_namespace) != edge_attr_name_vector[p].end())
               {
-                for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
+                const vector <vector <string> > ns_edge_attr_names = edge_attr_name_vector[p].at(attr_namespace);
+                for (size_t n = 0; n<ns_edge_attr_names.size(); n++)
                   {
-                    PyObject *py_attr_index = PyLong_FromLong(attr_index);
-                    
-                    PyDict_SetItemString(py_prj_ns_attr_info, ns_edge_attr_names[n][t].c_str(), py_attr_index);
-                    Py_DECREF(py_attr_index);
-
-                    attr_index++;
+                    for (size_t t = 0; t<ns_edge_attr_names[n].size(); t++)
+                      {
+                        PyObject *py_attr_index = PyLong_FromLong(attr_index);
+                        
+                        PyDict_SetItemString(py_prj_ns_attr_info, ns_edge_attr_names[n][t].c_str(), py_attr_index);
+                        Py_DECREF(py_attr_index);
+                        
+                        attr_index++;
+                      }
                   }
               }
             PyDict_SetItemString(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
@@ -2889,14 +2892,13 @@ extern "C"
             py_src_dict = PyDict_New();
             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
             PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
-            Py_DECREF(py_edge_iter);
             Py_DECREF(py_src_dict);
           }
         else
           {
             PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
-            Py_DECREF(py_edge_iter);
           }
+        Py_DECREF(py_edge_iter);
         
       }
 
