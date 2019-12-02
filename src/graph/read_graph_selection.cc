@@ -114,20 +114,34 @@ namespace neuroh5
                              " dst_start = ", dst_start,
                              " src_start = ", src_start);
 
-              throw_assert(graph::read_projection_selection
-                           (data_comm, file_name, pop_ranges, pop_pairs,
-                            src_pop_name, dst_pop_name, 
-                            src_start, dst_start, edge_attr_name_spaces, 
-                            selection, prj_vector, edge_attr_names_vector,
-                            local_prj_num_nodes,
-                            local_prj_num_edges, total_prj_num_edges) >= 0,
-                           "error in read_projection_selection");
+              bool selection_found = false;
+              for (gid : selection)
+                {
+                  if ((dst_start <= gid) && (gid < dst_end))
+                    {
+                      selection_found = true;
+                      break;
+                    }
+                }
 
-              mpi::MPI_DEBUG(data_comm, "read_graph_selection: projection ", i, 
-                             " has a total of ", total_prj_num_edges, " edges");
+              if (selection_found)
+                {
+                  
+                  throw_assert(graph::read_projection_selection
+                               (data_comm, file_name, pop_ranges, pop_pairs,
+                                src_pop_name, dst_pop_name, 
+                                src_start, dst_start, edge_attr_name_spaces, 
+                                selection, prj_vector, edge_attr_names_vector,
+                                local_prj_num_nodes,
+                                local_prj_num_edges, total_prj_num_edges) >= 0,
+                               "error in read_projection_selection");
+                  mpi::MPI_DEBUG(data_comm, "read_graph_selection: projection ", i, 
+                                 " has a total of ", total_prj_num_edges, " edges");
+                  
           
-              total_num_edges = total_num_edges + total_prj_num_edges;
-              local_num_edges = local_num_edges + local_prj_num_edges;
+                  total_num_edges = total_num_edges + total_prj_num_edges;
+                  local_num_edges = local_num_edges + local_prj_num_edges;
+                }
             }
 
           size_t sum_local_num_edges = 0;
