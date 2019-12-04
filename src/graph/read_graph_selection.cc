@@ -118,7 +118,7 @@ namespace neuroh5
                              " src_start = ", src_start);
 
               bool selection_found = false;
-              for (gid : selection)
+              for (auto gid : selection)
                 {
                   if ((dst_start <= gid) && (gid < dst_end))
                     {
