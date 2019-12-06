@@ -90,7 +90,7 @@ namespace neuroh5
       status = H5Pset_chunk(plist, 1, cdims);
       assert(status == 0);
 #if H5_VERSION_GE(1,10,2)
-      status = H5Pset_deflate(plist, 9);
+      status = H5Pset_deflate(plist, 6);
       assert(status == 0);
 #endif
       

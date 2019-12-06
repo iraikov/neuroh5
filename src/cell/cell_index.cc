@@ -87,6 +87,11 @@ namespace neuroh5
               ierr = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
               throw_assert_nomsg(ierr == 0);
 
+#if H5_VERSION_GE(1,10,2)
+              ierr = H5Pset_deflate(plist, 6);
+              throw_assert_nomsg(ierr == 0);
+#endif
+              
               hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
               throw_assert_nomsg(lcpl >= 0);
               throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
