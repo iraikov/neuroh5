@@ -72,7 +72,7 @@ namespace neuroh5
       hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(plist, 1, cdims);
       assert(status == 0);
-#if H5_VERSION_GE(1,10,2)
+#ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(plist, 6);
       assert(status == 0);
 #endif
@@ -81,7 +81,7 @@ namespace neuroh5
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(value_plist, 1, value_cdims);
       assert(status == 0);
-#if H5_VERSION_GE(1,10,2)
+#ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(value_plist, 6);
       assert(status == 0);
 #endif

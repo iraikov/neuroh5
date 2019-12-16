@@ -37,6 +37,10 @@
 
 #define MAX_ATTR_NAME_LEN 128
 
+#if H5_VERSION_GE(1,10,5)
+#define H5_HAS_PARALLEL_DEFLATE 
+#endif
+
 using namespace NGraph;
 
 namespace neuroh5

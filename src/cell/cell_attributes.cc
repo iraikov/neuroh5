@@ -439,7 +439,7 @@ namespace neuroh5
       status = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
       throw_assert(status == 0,
                    "create_cell_attribute_datasets: unable to set allocation time");
-#if H5_VERSION_GE(1,10,2)
+#ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(plist, 6);
       throw_assert(status == 0,
                    "create_cell_attribute_datasets: unable to add deflate filter");
@@ -457,7 +457,7 @@ namespace neuroh5
       status = H5Pset_alloc_time(value_plist, H5D_ALLOC_TIME_EARLY);
       throw_assert(status == 0,
                    "create_cell_attribute_datasets: unable to set allocation time");
-#if H5_VERSION_GE(1,10,2)
+#ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(value_plist, 6);
       throw_assert(status == 0,
                    "create_cell_attribute_datasets: unable to add deflate filter");

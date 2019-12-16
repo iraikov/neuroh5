@@ -87,7 +87,7 @@ namespace neuroh5
               ierr = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
               throw_assert_nomsg(ierr == 0);
 
-#if H5_VERSION_GE(1,10,2)
+#ifdef H5_HAS_PARALLEL_DEFLATE
               ierr = H5Pset_deflate(plist, 6);
               throw_assert_nomsg(ierr == 0);
 #endif
