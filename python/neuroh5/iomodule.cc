@@ -6502,11 +6502,12 @@ extern "C"
     Py_XDECREF(py_ntrg->state->struct_type);
 #endif
     Py_XDECREF(py_ntrg->state->tuple_index_info);
-    if (py_ntrg->state->pos == seq_next)
+    if (py_ntrg->state->comm != MPI_COMM_NULL)
       {
         int status = MPI_Comm_free(&(py_ntrg->state->comm));
         throw_assert(status == MPI_SUCCESS,
                      "NeuroH5CellAttrGen: unable to free MPI communicator");
+        py_ntrg->state->comm = MPI_COMM_NULL;
       }
     delete py_ntrg->state;
     Py_TYPE(py_ntrg)->tp_free(py_ntrg);
@@ -6667,18 +6668,23 @@ extern "C"
           if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
               (py_ntrg->state->cache_index < py_ntrg->state->count))
             {
+              MPI_Comm this_comm;
+              
+              int status = MPI_Comm_dup(py_ntrg->state->comm, &this_comm);
+              throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
+
+              
               int size, rank;
-              throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS,
+              throw_assert(MPI_Comm_size(this_comm, &size) == MPI_SUCCESS,
                            "NeuroH5CellAttrGen: unable to obtain MPI communicator size");
-              throw_assert(MPI_Comm_rank(py_ntrg->state->comm, &rank) == MPI_SUCCESS,
+              throw_assert(MPI_Comm_rank(this_comm,  &rank) == MPI_SUCCESS,
                            "NeuroH5CellAttrGen: unable to obtain MPI communicator rank");
 
               // If the end of the current cache block has been reached,
               // read the next block
               py_ntrg->state->attr_map.clear();
               
-              int status;
-              status = cell::scatter_read_cell_attributes (py_ntrg->state->comm,
+              status = cell::scatter_read_cell_attributes (this_comm,
                                                            py_ntrg->state->file_name,
                                                            py_ntrg->state->io_size,
                                                            py_ntrg->state->attr_namespace,
@@ -6691,10 +6697,13 @@ extern "C"
                                                            py_ntrg->state->cache_size);
               throw_assert (status >= 0,
                             "NeuroH5CellAttrGen: error in call to cell::scatter_read_cell_attributes");
+              status = MPI_Comm_free(&(this_comm));
+              throw_assert(status == MPI_SUCCESS,
+                           "NeuroH5CellAttrGen: unable to free MPI communicator");
 
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
-              py_ntrg->state->cache_index += py_ntrg->state->comm_size * py_ntrg->state->cache_size;
+              py_ntrg->state->cache_index += size * py_ntrg->state->cache_size;
               if ((py_ntrg->state->return_tp == return_tuple) && (py_ntrg->state->tuple_index_info == NULL))
                 {
                   py_ntrg->state->tuple_index_info = py_build_cell_attr_tuple_info(py_ntrg->state->attr_map,
@@ -6719,7 +6728,7 @@ extern "C"
                   int status = MPI_Comm_free(&(py_ntrg->state->comm));
                   throw_assert(status == MPI_SUCCESS,
                                "NeuroH5CellAttrGen: unable to free MPI communicator");
-
+                  py_ntrg->state->comm = MPI_COMM_NULL;
                   py_ntrg->state->attr_map.clear();
                   py_ntrg->state->pos = seq_last;
                 }
@@ -6780,6 +6789,7 @@ extern "C"
               int status = MPI_Comm_free(&(py_ntrg->state->comm));
               throw_assert(status == MPI_SUCCESS,
                            "NeuroH5CellAttrGen: unable to free MPI communicator");
+              py_ntrg->state->comm = MPI_COMM_NULL;
 
               py_ntrg->state->pos = seq_last;
             }
