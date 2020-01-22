@@ -1255,6 +1255,25 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
 
     }
 
+                           
+  for (size_t i=0; i<int16_attrs.size(); i++)
+    {
+      const vector<int16_t> &attr_value = int16_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
+      int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyDict_SetItemString(py_attrval,
+                           (attr_names[AttrMap::attr_index_int16][i]).c_str(),
+                           py_value);
+      Py_DECREF(py_value);
+
+    }
+
   for (size_t i=0; i<uint32_attrs.size(); i++)
     {
       const vector<uint32_t> &attr_value = uint32_attrs[i];
@@ -1448,6 +1467,20 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
 
+  for (size_t i=0; i<int16_attrs.size(); i++)
+    {
+      const vector<int16_t> &attr_value = int16_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
+      int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyTuple_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
   for (size_t i=0; i<uint32_attrs.size(); i++)
     {
       const vector<uint32_t> &attr_value = uint32_attrs[i];
@@ -1632,6 +1665,20 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
       uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
+      for (size_t j = 0; j < attr_value.size(); j++)
+        {
+          py_value_ptr[j]   = attr_value[j];
+        }
+                               
+      PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
+    }
+
+  for (size_t i=0; i<int16_attrs.size(); i++)
+    {
+      const vector<int16_t> &attr_value = int16_attrs[i];
+      dims[0] = attr_value.size();
+      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
+      int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
       for (size_t j = 0; j < attr_value.size(); j++)
         {
           py_value_ptr[j]   = attr_value[j];
