@@ -702,6 +702,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   PyObject *py_section_vector = NULL;
   PyObject *py_section_src = NULL;
   PyObject *py_section_dst = NULL;
+  PyObject *py_section_loc = NULL;
   PyObject *py_sections = NULL;
   
   if (topology)
@@ -716,6 +717,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       PyObject *py_section_node_map = PyDict_New();
       PyObject *py_section_key; PyObject *py_section_nodes;
       set<NODE_IDX_T> marked_nodes;
+      map <SECTION_IDX_T, vector<NODE_IDX_T> > section_node_map;
       size_t num_sections = sections[sections_ptr];
       sections_ptr++;
       while (sections_ptr < sections.size())
@@ -726,7 +728,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           nodes_dims[0]    = num_section_nodes;
           py_section_key   = PyLong_FromLong((long)section_idx);
           py_section_nodes = (PyObject *)PyArray_SimpleNew(1, nodes_dims, NPY_UINT32);
-          NODE_IDX_T *section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
+          NODE_IDX_T *py_section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
           sections_ptr++;
           for (size_t p = 0; p < num_section_nodes; p++)
             {
@@ -734,7 +736,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
               throw_assert(node_idx <= num_nodes,
                            "py_build_tree_value: invalid node index in tree");
 
-              section_nodes_ptr[p] = node_idx;
+              py_section_nodes_ptr[p] = node_idx;
+              section_nodes.push_back(node_idx);
               if (marked_nodes.find(node_idx) == marked_nodes.end())
                 {
                   section_vector_ptr[node_idx] = section_idx;
@@ -742,6 +745,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                 }
               sections_ptr++;
             }
+          section_node_map.insert(make_pair(section_idx, section_nodes));
           PyDict_SetItem(py_section_node_map, py_section_key, py_section_nodes);
           Py_DECREF(py_section_nodes);
           Py_DECREF(py_section_key);
@@ -756,10 +760,48 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
       py_section_dst = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
       SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
+      py_section_loc = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT32);
+      NODE_IDX_T *section_loc_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_loc, &ind);
       for (size_t s = 0; s < src_vector.size(); s++)
         {
           section_src_ptr[s] = src_vector[s];
           section_dst_ptr[s] = dst_vector[s];
+          auto node_map_it = section_node_map.find(src_vector[s]);
+          throw_assert (node_map_it != section_node_map.end(),
+                        "py_build_tree_value: invalid section index in tree source vector");
+          // find parent point in destination section and determine location where the two sections are located
+          vector<NODE_IDX_T>& src_section_nodes = node_map_it->second;
+          node_map_it = section_node_map.find(dst_vector[s]);
+          throw_assert (node_map_it != section_node_map.end(),
+                        "py_build_tree_value: invalid section index in tree source vector");
+          vector<NODE_IDX_T>& dst_section_nodes = node_map_it->second;
+          const NODE_IDX_T dst_start = dst_section_nodes[0];
+          const PARENT_NODE_IDX_T dst_start_parent = parents[dst_start];
+
+          auto node_it = std::find(src_section_nodes.begin(), src_section_nodes.end(), dst_start);
+          if (node_it != src_section_nodes.end())
+            {
+              section_loc_ptr[s] = *node_it;
+            }
+          else 
+            {
+              if (dst_start_parent != -1)
+                {
+                  node_it = std::find(src_section_nodes.begin(), src_section_nodes.end(), dst_start_parent);
+                  if (node_it != src_section_nodes.end())
+                    {
+                      section_loc_ptr[s] = *node_it;
+                    }
+                  else
+                    {
+                      throw_err("py_build_tree: unable to determine connection point");
+                    }
+                }
+              else
+                {
+                  throw_err("py_build_tree: unable to determine connection point");
+                }
+            }
         }
 
       PyObject *py_num_sections = PyLong_FromUnsignedLong(num_sections);
@@ -771,6 +813,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       Py_DECREF(py_section_src);
       PyDict_SetItemString(py_section_topology, "dst", py_section_dst);
       Py_DECREF(py_section_dst);
+      PyDict_SetItemString(py_section_topology, "loc", py_section_loc);
+      Py_DECREF(py_section_loc);
     }
   else
     {
@@ -3555,6 +3599,7 @@ extern "C"
     "               - nodes: a dictionary that maps each section indices to the point indices contained in that section\n"
     "               - src: a vector of source section indices (uint16 ndarray)\n"
     "               - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "               - loc: a vector of source section connection point indices (uint32 ndarray)\n"
     "          If topology is False :\n"
     "             - sections: for each section, the number of points, followed by the corresponding point indices (uint16 ndarray)\n"
     "             - src: a vector of source section indices (uint16 ndarray)\n"
@@ -3583,7 +3628,7 @@ extern "C"
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOik", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, &py_mask, 
                                      &py_attr_name_spaces, 
                                      &topology_flag))
@@ -3768,6 +3813,7 @@ extern "C"
     "               - nodes: a dictionary that maps each section indices to the point indices contained in that section\n"
     "               - src: a vector of source section indices (uint16 ndarray)\n"
     "               - dst: a vector of destination section indices (uint16 ndarray)\n"
+    "               - loc: a vector of source section connection indices (uint32 ndarray)\n"
     "          If topology is False :\n"
     "             - sections: for each section, the number of points, followed by the corresponding point indices (uint16 ndarray)\n"
     "             - src: a vector of source section indices (uint16 ndarray)\n"
