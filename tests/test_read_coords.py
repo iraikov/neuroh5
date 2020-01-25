@@ -32,12 +32,16 @@ def main(coords_path, coords_namespace):
     soma_coords = {}
     for population in population_ranges.keys():
 
-        it = read_cell_attributes(coords_path, population, namespace=coords_namespace)
+        print('Population %s' % population)
+        it = read_cell_attributes(coords_path, population, namespace=coords_namespace, return_struct=True)
 
+        print('it = %s' % str(it))
         for cell_gid, coords_dict in it:
 
-            cell_u = coords_dict['U Coordinate']
-            cell_v = coords_dict['V Coordinate']
+            print(hasattr(coords_dict, 'U Coordinate'))
+            cell_u = getattr(coords_dict, 'U Coordinate')
+            cell_u = getattr(coords_dict, 'U Coordinate')
+            cell_v = getattr(coords_dict, 'V Coordinate')
                 
             print ('Rank %i: gid = %i u = %f v = %f' % (rank, cell_gid, cell_u, cell_v))
 

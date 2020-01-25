@@ -38,7 +38,7 @@ namespace neuroh5
       else
         {
           vector<T>& v = values_it->second;
-          values_it->second.insert(std::end(v), first, last);
+          v.insert(std::end(v), first, last);
         }
     }
 
@@ -146,7 +146,7 @@ namespace neuroh5
             append_values_map(value_map[attr_index], vindex, first, last);
             index_set.insert(vindex);
           }
-        return index;
+        return attr_index;
       }
 
 
@@ -368,7 +368,7 @@ namespace neuroh5
       template<class T>
       const vector<T> find_name (const std::string& name, CELL_IDX_T& index)
       {
-        vector<T> result;
+        vector<T> result(0);
         auto type_it = attr_name_map.find(std::type_index(typeid(T)));
         if (type_it != this->attr_name_map.cend())
           {
@@ -382,7 +382,7 @@ namespace neuroh5
             auto it = value_map.find(index);
             if (it != value_map.end())
               {
-                result = it->second;
+                std::copy(it->second.begin(), it->second.end(), back_inserter(result)); 
               }
           }
         return result;

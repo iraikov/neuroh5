@@ -138,37 +138,31 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      // MPI rank 0 reads and broadcasts the number of pairs
+      // allocate buffers
+      vector<pop_t> v;
+      size_t num_pairs = 0;
 
-      size_t num_pairs;
 
-      hid_t file = -1, dset = -1;
-
-      // process 0 reads the number of pairs and broadcasts
+      // process 0 reads the population pairs and broadcasts
       if (rank == 0)
         {
+          hid_t file = -1, dset = -1;
+
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           throw_assert_nomsg(file >= 0);
 
           dset = H5Dopen2(file, hdf5::h5types_path_join(hdf5::POP_COMBS).c_str(),
                           H5P_DEFAULT);
           throw_assert_nomsg(dset >= 0);
+
           hid_t fspace = H5Dget_space(dset);
           throw_assert_nomsg(fspace >= 0);
+
           num_pairs = (size_t) H5Sget_simple_extent_npoints(fspace);
           throw_assert_nomsg(num_pairs > 0);
           throw_assert_nomsg(H5Sclose(fspace) >= 0);
-        }
 
-      throw_assert_nomsg(MPI_Bcast(&num_pairs, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
 
-      // allocate buffers
-      vector<pop_t> v(2*num_pairs);
-
-      // MPI rank 0 reads and broadcasts the population pairs
-
-      if (rank == 0)
-        {
           vector<pop_comb_t> vpp(num_pairs);
           hid_t ftype = H5Dget_type(dset);
           throw_assert_nomsg(ftype >= 0);
@@ -176,6 +170,7 @@ namespace neuroh5
 
           throw_assert_nomsg(H5Dread(dset, mtype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
                          &vpp[0]) >= 0);
+          v.resize(2*num_pairs);
           for (size_t i = 0; i < vpp.size(); ++i)
             {
               v[2*i]   = vpp[i].src;
@@ -189,6 +184,8 @@ namespace neuroh5
           throw_assert_nomsg(H5Fclose(file) >= 0);
         }
 
+      throw_assert_nomsg(MPI_Bcast(&num_pairs, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      v.resize(2*num_pairs);
       throw_assert_nomsg(MPI_Bcast(&v[0], (int)2*num_pairs, MPI_UINT16_T, 0, comm) == MPI_SUCCESS);
 
       // populate the set
@@ -332,8 +329,8 @@ namespace neuroh5
               throw_assert_nomsg(H5Tclose(pop_labels_type) >= 0);
               throw_assert_nomsg(H5Gclose(grp_h5types) >= 0);
             }
+
           throw_assert_nomsg(H5Fclose(file) >= 0);
-            
         }
 
       {

@@ -39,6 +39,8 @@ namespace neuroh5
     {
       int status = 0;
 
+      prj_vector.clear();
+      
       size_t selection_size = selection.size();
       int data_color = 2;
       
@@ -86,6 +88,7 @@ namespace neuroh5
               //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
               
               string src_pop_name = prj_names[i].first, dst_pop_name = prj_names[i].second;
+
               uint32_t dst_pop_idx = 0, src_pop_idx = 0;
               bool src_pop_set = false, dst_pop_set = false;
               
@@ -114,20 +117,41 @@ namespace neuroh5
                              " dst_start = ", dst_start,
                              " src_start = ", src_start);
 
-              throw_assert(graph::read_projection_selection
-                           (data_comm, file_name, pop_ranges, pop_pairs,
-                            src_pop_name, dst_pop_name, 
-                            src_start, dst_start, edge_attr_name_spaces, 
-                            selection, prj_vector, edge_attr_names_vector,
-                            local_prj_num_nodes,
-                            local_prj_num_edges, total_prj_num_edges) >= 0,
-                           "error in read_projection_selection");
+              bool selection_found = false;
+              for (auto gid : selection)
+                {
+                  if ((dst_start <= gid) && (gid < dst_end))
+                    {
+                      selection_found = true;
+                      break;
+                    }
+                }
 
-              mpi::MPI_DEBUG(data_comm, "read_graph_selection: projection ", i, 
-                             " has a total of ", total_prj_num_edges, " edges");
-          
-              total_num_edges = total_num_edges + total_prj_num_edges;
-              local_num_edges = local_num_edges + local_prj_num_edges;
+              if (selection_found)
+                {
+                  
+                  throw_assert(graph::read_projection_selection
+                               (data_comm, file_name, pop_ranges, pop_pairs,
+                                src_pop_name, dst_pop_name, 
+                                src_start, dst_start, edge_attr_name_spaces, 
+                                selection, prj_vector, edge_attr_names_vector,
+                                local_prj_num_nodes,
+                                local_prj_num_edges, total_prj_num_edges) >= 0,
+                               "error in read_projection_selection");
+                  mpi::MPI_DEBUG(data_comm, "read_graph_selection: projection ", i, 
+                                 " has a total of ", total_prj_num_edges, " edges");
+                  
+                  total_num_edges = total_num_edges + total_prj_num_edges;
+                  local_num_edges = local_num_edges + local_prj_num_edges;
+                }
+              else
+                {
+                  edge_map_t prj_edge_map;
+                  map <string, vector < vector<string> > > edge_attr_names;
+                  prj_vector.push_back(prj_edge_map);
+                  edge_attr_names_vector.push_back(edge_attr_names);
+                }
+              
             }
 
           size_t sum_local_num_edges = 0;
