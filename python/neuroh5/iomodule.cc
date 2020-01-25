@@ -792,7 +792,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           auto node_it = std::find(src_section_nodes.begin(), src_section_nodes.end(), dst_start);
           if (node_it != src_section_nodes.end())
             {
-              section_loc_ptr[s] = *node_it;
+              size_t pos = std::distance(src_section_nodes.begin(), node_it);
+              section_loc_ptr[s] = pos;
             }
           else 
             {
@@ -801,7 +802,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                   node_it = std::find(src_section_nodes.begin(), src_section_nodes.end(), dst_start_parent);
                   if (node_it != src_section_nodes.end())
                     {
-                      section_loc_ptr[s] = *node_it;
+                      size_t pos = std::distance(src_section_nodes.begin(), node_it);
+                      section_loc_ptr[s] = pos;
                     }
                   else
                     {
