@@ -10,7 +10,7 @@ if ( CMAKE_COMPILER_IS_GNUCC )
 endif()
   
 include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
-set(NEUROH5_VERSION 1.0.0)
+set(NEUROH5_VERSION 0.0.4)
 
 # Set the build type.  Options are:
 #  Debug          : w/ debug symbols, w/o optimization
@@ -36,7 +36,8 @@ option(BUILD_TESTS "Build tests" ON)
 
 # find python
 if (BUILD_PYTHON_BINDINGS)
-find_package(PythonInterp 2.7 REQUIRED)
+find_package(PythonLibs 3 REQUIRED)
+find_package(PythonInterp 3 REQUIRED)
 if (NOT PYTHON_EXECUTABLE)
   set(BUILD_PYTHON_BINDINGS OFF)
 else()
@@ -72,15 +73,39 @@ endif()
 
 
 # find mpi
-find_package(MPI)
+find_package(MPI )
 if (MPI_FOUND)
-  message("found MPI version " ${MPI_VERSION} )
+  message("found MPI version: ${MPI_VERSION}")
+  message("MPI libraries: ${MPI_C_LIBRARIES}")
 else()
   message(SEND_ERROR "Could not find the MPI library. Define the MPI_COMPILER variable to the path of your MPI compiler.")
 endif()
 
-# Parallel HDF5 needs to find the "mpi.h" header file
-include_directories(${MPI_INCLUDE_PATH})
+# Parallel HDF5 needs to find the MPI header file
+include_directories(${MPI_C_INCLUDE_DIRS})
+
+add_library(mpi INTERFACE)
+target_link_libraries(mpi INTERFACE ${MPI_C_LIBRARIES})
+if(MPI_EXTRA_LIBRARY)
+  target_link_libraries(mpi INTERFACE ${MPI_EXTRA_LIBRARY})
+endif()
+target_compile_options(mpi INTERFACE ${MPI_C_COMPILE_OPTIONS})
+set_property(TARGET mpi PROPERTY
+  INTERFACE_LINK_OPTIONS
+  ${MPI_C_LINK_OPTIOS})
+
+
+#find parmetis [optional]
+find_library(PARMETIS_LIBRARY NAME libparmetis.a libparmetis.dylib
+  HINTS ${METIS_DIR}/lib PATHS /usr/lib ${METIS_DIR}/lib)
+message(STATUS "ParMETIS library: ${PARMETIS_LIBRARY}")
+find_path(METIS_INCLUDE_DIR NAME metis.h
+  HINTS ${METIS_DIR}/include PATHS /usr/include)
+
+if(METIS_INCLUDE_DIR AND PARMETIS_LIBRARY)
+  include_directories(${METIS_INCLUDE_DIR})
+  set(HAVE_PARMETIS TRUE)
+endif()
 
 if (BUILD_TESTS)
 find_package(Threads)
@@ -97,10 +122,13 @@ endif()
 #set the C/C++ include path to the "include" directory
 include_directories(BEFORE
   ${PROJECT_SOURCE_DIR}/include
-  ${PROJECT_SOURCE_DIR}/include/data
-  ${PROJECT_SOURCE_DIR}/include/mpi
-  ${PROJECT_SOURCE_DIR}/include/lowio
+  ${PROJECT_SOURCE_DIR}/include/cell
+  ${PROJECT_SOURCE_DIR}/include/graph
   ${PROJECT_SOURCE_DIR}/include/io
+  ${PROJECT_SOURCE_DIR}/include/mpi
+  ${PROJECT_SOURCE_DIR}/include/data
+  ${PROJECT_SOURCE_DIR}/include/hdf5
+  ${PROJECT_SOURCE_DIR}/include/ngraph
   ${PROJECT_SOURCE_DIR}/include/test)
 
 
@@ -114,14 +142,14 @@ else()
     add_definitions( "-Wall -Wno-unknown-pragmas -Wno-unused-function" )
 endif()
 
-add_subdirectory( src )
+#add_subdirectory( src )
 
 #if (BUILD_EXAMPLES)
 #  add_subdirectory( examples )
 #endif(BUILD_EXAMPLES)
-if (BUILD_TESTS)
-  add_subdirectory( tests )
-endif (BUILD_TESTS)
+#if (BUILD_TESTS)
+#  add_subdirectory( tests )
+#endif (BUILD_TESTS)
 #if (BUILD_DOC)
 #  add_subdirectory( doc )
 #endif (BUILD_DOC)
@@ -130,27 +158,122 @@ endif (BUILD_TESTS)
 # Include module with fuction 'write_basic_package_version_file'
 include(CMakePackageConfigHelpers)
 
-# RPM
-find_program(RPM_PROGRAM rpm)
-if(EXISTS ${RPM_PROGRAM})
-  list(APPEND CPACK_GENERATOR "RPM")
-endif(EXISTS ${RPM_PROGRAM})
-# DEB
-find_program(DPKG_PROGRAM dpkg)
-if(EXISTS ${DPKG_PROGRAM})
-  list(APPEND CPACK_GENERATOR "DEB")
-endif(EXISTS ${DPKG_PROGRAM})
-# NSIS
-find_program(NSIS_PROGRAM makensis MakeNSIS)
-if(EXISTS ${NSIS_PROGRAM})
-  list(APPEND CPACK_GENERATOR "NSIS")
-endif(EXISTS ${NSIS_PROGRAM})
-# dpkg
-find_program(PACKAGE_MAKER_PROGRAM PackageMaker
-	    HINTS /Developer/Applications/Utilities)
-if(EXISTS ${PACKAGE_MAKER_PROGRAM})
-  list(APPEND CPACK_GENERATOR "PackageMaker")
-endif(EXISTS ${PACKAGE_MAKER_PROGRAM})
+file(GLOB cell_SRC ${PROJECT_SOURCE_DIR}/src/cell/*.cc)
+add_library(neuroh5.cell OBJECT ${cell_SRC})
+
+file(GLOB data_SRC ${PROJECT_SOURCE_DIR}/src/data/*.cc)
+add_library(neuroh5.data OBJECT ${data_SRC})
+
+file(GLOB graph_SRC ${PROJECT_SOURCE_DIR}/src/graph/*.cc)
+if(NOT HAVE_PARMETIS)
+  list(REMOVE_ITEM graph_SRC "${PROJECT_SOURCE_DIR}/src/graph/partition_graph.cc")
+endif()
+add_library(neuroh5.graph OBJECT ${graph_SRC})
+
+file(GLOB hdf5_SRC ${PROJECT_SOURCE_DIR}/src/hdf5/*.cc)
+add_library(neuroh5.hdf5 OBJECT ${hdf5_SRC})
+
+file(GLOB io_SRC ${PROJECT_SOURCE_DIR}/src/io/*.cc)
+add_library(neuroh5.io OBJECT ${io_SRC})
+
+file(GLOB mpi_SRC ${PROJECT_SOURCE_DIR}/src/mpi/*.cc)
+add_library(neuroh5.mpi OBJECT ${mpi_SRC})
+
+
+add_executable(neurograph_reader
+  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_reader
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.graph>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurograph_reader PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurograph_scatter_read
+  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_scatter_read
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.graph>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurograph_scatter_read PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(balance_indegree
+  ${PROJECT_SOURCE_DIR}/src/driver/balance_indegree
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.graph>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(balance_indegree PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurograph_vertex_metrics
+  ${PROJECT_SOURCE_DIR}/src/driver/vertex_metrics
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.graph>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurograph_vertex_metrics PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurograph_import
+  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_import
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.graph>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurograph_import PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurotrees_copy
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_copy
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurotrees_copy PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurotrees_select
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_select
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurotrees_select PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurotrees_import
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_import
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurotrees_import PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurotrees_read
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_read
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurotrees_read PUBLIC ${HDF5_LIBRARIES} mpi)
+
+add_executable(neurotrees_scatter_read
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_scatter_read
+  $<TARGET_OBJECTS:neuroh5.cell>
+  $<TARGET_OBJECTS:neuroh5.data>
+  $<TARGET_OBJECTS:neuroh5.hdf5>
+  $<TARGET_OBJECTS:neuroh5.io>
+  $<TARGET_OBJECTS:neuroh5.mpi>)
+target_link_libraries(neurotrees_scatter_read PUBLIC ${HDF5_LIBRARIES} mpi)
 
 message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

@@ -12,10 +12,10 @@
 
 #include "cell_populations.hh"
 #include "read_projection.hh"
-#include "scatter_graph.hh"
+#include "scatter_read_graph.hh"
 #include "merge_edge_map.hh"
 #include "vertex_degree.hh"
-#include "read_population.hh"
+#include "cell_populations.hh"
 #include "validate_edge_list.hh"
 
 #include <getopt.h>
