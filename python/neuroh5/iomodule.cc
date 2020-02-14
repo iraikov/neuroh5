@@ -787,16 +787,33 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                         "py_build_tree_value: invalid section index in tree source vector");
           vector<NODE_IDX_T>& dst_section_nodes = node_map_it->second;
           const NODE_IDX_T dst_start = dst_section_nodes[0];
+          const PARENT_NODE_IDX_T dst_start_parent = parents[dst_start];
 
-          auto node_it = std::find(src_section_nodes.begin(), src_section_nodes.end(), dst_start);
-          if (node_it != src_section_nodes.end())
+          if (dst_start_parent != -1)
             {
-              size_t pos = std::distance(src_section_nodes.begin(), node_it);
-              section_loc_ptr[s] = pos;
+              auto node_it = std::find(src_section_nodes.begin(), src_section_nodes.end(), dst_start_parent);
+              if (node_it != src_section_nodes.end())
+                {
+                  size_t pos = std::distance(src_section_nodes.begin(), node_it);
+                  section_loc_ptr[s] = pos;
+                }
+              else
+                {
+                  throw_err("py_build_tree: unable to determine connection point");                  
+                }
             }
-          else 
+          else
             {
-              section_loc_ptr[s] = src_section_nodes.size()-1;
+              auto node_it = std::find(src_section_nodes.begin(), src_section_nodes.end(), dst_start);
+              if (node_it != src_section_nodes.end())
+                {
+                  size_t pos = std::distance(src_section_nodes.begin(), node_it);
+                  section_loc_ptr[s] = pos;
+                }
+              else 
+                {
+                  section_loc_ptr[s] = src_section_nodes.size()-1;
+                }
             }
         }
 
