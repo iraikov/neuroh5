@@ -35,6 +35,7 @@ option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
 option(BUILD_TESTS "Build tests" ON)
 
 # find python
+set(NEUROH5_IO_PYTHON_C_MODULE_NAME "io" CACHE STRING "Name of the C extension module")
 if (BUILD_PYTHON_BINDINGS)
 find_package(PythonLibs 3 REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
@@ -42,6 +43,8 @@ if (NOT PYTHON_EXECUTABLE)
   set(BUILD_PYTHON_BINDINGS OFF)
 else()
   configure_file( setup.py.tmpl setup.py )
+  add_subdirectory(python/neuroh5 EXCLUDE_FROM_ALL)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 endif()
 
