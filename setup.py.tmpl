@@ -12,9 +12,10 @@ for f in sys.argv:
         cmake_cmd_args.append(f)
 
 class CMakeExtension(Extension):
-    def __init__(self, name, cmake_lists_dir='.', **kwa):
+    def __init__(self, name, target='all', cmake_lists_dir='.', **kwa):
         Extension.__init__(self, name, sources=[], **kwa)
         self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
+        self.target = target
 
 class cmake_build_ext(build_ext.build_ext):
     def build_extensions(self):
@@ -77,7 +78,7 @@ class cmake_build_ext(build_ext.build_ext):
                                   cwd=self.build_temp)
 
             # Build
-            subprocess.check_call(['cmake', '--build', '.', '--config', cfg],
+            subprocess.check_call(['cmake', '--build', '.', '--config', cfg, '--target', ext.target],
                                   cwd=self.build_temp)
 
 
@@ -103,7 +104,7 @@ setup(
     ''',
     cmdclass = {'build_ext': cmake_build_ext},
     ext_modules = [
-        CMakeExtension('neuroh5.io')
+        CMakeExtension('neuroh5.io', target='python_neuroh5_io')
     ]
 )
 

@@ -34,32 +34,6 @@ set(TEST_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/test)
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
 option(BUILD_TESTS "Build tests" ON)
 
-# find python
-set(NEUROH5_IO_PYTHON_C_MODULE_NAME "io" CACHE STRING "Name of the C extension module")
-if (BUILD_PYTHON_BINDINGS)
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
-if (NOT PYTHON_EXECUTABLE)
-  set(BUILD_PYTHON_BINDINGS OFF)
-else()
-  configure_file( setup.py.tmpl setup.py )
-  add_subdirectory(python/neuroh5 EXCLUDE_FROM_ALL)
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-endif()
-endif()
-
-# check if can use the NumPy C API
-exec_program(${PYTHON_EXECUTABLE}
-             ARGS "-c \"import numpy as np; print(np.get_include())\""
-             OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-             RETURN_VALUE NUMPY_NOT_FOUND
-            )
-if(NUMPY_NOT_FOUND)
-  message(SEND_ERROR "NumPy headers not found")
-else()
-  message("found NumPy include dir " ${NUMPY_INCLUDE_DIR} )
-endif()
-
 # find hdf5
 find_hdf5()
 if(HDF5_FOUND)
@@ -98,6 +72,44 @@ set_property(TARGET mpi PROPERTY
   INTERFACE_LINK_OPTIONS
   ${MPI_C_LINK_OPTIONS})
 
+
+# find python
+set(NEUROH5_IO_PYTHON_C_MODULE_NAME "io" CACHE STRING "Name of the C extension module")
+if (BUILD_PYTHON_BINDINGS)
+find_package(PythonInterp 3 REQUIRED)
+find_package(PythonLibs 3 REQUIRED)
+if (NOT PYTHON_EXECUTABLE)
+  set(BUILD_PYTHON_BINDINGS OFF)
+else()
+  
+  # check if can use the NumPy C API
+  exec_program(${PYTHON_EXECUTABLE}
+    ARGS "-c \"import numpy as np; print(np.get_include())\""
+    OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
+    RETURN_VALUE NUMPY_NOT_FOUND
+    )
+  if(NUMPY_NOT_FOUND)
+    message(SEND_ERROR "NumPy headers not found")
+  else()
+    message("found NumPy include dir " ${NUMPY_INCLUDE_DIR} )
+  endif()
+
+  # check if can use the mpi4py C API
+  exec_program(${PYTHON_EXECUTABLE}
+    ARGS "-c \"import mpi4py; print(mpi4py.get_include())\""
+    OUTPUT_VARIABLE MPI4PY_INCLUDE_DIR
+    RETURN_VALUE MPI4PY_NOT_FOUND
+    )
+  if(MPI4PY_NOT_FOUND)
+    message(SEND_ERROR "mpi4py headers not found")
+  else()
+    message("found mpi4py include dir " ${MPI4PY_INCLUDE_DIR} )
+  endif()
+  
+  configure_file( setup.py.tmpl setup.py )
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+endif()
 
 #find parmetis [optional]
 find_library(PARMETIS_LIBRARY NAME libparmetis.a libparmetis.dylib
@@ -278,6 +290,10 @@ add_executable(neurotrees_scatter_read
   $<TARGET_OBJECTS:neuroh5.io>
   $<TARGET_OBJECTS:neuroh5.mpi>)
 target_link_libraries(neurotrees_scatter_read PUBLIC ${HDF5_LIBRARIES} mpi)
+
+if (BUILD_PYTHON_BINDINGS)
+  add_subdirectory(python/neuroh5 EXCLUDE_FROM_ALL)
+endif()
 
 message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

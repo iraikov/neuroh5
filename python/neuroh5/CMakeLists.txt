@@ -2,6 +2,8 @@ set(NEUROH5_IO_SRCS
     "iomodule.cc"
 )
 
+include_directories(${MPI_C_INCLUDE_DIRS})
+
 add_library(python_neuroh5_io SHARED
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
@@ -27,14 +29,13 @@ if(WIN32)
     )
 endif()
 
-
 target_include_directories(python_neuroh5_io PUBLIC
     ${PYTHON_INCLUDE_DIRS}
     ${NUMPY_INCLUDE_DIR}
+    ${MPI4PY_INCLUDE_DIR}
     ${MPI_C_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/include
     )
-
 target_link_libraries(python_neuroh5_io PUBLIC ${HDF5_LIBRARIES} mpi)
 
 # On Windows, it is required to link to the Python libraries
