@@ -76,12 +76,13 @@ endif()
 
 
 # find mpi
+set(MPI_CXX_SKIP_MPICXX TRUE)
 find_package(MPI )
-if (MPI_FOUND)
-  message("found MPI version: ${MPI_VERSION}")
+if (MPI_C_FOUND)
+  message("found MPI version: ${MPI_C_VERSION}")
   message("MPI libraries: ${MPI_C_LIBRARIES}")
 else()
-  message(SEND_ERROR "Could not find the MPI library. Define the MPI_COMPILER variable to the path of your MPI compiler.")
+  message(SEND_ERROR "Could not find the MPI library. ")
 endif()
 
 # Parallel HDF5 needs to find the MPI header file
@@ -89,13 +90,13 @@ include_directories(${MPI_C_INCLUDE_DIRS})
 
 add_library(mpi INTERFACE)
 target_link_libraries(mpi INTERFACE ${MPI_C_LIBRARIES})
-if(MPI_EXTRA_LIBRARY)
-  target_link_libraries(mpi INTERFACE ${MPI_EXTRA_LIBRARY})
+if(MPI_C_EXTRA_LIBRARY)
+  target_link_libraries(mpi INTERFACE ${MPI_C_EXTRA_LIBRARY})
 endif()
 target_compile_options(mpi INTERFACE ${MPI_C_COMPILE_OPTIONS})
 set_property(TARGET mpi PROPERTY
   INTERFACE_LINK_OPTIONS
-  ${MPI_C_LINK_OPTIOS})
+  ${MPI_C_LINK_OPTIONS})
 
 
 #find parmetis [optional]
