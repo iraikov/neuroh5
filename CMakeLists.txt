@@ -106,7 +106,7 @@ else()
     message("found mpi4py include dir " ${MPI4PY_INCLUDE_DIR} )
   endif()
   
-  configure_file( setup.py.tmpl setup.py )
+#  configure_file( setup.py.tmpl setup.py )
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 endif()
