@@ -2,7 +2,6 @@
 #define NODE_ATTRIBUTES_HH
 
 
-#include <cassert>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -18,6 +17,7 @@
 #include "hdf5_node_attributes.hh"
 #include "exists_dataset.hh"
 #include "attr_map.hh"
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -76,15 +76,15 @@ namespace neuroh5
      )
     {
       int status;
-      assert(index.size() == attr_ptr.size()-1);
+      throw_assert(index.size() == attr_ptr.size()-1, "invalid index size");
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
       int size, rank;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "error in MPI_Comm_rank");
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0, "error in H5Pset_fapl_mpio");
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 
       size_t nslots;  /* Number of slots in the 
@@ -92,16 +92,18 @@ namespace neuroh5
       size_t nbytes; /* Size of chunk cache in bytes */ 
       double w0;      /* Chunk preemption policy */ 
       /* Retrieve default cache parameters */ 
-      assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0);
+      throw_assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0,
+                   "error in H5Pget_cache");
       /* Set cache size and instruct the cache to discard the fully read chunk */ 
       nbytes = cache_size; w0 = 1.;
-      assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0);
+      throw_assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0,
+                   "error in H5Pset_cache");
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
+      throw_assert(file >= 0, "error in H5Fopen");
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0, "error in infer_datatype");
 
       string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
@@ -109,17 +111,17 @@ namespace neuroh5
         {
           hdf5::create_node_attribute_datasets(file, attr_namespace, attr_name,
                                                ftype, chunk_size, value_chunk_size);
-          assert(H5Fclose(file) >= 0);
+          throw_assert(H5Fclose(file) >= 0, "error in H5Fclose");
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-          assert(file >= 0);
+          throw_assert(file >= 0, "error in H5Fopen");
         }
 
       hdf5::append_node_attribute<T>(file, attr_path, index, attr_ptr, values);
     
       status = H5Fclose(file);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Fclose");
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Pclose");
     }
 
 
@@ -141,10 +143,10 @@ namespace neuroh5
       vector<T>  value_vector;
     
       int ssize, srank; size_t size, rank;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-      assert(ssize > 0);
-      assert(srank >= 0);
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      throw_assert(ssize > 0, "invalid MPI comm size");
+      throw_assert(srank >= 0, "invalid MPI comm rank");
       rank = srank;
       size = ssize;
     
@@ -168,9 +170,9 @@ namespace neuroh5
       // Determine number of values for each rank
       vector<uint32_t> sendbuf_num_values(size, value_map.size());
       vector<uint32_t> recvbuf_num_values(size);
-      assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
-                           &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
-             == MPI_SUCCESS);
+      throw_assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
+                                 &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
+                   == MPI_SUCCESS, "error in MPI_Allgather");
       sendbuf_num_values.clear();
 
       // Determine local value size and offset
@@ -182,9 +184,9 @@ namespace neuroh5
         }
       vector<uint32_t> sendbuf_size_values(size, local_value_size);
       vector<uint32_t> recvbuf_size_values(size);
-      assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
-                           &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
-             == MPI_SUCCESS);
+      throw_assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
+                                 &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
+                   == MPI_SUCCESS, "error in MPI_Allgather");
       sendbuf_size_values.clear();
     
       // Create index, attr_ptr, value arrays
@@ -240,9 +242,9 @@ namespace neuroh5
 
       T dummy;
       MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
-      assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
-                           &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
-                           comm) >= 0);
+      throw_assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
+                                 &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
+                                 comm) >= 0, "error in MPI_Alltoallv");
       value_vector.clear();
     
       vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
@@ -272,9 +274,9 @@ namespace neuroh5
       vector<ATTR_PTR_T> attr_ptr_recvbuf(ptr_recvbuf_size);
     
       // Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
-                           &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
-                           comm) >= 0);
+      throw_assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
+                                 &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
+                                 comm) >= 0, "error in MPI_Alltoallv");
       if (rank < io_size)
         {
           attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
@@ -320,9 +322,9 @@ namespace neuroh5
 
       vector<NODE_IDX_T> index_recvbuf(idx_recvbuf_size);
     
-      assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_NODE_IDX_T,
-                           &index_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_NODE_IDX_T,
-                           comm) >= 0);
+      throw_assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_NODE_IDX_T,
+                                 &index_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_NODE_IDX_T,
+                                 comm) >= 0, "error in MPI_Alltoallv");
       index_vector.clear();
       idx_sendcounts.clear();
       idx_sdispls.clear();
@@ -354,7 +356,7 @@ namespace neuroh5
                                          index_recvbuf, attr_ptr_recvbuf, value_recvbuf,
                                          chunk_size, value_chunk_size, cache_size);
         }
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS, "error in MPI_Comm_free");
     }
 
 
@@ -375,13 +377,13 @@ namespace neuroh5
      )
     {
       int status;
-      assert(index_vector.size() == attr_ptr.size()-1);
+      throw_assert(index_vector.size() == attr_ptr.size()-1, "invalid index vector");
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
     
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0, "error in H5Pset_fapl_mpio");
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 
       size_t nslots;  /* Number of slots in the 
@@ -389,17 +391,17 @@ namespace neuroh5
       size_t nbytes; /* Size of chunk cache in bytes */ 
       double w0;      /* Chunk preemption policy */ 
       /* Retrieve default cache parameters */ 
-      assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0);
+      throw_assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0, "error in H5Pget_cache");
       /* Set cache size and instruct the cache to discard the fully read chunk */ 
       nbytes = cache_size; w0 = 1.;
-      assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0);
+      throw_assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0, "error in H5Pset_cache");
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(file >= 0);
+      throw_assert(file >= 0, "error in H5Fopen");
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0, "error in infer_datatype");
 
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
 
@@ -410,9 +412,9 @@ namespace neuroh5
                                      index_vector, attr_ptr, value);
 
       status = H5Fclose(file);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Fclose");
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Pclose");
     }
 
   

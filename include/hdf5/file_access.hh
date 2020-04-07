@@ -26,6 +26,8 @@ namespace neuroh5
      hid_t &file
      );
 
+    int what_is_open(hid_t fid, int mask=H5F_OBJ_ALL) ;
+
     
   }
 }

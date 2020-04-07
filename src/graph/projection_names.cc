@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading projection names from an HDF5 file.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 #include <mpi.h>
 #include <hdf5.h>
@@ -16,10 +16,7 @@
 #include "path_names.hh"
 #include "group_contents.hh"
 #include "serialize_data.hh"
-
-
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 #define MAX_PRJ_NAME 1024
 
@@ -55,8 +52,8 @@ namespace neuroh5
 
         int rank, size;
 
-        assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-        assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
         
         vector<string> prj_src_pop_names, prj_dst_pop_names;
         
@@ -71,14 +68,14 @@ namespace neuroh5
             if (file >= 0)
               {
 
-                assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS, dst_pop_names) >= 0);
+                throw_assert_nomsg(hdf5::group_contents(comm, file, hdf5::PROJECTIONS, dst_pop_names) >= 0);
                 
                 for (size_t i=0; i<dst_pop_names.size(); i++)
                   {
                     vector <string> src_pop_names;
                     const string& dst_pop_name = dst_pop_names[i];
                     
-                    assert(hdf5::group_contents(comm, file, hdf5::PROJECTIONS+"/"+dst_pop_name, src_pop_names) >= 0);
+                    throw_assert_nomsg(hdf5::group_contents(comm, file, hdf5::PROJECTIONS+"/"+dst_pop_name, src_pop_names) >= 0);
                     
                     for (size_t j=0; j<src_pop_names.size(); j++)
                       {
@@ -87,7 +84,7 @@ namespace neuroh5
                       }
                   }
                 
-                assert(H5Fclose(file) >= 0);
+                throw_assert_nomsg(H5Fclose(file) >= 0);
               }
             else
               {
@@ -104,9 +101,9 @@ namespace neuroh5
               sendbuf_size = sendbuf.size();
             }
 
-          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) == MPI_SUCCESS);
           sendbuf.resize(sendbuf_size);
-          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
           
           if (rank != 0)
             {
@@ -122,9 +119,9 @@ namespace neuroh5
             }
           
 
-          assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, comm) == MPI_SUCCESS);
           sendbuf.resize(sendbuf_size);
-          assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
           
           if (rank != 0)
             {

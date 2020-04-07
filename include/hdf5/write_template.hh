@@ -1,12 +1,13 @@
 #ifndef WRITE_TEMPLATE
 #define WRITE_TEMPLATE
 
-#include "hdf5.h"
+#include <hdf5.h>
 
 #include <cstdint>
 #include <cstdio>
 #include <string>
 #include <vector>
+
 #include "throw_assert.hh"
 
 namespace neuroh5

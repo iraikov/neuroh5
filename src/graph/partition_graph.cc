@@ -4,7 +4,7 @@
 ///
 ///  Graph partitioning functions.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -17,9 +17,9 @@
 #include "vertex_degree.hh"
 #include "cell_populations.hh"
 #include "validate_edge_list.hh"
+#include "throw_assert.hh"
 
 #include <getopt.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -142,8 +142,8 @@ namespace neuroh5
       int status;
     
       int rank, size;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
     
       // Read population info to determine total_num_nodes
@@ -152,7 +152,7 @@ namespace neuroh5
 
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      assert(io::hdf5::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      throw_assert_nomsg(io::hdf5::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       map<NODE_IDX_T, rank_t> node_rank_map;

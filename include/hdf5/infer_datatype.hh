@@ -1,11 +1,11 @@
 #ifndef INFER_DATATYPE
 #define INFER_DATATYPE
 
-#include <cassert>
-#include "hdf5.h"
+#include <hdf5.h>
 
 #include <type_traits>
 
+#include "throw_assert.hh"
 
 template <typename T>
 hid_t infer_datatype(const T& x)
@@ -54,7 +54,7 @@ hid_t infer_datatype(const T& x)
     }
   else
     {
-      assert(result >= 0);
+      throw_assert(result >= 0, "unknown datatype");
     }
 
   return result;

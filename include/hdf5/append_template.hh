@@ -1,12 +1,13 @@
 #ifndef APPEND_TEMPLATE
 #define APPEND_TEMPLATE
 
-#include "hdf5.h"
+#include <hdf5.h>
 
-#include <cassert>
 #include <cstdio>
 #include <string>
 #include <vector>
+
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -29,44 +30,44 @@ namespace neuroh5
       herr_t ierr = 0;
 
       hid_t dset = H5Dopen2(file, name.c_str(), H5P_DEFAULT);
-      assert(dset >= 0);
+      throw_assert(dset >= 0, "error in H5Dopen2");
 
       if (newsize > 0)
         {
           ierr = H5Dset_extent (dset, &newsize);
-          assert(ierr >= 0);
+          throw_assert(ierr >= 0, "error in H5Dset_extent");
         }
 
       // make hyperslab selection
       hid_t fspace = H5Dget_space(dset);
-      assert(fspace >= 0);
+      throw_assert(fspace >= 0, "error in H5Dget_space");
       hsize_t one = 1;
       hid_t mspace = H5Screate_simple(1, &len, NULL);
-      assert(mspace >= 0);
+      throw_assert(mspace >= 0, "error in H5Screate_simple");
 
       if (len > 0)
         {
           ierr = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &len);
-          assert(ierr >= 0);
+          throw_assert(ierr >= 0, "error in H5Sselect_hyperslab");
           ierr = H5Sselect_all(mspace);
-          assert(ierr >= 0);
+          throw_assert(ierr >= 0, "error in H5Sselect_all");
         }
       else
         {
           ierr = H5Sselect_none(fspace);
-          assert(ierr >= 0);
+          throw_assert(ierr >= 0, "error in H5Sselect_none");
           ierr = H5Sselect_none(mspace);
-          assert(ierr >= 0);
+          throw_assert(ierr >= 0, "error in H5Sselection_none");
         }
 
 
       ierr = H5Dwrite(dset, ntype, mspace, fspace, wapl, &v[0]);
-      assert(ierr >= 0);
+      throw_assert(ierr >= 0, "error in H5Dwrite");
 
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
+      throw_assert(H5Dclose(dset) >= 0, "error in H5Dclose");
+      throw_assert(H5Sclose(mspace) >= 0, "error in H5Sclose");
+      throw_assert(H5Sclose(fspace) >= 0, "error in H5Sclose");
 
       return ierr;
     }

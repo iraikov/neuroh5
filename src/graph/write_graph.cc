@@ -5,7 +5,7 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -19,12 +19,10 @@
 #include "path_names.hh"
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
+#include "throw_assert.hh"
 
 #include <vector>
 #include <map>
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace neuroh5::data;
 using namespace std;
@@ -74,8 +72,8 @@ namespace neuroh5
       size_t src_start, src_end;
 
       int size, rank;
-      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
       if (size < io_size_arg)
         {
@@ -85,10 +83,10 @@ namespace neuroh5
         {
           io_size = io_size_arg > 0 ? io_size_arg : 1;
         }
-      //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
-      assert(cell::read_population_ranges(all_comm, file_name,
+      //FIXME: throw_assert_nomsg(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
+      throw_assert_nomsg(cell::read_population_ranges(all_comm, file_name,
                                           pop_ranges, pop_vector, total_num_nodes) >= 0);
-      assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
+      throw_assert_nomsg(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
       
       for (size_t i=0; i< pop_labels.size(); i++)
         {
@@ -103,7 +101,7 @@ namespace neuroh5
               dst_pop_set = true;
             }
         }
-      assert(dst_pop_set && src_pop_set);
+      throw_assert_nomsg(dst_pop_set && src_pop_set);
       
       dst_start = pop_vector[dst_pop_idx].start;
       dst_end   = dst_start + pop_vector[dst_pop_idx].count;
@@ -136,7 +134,7 @@ namespace neuroh5
         {
           NODE_IDX_T dst = iter.first;
           // all source/destination node IDs must be in range
-          assert(dst_start <= dst && dst <= dst_end);
+          throw_assert_nomsg(dst_start <= dst && dst <= dst_end);
           edge_tuple_t& et        = iter.second;
           vector<NODE_IDX_T>& v   = get<0>(et);
           vector <AttrVal> & va   = get<1>(et);
@@ -148,7 +146,7 @@ namespace neuroh5
                 {
                   printf("src = %u src_start = %lu src_end = %lu\n", src, src_start, src_end);
                 }
-              assert(src_start <= src && src <= src_end);
+              throw_assert_nomsg(src_start <= src && src <= src_end);
               adj_vector.push_back(src - src_start);
               num_edges++;
             }
@@ -161,43 +159,43 @@ namespace neuroh5
               
               for (size_t i=0; i<a.size_attr_vec<float>(); i++)
                 {
-                  assert(a.float_values[i].size() == adj_vector.size());
+                  throw_assert_nomsg(a.float_values[i].size() == adj_vector.size());
                   apply_permutation_in_place(a.float_values[i], p);
                 }
               for (size_t i=0; i<a.size_attr_vec<uint8_t>(); i++)
                 {
-                  assert(a.uint8_values[i].size() == adj_vector.size());
+                  throw_assert_nomsg(a.uint8_values[i].size() == adj_vector.size());
                   apply_permutation_in_place(a.uint8_values[i], p);
                 }
               for (size_t i=0; i<a.size_attr_vec<uint16_t>(); i++)
                 {
-                  assert(a.uint16_values[i].size() == adj_vector.size());
+                  throw_assert_nomsg(a.uint16_values[i].size() == adj_vector.size());
                   apply_permutation_in_place(a.uint16_values[i], p);
                 }
               for (size_t i=0; i<a.size_attr_vec<uint32_t>(); i++)
                 {
-                  assert(a.uint32_values[i].size() == adj_vector.size());
+                  throw_assert_nomsg(a.uint32_values[i].size() == adj_vector.size());
                   apply_permutation_in_place(a.uint32_values[i], p);
                 }
               for (size_t i=0; i<a.size_attr_vec<int8_t>(); i++)
                 {
-                  assert(a.int8_values[i].size() == adj_vector.size());
+                  throw_assert_nomsg(a.int8_values[i].size() == adj_vector.size());
                   apply_permutation_in_place(a.int8_values[i], p);
                 }
               for (size_t i=0; i<a.size_attr_vec<int16_t>(); i++)
                 {
-                  assert(a.int16_values[i].size() == adj_vector.size());
+                  throw_assert_nomsg(a.int16_values[i].size() == adj_vector.size());
                   apply_permutation_in_place(a.int16_values[i], p);
                 }
               for (size_t i=0; i<a.size_attr_vec<int32_t>(); i++)
                 {
-                  assert(a.int32_values[i].size() == adj_vector.size());
+                  throw_assert_nomsg(a.int32_values[i].size() == adj_vector.size());
                   apply_permutation_in_place(a.int32_values[i], p);
                 }
             }
           
           auto it = node_rank_map.find(dst);
-          assert(it != node_rank_map.end());
+          throw_assert_nomsg(it != node_rank_map.end());
           size_t dst_rank = it->second;
           edge_tuple_t& et1 = rank_edge_map[dst_rank][dst];
           vector<NODE_IDX_T> &src_vec = get<0>(et1);
@@ -238,7 +236,7 @@ namespace neuroh5
       //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
       //    and creates sendcounts and sdispls arrays
       
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
       
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
@@ -254,7 +252,7 @@ namespace neuroh5
       recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
       
       // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
+      throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
                            all_comm) == MPI_SUCCESS);
       sendbuf.clear();
@@ -274,21 +272,21 @@ namespace neuroh5
       if ((rank_t)rank < io_size)
         {
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-          assert(fapl >= 0);
-          assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
+          throw_assert_nomsg(fapl >= 0);
+          throw_assert_nomsg(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
           
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-          assert(file >= 0);
+          throw_assert_nomsg(file >= 0);
           
           write_projection (file, src_pop_name, dst_pop_name,
                             src_start, src_end, dst_start, dst_end,
                             num_unpacked_edges, prj_edge_map, edge_attr_index);
           
-          assert(H5Fclose(file) >= 0);
-          assert(H5Pclose(fapl) >= 0);
+          throw_assert_nomsg(H5Fclose(file) >= 0);
+          throw_assert_nomsg(H5Pclose(fapl) >= 0);
         }
 
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       return 0;
     }

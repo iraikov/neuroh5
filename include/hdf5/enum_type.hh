@@ -1,12 +1,13 @@
 #ifndef ENUM_TYPE
 #define ENUM_TYPE
 
-#include "hdf5.h"
+#include <hdf5.h>
 
-#include <cassert>
 #include <map>
 #include <string>
 #include <vector>
+
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -24,10 +25,7 @@ namespace neuroh5
     {
       hid_t result = -1;
 
-      if (enumeration.size() == 0)
-        {
-          assert("Empty enumeration found.");
-        }
+      throw_assert (enumeration.size() > 0, "empty enumeration");
 
       switch (sizeof(T))
         {
@@ -80,16 +78,17 @@ namespace neuroh5
             break;
           }
         default:
-          assert("Unsupported type for enumeration base type found.");
+          throw runtime_error("Unsupported type for enumeration base type found.");
           break;
         }
 
-      assert(result >= 0);
+      throw_assert(result >= 0, "error in H5Tenum_create");
 
       for (size_t i = 0; i < enumeration.size(); ++i)
         {
-          assert(H5Tenum_insert(result, enumeration[i].second.c_str(),
-                                &enumeration[i].first) >= 0);
+          throw_assert(H5Tenum_insert(result, enumeration[i].second.c_str(),
+                                      &enumeration[i].first) >= 0,
+                       "error in H5Tenum_insert");
         }
 
       return result;

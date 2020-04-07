@@ -6,9 +6,9 @@
 #include "write_projection.hh"
 #include "write_template.hh"
 #include "edge_attributes.hh"
+#include "throw_assert.hh"
 
 #include <algorithm>
-#include <cassert>
 #include <map>
 
 using namespace std;
@@ -38,23 +38,23 @@ namespace neuroh5
      )
     {
       // do a sanity check on the input
-      assert(src_start < src_end);
-      assert(dst_start < dst_end);
+      throw_assert_nomsg(src_start < src_end);
+      throw_assert_nomsg(dst_start < dst_end);
       
       // get the I/O communicator
       MPI_Comm comm;
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
-      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+      throw_assert_nomsg(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
 
       int ssize, srank;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
       size_t size, rank;
       size = (size_t)ssize;
       rank = (size_t)srank;
         
-      assert(H5Pclose(fapl) >= 0);
+      throw_assert_nomsg(H5Pclose(fapl) >= 0);
 
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
@@ -94,26 +94,26 @@ namespace neuroh5
             }
         }
       dst_ptr.push_back(num_prj_edges);
-      assert(num_edges == src_idx.size());
+      throw_assert_nomsg(num_edges == src_idx.size());
 
       
 
       // exchange allocation data
       vector<size_t> sendbuf_num_blocks(size, num_blocks);
       vector<size_t> recvbuf_num_blocks(size);
-      assert(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_SIZE_T,
+      throw_assert_nomsg(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_SIZE_T,
                            &recvbuf_num_blocks[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
       vector<size_t> sendbuf_num_dest(size, num_dest);
       vector<size_t> recvbuf_num_dest(size);
-      assert(MPI_Allgather(&sendbuf_num_dest[0], 1, MPI_SIZE_T,
+      throw_assert_nomsg(MPI_Allgather(&sendbuf_num_dest[0], 1, MPI_SIZE_T,
                            &recvbuf_num_dest[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
       vector<size_t> sendbuf_num_edge(size, num_edges);
       vector<size_t> recvbuf_num_edge(size);
-      assert(MPI_Allgather(&sendbuf_num_edge[0], 1, MPI_SIZE_T,
+      throw_assert_nomsg(MPI_Allgather(&sendbuf_num_edge[0], 1, MPI_SIZE_T,
                            &recvbuf_num_edge[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
@@ -130,20 +130,20 @@ namespace neuroh5
 	}
       
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      throw_assert_nomsg(lcpl >= 0);
+      throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
       /* Dataset creation property list to enable chunking */
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-      assert(dcpl >= 0);
+      throw_assert_nomsg(dcpl >= 0);
       hsize_t chunk = cdim;
 
       hid_t wapl = H5P_DEFAULT;
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
-	  assert(wapl >= 0);
-	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	  throw_assert_nomsg(wapl >= 0);
+	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
 
       size_t total_num_blocks=0;
@@ -151,46 +151,46 @@ namespace neuroh5
         {
           total_num_blocks = total_num_blocks + recvbuf_num_blocks[p];
         }
-      assert(total_num_blocks > 0);
+      throw_assert_nomsg(total_num_blocks > 0);
 
       size_t total_num_dests=0;
       for (size_t p=0; p<size; p++)
         {
           total_num_dests = total_num_dests + recvbuf_num_dest[p];
         }
-      assert(total_num_dests > 0);
+      throw_assert_nomsg(total_num_dests > 0);
 
       size_t total_num_edges=0;
       for (size_t p=0; p<size; p++)
         {
           total_num_edges = total_num_edges + recvbuf_num_edge[p];
         }
-      assert(total_num_edges > 0);
+      throw_assert_nomsg(total_num_edges > 0);
 
       hsize_t start = 0, block = 0;
       
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
       hsize_t dst_blk_idx_dims = (hsize_t)total_num_blocks, one = 1;
       hid_t fspace = H5Screate_simple(1, &dst_blk_idx_dims, &dst_blk_idx_dims);
-      assert(fspace >= 0);
+      throw_assert_nomsg(fspace >= 0);
       if (chunk < dst_blk_idx_dims)
         {
-          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
         }
       else
         {
-          assert(H5Pset_chunk(dcpl, 1, &dst_blk_idx_dims ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &dst_blk_idx_dims ) >= 0);
         }
 #ifdef H5_HAS_PARALLEL_DEFLATE
-      assert(H5Pset_deflate(dcpl, 6) >= 0);
+      throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
 #endif
       hid_t dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
                               lcpl, dcpl, H5P_DEFAULT);
-      assert(dset >= 0);
+      throw_assert_nomsg(dset >= 0);
       block = num_blocks;
       hid_t mspace = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
+      throw_assert_nomsg(mspace >= 0);
+      throw_assert_nomsg(H5Sselect_all(mspace) >= 0);
       for (size_t p = 0; p < rank; ++p)
         {
           start += recvbuf_num_blocks[p];
@@ -198,19 +198,19 @@ namespace neuroh5
         
       if (block > 0)
         {
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+          throw_assert_nomsg(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
       else
         {
-          assert(H5Sselect_none(fspace) >= 0);
+          throw_assert_nomsg(H5Sselect_none(fspace) >= 0);
         }
-      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
+      throw_assert_nomsg(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
 		      wapl, &dst_blk_idx[0]) >= 0);
 
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Sclose(fspace) >= 0);
 
       if (block > 0)
         {
@@ -231,21 +231,21 @@ namespace neuroh5
       path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
       hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1;
       fspace = H5Screate_simple(1, &dst_blk_ptr_dims, &dst_blk_ptr_dims);
-      assert(fspace >= 0);
+      throw_assert_nomsg(fspace >= 0);
       if (chunk < dst_blk_ptr_dims)
         {
-          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
         }
       else
         {
-          assert(H5Pset_chunk(dcpl, 1, &dst_blk_ptr_dims ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &dst_blk_ptr_dims ) >= 0);
         }
 #ifdef H5_HAS_PARALLEL_DEFLATE
-      assert(H5Pset_deflate(dcpl, 6) >= 0);
+      throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
 #endif
       dset = H5Dcreate2(file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
                         fspace, lcpl, dcpl, H5P_DEFAULT);
-      assert(dset >= 0);
+      throw_assert_nomsg(dset >= 0);
       if (rank == last_rank)
         {
           block = num_blocks+1;
@@ -255,8 +255,8 @@ namespace neuroh5
           block = num_blocks;
         }
       mspace = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
+      throw_assert_nomsg(mspace >= 0);
+      throw_assert_nomsg(H5Sselect_all(mspace) >= 0);
 
       start = 0;
       for (size_t p = 0; p < rank; ++p)
@@ -266,19 +266,19 @@ namespace neuroh5
 
       if (block > 0)
         {
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+          throw_assert_nomsg(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
       else
         {
-          assert(H5Sselect_none(fspace) >= 0);
+          throw_assert_nomsg(H5Sselect_none(fspace) >= 0);
         }
-      assert(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
+      throw_assert_nomsg(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
                       wapl, &dst_blk_ptr[0]) >= 0);
 
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Sclose(fspace) >= 0);
 
       /*
         write(file, path, DST_BLK_PTR_H5_FILE_T, dbp);
@@ -308,42 +308,42 @@ namespace neuroh5
       hsize_t dst_ptr_dims = total_num_dests+1;
 
       fspace = H5Screate_simple(1, &dst_ptr_dims, &dst_ptr_dims);
-      assert(fspace >= 0);
+      throw_assert_nomsg(fspace >= 0);
       if (chunk < dst_ptr_dims)
         {
-          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
         }
       else
         {
-          assert(H5Pset_chunk(dcpl, 1, &dst_ptr_dims ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &dst_ptr_dims ) >= 0);
         }
 #ifdef H5_HAS_PARALLEL_DEFLATE
-      assert(H5Pset_deflate(dcpl, 6) >= 0);
+      throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
 #endif
       dset = H5Dcreate2(file, path.c_str(), DST_PTR_H5_FILE_T,
                         fspace, lcpl, dcpl, H5P_DEFAULT);
-      assert(dset >= 0);
+      throw_assert_nomsg(dset >= 0);
       block = (hsize_t) dst_ptr.size();
       mspace = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
+      throw_assert_nomsg(mspace >= 0);
+      throw_assert_nomsg(H5Sselect_all(mspace) >= 0);
       if (block > 0)
         {
           start = (hsize_t)dst_blk_ptr[0];
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+          throw_assert_nomsg(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
       else
         {
-          assert(H5Sselect_none(fspace) >= 0);
+          throw_assert_nomsg(H5Sselect_none(fspace) >= 0);
         }
 
-      assert(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
+      throw_assert_nomsg(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
                       wapl, &dst_ptr[0]) >= 0);
 
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Sclose(fspace) >= 0);
 
       /*
         write(file, path, DST_PTR_H5_FILE_T, dst_ptr);
@@ -356,43 +356,43 @@ namespace neuroh5
       hsize_t src_idx_dims = total_num_edges;
 
       fspace = H5Screate_simple(1, &src_idx_dims, &src_idx_dims);
-      assert(fspace >= 0);
+      throw_assert_nomsg(fspace >= 0);
       if (chunk < src_idx_dims)
         {
-          assert(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
         }
       else
         {
-          assert(H5Pset_chunk(dcpl, 1, &src_idx_dims ) >= 0);
+          throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &src_idx_dims ) >= 0);
         }
 #ifdef H5_HAS_PARALLEL_DEFLATE
-      assert(H5Pset_deflate(dcpl, 6) >= 0);
+      throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
 #endif
       dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T,
                         fspace, lcpl, dcpl, H5P_DEFAULT);
-      assert(dset >= 0);
+      throw_assert_nomsg(dset >= 0);
 
       block = (hsize_t) src_idx.size();
       mspace = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
+      throw_assert_nomsg(mspace >= 0);
+      throw_assert_nomsg(H5Sselect_all(mspace) >= 0);
       if (block > 0)
         {
           start = (hsize_t)dst_ptr[0];
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+          throw_assert_nomsg(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
       else
         {
-          assert(H5Sselect_none(fspace) >= 0);
+          throw_assert_nomsg(H5Sselect_none(fspace) >= 0);
         }
 
-      assert(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
+      throw_assert_nomsg(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
                       wapl, &src_idx[0]) >= 0);
 
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Sclose(fspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Sclose(fspace) >= 0);
 
       /*
         write(file, path, NODE_IDX_H5_FILE_T, src_idx);
@@ -429,7 +429,7 @@ namespace neuroh5
               size_t ni=0;
               for (auto & attr_values : a)
                 {
-                  assert(ni < edge_attr_name_spaces.size());
+                  throw_assert_nomsg(ni < edge_attr_name_spaces.size());
                   const string & attr_namespace = edge_attr_name_spaces[ni];
                   edge_attr_map[attr_namespace].append(attr_values);
                   ni++;
@@ -453,11 +453,11 @@ namespace neuroh5
                                         edge_attr_map, edge_attr_index);
       
       // clean-up
-      assert(H5Pclose(dcpl) >= 0);
-      assert(H5Pclose(lcpl) >= 0);
-      assert(H5Pclose(wapl) >= 0);
+      throw_assert_nomsg(H5Pclose(dcpl) >= 0);
+      throw_assert_nomsg(H5Pclose(lcpl) >= 0);
+      throw_assert_nomsg(H5Pclose(wapl) >= 0);
 
-      assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
     }
   }
 }

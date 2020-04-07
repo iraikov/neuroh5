@@ -5,7 +5,7 @@
 ///  Top-level functions for reading specified subsets of graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"

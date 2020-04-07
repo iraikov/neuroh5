@@ -10,6 +10,7 @@
 #include "dataset_num_elements.hh"
 #include "exists_dataset.hh"
 #include "exists_group.hh"
+#include "file_access.hh"
 #include "read_template.hh"
 #include "write_template.hh"
 #include "mpe_seq.hh"
@@ -63,11 +64,11 @@ namespace neuroh5
       herr_t status = 0;
 
       int size, rank;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "error in MPI_Comm_rank");
 
       status = exists_group (loc, path.c_str());
-      assert(status > 0);
+      throw_assert(status > 0, "group " << path << " does not exist");
       
       hsize_t dset_size = index.size();
       size_t read_size = 0;
@@ -123,22 +124,23 @@ namespace neuroh5
 
           // read values
           hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
-          assert(dset >= 0);
+          throw_assert(dset >= 0, "error in H5Dopen");
           hid_t ftype = H5Dget_type(dset);
-          assert(ftype >= 0);
+          throw_assert(ftype >= 0, "error in H5Dget_type");
           hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-          assert(H5Dclose(dset)   >= 0);
-          assert(H5Tclose(ftype)  >= 0);
+          throw_assert(H5Dclose(dset)   >= 0, "error  in H5Dclose");
+          throw_assert(H5Tclose(ftype)  >= 0, "error  in H5Tclose");
           
           value.resize(value_block);
           status = read<T> (loc, value_path, value_start, value_block,
                             ntype, value, rapl);
           
-          assert(H5Tclose(ntype)  >= 0);
+          throw_assert(H5Tclose(ntype)  >= 0, "error in H5Tclose");
           status = H5Pclose(rapl);
-          assert(status == 0);
+          throw_assert(status == 0, "error in H5Pclose");
           
         }
+
       return status;
     }
 
@@ -161,20 +163,18 @@ namespace neuroh5
       herr_t status = 0;
 
       int size, rank;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "error in MPI_Comm_size");
 
       status = exists_group (loc, path.c_str());
-      assert(status > 0);
+      throw_assert(status > 0, "group " << path << " does not exist");
       
       hsize_t dset_size = index.size();
       vector< pair<hsize_t,hsize_t> > ranges;
+
       
       if (dset_size > 0)
         {
-          /* Create property list for collective dataset operations. */
-          hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
-          status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
 
           string value_path = path + "/" + ATTR_VAL;
 
@@ -203,24 +203,27 @@ namespace neuroh5
               selection_ptr.push_back(selection_ptr_pos);
             }
           
-          // read values
+
           hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
-          assert(dset >= 0);
+          throw_assert(dset >= 0, "error in H5Dopen");
           hid_t ftype = H5Dget_type(dset);
-          assert(ftype >= 0);
+          throw_assert(ftype >= 0, "error in H5Dget_type");
           hid_t ntype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-          assert(H5Dclose(dset)   >= 0);
-          assert(H5Tclose(ftype)  >= 0);
+          throw_assert(H5Tclose(ftype)  >= 0, "error in H5Tclose");
+          throw_assert(H5Dclose(dset)   >= 0, "error in H5Dclose");
+
+          /* Create property list for collective dataset operations. */
+          hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+          status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
               
           values.resize(selection_ptr_pos);
-          status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
 
-          status = H5Pclose(rapl);
-          assert(status == 0);
-          
-          assert(H5Tclose(ntype)  >= 0);
+          status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
+          throw_assert(H5Pclose(rapl)   >= 0, "error in H5Pclose");
+          throw_assert(H5Tclose(ntype)  >= 0, "error in H5Tclose");
+
         }
-      
+
       return status;
     }
 
@@ -255,10 +258,10 @@ namespace neuroh5
                    "append_cell_attribute: unable to obtain MPI I/O communicator");
 
       int ssize, srank; size_t size, rank;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-      assert(ssize > 0);
-      assert(srank >= 0);
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      throw_assert(ssize > 0, "invalid MPI comm size");
+      throw_assert(srank >= 0, "invalid MPI comm rank");
       size = ssize;
       rank = srank;
 
@@ -403,11 +406,11 @@ namespace neuroh5
       status = H5Fclose (file);
       throw_assert(status >= 0, "append_cell_attribute: unable to close HDF5 file");
     
-      assert(H5Tclose(mtype) >= 0);
+      throw_assert(H5Tclose(mtype) >= 0, "error in H5Tclose");
       status = H5Pclose(wapl);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Pclose");
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Pclose");
 
       status = MPI_Comm_free(&comm);
       throw_assert(status == MPI_SUCCESS,
@@ -436,23 +439,23 @@ namespace neuroh5
      )
     {
       int status;
-      assert(index.size() == attr_ptr.size()-1);
+      throw_assert(index.size() == attr_ptr.size()-1, "invalid index size");
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
       hid_t file = H5Iget_file_id(loc);
-      assert(file >= 0);
+      throw_assert(file >= 0, "error in H5Iget_file_id");
 
       // get the I/O communicator
       MPI_Comm comm;
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
-      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "error in H5Fget_access_plist");
       
       int ssize, srank; size_t size, rank;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-      assert(ssize > 0);
-      assert(srank >= 0);
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      throw_assert(ssize > 0, "invalid MPI comm size");
+      throw_assert(srank >= 0, "invalid MPI comm rank");
       size = ssize;
       rank = srank;
 
@@ -461,7 +464,7 @@ namespace neuroh5
       std::vector<uint64_t> index_size_vector;
       index_size_vector.resize(size);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
       hsize_t local_ptr_size=attr_ptr.size()-1;
@@ -473,13 +476,13 @@ namespace neuroh5
       std::vector<uint64_t> ptr_size_vector;
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
     
       hsize_t local_value_size = value.size();
       std::vector<uint64_t> value_size_vector;
       value_size_vector.resize(size);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
 
       hsize_t local_value_start=0, local_index_start=0, local_ptr_start=0;
       // calculate the starting positions of this rank
@@ -507,9 +510,9 @@ namespace neuroh5
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0, "error in infer_datatype");
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-      assert(mtype >= 0);
+      throw_assert(mtype >= 0, "error in H5Tget_native_type");
 
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
@@ -555,21 +558,21 @@ namespace neuroh5
         }
 
       status = H5Fclose (file);
-      assert(status >= 0);
+      throw_assert(status >= 0, "error in H5Fclose");
 
-      assert(H5Tclose(mtype)  >= 0);
+      throw_assert(H5Tclose(mtype)  >= 0, "error in H5Tclose");
       status = H5Pclose(wapl);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Pclose");
 
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Pclose");
 
       status = MPI_Comm_free(&comm);
-      assert(status == MPI_SUCCESS);
+      throw_assert(status == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
         {
           status = MPI_Info_free(&info);
-          assert(status == MPI_SUCCESS);
+          throw_assert(status == MPI_SUCCESS, "error in MPI_Info_free");
         
         }
     }

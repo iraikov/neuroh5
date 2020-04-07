@@ -5,7 +5,7 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -15,6 +15,7 @@
 #include "scatter_read_projection.hh"
 #include "scatter_read_graph.hh"
 #include "mpi_debug.hh"
+#include "throw_assert.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -24,9 +25,6 @@
 #include <set>
 #include <map>
 #include <vector>
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace std;
 
@@ -63,14 +61,14 @@ namespace neuroh5
       vector< pair<pop_t, string> > pop_labels;
       
       int rank, size;
-      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
           
-       assert(cell::read_population_ranges
-              (all_comm, file_name, pop_ranges, pop_vector, total_num_nodes)
-              >= 0);
-       assert(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
-       assert(cell::read_population_combos(all_comm, file_name, pop_pairs)  >= 0);
+       throw_assert_nomsg(cell::read_population_ranges
+                          (all_comm, file_name, pop_ranges, pop_vector, total_num_nodes)
+                          >= 0);
+       throw_assert_nomsg(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
+       throw_assert_nomsg(cell::read_population_combos(all_comm, file_name, pop_pairs)  >= 0);
           
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_names.size(); i++)

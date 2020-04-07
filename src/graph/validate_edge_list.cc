@@ -5,11 +5,11 @@
 ///  Functions for validating edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "validate_edge_list.hh"
-
+#include "throw_assert.hh"
 #include "debug.hh"
 
 using namespace std;
@@ -75,7 +75,7 @@ namespace neuroh5
                           pp.second = riter->second.second-1;
                         }
                       size_t low = dst_ptr[i], high = dst_ptr[i+1];
-                      assert((low <= src_idx.size()) && (high <= src_idx.size()));
+                      throw_assert_nomsg((low <= src_idx.size()) && (high <= src_idx.size()));
                       if ((high-low) == 0)
                         {
                           result = true;

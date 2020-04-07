@@ -4,15 +4,12 @@
 ///
 ///  Merge edges from multiple projections into a single edge map.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
 
 #include "neuroh5_types.hh"
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace std;
 

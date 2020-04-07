@@ -1,7 +1,6 @@
 #ifndef CELL_ATTRIBUTES_HH
 #define CELL_ATTRIBUTES_HH
 
-#include <cassert>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -161,11 +160,12 @@ namespace neuroh5
       size_t nbytes; /* Size of chunk cache in bytes */ 
       double w0;      /* Chunk preemption policy */ 
       /* Retrieve default cache parameters */ 
-      assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0);
+      throw_assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0,
+                   "error in H5Pget_cache");
       /* Set cache size and instruct the cache to discard the fully read chunk */ 
       nbytes = cache_size; w0 = 1.;
-      assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0);
-      
+      throw_assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0,
+                   "error in H5Pset_cache");
       
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       throw_assert(file >= 0,
@@ -233,10 +233,10 @@ namespace neuroh5
       vector<T>  value_vector;
     
       int ssize, srank; size_t size, rank; size_t io_size_value=0;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-      assert(ssize > 0);
-      assert(srank >= 0);
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      throw_assert(ssize > 0, "invalid MPI comm size");
+      throw_assert(srank >= 0, "invalid MPI rank");
       rank = srank;
       size = ssize;
       
@@ -503,7 +503,7 @@ namespace neuroh5
      )
     {
       int status;
-      assert(index.size() == attr_ptr.size()-1);
+      throw_assert(index.size() == attr_ptr.size()-1, "invalid index");
       std::vector<ATTR_PTR_T>  local_attr_ptr;
     
     
@@ -519,10 +519,12 @@ namespace neuroh5
       size_t nbytes; /* Size of chunk cache in bytes */ 
       double w0;      /* Chunk preemption policy */ 
       /* Retrieve default cache parameters */ 
-      assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0);
+      throw_assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0,
+                   "error in H5Pget_cache");
       /* Set cache size and instruct the cache to discard the fully read chunk */ 
       nbytes = cache_size; w0 = 1.;
-      assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0);
+      throw_assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0,
+                   "error in H5Pset_cache");
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
       throw_assert(file >= 0, "write_cell_attribute: unable to open file");
@@ -533,7 +535,7 @@ namespace neuroh5
         ftype = data_type.value();
       else
         ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0, "error in infer_datatype");
 
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
 
@@ -555,9 +557,9 @@ namespace neuroh5
 
       
       status = H5Fclose(file);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Fclose");
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert(status == 0, "error in H5Pclose");
     }
 
 
@@ -584,10 +586,10 @@ namespace neuroh5
       vector<T>  value_vector;
     
       int ssize, srank; size_t size, rank; size_t io_size_value=0;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-      assert(ssize > 0);
-      assert(srank >= 0);
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      throw_assert(ssize > 0, "invalid MPI comm size");
+      throw_assert(srank >= 0, "invalid MPI comm rank");
       rank = srank;
       size = ssize;
       

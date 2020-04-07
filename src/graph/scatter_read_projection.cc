@@ -5,7 +5,7 @@
 ///  Top-level functions for reading edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -22,6 +22,7 @@
 #include "append_rank_edge_map.hh"
 #include "range_sample.hh"
 #include "mpi_debug.hh"
+#include "throw_assert.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -31,9 +32,6 @@
 #include <set>
 #include <map>
 #include <vector>
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace std;
 
@@ -65,8 +63,8 @@ namespace neuroh5
       int io_color = 1;
 
       int rank, size;
-      assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
@@ -131,13 +129,13 @@ namespace neuroh5
                       dst_pop_set = true;
                     }
                 }
-              assert(dst_pop_set && src_pop_set);
+              throw_assert_nomsg(dst_pop_set && src_pop_set);
 
               dst_start = pop_vector[dst_pop_idx].start;
               src_start = pop_vector[src_pop_idx].start;
 
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading projection ", src_pop_name, " -> ", dst_pop_name);
-              assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
+              throw_assert_nomsg(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
                                                     dst_start, src_start, block_base, edge_base,
                                                     dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                     total_num_edges, total_read_blocks, local_read_blocks,
@@ -145,7 +143,7 @@ namespace neuroh5
           
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges
-              assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+              throw_assert_nomsg(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                         pop_ranges, pop_pairs) == true);
           
               edge_count = src_idx.size();
@@ -153,10 +151,10 @@ namespace neuroh5
               for (const string& attr_namespace : attr_namespaces) 
                 {
                   vector< pair<string,AttrKind> > edge_attr_info;
-                  assert(graph::get_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
+                  throw_assert_nomsg(graph::get_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
                                                     attr_namespace, edge_attr_info) >= 0);
 
-                  assert(graph::read_all_edge_attributes(io_comm, file_name,
+                  throw_assert_nomsg(graph::read_all_edge_attributes(io_comm, file_name,
                                                          src_pop_name, dst_pop_name, attr_namespace,
                                                          edge_base, edge_count, edge_attr_info,
                                                          edge_attr_map[attr_namespace]) >= 0);
@@ -166,7 +164,7 @@ namespace neuroh5
 
               
               // append to the edge map
-              assert(data::append_rank_edge_map(size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+              throw_assert_nomsg(data::append_rank_edge_map(size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                 attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
                                                 edge_map_type) >= 0);
               
@@ -174,7 +172,7 @@ namespace neuroh5
                         " edges from projection ", src_pop_name, " -> ", dst_pop_name);
           
               // ensure that all edges in the projection have been read and appended to edge_list
-              assert(num_edges == src_idx.size());
+              throw_assert_nomsg(num_edges == src_idx.size());
           
               size_t num_packed_edges = 0;
           
@@ -182,7 +180,7 @@ namespace neuroh5
                                              num_packed_edges, sendcounts, sendbuf, sdispls);
 
               // ensure the correct number of edges is being packed
-              assert(num_packed_edges == num_edges);
+              throw_assert_nomsg(num_packed_edges == num_edges);
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: packed ", num_packed_edges,
                         " edges from projection ", src_pop_name, " -> ", dst_pop_name);
 
@@ -191,7 +189,7 @@ namespace neuroh5
           MPI_Barrier(all_comm);
           MPI_Barrier(io_comm);
           MPI_Comm_free(&io_comm);
-          assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+          throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                              recvcounts, rdispls, recvbuf) >= 0);
         }
 
@@ -210,9 +208,9 @@ namespace neuroh5
                 sendbuf_size = sendbuf.size();
               }
             
-            assert(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+            throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
             sendbuf.resize(sendbuf_size);
-            assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
+            throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
             
             if (rank != 0)
               {

@@ -4,7 +4,7 @@
 ///
 ///  Functions for edge attribute read/write.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "attr_val.hh"
@@ -14,8 +14,8 @@
 #include "path_names.hh"
 #include "serialize_data.hh"
 #include "read_template.hh"
+#include "throw_assert.hh"
 
-#include <cassert>
 #include <iostream>
 
 using namespace std;
@@ -88,15 +88,15 @@ namespace neuroh5
     
       hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(plist, 1, cdims);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(plist, 6);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
 #endif
       
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      throw_assert_nomsg(lcpl >= 0);
+      throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
       create_projection_groups(file, src_pop_name, dst_pop_name);
 
@@ -108,13 +108,13 @@ namespace neuroh5
       hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
       hid_t dset = H5Dcreate2(file, attr_path.c_str(), ftype, mspace,
                               lcpl, plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
     
-      assert(H5Pclose(lcpl) >= 0);
+      throw_assert_nomsg(H5Pclose(lcpl) >= 0);
     
       status = H5Pclose(plist);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
     
     }
 
@@ -133,23 +133,24 @@ namespace neuroh5
      )
     {
       hid_t dset = H5Dopen2(group_id, name, H5P_DEFAULT);
+
       if (dset < 0) // skip the link, if this is not a dataset
         {
           return 0;
         }
       
       hid_t ftype = H5Dget_type(dset);
-      assert(ftype >= 0);
+      throw_assert_nomsg(ftype >= 0);
       
       vector< pair<string,AttrKind> >* ptr =
         (vector< pair<string,AttrKind> >*) op_data;
       ptr->push_back(make_pair(name, hdf5::h5type_attr_kind(ftype)));
       
-      assert(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
 
       return 0;
     }
-
+  
     /////////////////////////////////////////////////////////////////////////
     herr_t get_edge_attributes
     (
@@ -164,13 +165,13 @@ namespace neuroh5
       herr_t ierr=0;
       int root=0;
       int rank, size;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
       if (rank == root)
         {
           hid_t in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-          assert(in_file >= 0);
+          throw_assert_nomsg(in_file >= 0);
           out_attributes.clear();
           
           string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
@@ -181,12 +182,11 @@ namespace neuroh5
               hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
               if (grp >= 0)
                 {
-                  
                   hsize_t idx = 0;
                   ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                                     &edge_attribute_cb, (void*) &out_attributes);
                   
-                  assert(H5Gclose(grp) >= 0);
+                  throw_assert_nomsg(H5Gclose(grp) >= 0);
                 }
             }
           ierr = H5Fclose(in_file);
@@ -199,12 +199,12 @@ namespace neuroh5
           edge_attributes_sendbuf_size = edge_attributes_sendbuf.size();
         }
 
-      assert(MPI_Bcast(&edge_attributes_sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&edge_attributes_sendbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
       edge_attributes_sendbuf.resize(edge_attributes_sendbuf_size);
 
       ierr = MPI_Bcast (&edge_attributes_sendbuf[0], edge_attributes_sendbuf_size,
                         MPI_CHAR, root, comm);
-      assert(ierr == MPI_SUCCESS);
+      throw_assert_nomsg(ierr == MPI_SUCCESS);
 
       out_attributes.clear();
 
@@ -212,7 +212,7 @@ namespace neuroh5
 
       return ierr;
     }
-
+    
     /////////////////////////////////////////////////////////////////////////
     herr_t num_edge_attributes
     (
@@ -282,7 +282,7 @@ namespace neuroh5
               break;
             }
 
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
         }
 
       return ierr;
@@ -309,11 +309,11 @@ namespace neuroh5
       hsize_t block = edge_count, base = edge_base;
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(fapl >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
+      throw_assert_nomsg(file >= 0);
 
       /* Create property list for collective dataset operations. */
       hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
@@ -329,16 +329,16 @@ namespace neuroh5
           hsize_t one = 1;
 
           hid_t mspace = H5Screate_simple(1, &block, NULL);
-          assert(mspace >= 0);
+          throw_assert_nomsg(mspace >= 0);
           ierr = H5Sselect_all(mspace);
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
           
           hid_t dset = H5Dopen2 (file, dset_path.c_str(), H5P_DEFAULT);
-          assert(dset >= 0);
+          throw_assert_nomsg(dset >= 0);
           
           // make hyperslab selection
           hid_t fspace = H5Dget_space(dset);
-          assert(fspace >= 0);
+          throw_assert_nomsg(fspace >= 0);
           
           if (block > 0)
             {
@@ -348,7 +348,7 @@ namespace neuroh5
             {
               ierr = H5Sselect_none(fspace);
             }
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
           
           size_t attr_size = attr_kind.size;
           hid_t attr_h5type = hdf5::attr_kind_h5type(attr_kind);
@@ -442,16 +442,16 @@ namespace neuroh5
               break;
             }
           
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
           
-          assert(H5Sclose(fspace) >= 0);
-          assert(H5Dclose(dset) >= 0);
-          assert(H5Sclose(mspace) >= 0);
+          throw_assert_nomsg(H5Sclose(fspace) >= 0);
+          throw_assert_nomsg(H5Dclose(dset) >= 0);
+          throw_assert_nomsg(H5Sclose(mspace) >= 0);
         }
 
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
-      assert(H5Pclose(rapl) >= 0);
+      throw_assert_nomsg(H5Fclose(file) >= 0);
+      throw_assert_nomsg(H5Pclose(fapl) >= 0);
+      throw_assert_nomsg(H5Pclose(rapl) >= 0);
 
       return ierr;
     }
@@ -479,7 +479,7 @@ namespace neuroh5
         {
           string attr_name   = edge_attr_info[j].first;
           AttrKind attr_kind = edge_attr_info[j].second;
-          assert ((ierr = read_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
+          throw_assert_nomsg ((ierr = read_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
                                                name_space, attr_name, edge_base, edge_count,
                                                attr_kind, edge_attr_values))
                   >= 0);
@@ -511,13 +511,12 @@ namespace neuroh5
       hid_t file;
       herr_t ierr = 0;
       hsize_t block = 0;
-      
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(fapl >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
+      throw_assert_nomsg(file >= 0);
 
       /* Create property list for collective dataset operations. */
       hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
@@ -616,13 +615,13 @@ namespace neuroh5
               break;
             }
           
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
           
         }
 
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
-      assert(H5Pclose(rapl) >= 0);
+      throw_assert_nomsg(H5Fclose(file) >= 0);
+      throw_assert_nomsg(H5Pclose(fapl) >= 0);
+      throw_assert_nomsg(H5Pclose(rapl) >= 0);
 
       return ierr;
     }
@@ -652,11 +651,11 @@ namespace neuroh5
         {
           string attr_name   = edge_attr_info[j].first;
           AttrKind attr_kind = edge_attr_info[j].second;
-          assert ((ierr = read_edge_attribute_selection(comm, file_name, src_pop_name, dst_pop_name,
-                                                        name_space, attr_name, edge_base, edge_count,
-                                                        selection_dst_idx, selection_dst_ptr, src_idx_ranges,
-                                                        attr_kind, edge_attr_values))
-                  >= 0);
+          ierr = read_edge_attribute_selection(comm, file_name, src_pop_name, dst_pop_name,
+                                               name_space, attr_name, edge_base, edge_count,
+                                               selection_dst_idx, selection_dst_ptr, src_idx_ranges,
+                                               attr_kind, edge_attr_values);
+          throw_assert_nomsg (ierr >= 0);
         }
 
       return ierr;

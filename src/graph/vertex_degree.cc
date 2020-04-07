@@ -4,18 +4,16 @@
 ///
 ///  Calculate vertex (in/out)degree from an edge map.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
+#include "throw_assert.hh"
 
 #include "neuroh5_types.hh"
 #include <map>
 #include <set>
 #include <vector>
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace neuroh5;
 using namespace std;

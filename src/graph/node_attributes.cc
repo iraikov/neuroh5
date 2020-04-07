@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a graph node.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -20,11 +20,11 @@
 #include "alltoallv_template.hh"
 #include "serialize_data.hh"
 #include "serialize_cell_attributes.hh"
+#include "throw_assert.hh"
 
 #include <hdf5.h>
 #include <mpi.h>
 
-#include <cassert>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -71,24 +71,24 @@ namespace neuroh5
     
       hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(plist, 1, cdims);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(plist, 6);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
 #endif
 
       hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(value_plist, 1, value_cdims);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(value_plist, 6);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
 #endif
       
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      throw_assert_nomsg(lcpl >= 0);
+      throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
     
       if (!(hdf5::exists_dataset (file, ("/" + hdf5::NODES)) > 0))
         {
@@ -104,31 +104,31 @@ namespace neuroh5
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
 
       hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
-      assert(mspace >= 0);
+      throw_assert_nomsg(mspace >= 0);
       hid_t dset = H5Dcreate2(file, (attr_path + "/" + hdf5::NODE_INDEX).c_str(), NODE_IDX_H5_FILE_T,
                               mspace, lcpl, plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
 
       mspace = H5Screate_simple(1, &initial_size, maxdims);
-      assert(mspace >= 0);
+      throw_assert_nomsg(mspace >= 0);
       dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_PTR).c_str(), ATTR_PTR_H5_FILE_T,
                         mspace, lcpl, plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
     
       mspace = H5Screate_simple(1, &initial_size, maxdims);
       dset = H5Dcreate2(file, (attr_path + "/" + hdf5::ATTR_VAL).c_str(), ftype, mspace,
                         lcpl, value_plist, H5P_DEFAULT);
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Sclose(mspace) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Sclose(mspace) >= 0);
     
-      assert(H5Pclose(lcpl) >= 0);
+      throw_assert_nomsg(H5Pclose(lcpl) >= 0);
     
       status = H5Pclose(plist);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
       status = H5Pclose(value_plist);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
     
     }
   }
@@ -152,13 +152,13 @@ namespace neuroh5
         }
     
       hid_t ftype = H5Dget_type(dset);
-      assert(ftype >= 0);
+      throw_assert_nomsg(ftype >= 0);
     
       vector< pair<string,hid_t> >* ptr =
         (vector< pair<string,hid_t> >*) op_data;
       ptr->push_back(make_pair(name, ftype));
 
-      assert(H5Dclose(dset) >= 0);
+      throw_assert_nomsg(H5Dclose(dset) >= 0);
     
       return 0;
     }
@@ -174,7 +174,7 @@ namespace neuroh5
       herr_t ierr;
     
       in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(in_file >= 0);
+      throw_assert_nomsg(in_file >= 0);
       out_attributes.clear();
     
       string path = hdf5::node_attribute_prefix(name_space);
@@ -187,7 +187,7 @@ namespace neuroh5
           ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &node_attribute_cb, (void*) &out_attributes);
           
-          assert(H5Gclose(grp) >= 0);
+          throw_assert_nomsg(H5Gclose(grp) >= 0);
         }
       
       ierr = H5Fclose(in_file);
@@ -274,7 +274,7 @@ namespace neuroh5
               break;
             }
 
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
         }
 
       return ierr;
@@ -293,8 +293,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       vector< pair<string,hid_t> > attr_info;
     
@@ -302,9 +302,9 @@ namespace neuroh5
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
+      throw_assert_nomsg(file >= 0);
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
@@ -423,9 +423,9 @@ namespace neuroh5
         }
 
       status = H5Fclose(file);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
       status = H5Pclose(fapl);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
     }
 
 
@@ -455,7 +455,7 @@ namespace neuroh5
                 {
                   printf("index %u not in node rank map\n", index);
                 }
-              assert(it != node_rank_map.end());
+              throw_assert_nomsg(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -470,7 +470,7 @@ namespace neuroh5
               const NODE_IDX_T index = element.first;
               const vector<uint8_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert_nomsg(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -485,7 +485,7 @@ namespace neuroh5
               const NODE_IDX_T index = element.first;
               const vector<int8_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert_nomsg(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -500,7 +500,7 @@ namespace neuroh5
               const NODE_IDX_T index = element.first;
               const vector<uint16_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert_nomsg(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -515,7 +515,7 @@ namespace neuroh5
               const NODE_IDX_T index = element.first;
               const vector<int16_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert_nomsg(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -530,7 +530,7 @@ namespace neuroh5
               const NODE_IDX_T index = element.first;
               const vector<uint32_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert_nomsg(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -545,7 +545,7 @@ namespace neuroh5
               const NODE_IDX_T index = element.first;
               const vector<int32_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              assert(it != node_rank_map.end());
+              throw_assert_nomsg(it != node_rank_map.end());
               size_t dst_rank = it->second;
               data::AttrMap &attr_map = rank_attr_map[dst_rank];
               attr_map.insert(i, index, v);
@@ -572,10 +572,10 @@ namespace neuroh5
      )
     {
       int srank, ssize; size_t rank, size;
-      assert(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
-      assert(ssize > 0);
-      assert(srank >= 0);
+      throw_assert_nomsg(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(ssize > 0);
+      throw_assert_nomsg(srank >= 0);
       size = ssize;
       rank = srank;
 
@@ -589,7 +589,7 @@ namespace neuroh5
       // MPI group color value used for I/O ranks
       int io_color = 1;
 
-      assert(io_size > 0);
+      throw_assert_nomsg(io_size > 0);
     
       vector<char> sendbuf; 
       vector<int> sendcounts, sdispls, recvcounts, rdispls;
@@ -629,7 +629,7 @@ namespace neuroh5
           num_attrs_bcast[i] = num_attrs[i];
         }
       // 4. Broadcast the number of attributes of each type to all ranks
-      assert(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
       for (size_t i=0; i<num_attrs.size(); i++)
         {
           num_attrs[i] = num_attrs_bcast[i];
@@ -644,9 +644,9 @@ namespace neuroh5
             sendbuf_size = sendbuf.size();
           }
 
-        assert(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
         sendbuf.resize(sendbuf_size);
-        assert(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
         
         if (rank != 0)
           {
@@ -686,7 +686,7 @@ namespace neuroh5
       // 6. Each ALL_COMM rank sends an attribute set size to
       //    every other ALL_COMM rank (non IO_COMM ranks pass zero)
     
-      assert(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
+      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
                           &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
     
       // 7. Each ALL_COMM rank accumulates the vector sizes and allocates
@@ -703,7 +703,7 @@ namespace neuroh5
       if (recvbuf_size > 0) recvbuf.resize(recvbuf_size);
     
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
-      assert(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+      throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                          recvcounts, rdispls, recvbuf) >= 0);
     
       sendbuf.clear();
@@ -713,7 +713,7 @@ namespace neuroh5
       data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
       recvbuf.clear();
       
-      assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       return 0;
     }

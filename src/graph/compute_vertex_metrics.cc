@@ -4,7 +4,7 @@
 ///
 ///  Computes vertex metrics in the graph,
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -17,9 +17,9 @@
 #include "vertex_degree.hh"
 #include "validate_edge_list.hh"
 #include "node_attributes.hh"
+#include "throw_assert.hh"
 
 #include <getopt.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -64,8 +64,8 @@ namespace neuroh5
                                    const string& output_file_name)
     {
       int srank, ssize;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
 
       size_t rank, size;
       rank = (size_t)srank;
@@ -138,8 +138,8 @@ namespace neuroh5
       int status=0;
     
       int srank, ssize;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
 
       size_t rank, size;
       rank = (size_t)srank;
@@ -151,7 +151,7 @@ namespace neuroh5
       vector<string> edge_attr_name_spaces;
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      assert(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      throw_assert_nomsg(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       map<NODE_IDX_T, rank_t> node_rank_map;
@@ -208,8 +208,8 @@ namespace neuroh5
       int status=0;
     
       int srank, ssize;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
 
       size_t rank, size;
       rank = (size_t)srank;
@@ -222,7 +222,7 @@ namespace neuroh5
       vector<string> edge_attr_name_spaces;
       vector<pop_range_t> pop_vector;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      assert(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      throw_assert_nomsg(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       map<NODE_IDX_T, rank_t> node_rank_map;

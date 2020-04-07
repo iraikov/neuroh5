@@ -3,7 +3,6 @@
 
 #include <hdf5.h>
 
-#include <cassert>
 #include <vector>
 #include <string>
 

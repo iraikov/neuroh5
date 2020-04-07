@@ -1301,7 +1301,9 @@ namespace neuroh5
       throw_assert(file >= 0,
                    "read_cell_attribute_selection: unable to open file " << file_name);
 
-
+      status = H5Pclose(fapl);
+      throw_assert(status == 0,
+                   "read_cell_attribute_selection: unable to close file access property list");
 
       for (size_t i=0; i<attr_info.size(); i++)
         {
@@ -1416,13 +1418,11 @@ namespace neuroh5
 
         }
 
+
       status = H5Fclose(file);
       throw_assert(status == 0,
                    "read_cell_attribute_selection: unable to close file " << file_name);
 
-      status = H5Pclose(fapl);
-      throw_assert(status == 0,
-                   "read_cell_attribute_selection: unable to close file access property list");
              
     }
 

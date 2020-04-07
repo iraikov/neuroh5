@@ -8,10 +8,9 @@
 #include "hdf5_edge_attributes.hh"
 #include "exists_dataset.hh"
 
-#include "hdf5.h"
-#include "mpi.h"
+#include <hdf5.h>
+#include <mpi.h>
 
-#include <cassert>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -156,32 +155,34 @@ namespace neuroh5
     {
       // get a file handle and retrieve the MPI info
       hid_t file = H5Iget_file_id(loc);
-      assert(file >= 0);
+      throw_assert(file >= 0, "error in H5Iget_file_id");
 
       MPI_Comm comm;
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
-      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
+      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "error in H5Pget_fapl_mpio");
 
       hid_t wapl = H5P_DEFAULT;
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
-	  assert(wapl >= 0);
-	  assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
+	  throw_assert(wapl >= 0, "error in H5Pcreate");
+	  throw_assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0, 
+                       "error in H5Pset_dxpl_mpio");
 	}
 
       int ssize, srank;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
       size_t size, rank;
       size = (size_t)ssize;
       rank = (size_t)srank;
 
       uint32_t my_count = (uint32_t)value.size();
       std::vector<uint32_t> all_counts(size);
-      assert(MPI_Allgather(&my_count, 1, MPI_UINT32_T, &all_counts[0], 1,
-                           MPI_UINT32_T, comm) == MPI_SUCCESS);
+      throw_assert(MPI_Allgather(&my_count, 1, MPI_UINT32_T, &all_counts[0], 1,
+                                 MPI_UINT32_T, comm) == MPI_SUCCESS,
+                   "error in MPI_Allgather");
 
       // calculate the total dataset size and the offset of my piece
       hsize_t start = 0, total = 0, count = 1, block = my_count;
@@ -196,47 +197,49 @@ namespace neuroh5
 
       // create dataspaces and selections
       hid_t mspace = H5Screate_simple(1, &block, &block);
-      assert(mspace >= 0);
-      assert(H5Sselect_all(mspace) >= 0);
+      throw_assert(mspace >= 0, "error in H5Screate_simple");
+      throw_assert(H5Sselect_all(mspace) >= 0, "error in H5Sselect_all");
       hid_t fspace = H5Screate_simple(1, &total, &total);
-      assert(fspace >= 0);
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
-                                 &count, &block) >= 0);
+      throw_assert(fspace >= 0, "error in H5Screate_simple");
+      throw_assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
+                                       &count, &block) >= 0,
+                   "error in H5Sselect_hyperslab");
 
       // figure the type
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0, "error in infer_datatype");
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-      assert(mtype >= 0);
+      throw_assert(mtype >= 0, "H5Tget_native_type");
 
 
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
-      assert(lcpl >= 0);
-      assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+      throw_assert(lcpl >= 0, "error in H5Pcreate");
+      throw_assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0, 
+                   "error in H5Pset_create_intermediate_group");
 
       hid_t dset = H5Dcreate(loc, path.c_str(), ftype, fspace,
                              lcpl, H5P_DEFAULT, H5P_DEFAULT);
-      assert(dset >= 0);
-      assert(H5Dwrite(dset, mtype, mspace, fspace, wapl, &value[0])
-             >= 0);
+      throw_assert(dset >= 0, "error in H5Dcreate");
+      throw_assert(H5Dwrite(dset, mtype, mspace, fspace, wapl, &value[0])
+                   >= 0, "error in H5Dwrite");
 
-      assert(H5Dclose(dset) >= 0);
-      assert(H5Tclose(mtype) >= 0);
-      assert(H5Sclose(fspace) >= 0);
-      assert(H5Sclose(mspace) >= 0);
-      assert(H5Pclose(lcpl) >= 0);
-      assert(H5Pclose(wapl) >= 0);
+      throw_assert(H5Dclose(dset) >= 0, "error in H5Dclose");
+      throw_assert(H5Tclose(mtype) >= 0, "error in H5Tclose");
+      throw_assert(H5Sclose(fspace) >= 0, "error in H5Sclose");
+      throw_assert(H5Sclose(mspace) >= 0, "error in H5Sclose");
+      throw_assert(H5Pclose(lcpl) >= 0, "error in H5Pclose");
+      throw_assert(H5Pclose(wapl) >= 0, "error in H5Pclose");
 
-      assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
         {
-          assert(MPI_Info_free(&info) == MPI_SUCCESS);
+          throw_assert(MPI_Info_free(&info) == MPI_SUCCESS, "error in MPI_Info_free");
         }
 
-      assert(H5Fclose (file) >= 0);
-      assert(H5Pclose (fapl) >= 0);
+      throw_assert(H5Fclose (file) >= 0, "error in H5Fclose");
+      throw_assert(H5Pclose (fapl) >= 0, "error in H5Pclose");
 
       return 0;
     }
@@ -290,27 +293,18 @@ namespace neuroh5
     {
       // get a file handle and retrieve the MPI info
       hid_t file = H5Iget_file_id(loc);
-      assert(file >= 0);
+      throw_assert(file >= 0, "error in H5Iget_file_id");
 
       MPI_Comm comm;
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
-      assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
-
-      /*
-      int ssize, srank;
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-      size_t size, rank;
-      size = (size_t)ssize;
-      rank = (size_t)srank;
-      */
+      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "error in H5Pget_fapl_mpio");
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
-      assert(ftype >= 0);
+      throw_assert(ftype >= 0, "error in infer_datatype");
       hid_t mtype = H5Tget_native_type(ftype, H5T_DIR_ASCEND);
-      assert(mtype >= 0);
+      throw_assert(mtype >= 0, "error in H5Tget_native_type");
 
       string attr_prefix = hdf5::edge_attribute_prefix(src_pop_name,
                                                        dst_pop_name,
@@ -329,14 +323,14 @@ namespace neuroh5
                                      attr_namespace, attr_name,
                                      value);
       
-      assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
         {
-          assert(MPI_Info_free(&info) == MPI_SUCCESS);
+          throw_assert(MPI_Info_free(&info) == MPI_SUCCESS, "error in MPI_Info_free");
         }
       
-      assert(H5Fclose (file) >= 0);
-      assert(H5Pclose (fapl) >= 0);
+      throw_assert(H5Fclose (file) >= 0, "error in H5Fclose");
+      throw_assert(H5Pclose (fapl) >= 0, "error in H5Pclose");
 
       return 0;
     }

@@ -1,11 +1,10 @@
 #ifndef ATTR_KIND_DATATYPE
 #define ATTR_KIND_DATATYPE
 
-#include <cassert>
 #include <type_traits>
+#include <hdf5.h>
 
 #include "neuroh5_types.hh"
-#include "hdf5.h"
 
 
 namespace neuroh5
