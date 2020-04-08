@@ -17,6 +17,7 @@
 #include "path_names.hh"
 #include "hdf5_cell_attributes.hh"
 #include "exists_dataset.hh"
+#include "file_access.hh"
 #include "attr_map.hh"
 #include "compact_optional.hh"
 #include "optional_value.hh"

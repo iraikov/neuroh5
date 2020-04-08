@@ -9,19 +9,16 @@
 
 #include <hdf5.h>
 
+#include <iostream>
+#include <sstream>
+#include <string>
+
 #include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
 #include "read_template.hh"
 #include "exists_group.hh"
 #include "path_names.hh"
 #include "throw_assert.hh"
-
-#include <iostream>
-#include <sstream>
-#include <string>
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace std;
 
@@ -80,7 +77,7 @@ namespace neuroh5
             }
           
           status = H5Pclose(rapl);
-          assert(status == 0);
+          throw_assert(status == 0, "read_cell_index_ptr: unable to close property list");
           
         }
       

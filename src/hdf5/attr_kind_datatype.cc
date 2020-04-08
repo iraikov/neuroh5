@@ -1,10 +1,10 @@
 
 
-#include <cassert>
 #include <type_traits>
 
 #include "neuroh5_types.hh"
 #include "attr_kind_datatype.hh"
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -120,7 +120,7 @@ namespace neuroh5
           throw runtime_error("Unsupported attribute type");
         }
 
-      assert(result >= 0);
+      throw_assert(result >= 0, "unable to determine attribute kind");
       return result;
     }
   }

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "file_access.hh"
 #include "throw_assert.hh"
 
 namespace neuroh5
@@ -81,9 +82,12 @@ namespace neuroh5
         throw_assert(ierr >= 0, "write_template: error in H5Dwrite on dataset "
                      << name << " length: " << len);
 
-        throw_assert_nomsg(H5Dclose(dset) >= 0);
-        throw_assert_nomsg(H5Sclose(mspace) >= 0);
-        throw_assert_nomsg(H5Sclose(fspace) >= 0);
+        ierr = H5Sclose(mspace);
+        throw_assert(ierr >= 0, "error in H5Sclose");
+        ierr = H5Sclose(fspace);
+        throw_assert(ierr >= 0, "error in H5Sclose");
+        ierr = H5Dclose(dset);
+        throw_assert(ierr >= 0, "error in H5Dclose");
 
         return ierr;
       }

@@ -5,8 +5,12 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
+
+#include <iostream>
+#include <sstream>
+#include <string>
 
 #include "debug.hh"
 
@@ -17,13 +21,8 @@
 #include "rank_range.hh"
 #include "read_projection_datasets.hh"
 #include "mpi_debug.hh"
+#include "throw_assert.hh"
 
-#include <iostream>
-#include <sstream>
-#include <string>
-
-#undef NDEBUG
-#include <cassert>
 
 using namespace std;
 
@@ -60,16 +59,16 @@ namespace neuroh5
     {
       herr_t ierr = 0;
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(fapl >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
+      throw_assert_nomsg(file >= 0);
 
       // determine number of blocks in projection
       hsize_t num_blocks = hdf5::dataset_num_elements
@@ -153,7 +152,7 @@ namespace neuroh5
              dst_blk_ptr,
              rapl
              );
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
           
           // rebase the block_ptr array to local offsets
           // REBASE is going to be the start offset for the hyperslab
@@ -196,7 +195,7 @@ namespace neuroh5
              dst_idx,
              rapl
              );
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
 
           // read destination pointers
           hsize_t dst_ptr_block=0, dst_ptr_start=0;
@@ -226,7 +225,7 @@ namespace neuroh5
              dst_ptr,
              rapl
              );
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
           
           DST_PTR_T dst_rebase = 0;
           
@@ -261,12 +260,12 @@ namespace neuroh5
              src_idx,
              rapl
              );
-          assert(ierr >= 0);
+          throw_assert_nomsg(ierr >= 0);
 
-          assert(H5Pclose(rapl) >= 0);
+          throw_assert_nomsg(H5Pclose(rapl) >= 0);
         }
-      assert(H5Fclose(file) >= 0);
-      assert(H5Pclose(fapl) >= 0);
+      throw_assert_nomsg(H5Fclose(file) >= 0);
+      throw_assert_nomsg(H5Pclose(fapl) >= 0);
 
       return ierr;
     }

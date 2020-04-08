@@ -8,17 +8,14 @@
 //==============================================================================
 
 #include "debug.hh"
+#include <string>
 
 #include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
 #include "read_template.hh"
 #include "path_names.hh"
 #include "read_syn_projection.hh"
-
-#include <string>
-
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -74,15 +71,15 @@ namespace neuroh5
     {
       herr_t ierr = 0;
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(fapl >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      assert(file >= 0);
+      throw_assert_nomsg(file >= 0);
 
       // determine number of edges in projection
       uint64_t num_blocks = hdf5::dataset_num_elements
@@ -123,7 +120,7 @@ namespace neuroh5
          src_gid_ptr,
          rapl
          );
-      assert(ierr >= 0);
+      throw_assert_nomsg(ierr >= 0);
         
       // rebase the src_gid_ptr array to local offsets
       // REBASE is going to be the start offset for the hyperslab
@@ -159,7 +156,7 @@ namespace neuroh5
          rapl
          );
         
-      assert(ierr >= 0);
+      throw_assert_nomsg(ierr >= 0);
 
       // read source indices
       hsize_t src_gid_block = (hsize_t)(src_gid_ptr.back() - src_gid_ptr.front());
@@ -167,7 +164,7 @@ namespace neuroh5
 
       // allocate buffer and memory dataspace
       src_gid.resize(src_gid_block);
-      assert(src_gid.size() > 0);
+      throw_assert_nomsg(src_gid.size() > 0);
 
       ierr = hdf5::read<NODE_IDX_T>
         (
@@ -179,7 +176,7 @@ namespace neuroh5
          src_gid,
          rapl
          );
-      assert(ierr >= 0);
+      throw_assert_nomsg(ierr >= 0);
 
       // Read syn_id_pointers
         
@@ -196,7 +193,7 @@ namespace neuroh5
          syn_id_ptr,
          rapl
          );
-      assert(ierr >= 0);
+      throw_assert_nomsg(ierr >= 0);
 
       DST_PTR_T syn_id_rebase = syn_id_ptr[0];
 
@@ -211,7 +208,7 @@ namespace neuroh5
 
       // allocate buffer and memory dataspace
       syn_id.resize(syn_id_block);
-      assert(syn_id.size() > 0);
+      throw_assert_nomsg(syn_id.size() > 0);
 
       ierr = hdf5::read<NODE_IDX_T>
         (
@@ -223,13 +220,13 @@ namespace neuroh5
          syn_id,
          rapl
          );
-      assert(ierr >= 0);
+      throw_assert_nomsg(ierr >= 0);
 
         
-      assert(H5Fclose(file) >= 0);
+      throw_assert_nomsg(H5Fclose(file) >= 0);
 
       ierr = H5Pclose(rapl);
-      assert(ierr == 0);
+      throw_assert_nomsg(ierr == 0);
 
       DEBUG("Task ",rank,": ", "read_syn_projection done\n");
       return ierr;

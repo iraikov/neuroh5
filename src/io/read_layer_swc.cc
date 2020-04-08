@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for reading descriptions of neurite structures.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -21,9 +21,7 @@
 #include "ngraph.hh"
 #include "neuroh5_types.hh"
 #include "contract_tree.hh"
-
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 using namespace std;
 using namespace NGraph;

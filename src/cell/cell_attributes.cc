@@ -432,7 +432,7 @@ namespace neuroh5
     
       hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_layout(plist, H5D_CHUNKED);
-      assert(status == 0);
+      throw_assert(status == 0, "create_cell_attribute_datasets: unable to set chunked layout");
       status = H5Pset_chunk(plist, 1, cdims);
       throw_assert(status == 0,
                    "create_cell_attribute_datasets: unable to set chunk size");

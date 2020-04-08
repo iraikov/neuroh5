@@ -4,11 +4,10 @@
 ///
 ///  Read a projection in text format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
-#include <cassert>
 #include <string>
 #include <vector>
 #include <map>
@@ -20,6 +19,7 @@
 #include "read_txt_projection.hh"
 #include "neuroh5_types.hh"
 #include "attr_val.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -53,8 +53,8 @@ namespace neuroh5
           istringstream iss(line);
           NODE_IDX_T src, dst;
           
-          assert (iss >> dst);
-          assert (iss >> src);
+          throw_assert_nomsg (iss >> dst);
+          throw_assert_nomsg (iss >> src);
 
           dst_src_map[dst].push_back(src);
 

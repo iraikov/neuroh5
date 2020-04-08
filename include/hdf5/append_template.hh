@@ -65,9 +65,12 @@ namespace neuroh5
       ierr = H5Dwrite(dset, ntype, mspace, fspace, wapl, &v[0]);
       throw_assert(ierr >= 0, "error in H5Dwrite");
 
-      throw_assert(H5Dclose(dset) >= 0, "error in H5Dclose");
-      throw_assert(H5Sclose(mspace) >= 0, "error in H5Sclose");
-      throw_assert(H5Sclose(fspace) >= 0, "error in H5Sclose");
+      ierr = H5Sclose(mspace);
+      throw_assert(ierr >= 0, "error in H5Sclose");
+      ierr = H5Sclose(fspace)
+      throw_assert(ierr >= 0, "error in H5Sclose");
+      ierr = H5Dclose(dset);
+      throw_assert(ierr >= 0, "error in H5Dclose");
 
       return ierr;
     }

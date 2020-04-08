@@ -1,10 +1,10 @@
 
-#include "hdf5.h"
+#include <hdf5.h>
 
-#include <cassert>
 #include <string>
 #include <vector>
 
+#include "throw_assert.hh"
 namespace neuroh5
 {
   namespace hdf5
@@ -25,16 +25,19 @@ namespace neuroh5
       hid_t file, group, prop;
       
       int rank, size;
-      assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                   "create_file_toplevel: error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                   "create_file_toplevel: error in MPI_Comm_rank");
       
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      throw_assert(fapl >= 0, "create_file_toplevel: unable to create file access property list");
+      status = H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL);
+      throw_assert(status >= 0, "create_file_toplevel: unable set mpio");
       
       /* Create a new file. If file exists its contents will be overwritten. */
       file = H5Fcreate (file_name.c_str(), H5F_ACC_EXCL, H5P_DEFAULT, fapl);
-      assert(file >= 0);
+      throw_assert(file >= 0, "create_file_toplevel: unable to create file " << file_name);
       
       /* Create dataset creation properties, i.e. to enable chunking  */
       prop = H5Pcreate (H5P_DATASET_CREATE);
@@ -43,12 +46,17 @@ namespace neuroh5
       for (size_t i=0; i<groups.size(); i++)
         {
           group = H5Gcreate2(file, groups[i].c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+          throw_assert(group >= 0, "create_file_toplevel: unable to create group " << groups[i]);
           status = H5Gclose(group);
+          throw_assert(status >= 0, "create_file_toplevel: unable to close group " << groups[i]);
         }
       
       status = H5Pclose (prop);
+      throw_assert(status >= 0, "create_file_toplevel: unable to close property list");
       status = H5Pclose (fapl);
+      throw_assert(status >= 0, "create_file_toplevel: unable to close property list");
       status = H5Fclose(file);
+      throw_assert(status >= 0, "create_file_toplevel: unable to close file " << file_name);
       
       return status;
     }

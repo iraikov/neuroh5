@@ -10,6 +10,11 @@
 
 #include "debug.hh"
 
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <algorithm>
+
 #include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
 #include "read_template.hh"
@@ -17,14 +22,7 @@
 #include "rank_range.hh"
 #include "read_projection_datasets.hh"
 #include "mpi_debug.hh"
-
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <algorithm>
-
-#undef NDEBUG
-#include <cassert>
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -57,15 +55,15 @@ namespace neuroh5
     {
       herr_t ierr = 0;
       unsigned int rank, size;
-      assert(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
 
       size_t num_blocks=0;
       
       if (rank == 0)
         {
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-          assert(file >= 0);
+          throw_assert_nomsg(file >= 0);
 
           // determine number of blocks in projection
           num_blocks = hdf5::dataset_num_elements
@@ -77,11 +75,11 @@ namespace neuroh5
           total_num_edges = hdf5::dataset_num_elements
             (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::SRC_IDX));
 
-          assert(H5Fclose(file) >= 0);
+          throw_assert_nomsg(H5Fclose(file) >= 0);
         }
       
-      assert(MPI_Bcast(&num_blocks, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
-      assert(MPI_Bcast(&total_num_edges, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&num_blocks, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Bcast(&total_num_edges, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
 
       hsize_t read_blocks = num_blocks;
       
@@ -97,7 +95,7 @@ namespace neuroh5
           if (rank == 0)
             {
               hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-              assert(file >= 0);
+              throw_assert_nomsg(file >= 0);
           
               ierr = hdf5::read<DST_BLK_PTR_T>
                 (
@@ -109,7 +107,7 @@ namespace neuroh5
                  dst_blk_ptr,
                  H5P_DEFAULT
                  );
-              assert(ierr >= 0);
+              throw_assert_nomsg(ierr >= 0);
           
               // rebase the block_ptr array to local offsets
               // REBASE is going to be the start offset for the hyperslab
@@ -120,10 +118,10 @@ namespace neuroh5
                   dst_blk_ptr[i] -= block_rebase;
                 }
 
-              assert(H5Fclose(file) >= 0);
+              throw_assert_nomsg(H5Fclose(file) >= 0);
             }
 
-          assert(MPI_Bcast(&dst_blk_ptr[0], dst_blk_ptr.size(), MPI_ATTR_PTR_T, 0, comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&dst_blk_ptr[0], dst_blk_ptr.size(), MPI_ATTR_PTR_T, 0, comm) == MPI_SUCCESS);
 
 
           // read destination block indices
@@ -145,7 +143,7 @@ namespace neuroh5
           if (rank == 0)
             {
               hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-              assert(file >= 0);
+              throw_assert_nomsg(file >= 0);
               
               ierr = hdf5::read<NODE_IDX_T>
                 (
@@ -157,11 +155,11 @@ namespace neuroh5
                  dst_blk_idx,
                  H5P_DEFAULT
                  );
-              assert(ierr >= 0);
-              assert(H5Fclose(file) >= 0);
+              throw_assert_nomsg(ierr >= 0);
+              throw_assert_nomsg(H5Fclose(file) >= 0);
             }
 
-          assert(MPI_Bcast(&dst_blk_idx[0], dst_blk_idx_block, NODE_IDX_MPI_T, 0, comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&dst_blk_idx[0], dst_blk_idx_block, NODE_IDX_MPI_T, 0, comm) == MPI_SUCCESS);
           
           // read destination pointers
           hsize_t dst_ptr_block=0, dst_ptr_start=0;
@@ -186,7 +184,7 @@ namespace neuroh5
           if (rank == 0)
             {
               hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-              assert(file >= 0);
+              throw_assert_nomsg(file >= 0);
 
               ierr = hdf5::read<DST_PTR_T>
                 (
@@ -198,12 +196,12 @@ namespace neuroh5
                  dst_ptr,
                  H5P_DEFAULT
                  );
-              assert(ierr >= 0);
+              throw_assert_nomsg(ierr >= 0);
 
-              assert(H5Fclose(file) >= 0);
+              throw_assert_nomsg(H5Fclose(file) >= 0);
             }
 
-          assert(MPI_Bcast(&dst_ptr[0], dst_ptr_block, MPI_ATTR_PTR_T, 0, comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&dst_ptr[0], dst_ptr_block, MPI_ATTR_PTR_T, 0, comm) == MPI_SUCCESS);
           
           DST_PTR_T dst_rebase = 0;
           // Create source index ranges based on selection_dst_ptr
@@ -283,8 +281,8 @@ namespace neuroh5
             
             /* Create property list for parallel file access. */
             hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-            assert(fapl >= 0);
-            assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+            throw_assert_nomsg(fapl >= 0);
+            throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
             
             /* Create property list for collective dataset operations. */
             hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
@@ -294,7 +292,7 @@ namespace neuroh5
               }
             
             hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-            assert(file >= 0);
+            throw_assert_nomsg(file >= 0);
             
             ierr = hdf5::read_selection<NODE_IDX_T>
               (
@@ -305,11 +303,11 @@ namespace neuroh5
                src_idx,
                rapl
                );
-            assert(ierr >= 0);
+            throw_assert_nomsg(ierr >= 0);
             
-            assert(H5Fclose(file) >= 0);
-            assert(H5Pclose(fapl) >= 0);
-            assert(H5Pclose(rapl) >= 0);
+            throw_assert_nomsg(H5Fclose(file) >= 0);
+            throw_assert_nomsg(H5Pclose(fapl) >= 0);
+            throw_assert_nomsg(H5Pclose(rapl) >= 0);
 
           }
           

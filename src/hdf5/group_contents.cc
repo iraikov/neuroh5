@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading the names of objects in a group.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 #include <mpi.h>
 #include <hdf5.h>
@@ -15,8 +15,6 @@
 #include "debug.hh"
 #include "path_names.hh"
 
-#undef NDEBUG
-#include <cassert>
 #include "throw_assert.hh"
 
 using namespace std;
@@ -66,57 +64,28 @@ namespace neuroh5
         if (rank == 0)
           {
             grp = H5Gopen(file, path.c_str(), H5P_DEFAULT);
-            assert(grp >= 0);
-            assert(H5Gget_num_objs(grp, &num_objs)>=0);
+            throw_assert(grp >= 0, "hdf5::group_contents: unable to open group " << path);
+            throw_assert(H5Gget_num_objs(grp, &num_objs)>=0,
+                         "hdf5::group_contents: unable to get number of objects in group " << path);
             hsize_t idx = 0;
             vector<string> op_data;
-            assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                              &iterate_cb, (void*)&op_data ) >= 0);
+            throw_assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                                    &iterate_cb, (void*)&op_data ) >= 0,
+                         "hdf5::group_contents: unable to iterate over objects in group " << path);
 
             assert(op_data.size() == num_objs);
             
             for (size_t i = 0; i < op_data.size(); ++i)
               {
-                assert(op_data[i].size() > 0);
+                throw_assert(op_data[i].size() > 0,
+                             "hdf5::group_contents: invalid object name in group " << path);
+                
                 obj_names.push_back(op_data[i]);
               }
 
-            assert(H5Gclose(grp) >= 0);
+            throw_assert(H5Gclose(grp) >= 0,
+                         "hdf5::group_contents: unable to close group " << path);
           }
-
-        return ierr;
-      }
-
-
-      herr_t group_contents_serial
-      (
-       const hid_t&         file,
-       const std::string&   path,
-       vector<string>&      obj_names
-       )
-      {
-        herr_t ierr = 0;
-
-        hsize_t num_objs;
-        hid_t grp = -1;
-
-        grp = H5Gopen(file, path.c_str(), H5P_DEFAULT);
-        assert(grp >= 0);
-        assert(H5Gget_num_objs(grp, &num_objs)>=0);
-        hsize_t idx = 0;
-        vector<string> op_data;
-        assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
-                          &iterate_cb, (void*)&op_data ) >= 0);
-        
-        assert(op_data.size() == num_objs);
-        
-        for (size_t i = 0; i < op_data.size(); ++i)
-          {
-            assert(op_data[i].size() > 0);
-            obj_names.push_back(op_data[i]);
-          }
-        
-        assert(H5Gclose(grp) >= 0);
 
         return ierr;
       }

@@ -799,7 +799,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                 }
               else
                 {
-                  throw_err("py_build_tree: unable to determine connection point");                  
+                  throw_err("py_build_tree: unable to determine connection point");
                 }
             }
           else

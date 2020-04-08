@@ -1,9 +1,8 @@
 
-#include "hdf5.h"
-
-#include <cassert>
+#include <hdf5.h>
 #include <string>
 #include <vector>
+#include "throw_assert.hh"
 
 namespace neuroh5
 {
@@ -22,11 +21,11 @@ namespace neuroh5
      )
     {
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
+      throw_assert_nomsg(fapl >= 0);
 
       if (collective)
         {
-          assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+          throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
         }
       
       hid_t file;
@@ -40,7 +39,7 @@ namespace neuroh5
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
         }
       
-      assert(file >= 0);
+      throw_assert_nomsg(file >= 0);
       
       return file;
     }
@@ -62,7 +61,7 @@ namespace neuroh5
       H5I_type_t ot;
       hid_t anobj;
       hid_t *objs;
-      char name[1024];
+      char *name = new char [1024];
       herr_t status;
 
       cnt = H5Fget_obj_count(fid, mask);
@@ -114,6 +113,7 @@ namespace neuroh5
           }
         }
          
+      delete [] name;
       return howmany;
     }
         
