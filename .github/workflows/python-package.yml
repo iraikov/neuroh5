@@ -11,13 +11,8 @@ on:
 
 jobs:
   build-macos:
-      macos:
-        runs-on: macOS-latest
-        strategy:
-          matrix:
-            python-version: [3.5, 3.6, 3.7, 3.8]
-
     runs-on: macOS-latest
+
     strategy:
       matrix:
         python-version: [3.5, 3.6, 3.7, 3.8]
