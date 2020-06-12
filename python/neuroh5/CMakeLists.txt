@@ -38,8 +38,11 @@ target_include_directories(python_neuroh5_io PUBLIC
     )
 target_link_libraries(python_neuroh5_io PUBLIC ${HDF5_LIBRARIES} mpi)
 
-# On Windows, it is required to link to the Python libraries
+# On Windows and Mac OS, it is required to link to the Python libraries
 if(WIN32)
+    target_link_libraries(python_neuroh5_io ${PYTHON_LIBRARIES})
+endif()
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     target_link_libraries(python_neuroh5_io ${PYTHON_LIBRARIES})
 endif()
 
