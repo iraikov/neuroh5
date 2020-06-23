@@ -4,6 +4,8 @@ set(NEUROH5_IO_SRCS
 
 include_directories(${MPI_C_INCLUDE_DIRS})
 
+set(CMAKE_MACOSX_RPATH 1)
+
 add_library(python_neuroh5_io SHARED
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
