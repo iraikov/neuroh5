@@ -39,6 +39,7 @@ jobs:
           python -m pip install -v .
       - name: Test import
         run: |
+          python -m pip show -f neuroh5
           python ./tests/test_import.py
 
  
@@ -69,4 +70,5 @@ jobs:
         python -m pip install -v .
     - name: Test import
       run: |
+        python -m pip show -f neuroh5
         python ./tests/test_import.py

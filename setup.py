@@ -68,6 +68,10 @@ class cmake_build_ext(build_ext.build_ext):
                         '-G', 'MinGW Makefiles',
                     ]
 
+            mdt = os.getenv("MACOSX_DEPLOYMENT_TARGET")
+            if mdt:
+                cmake_args.append("-DCMAKE_OSX_DEPLOYMENT_TARGET={}".format(mdt))
+                    
             cmake_args += cmake_cmd_args
 
             if not os.path.exists(self.build_temp):
