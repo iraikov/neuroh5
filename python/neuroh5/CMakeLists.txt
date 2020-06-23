@@ -6,7 +6,7 @@ include_directories(${MPI_C_INCLUDE_DIRS})
 
 set(CMAKE_MACOSX_RPATH 1)
 
-add_library(python_neuroh5_io SHARED
+add_library(python_neuroh5_io MODULE
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.graph>
