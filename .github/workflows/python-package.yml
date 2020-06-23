@@ -27,7 +27,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          export MACOSX_DEPLOYMENT_TARGET=10.9
           brew install cmake open-mpi iltommi/brews/hdf5-parallel
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade numpy mpi4py h5py
@@ -35,7 +34,6 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Build
         run: |
-          export MACOSX_DEPLOYMENT_TARGET=10.9
           export PATH="/usr/local/opt/hdf5-parallel/bin:$PATH"
           export LDFLAGS="-L/usr/local/opt/hdf5-parallel/lib"
           export CPPFLAGS="-I/usr/local/opt/hdf5-parallel/include"
