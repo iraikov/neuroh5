@@ -44,7 +44,7 @@ jobs:
           python -m pip show -f neuroh5
           otool -L /Users/runner/hostedtoolcache/Python/3.8.3/x64/lib/python3.8/site-packages/neuroh5/io.dylib
           otool -l /Users/runner/hostedtoolcache/Python/3.8.3/x64/lib/python3.8/site-packages/neuroh5/io.dylib
-          python -v ./tests/test_import.py
+          python -vvv ./tests/test_import.py
 
  
   build-linux:
