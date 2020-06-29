@@ -44,10 +44,10 @@ namespace neuroh5
       herr_t ierr = 0;
       int srank, ssize; size_t rank, size;
     
-      assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
-      assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
-      assert(srank >= 0);
-      assert(ssize > 0);
+      throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(srank >= 0);
+      throw_assert_nomsg(ssize > 0);
       
       rank = (size_t)srank;
       size = (size_t)ssize;
