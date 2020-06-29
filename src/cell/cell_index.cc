@@ -108,6 +108,7 @@ namespace neuroh5
           throw_assert_nomsg(ierr == 0);
         }
 
+      
       return ierr;
     }
     
@@ -196,6 +197,7 @@ namespace neuroh5
         }
 
       ierr = create_cell_index(comm, file_name, pop_name, attr_name_space);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       
       hid_t file = hdf5::open_file(comm, file_name, true, true);
       throw_assert_nomsg(file >= 0);
