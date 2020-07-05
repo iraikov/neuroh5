@@ -4,7 +4,7 @@
 ///
 ///  Python module for reading and writing neuronal connectivity and morphological information.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -104,6 +104,12 @@ struct Intern {
 };
 
 Intern attr_name_intern;
+
+void throw_err(const std::string& err_message)
+{
+  fprintf(stderr, "Error: %s\n", err_message.c_str());
+  MPI_Abort(MPI_COMM_WORLD, 1);
+}
 
 void throw_err(char const* err_message)
 {
@@ -3454,7 +3460,7 @@ extern "C"
               }
             if (!pop_idx_set)
               {
-                throw_err("Population not found");
+                throw_err(std::string("py_read_cell_attribute_info; ") + "Population " + pop_name + " not found");
               }
 
 
@@ -3964,7 +3970,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_read_cell_attribute_info; ") + "Population " + pop_name + " not found");
       }
 
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -4195,7 +4201,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_scatter_read_trees: ") + "Population " + pop_name + " not found");
       }
     
 
@@ -4404,7 +4410,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_read_tree_selection: ") + "Population " + pop_name + " not found");
       }
 
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -4652,7 +4658,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_scatter_read_cell_attributes") + "Population " + pop_name + " not found");
       }
 
     PyObject *py_namespace_dict = PyDict_New();
@@ -4839,7 +4845,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_read_cell_attributes: ") + "Population " + pop_name + " not found");
       }
 
     size_t n_nodes;
@@ -5022,7 +5028,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_read_cell_attribute_selection: ") + "Population " + pop_name + " not found");
       }
 
     size_t n_nodes;
@@ -5202,7 +5208,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_bcast_cell_attributes: ") + "Population " + pop_name + " not found");
       }
 
     size_t n_nodes;
@@ -5356,7 +5362,7 @@ extern "C"
           }
         if (!pop_idx_set)
           {
-            throw_err("Population not found");
+            throw_err(std::string("py_write_cell_attributes: ") + "Population " + pop_name + " not found");
           }
         
         map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -5564,7 +5570,7 @@ extern "C"
           }
         if (!pop_idx_set)
           {
-            throw_err("Population not found");
+            throw_err(std::string("py_append_cell_attributes: ") + "Population " + pop_name + " not found");
           }
         
         map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -5790,7 +5796,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("py_append_cell_trees: ") + "Population " + pop_name + " not found");
       }
 
     
@@ -6280,7 +6286,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("NeuroH5TreeGen: ") + "Population " + pop_name + " not found");
       }
 
     size_t n_nodes;
@@ -6480,7 +6486,7 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err("Population not found");
+        throw_err(std::string("NeuroH5CellAttrGen: ") + "Population " + pop_name + " not found");
       }
 
     size_t n_nodes;
