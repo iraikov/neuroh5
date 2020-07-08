@@ -244,7 +244,8 @@ namespace neuroh5
       MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
       throw_assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
                                  &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
-                                 comm) >= 0, "error in MPI_Alltoallv");
+                                 comm) == MPI_SUCCESS, "error in MPI_Alltoallv");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
       value_vector.clear();
     
       vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
@@ -277,6 +278,8 @@ namespace neuroh5
       throw_assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
                                  &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
                                  comm) >= 0, "error in MPI_Alltoallv");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
+
       if (rank < io_size)
         {
           attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
@@ -356,6 +359,8 @@ namespace neuroh5
                                          index_recvbuf, attr_ptr_recvbuf, value_recvbuf,
                                          chunk_size, value_chunk_size, cache_size);
         }
+
+      throw_assert(MPI_Barrier(io_comm) == MPI_SUCCESS, "error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS, "error in MPI_Comm_free");
     }
 

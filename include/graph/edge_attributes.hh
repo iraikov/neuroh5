@@ -232,6 +232,7 @@ namespace neuroh5
       throw_assert(H5Pclose(lcpl) >= 0, "error in H5Pclose");
       throw_assert(H5Pclose(wapl) >= 0, "error in H5Pclose");
 
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
         {
@@ -322,7 +323,8 @@ namespace neuroh5
       hdf5::append_edge_attribute<T>(file, src_pop_name, dst_pop_name,
                                      attr_namespace, attr_name,
                                      value);
-      
+
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
         {

@@ -76,7 +76,11 @@ using namespace std;
 using namespace neuroh5;
 using namespace neuroh5::data;
 
+#if HAS_STRUCT_SEQUENCE
 enum return_type {return_dict, return_struct, return_tuple};
+#else
+enum return_type {return_dict, return_tuple};
+#endif
 
 struct Intern {
 
@@ -1820,11 +1824,13 @@ PyObject* NeuroH5CellAttrIter_iternext(PyObject *self)
       PyObject *attrval = NULL;
       switch (py_state->state->return_tp)
         {
+#if HAS_STRUCT_SEQUENCE
         case return_struct:
           attrval = py_build_cell_attr_values_struct(key, py_state->state->attr_map,
                                                      py_state->state->attr_names,
                                                      py_state->state->struct_type);
           break;
+#endif
         case return_tuple:
           attrval = py_build_cell_attr_values_tuple(key, py_state->state->attr_map,
                                                     py_state->state->attr_names);
@@ -2763,8 +2769,7 @@ extern "C"
         edge_map_type = EdgeMapSrc;
       }
     
-    assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
-    throw_assert(status == MPI_SUCCESS,
+    throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
                  "py_bcast_graph: unable to obtain size of MPI communicator");
 
     vector <string> edge_attr_name_spaces;
@@ -2971,8 +2976,7 @@ extern "C"
     graph::read_graph_selection(comm, std::string(input_file_name), edge_attr_name_spaces,
                                 prj_names, selection, prj_vector, edge_attr_name_vector,
                                 total_num_nodes, local_num_edges, total_num_edges);
-    assert(MPI_Comm_free(&comm) == MPI_SUCCESS);
-    throw_assert(status == MPI_SUCCESS,
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_read_graph_selection: unable to free MPI communicator");
     
     PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
@@ -5444,13 +5448,13 @@ extern "C"
         
       }
     
-    //throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
-    //             "py_write_cell_attributes: error in MPI barrier on data communicator");
-    throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
-                 "py_write_cell_attributes: unable to free data MPI communicator");
-    
+    throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
+                 "py_write_cell_attributes: error in MPI barrier on data communicator");
     throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                  "py_write_cell_attributes: error in MPI barrier");
+
+    throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
+                 "py_write_cell_attributes: unable to free data MPI communicator");
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_write_cell_attributes: unable to free MPI communicator");
     
@@ -5912,6 +5916,8 @@ extern "C"
                  "py_append_cell_trees: unable to append trees");
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
                  "py_append_cell_trees: MPI barrier error");
+    throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                 "py_append_cell_trees: MPI barrier error");
     
     throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
                  "py_append_cell_trees: unable to free data MPI communicator");
@@ -6144,6 +6150,9 @@ extern "C"
     if (!py_ngg) return NULL;
     py_ngg->state = new NeuroH5ProjectionGenState();
 
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+
     throw_assert(MPI_Comm_dup(comm, &(py_ngg->state->comm)) == MPI_SUCCESS, 
                  "NeuroH5ProjectionGen: unable to duplicate MPI communicator");
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
@@ -6343,6 +6352,8 @@ extern "C"
     throw_assert(status == MPI_SUCCESS,
                  "NeuroH5TreeGen: MPI_Allreduce error");
 
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS, "NeuroH5TreeGen: MPI_Barrier error");
 
     throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS,
                  "NeuroH5TreeGen: unable to duplicate MPI communicator");
@@ -6588,7 +6599,10 @@ extern "C"
   {
     if (py_ntrg->state->pos == seq_next)
       {
-        int status = MPI_Comm_free(&(py_ntrg->state->comm));
+        int status = MPI_Barrier(py_ntrg->state->comm);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5TreeGen: MPI_Barrier error");
+
+        status = MPI_Comm_free(&(py_ntrg->state->comm));
         throw_assert(status == MPI_SUCCESS,
                      "NeuroH5TreeGen: unable to free MPI communicator");
       }
@@ -6605,7 +6619,10 @@ extern "C"
     Py_XDECREF(py_ntrg->state->tuple_index_info);
     if (py_ntrg->state->comm != MPI_COMM_NULL)
       {
-        int status = MPI_Comm_free(&(py_ntrg->state->comm));
+        int status = MPI_Barrier(py_ntrg->state->comm);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: MPI_Barrier error");
+
+        status = MPI_Comm_free(&(py_ntrg->state->comm));
         throw_assert(status == MPI_SUCCESS,
                      "NeuroH5CellAttrGen: unable to free MPI communicator");
         py_ntrg->state->comm = MPI_COMM_NULL;
@@ -6619,7 +6636,10 @@ extern "C"
   {
     if (py_ngg->state->pos == seq_next)
       {
-        int status = MPI_Comm_free(&(py_ngg->state->comm));
+        int status = MPI_Barrier(py_ngg->state->comm);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+
+        status = MPI_Comm_free(&(py_ngg->state->comm));
         throw_assert(status == MPI_SUCCESS, 
                      "NeuroH5ProjectionGen: unable to free MPI communicator");
       }
@@ -6669,6 +6689,9 @@ extern "C"
                                                  py_ntrg->state->cache_size);
               throw_assert (status >= 0,
                             "NeuroH5TreeGen: error in call to cell::scatter_read_trees");
+              status = MPI_Barrier(py_ntrg->state->comm);
+              throw_assert(status == MPI_SUCCESS,
+                           "NeuroH5CellAttrGen: MPI barrier error");
 
 
               if (py_ntrg->state->cache_index < py_ntrg->state->count)
@@ -6682,7 +6705,10 @@ extern "C"
             {
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
-                  int status = MPI_Comm_free(&(py_ntrg->state->comm));
+                  int status = MPI_Barrier(py_ntrg->state->comm);
+                  throw_assert(status == MPI_SUCCESS, "NeuroH5TreeGen: MPI_Barrier error");
+
+                  status = MPI_Comm_free(&(py_ntrg->state->comm));
                   throw_assert(status == MPI_SUCCESS,
                                "NeuroH5TreeGen: unable to free MPI communicator");
 
@@ -6720,7 +6746,10 @@ extern "C"
         {
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
-              int status = MPI_Comm_free(&(py_ntrg->state->comm));
+              int status = MPI_Barrier(py_ntrg->state->comm);
+              throw_assert(status == MPI_SUCCESS, "NeuroH5CellTreeGen: MPI_Barrier error");
+
+              status = MPI_Comm_free(&(py_ntrg->state->comm));
               throw_assert(status == MPI_SUCCESS,
                            "NeuroH5TreeGen: unable to free MPI communicator");
 
@@ -6773,7 +6802,6 @@ extern "C"
               
               int status = MPI_Comm_dup(py_ntrg->state->comm, &this_comm);
               throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
-
               
               int size, rank;
               throw_assert(MPI_Comm_size(this_comm, &size) == MPI_SUCCESS,
@@ -6796,8 +6824,13 @@ extern "C"
                                                            py_ntrg->state->attr_map,
                                                            py_ntrg->state->cache_index,
                                                            py_ntrg->state->cache_size);
+              
               throw_assert (status >= 0,
                             "NeuroH5CellAttrGen: error in call to cell::scatter_read_cell_attributes");
+              status = MPI_Barrier(this_comm);
+              throw_assert(status == MPI_SUCCESS,
+                           "NeuroH5CellAttrGen: MPI barrier error");
+
               status = MPI_Comm_free(&(this_comm));
               throw_assert(status == MPI_SUCCESS,
                            "NeuroH5CellAttrGen: unable to free MPI communicator");
@@ -6826,7 +6859,10 @@ extern "C"
             {
               if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
                 {
-                  int status = MPI_Comm_free(&(py_ntrg->state->comm));
+                  int status = MPI_Barrier(py_ntrg->state->comm);
+                  throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: MPI_Barrier error");
+
+                  status = MPI_Comm_free(&(py_ntrg->state->comm));
                   throw_assert(status == MPI_SUCCESS,
                                "NeuroH5CellAttrGen: unable to free MPI communicator");
                   py_ntrg->state->comm = MPI_COMM_NULL;
@@ -6887,7 +6923,10 @@ extern "C"
           py_ntrg->state->attr_map.clear();
           if (py_ntrg->state->seq_index == py_ntrg->state->max_local_count)
             {
-              int status = MPI_Comm_free(&(py_ntrg->state->comm));
+              int status = MPI_Barrier(py_ntrg->state->comm);
+              throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: MPI_Barrier error");
+
+              status = MPI_Comm_free(&(py_ntrg->state->comm));
               throw_assert(status == MPI_SUCCESS,
                            "NeuroH5CellAttrGen: unable to free MPI communicator");
               py_ntrg->state->comm = MPI_COMM_NULL;
@@ -6983,6 +7022,9 @@ extern "C"
     throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Allreduce error");
     py_ngg->state->node_count += max_local_num_nodes;
 
+    status = MPI_Barrier(py_ngg->state->comm);
+    throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+
     return status;
   }
 
@@ -7018,7 +7060,10 @@ extern "C"
                 {
                   if (py_ngg->state->node_index == py_ngg->state->node_count)
                     {
-                      int status = MPI_Comm_free(&(py_ngg->state->comm));
+                      int status = MPI_Barrier(py_ngg->state->comm);
+                      throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+
+                      status = MPI_Comm_free(&(py_ngg->state->comm));
                       throw_assert(status == MPI_SUCCESS,
                                    "NeuroH5ProjectionGen: unable to free MPI communicator");
 
@@ -7060,7 +7105,10 @@ extern "C"
 
           if (py_ngg->state->node_index == py_ngg->state->node_count)
             {
-              int status = MPI_Comm_free(&(py_ngg->state->comm));
+              int status = MPI_Barrier(py_ngg->state->comm);
+              throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+
+              status = MPI_Comm_free(&(py_ngg->state->comm));
               throw_assert(status == MPI_SUCCESS,
                      "NeuroH5ProjectionGen: unable to free MPI communicator");
               py_ngg->state->pos = seq_last;
@@ -7076,7 +7124,10 @@ extern "C"
         {
           if (py_ngg->state->node_index == py_ngg->state->node_count)
             {
-              int status = MPI_Comm_free(&(py_ngg->state->comm));
+              int status = MPI_Barrier(py_ngg->state->comm);
+              throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+
+              status = MPI_Comm_free(&(py_ngg->state->comm));
               throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: unable to free MPI communicator");
               py_ngg->state->pos = seq_last;
             }

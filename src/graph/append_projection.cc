@@ -558,6 +558,7 @@ namespace neuroh5
       size_t sum_num_edges = 0;
       throw_assert_nomsg(MPI_Allreduce(&num_edges, &sum_num_edges, 1,
                         MPI_SIZE_T, MPI_SUM, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       if (sum_num_edges == 0)
         {
@@ -610,18 +611,21 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_SIZE_T,
                            &recvbuf_num_blocks[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       vector<size_t> sendbuf_num_dest(size, num_dest);
       vector<size_t> recvbuf_num_dest(size);
       throw_assert_nomsg(MPI_Allgather(&sendbuf_num_dest[0], 1, MPI_SIZE_T,
                            &recvbuf_num_dest[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       vector<size_t> sendbuf_num_edge(size, num_edges);
       vector<size_t> recvbuf_num_edge(size);
       throw_assert_nomsg(MPI_Allgather(&sendbuf_num_edge[0], 1, MPI_SIZE_T,
                            &recvbuf_num_edge[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       // determine last rank that has data
       size_t last_rank = size-1;
@@ -787,6 +791,7 @@ namespace neuroh5
               ni++;
             }
 	}
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
                                        edge_attr_map, edge_attr_index);
       append_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,
@@ -803,7 +808,7 @@ namespace neuroh5
                                          edge_attr_map, edge_attr_index);
         
       // clean-up
-
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
       if (info != MPI_INFO_NULL)
         {

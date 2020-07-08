@@ -73,7 +73,8 @@ namespace neuroh5
                                     &iterate_cb, (void*)&op_data ) >= 0,
                          "hdf5::group_contents: unable to iterate over objects in group " << path);
 
-            assert(op_data.size() == num_objs);
+            throw_assert(op_data.size() == num_objs, 
+                         "hdf5::group_contents: group size mismatch");
             
             for (size_t i = 0; i < op_data.size(); ++i)
               {

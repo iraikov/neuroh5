@@ -20,7 +20,9 @@
 #include "path_names.hh"
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
+#include "range_sample.hh"
 #include "mpi_debug.hh"
+#include "throw_assert.hh"
 
 #include <vector>
 #include <map>
@@ -52,7 +54,6 @@ namespace neuroh5
       size_t num_edges = 0;
       
       // read the population info
-      set< pair<pop_t, pop_t> > pop_pairs;
       vector<pop_range_t> pop_vector;
       vector<pair <pop_t, string> > pop_labels;
       map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
@@ -79,7 +80,6 @@ namespace neuroh5
         {
           io_size = io_size_arg > 0 ? (size_t)io_size_arg : 1;
         }
-      //FIXME: assert(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
       throw_assert_nomsg(cell::read_population_ranges(all_comm, file_name,
                                                       pop_ranges, pop_vector, pop_num_nodes) >= 0);
       throw_assert_nomsg(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
@@ -117,6 +117,8 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
                                          &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
                            == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
         for (size_t p=0; p<size; p++)
           {
             total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
@@ -135,20 +137,32 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
                                           &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
                                           all_comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
 
         vector<size_t> p = sort_permutation(node_index, compare_nodes);
         apply_permutation_in_place(node_index, p);
       }
 
       throw_assert_nomsg(node_index.size() == total_num_nodes);
+      
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
       {
         rank_t r=0; 
         for (size_t i = 0; i < node_index.size(); i++)
           {
+            while (io_rank_set.count(r) == 0)
+              {
+                r++;
+                if ((unsigned int)size <= r) r=0;
+              }
             node_rank_map.insert(make_pair(node_index[i], r++));
-            if ((unsigned int)io_size <= r) r=0;
           }
       }
       rank_edge_map_t rank_edge_map;
@@ -260,7 +274,8 @@ namespace neuroh5
       //    and creates sendcounts and sdispls arrays
       
       throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
-      
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
       
@@ -278,6 +293,8 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
                                        &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
                                        all_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
@@ -294,7 +311,7 @@ namespace neuroh5
       MPI_Comm  io_comm;
       // MPI group color value used for I/O ranks
       int io_color = 1;
-      if ((rank_t)rank < io_size)
+      if (is_io_rank)
         {
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
@@ -304,7 +321,7 @@ namespace neuroh5
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
 
-      if ((rank_t)rank < io_size)
+      if (is_io_rank)
         {
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
           throw_assert_nomsg(fapl >= 0);
@@ -328,8 +345,8 @@ namespace neuroh5
           throw_assert_nomsg(H5Fclose(file) >= 0);
           throw_assert_nomsg(H5Pclose(fapl) >= 0);
         } 
-      MPI_Barrier(io_comm);
-      MPI_Barrier(all_comm);
+      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       return 0;

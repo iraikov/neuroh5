@@ -130,7 +130,10 @@ namespace neuroh5
 
       prj_vector.push_back(prj_edge_map);
       edge_attr_names_vector.push_back (edge_attr_names);
-      
+
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "read_projection: error in MPI_Barrier");
+
       
       return ierr;
     }

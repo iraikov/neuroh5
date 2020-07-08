@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a cell id.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -261,7 +261,7 @@ namespace neuroh5
       herr_t ierr;
     
       in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(in_file >= 0);
+      throw_assert(in_file >= 0, "get_cell_attributes unable to open file " << file_name);
       out_attributes.clear();
     
       string path = hdf5::cell_attribute_prefix(name_space, pop_name);
@@ -300,7 +300,7 @@ namespace neuroh5
       herr_t ierr;
     
       in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      assert(in_file >= 0);
+      throw_assert(in_file >= 0, "get_call_attributes_index_ptr: unable to open file " << file_name);
       out_attributes.clear();
     
       string path = hdf5::cell_attribute_prefix(name_space, pop_name);
