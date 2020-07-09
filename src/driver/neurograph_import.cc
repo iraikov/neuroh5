@@ -4,7 +4,7 @@
 ///
 ///  Driver program for various import procedures.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -20,11 +20,11 @@
 #include "attr_map.hh"
 #include "attr_val.hh"
 #include "tokenize.hh"
+#include "throw_assert.hh"
 
 #include <mpi.h>
 #include <hdf5.h>
 #include <getopt.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h>
@@ -107,7 +107,8 @@ int append_syn_adj_map
 
           for (size_t i = low_src_ptr, ii = low_syn_ptr; i < high_src_ptr; ++i, ++ii)
             {
-              assert(ii < high_syn_ptr);
+              throw_assert(ii < high_syn_ptr,
+                           "neurograph_import: invalid node index");
               NODE_IDX_T src = src_idx[i];
               if (src <= src_range[1] && src >= src_range[0])
                 {
@@ -291,13 +292,17 @@ int main(int argc, char** argv)
   MPI_Comm all_comm;
 
   
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "neurograph_import: error in MPI initialization");
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
   int rank, size, io_size=1;
-  assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS,
+               "neurograph_import: error in MPI_Comm_size");
+
+  throw_assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS,
+               "neurograph_import: error in MPI_Comm_rank");
 
   int dst_offset=0, src_offset=0;
   int optflag_attr_names   = 0;
@@ -553,15 +558,19 @@ int main(int argc, char** argv)
 
   if (opt_hdf5_syn)
     {
-      assert(cell::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
-                                          pop_vector, n_nodes) >= 0);
-      assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0);
+      throw_assert(cell::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
+                                                pop_vector, n_nodes) >= 0,
+                   "neurograph_import: error in reading population ranges");
+      throw_assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0,
+                   "neurograph_import: error in reading population labels");
     }
   else
     {
-      assert(cell::read_population_ranges(all_comm, output_file_name, pop_ranges,
-                                          pop_vector, n_nodes) >= 0);
-      assert(cell::read_population_labels(all_comm, output_file_name, pop_labels) >= 0);
+      throw_assert(cell::read_population_ranges(all_comm, output_file_name, pop_ranges,
+                                                pop_vector, n_nodes) >= 0,
+                   "neurograph_import: error in reading population ranges");
+      throw_assert(cell::read_population_labels(all_comm, output_file_name, pop_labels) >= 0,
+                   "neurograph_import: error in reading population labels");
     }
 
   for (size_t i=0; i< pop_labels.size(); i++)
@@ -577,7 +586,8 @@ int main(int argc, char** argv)
           dst_pop_set = true;
         }
     }
-  assert(dst_pop_set && src_pop_set);
+  throw_assert(dst_pop_set && src_pop_set,
+               "neurograph_import: source or destination population not found");
   
   src_range[0] = pop_vector[src_pop_idx].start;
   src_range[1] = src_range[0] + pop_vector[src_pop_idx].count;

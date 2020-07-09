@@ -4,7 +4,7 @@
 ///
 ///  Driver program for scatter_read_trees function.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -28,6 +28,7 @@
 #include "validate_tree.hh"
 #include "attr_map.hh"
 #include "tokenize.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 using namespace neuroh5;
@@ -239,11 +240,15 @@ int main(int argc, char** argv)
   map<CELL_IDX_T, rank_t> node_rank_map;
   stringstream ss;
 
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "neurotrees_scatter_read: error in MPI initialization"); 
 
   int rank, size, io_size=1;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS,
+               "neurotrees_scatter_read: error in MPI_Comm_size"); 
+         
+  throw_assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS,
+               "neurotrees_scatter_read: error in MPI_Comm_rank"); 
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
@@ -346,12 +351,16 @@ int main(int argc, char** argv)
   vector<pop_range_t> pop_vector;
 
   // Read population info to determine n_nodes
-  assert(cell::read_population_ranges(all_comm, input_file_name,
-                                      pop_ranges, pop_vector,
-                                      n_nodes) >= 0);
+  throw_assert(cell::read_population_ranges(all_comm, input_file_name,
+                                            pop_ranges, pop_vector,
+                                            n_nodes) >= 0,
+               "neurotrees_scatter_read: error in reading population ranges"); 
+
   vector<string> pop_names;
   status = cell::read_population_names(all_comm, input_file_name, pop_names);
-  assert (status >= 0);
+  throw_assert (status >= 0,
+                "neurotrees_scatter_read: error in reading population names"); 
+
 
   // Determine which nodes are assigned to which compute ranks
   if (!opt_rankfile)
@@ -373,7 +382,9 @@ int main(int argc, char** argv)
           istringstream iss(line);
           size_t n;
 
-          assert (iss >> n);
+          throw_assert (iss >> n,
+                        "neurotrees_scatter_read: invalid entry on node to rank assignment file"); 
+
           node_rank_map.insert(make_pair(i,n));
           i++;
         }
@@ -394,8 +405,9 @@ int main(int argc, char** argv)
                                          tree_map, attr_maps);
 
       
-      assert (status >= 0);
-      
+      throw_assert (status >= 0,
+                    "neurotrees_scatter_read: error in reading trees"); 
+
       for_each(tree_map.cbegin(),
                tree_map.cend(),
                [&] (const pair<CELL_IDX_T, neurotree_t> &element)

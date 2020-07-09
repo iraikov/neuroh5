@@ -4,7 +4,7 @@
 ///
 ///  Driver program for read_graph function.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -13,6 +13,7 @@
 #include "neuroh5_types.hh"
 #include "read_graph.hh"
 #include "projection_names.hh"
+#include "throw_assert.hh"
 
 #include <mpi.h>
 
@@ -123,11 +124,15 @@ int main(int argc, char** argv)
   string input_file_name;
   vector< string > edge_attr_name_spaces;
 
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "neurograph_reader: error in MPI initialization");
 
   int rank, size;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS,
+               "neurograph_reader: error in MPI_Comm_size");
+         
+  throw_assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS,
+               "neurograph_reader: error in MPI_Comm_rank");
 
   debug_enabled = false;
 
@@ -184,8 +189,10 @@ int main(int argc, char** argv)
     }
 
   vector< pair<string, string> > prj_names;
-  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name,
-                                      prj_names) >= 0);
+  throw_assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name,
+                                            prj_names) >= 0,
+               "neurograph_reader: error in reading projection names");
+
 
   vector<edge_map_t> prj_vector;
   size_t total_num_edges = 0, local_num_edges = 0, total_num_nodes = 0;

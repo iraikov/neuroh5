@@ -4,7 +4,7 @@
 ///
 ///  Driver program for scatter_read_graph function.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -15,11 +15,11 @@
 #include "read_graph.hh"
 #include "scatter_read_graph.hh"
 #include "projection_names.hh"
+#include "throw_assert.hh"
 
 #include <mpi.h>
 
 #include <getopt.h>
-
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -73,13 +73,16 @@ int main(int argc, char** argv)
   vector <string> edge_attr_name_spaces;
   stringstream ss;
 
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "neurograph_scatter_read: error in MPI initialization");
 
   EdgeMapType edge_map_type = EdgeMapDst;
   int rank, size, io_size; size_t n_nodes, local_num_nodes;
   size_t local_num_edges, total_num_edges;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS,
+               "neurograph_scatter_read: error in MPI_Comm_size");
+  throw_assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS,
+               "neurograph_scatter_read: error in MPI_Comm_rank");
 
   debug_enabled = false;
 
@@ -211,8 +214,11 @@ int main(int argc, char** argv)
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
   // Read population info to determine n_nodes
-  assert(cell::read_population_ranges(all_comm, input_file_name, pop_ranges,
-                                      pop_vector, n_nodes) >= 0);
+  throw_assert(cell::read_population_ranges(all_comm, input_file_name, pop_ranges,
+                                            pop_vector, n_nodes) >= 0,
+               "neurograph_scatter_read: error in reading population ranges");
+
+
 
   // Determine which nodes are assigned to which compute ranks
   if (!opt_rankfile)
@@ -234,7 +240,9 @@ int main(int argc, char** argv)
           istringstream iss(line);
           rank_t n;
 
-          assert (iss >> n);
+          throw_assert (iss >> n,
+                        "neurograph_scatter_read: invalid entry in node to rank assignment file");
+
           node_rank_map.insert(make_pair(i, n));
           i++;
         }
@@ -244,7 +252,9 @@ int main(int argc, char** argv)
 
   DEBUG("scatter: reading projection names");
 
-  assert(graph::read_projection_names(all_comm, input_file_name, prj_names) >= 0);
+  throw_assert(graph::read_projection_names(all_comm, input_file_name, prj_names) >= 0,
+               "neurograph_scatter_read: error in reading projection names");
+
   MPI_Barrier(all_comm);
   DEBUG("scatter: finished reading projection names");
 

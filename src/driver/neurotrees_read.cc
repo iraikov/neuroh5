@@ -4,7 +4,7 @@
 ///
 ///  Driver program for read_trees function.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -16,6 +16,7 @@
 #include "validate_tree.hh"
 #include "path_names.hh"
 #include "dataset_num_elements.hh"
+#include "throw_assert.hh"
 
 #include <mpi.h>
 #include <getopt.h>
@@ -145,11 +146,15 @@ int main(int argc, char** argv)
   MPI_Comm all_comm;
   string input_file_name;
 
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "neurotrees_read: error in MPI initialization");
 
   int rank, size;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS,
+         "neurotrees_read: error in MPI_Comm_size");
+         
+  throw_assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS,
+         "neurotrees_read: error in MPI_Comm_rank");
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
@@ -197,13 +202,16 @@ int main(int argc, char** argv)
   vector<pop_range_t> pop_vector;
   size_t n_nodes;
   // Read population info
-  assert(cell::read_population_ranges(all_comm, input_file_name,
-                                      pop_ranges, pop_vector,
-                                      n_nodes) >= 0);
+  throw_assert(cell::read_population_ranges(all_comm, input_file_name,
+                                            pop_ranges, pop_vector,
+                                            n_nodes) >= 0,
+               "neurotrees_read: error in reading population ranges");
 
   vector<string> pop_names;
   status = cell::read_population_names(all_comm, input_file_name, pop_names);
-  assert (status >= 0);
+  throw_assert (status >= 0,
+                "neurotrees_read: error in reading population names");
+
 
   size_t start=0, end=0;
   std::vector<neurotree_t> tree_list;
@@ -212,7 +220,8 @@ int main(int argc, char** argv)
       status = cell::read_trees (all_comm, input_file_name,
                                  pop_names[i], pop_vector[i].start,
                                  tree_list, start, end, true);
-      assert (status >= 0);
+      throw_assert (status >= 0,
+                    "neurotrees_read: error in reading trees");
       
       for_each(tree_list.cbegin(),
                tree_list.cend(),

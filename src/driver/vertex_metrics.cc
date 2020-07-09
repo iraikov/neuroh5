@@ -2,9 +2,9 @@
 //==============================================================================
 ///  @file vertex_metrics.cc
 ///
-///  Driver program for computing graph vertex metrics and saving them to the file.
+///  Driver program for computing graph vertex metrics and saving them to file.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -14,12 +14,12 @@
 #include "read_graph.hh"
 #include "compute_vertex_metrics.hh"
 #include "projection_names.hh"
+#include "throw_assert.hh"
 
 #include <execinfo.h>
 #include <unistd.h>
 
 #include <getopt.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <csignal>
@@ -91,11 +91,15 @@ int main(int argc, char** argv)
 
   signal(SIGSEGV, segv_handler);  
   
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "vertex_metrics: error in MPI initialization"); 
 
   int rank, size;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS,
+               "vertex_metrics: error in MPI_Comm_size"); 
+  
+  throw_assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS,
+               "vertex_metrics: error in MPI_Comm_rank"); 
 
   debug_enabled = false;
   
@@ -177,7 +181,9 @@ int main(int argc, char** argv)
   if (!opt_iosize) iosize = 4;
 
   vector<pair<string, string>> prj_names;
-  assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0);
+  throw_assert(graph::read_projection_names(MPI_COMM_WORLD, input_file_name, prj_names) >= 0,
+               "vertex_metrics: error in reading projection names"); 
+
 
   vector<edge_map_t> prj_list;
   

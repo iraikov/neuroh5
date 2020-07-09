@@ -4,7 +4,7 @@
 ///
 ///  Driver program for copying tree structures.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 

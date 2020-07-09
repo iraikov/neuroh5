@@ -4,7 +4,7 @@
 ///
 ///  Driver program for various import procedures.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -13,7 +13,6 @@
 #include <mpi.h>
 #include <hdf5.h>
 #include <getopt.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h>
@@ -34,6 +33,7 @@
 #include "insert_tree_points.hh"
 #include "path_names.hh"
 #include "create_file_toplevel.hh"
+#include "throw_assert.hh"
 
 
 using namespace std;
@@ -95,13 +95,16 @@ int main(int argc, char** argv)
   vector<neurotree_t> tree_list, include_tree_list;
   MPI_Comm all_comm;
   
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "neurotrees_import: error in MPI initialization");
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
   int rank, size;
-  assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS,
+               "neurotrees_import: error in MPI_Comm_size");               
+  throw_assert(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS,
+               "neurotrees_import: error in MPI_Comm_rank");
 
   bool opt_include_layer  = false;
   bool opt_split_layers   = false;
@@ -248,8 +251,8 @@ int main(int argc, char** argv)
   size_t filecount=0;
   hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
 
-  assert(gid_list.size() > 0);
-
+  throw_assert(gid_list.size() > 0,
+               "neurotrees_import: empty list of gids");
   
   if (opt_include)
     { 
@@ -334,11 +337,15 @@ int main(int argc, char** argv)
       groups.push_back (hdf5::POPULATIONS);
       status = hdf5::create_file_toplevel (all_comm, output_file_name, groups);
     }
-  assert(status == 0);
+  throw_assert(status == 0,
+               "neurotrees_import: error in creating HDF5 file");
+
   MPI_Barrier(all_comm);
 
   status = cell::append_trees(all_comm, output_file_name, pop_name, 0, tree_list);
-  assert(status == 0);
+  throw_assert(status == 0,
+               "neurotrees_import: error in appending trees to HDF5 file");
+             
 
   MPI_Barrier(all_comm);
   MPI_Comm_free(&all_comm);

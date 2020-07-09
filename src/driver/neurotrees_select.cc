@@ -4,7 +4,7 @@
 ///
 ///  Program for selecting tree subsets.
 ///
-///  Copyright (C) 2016-2019 Project Neurotrees.
+///  Copyright (C) 2016-2020 Project Neurotrees.
 //==============================================================================
 
 
@@ -34,12 +34,12 @@
 #include "sort_permutation.hh"
 #include "attr_map.hh"
 #include "tokenize.hh"
-
 #include "dataset_num_elements.hh"
 #include "validate_tree.hh"
 #include "create_file_toplevel.hh"
 #include "exists_tree_h5types.hh"
 #include "copy_tree_h5types.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 using namespace neuroh5;
@@ -110,12 +110,15 @@ int main(int argc, char** argv)
   map<CELL_IDX_T, rank_t> node_rank_map;
   stringstream ss;
 
-  assert(MPI_Init(&argc, &argv) >= 0);
+  throw_assert(MPI_Init(&argc, &argv) >= 0,
+               "neurotrees_select: error in MPI initialization"); 
 
   size_t chunksize=1000, value_chunksize=1000, cachesize=1*1024*1024;
   int rank, size, io_size=1;
-  assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS);
-  assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
+  throw_assert(MPI_Comm_size(MPI_COMM_WORLD, &size) == MPI_SUCCESS,
+               "neurotrees_select: error in MPI_Comm_size"); 
+  throw_assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS,
+               "neurotrees_select: error in MPI_Comm_rank"); 
 
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
   
@@ -266,12 +269,15 @@ int main(int argc, char** argv)
   vector<pop_range_t> pop_vector;
 
   // Read population info to determine n_nodes
-  assert(cell::read_population_ranges(all_comm, input_file_name,
-                                      pop_ranges, pop_vector,
-                                      n_nodes) >= 0);
+  throw_assert(cell::read_population_ranges(all_comm, input_file_name,
+                                            pop_ranges, pop_vector,
+                                            n_nodes) >= 0,
+               "neurotrees_select: error in reading population ranges"); 
+
   vector<pair <pop_t, string> > pop_labels;
   status = cell::read_population_labels(all_comm, input_file_name, pop_labels);
-  assert (status >= 0);
+  throw_assert (status >= 0,
+                "neurotrees_select: error in reading population labels"); 
 
   // Determine index of population to be read
   size_t pop_idx=0; bool pop_idx_set=false;
@@ -302,7 +308,9 @@ int main(int argc, char** argv)
 
     auto name_map = selection_attr_map.attr_name_map[typeid(uint32_t)];
     auto const& name_it = name_map.find(selection_attr);
-    assert(name_it != name_map.end());
+    throw_assert(name_it != name_map.end(),
+                 "neurotrees_select: selection attribute not found"); 
+
     size_t newgid_attr_index = name_it->second;
     auto attr_map = selection_attr_map.attr_map<uint32_t>(newgid_attr_index);
     for (auto const& attr_it : attr_map)
@@ -331,7 +339,9 @@ int main(int argc, char** argv)
           istringstream iss(line);
           size_t n;
 
-          assert (iss >> n);
+          throw_assert (iss >> n,
+                        "neurotrees_select: invalid entry in node to rank assignment file"); 
+
           node_rank_map.insert(make_pair(i,n));
           i++;
         }
@@ -388,7 +398,9 @@ int main(int argc, char** argv)
                                      tree_map, attr_maps);
   
   
-  assert (status >= 0);
+  throw_assert (status >= 0,
+                "neurotrees_select: error in reading trees"); 
+
   
   for_each(tree_map.cbegin(),
            tree_map.cend(),
@@ -408,7 +420,9 @@ int main(int argc, char** argv)
         {
           neurotree_t &tree = element.second;
           auto it = selection_map.find(idx);
-          assert(it != selection_map.end());
+          throw_assert(it != selection_map.end(),
+                       "neurotrees_select: selection tree index not found"); 
+
           CELL_IDX_T idx1 = it->second;
           get<0>(tree) = idx1;
           tree_subset.push_back(tree);
@@ -499,16 +513,22 @@ int main(int argc, char** argv)
   // Determine the total number of selected trees
   uint32_t global_subset_size=0, local_subset_size=tree_subset.size();
 
-  assert(MPI_Reduce(&local_subset_size, &global_subset_size, 1, MPI_UINT32_T,
-                    MPI_SUM, 0, all_comm) == MPI_SUCCESS);
-  assert(MPI_Bcast(&global_subset_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+  throw_assert(MPI_Reduce(&local_subset_size, &global_subset_size, 1, MPI_UINT32_T,
+                    MPI_SUM, 0, all_comm) == MPI_SUCCESS,
+         "neurotrees_select: error in MPI_Reduce"); 
+
+  throw_assert(MPI_Bcast(&global_subset_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS,
+               "neurotrees_select: error in MPI_Bcast"); 
+
 
   for (auto const& tree : tree_subset)
     {
       CELL_IDX_T idx = get<0>(tree);
 
       auto it = subset_node_rank_map.find(idx);
-      assert(it != subset_node_rank_map.end());
+      throw_assert(it != subset_node_rank_map.end(),
+                   "neurotrees_select: tree index not found in node rank assignment"); 
+
       rank_t tree_rank = it->second;
       tree_subset_rank_map[tree_rank].insert(make_pair(idx, tree));
     }
@@ -525,8 +545,10 @@ int main(int argc, char** argv)
   // Send packed representation of the tree subset to the respective ranks
   vector<char> recvbuf; 
   vector<int> recvcounts, rdispls;
-  assert(mpi::alltoallv_vector(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                               recvcounts, rdispls, recvbuf) >= 0);
+  throw_assert(mpi::alltoallv_vector(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                     recvcounts, rdispls, recvbuf) >= 0,
+               "neurotrees_select: error while sending tree subset to assigned ranks"); 
+
   sendbuf.clear();
 
   // Unpack tree subset on the owning ranks
@@ -546,41 +568,51 @@ int main(int argc, char** argv)
       vector <string> groups;
       groups.push_back (hdf5::POPULATIONS);
       status = hdf5::create_file_toplevel (all_comm, output_file_name, groups);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "neurotrees_select: error in creating output HDF5 file"); 
+
       MPI_Barrier(all_comm);
       
       // TODO; create separate functions for opening HDF5 file for reading and writing
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
+      throw_assert_nomsg(fapl >= 0);
+      throw_assert_nomsg(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
       hid_t output_file = H5Fopen(output_file_name.c_str(), H5F_ACC_RDWR, fapl);
-      assert(output_file >= 0);
+      throw_assert(output_file >= 0,
+                   "neurotrees_select: error in opening output HDF5 file"); 
       
       if (!hdf5::exists_tree_h5types(output_file))
         {
           input_file = H5Fopen(input_file_name.c_str(), H5F_ACC_RDONLY, fapl);
-          assert(input_file >= 0);
+          throw_assert(input_file >= 0,
+                       "neurotrees_select: error in opening input HDF5 file with H5Types definition"); 
+
           status = hdf5::copy_tree_h5types(input_file, output_file);
           status = H5Fclose (input_file);
-          assert(status == 0);
+          throw_assert(status == 0,
+                       "neurotrees_select: error in closing input HDF5 file with H5Types definition"); 
+
         }
 
-      assert(status == 0);
       status = H5Pclose (fapl);
-      assert(status == 0);
+      throw_assert_nomsg(status == 0);
       status = H5Fclose (output_file);
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "neurotrees_select: error in closing output file");
 
       map<CELL_IDX_T, pair<uint32_t,pop_t> > output_pop_ranges;
       vector<pop_range_t> output_pop_vector;
 
       // Read population info to determine n_nodes
-      assert(cell::read_population_ranges(all_comm, output_file_name,
-                                          output_pop_ranges, output_pop_vector,
-                                          n_nodes) >= 0);
+      throw_assert(cell::read_population_ranges(all_comm, output_file_name,
+                                                output_pop_ranges, output_pop_vector,
+                                                n_nodes) >= 0,
+                   "neurotrees_select: error in reading population ranges"); 
+
       vector<pair <pop_t, string> > output_pop_labels;
       status = cell::read_population_labels(all_comm, output_file_name, output_pop_labels);
-      assert (status >= 0);
+      throw_assert (status >= 0,
+                    "neurotrees_select: error in reading population labels"); 
       
       // Determine index of population to be read
       size_t output_pop_idx=0; bool output_pop_idx_set=false;
@@ -601,7 +633,8 @@ int main(int argc, char** argv)
 
       status = cell::append_trees(all_comm, output_file_name, pop_name, output_pop_start, tree_subset);
       
-      assert(status == 0);
+      throw_assert(status == 0,
+                   "neurotrees_select: error in appending trees to output file"); 
 
       for (string& attr_name_space : attr_name_spaces)
         {

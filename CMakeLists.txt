@@ -6,7 +6,7 @@ string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 enable_language(CXX)
 set (CMAKE_CXX_STANDARD 11)
 if ( CMAKE_COMPILER_IS_GNUCC )
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -D MPICH_SKIP_MPICXX=1")
 endif()
   
 include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
