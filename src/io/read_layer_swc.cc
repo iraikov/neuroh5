@@ -71,12 +71,12 @@ namespace neuroh5
           id = id+id_offset;
           if (iss.fail()) continue;
         
-          assert (iss >> layer_value);
-          assert (iss >> x);
-          assert (iss >> y);
-          assert (iss >> z);
-          assert (iss >> radius);
-          assert (iss >> opt_idpar);
+          throw_assert_nomsg (iss >> layer_value);
+          throw_assert_nomsg (iss >> x);
+          throw_assert_nomsg (iss >> y);
+          throw_assert_nomsg (iss >> z);
+          throw_assert_nomsg (iss >> radius);
+          throw_assert_nomsg (iss >> opt_idpar);
 
           if (layer_value < 0)
             {
@@ -133,7 +133,7 @@ namespace neuroh5
     
       //cout << S;
       size_t num_sections = contraction_map.size();
-      assert(num_sections > 0);
+      throw_assert_nomsg(num_sections > 0);
     
       sec_vector.push_back(contraction_map.size());
       size_t sec_idx = 0;
@@ -146,20 +146,20 @@ namespace neuroh5
           sec_vector.insert(std::end(sec_vector),std::begin(it->second),std::end(it->second));
           sec_idx++;
         }
-      assert(sec_idx == num_sections);
+      throw_assert_nomsg(sec_idx == num_sections);
 
       
       for ( Graph::const_iterator p = S.begin(); p != S.end(); p++)
         {
           Graph::vertex u = Graph::node (p); 
           Graph::vertex_set outs = S.out_neighbors(u);
-          assert(u < num_sections);
+          throw_assert_nomsg(u < num_sections);
 
           for ( Graph::vertex_set::const_iterator s = outs.begin(); s != outs.end(); s++)
             {
               Graph::vertex v = Graph::node (s);
-              assert(v < num_sections);
-              assert(u != v);
+              throw_assert_nomsg(v < num_sections);
+              throw_assert_nomsg(u != v);
               src_vector.push_back(u);
               dst_vector.push_back(v);
             }
@@ -242,13 +242,13 @@ namespace neuroh5
           id = id+id_offset;
           if (iss.fail()) continue;
         
-          assert (iss >> swc_value);
+          throw_assert_nomsg (iss >> swc_value);
           swc_type = swc_value;
-          assert (iss >> x);
-          assert (iss >> y);
-          assert (iss >> z);
-          assert (iss >> radius);
-          assert (iss >> opt_idpar);
+          throw_assert_nomsg (iss >> x);
+          throw_assert_nomsg (iss >> y);
+          throw_assert_nomsg (iss >> z);
+          throw_assert_nomsg (iss >> radius);
+          throw_assert_nomsg (iss >> opt_idpar);
           iss >> opt_layer;
           if (!iss.fail())
             {
@@ -299,7 +299,7 @@ namespace neuroh5
     
       //cout << S;
       size_t num_sections = contraction_map.size();
-      assert(num_sections > 0);
+      throw_assert_nomsg(num_sections > 0);
     
       sec_vector.push_back(contraction_map.size());
       size_t sec_idx = 0;
@@ -312,19 +312,19 @@ namespace neuroh5
           sec_vector.insert(std::end(sec_vector),std::begin(it->second),std::end(it->second));
           sec_idx++;
         }
-      assert(sec_idx == num_sections);
+      throw_assert_nomsg(sec_idx == num_sections);
     
       for ( Graph::const_iterator p = S.begin(); p != S.end(); p++)
         {
           Graph::vertex u = Graph::node (p); 
           Graph::vertex_set outs = S.out_neighbors(u);
-          assert(u < num_sections);
+          throw_assert_nomsg(u < num_sections);
 
           for ( Graph::vertex_set::const_iterator s = outs.begin(); s != outs.end(); s++)
             {
               Graph::vertex v = Graph::node (s);
-              assert(v < num_sections);
-              assert(u != v);
+              throw_assert_nomsg(v < num_sections);
+              throw_assert_nomsg(u != v);
               src_vector.push_back(u);
               dst_vector.push_back(v);
             }
