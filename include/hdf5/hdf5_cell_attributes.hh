@@ -272,6 +272,8 @@ namespace neuroh5
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS,
                    "append_cell_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
       hsize_t local_ptr_size;
@@ -295,12 +297,16 @@ namespace neuroh5
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS, "append_cell_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
     
       hsize_t local_value_size = value.size();
       std::vector<uint64_t> value_size_vector;
       value_size_vector.resize(size);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS, "append_cell_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
       
       T dummy;
       hid_t ftype;
