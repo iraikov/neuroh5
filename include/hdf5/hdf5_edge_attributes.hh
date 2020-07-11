@@ -100,7 +100,9 @@ namespace neuroh5
       std::vector<size_t> all_counts(size);
       throw_assert(MPI_Allgather(&my_count, 1, MPI_SIZE_T, &all_counts[0], 1,
                                  MPI_SIZE_T, comm) == MPI_SUCCESS,
-                   "error in MPI_Allgather");
+                   "append_edge_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_edge_attribute: error in MPI_Barrier");
 
       // calculate the total dataset size and the offset of my piece
       hsize_t local_value_start = current_value_size,
@@ -136,6 +138,9 @@ namespace neuroh5
         }
 
       throw_assert(H5Tclose(mtype) >= 0, "error in H5Tclose");
+
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_edge_attribute: error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
         {

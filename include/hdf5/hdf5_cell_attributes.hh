@@ -418,6 +418,8 @@ namespace neuroh5
       status = H5Pclose(fapl);
       throw_assert(status == 0, "error in H5Pclose");
 
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
       status = MPI_Comm_free(&comm);
       throw_assert(status == MPI_SUCCESS,
                    "append_cell_attribute: error in MPI_Comm_free");
@@ -470,7 +472,9 @@ namespace neuroh5
       std::vector<uint64_t> index_size_vector;
       index_size_vector.resize(size);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "write_cell_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_cell_attribute: error in MPI_Barrier");
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
       hsize_t local_ptr_size=attr_ptr.size()-1;
@@ -482,13 +486,17 @@ namespace neuroh5
       std::vector<uint64_t> ptr_size_vector;
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "write_cell_attribute; error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_cell_attribute: error in MPI_Barrier");
     
       hsize_t local_value_size = value.size();
       std::vector<uint64_t> value_size_vector;
       value_size_vector.resize(size);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "write_cell_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_cell_attribute: error in MPI_Barrier");
 
       hsize_t local_value_start=0, local_index_start=0, local_ptr_start=0;
       // calculate the starting positions of this rank
@@ -573,6 +581,8 @@ namespace neuroh5
       status = H5Pclose(fapl);
       throw_assert(status == 0, "error in H5Pclose");
 
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_cell_attribute: error in MPI_Barrier");
       status = MPI_Comm_free(&comm);
       throw_assert(status == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)

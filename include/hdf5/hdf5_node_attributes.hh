@@ -177,7 +177,9 @@ namespace neuroh5
       std::vector<uint64_t> index_size_vector;
       index_size_vector.resize(size);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "append_node_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_node_attribute: error in MPI_Barrier");
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
       uint64_t local_ptr_size=attr_ptr.size()-1;
@@ -189,13 +191,17 @@ namespace neuroh5
       std::vector<uint64_t> ptr_size_vector;
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "append_node_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_node_attribute: error in MPI_Barrier");
     
       hsize_t local_value_size = value.size();
       std::vector<uint64_t> value_size_vector;
       value_size_vector.resize(size);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "append_node_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_node_attribute: error in MPI_Barrier");
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
@@ -278,6 +284,8 @@ namespace neuroh5
       status = H5Pclose(fapl);
       throw_assert(status == 0, "error in H5Pclose");
 
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_node_attribute: error in MPI_Barrier");
       status = MPI_Comm_free(&comm);
       throw_assert(status == MPI_SUCCESS, "error in MPI_Comm_free");
       if (info != MPI_INFO_NULL)
@@ -293,7 +301,6 @@ namespace neuroh5
     template <typename T>
     void write_node_attribute
     (
-     MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
      const std::vector<NODE_IDX_T>&  index,
@@ -304,6 +311,15 @@ namespace neuroh5
       int status;
       throw_assert(index.size() == attr_ptr.size()-1, "invalid index");
       std::vector<ATTR_PTR_T>  local_attr_ptr;
+
+      hid_t file = H5Iget_file_id(loc);
+      throw_assert(file >= 0, "H5Iget_file_id");
+
+      // get the I/O communicator
+      MPI_Comm comm;
+      MPI_Info info;
+      hid_t fapl = H5Fget_access_plist(file);
+      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "H5Pget_fapl_mpio");
     
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
@@ -318,7 +334,9 @@ namespace neuroh5
       std::vector<uint64_t> index_size_vector;
       index_size_vector.resize(size);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "write_node_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_node_attribute: error in MPI_Barrier");
 
       // Determine the total number of ptrs, add 1 to ptr of last rank
       hsize_t local_ptr_size=attr_ptr.size()-1;
@@ -330,13 +348,17 @@ namespace neuroh5
       std::vector<uint64_t> ptr_size_vector;
       ptr_size_vector.resize(size);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "write_node_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_node_attribute: error in MPI_Barrier");
     
       hsize_t local_value_size = value.size();
       std::vector<uint64_t> value_size_vector;
       value_size_vector.resize(size);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Allgather");
+      throw_assert(status == MPI_SUCCESS, "write_node_attribute: error in MPI_Allgather");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_node_attribute: error in MPI_Barrier");
 
       hsize_t local_value_start=0, local_index_start=0, local_ptr_start=0;
       // calculate the starting positions of this rank
@@ -397,6 +419,17 @@ namespace neuroh5
       throw_assert(H5Tclose(mtype)  >= 0, "error in H5Tclose");
       status = H5Pclose(wapl);
       throw_assert(status == 0, "error in H5Pclose");
+
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_node_attribute: error in MPI_Barrier");
+      status = MPI_Comm_free(&comm);
+      throw_assert(status == MPI_SUCCESS, "error in MPI_Comm_free");
+      if (info != MPI_INFO_NULL)
+        {
+          status = MPI_Info_free(&info);
+          throw_assert(status == MPI_SUCCESS, "error in MPI_Info_free");
+        
+        }
 
     }
 
