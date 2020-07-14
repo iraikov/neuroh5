@@ -5,9 +5,9 @@ name: CI
 
 on:
   push:
-    branches: [ v0.0.4 ]
+    branches: [ master ]
   pull_request:
-    branches: [ v0.0.4 ]
+    branches: [ master ]
 
 jobs:
   build-macos:
