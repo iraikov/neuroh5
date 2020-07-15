@@ -27,12 +27,9 @@ namespace neuroh5
     (
      MPI_Comm              comm,
      const std::string&    file_name,
-     const int             io_size,
      const vector<string>& edge_attr_name_spaces,
      const vector< pair<string, string> >& prj_names,
      const std::vector<NODE_IDX_T>&  selection,
-     // A vector that maps nodes to compute ranks
-     const map<NODE_IDX_T, rank_t>&  node_rank_map,
      std::vector<edge_map_t>& prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&              total_num_nodes,

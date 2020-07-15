@@ -1,6 +1,6 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file read_graph_selection.hh
+///  @file scatter_read_graph_selection.hh
 ///
 ///  Top-level functions for reading subsets of graphs in DBS (Destination Block Sparse)
 ///  format.
