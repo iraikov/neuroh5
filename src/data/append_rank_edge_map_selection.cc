@@ -1,10 +1,10 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file append_edge_map_selection.cc
+///  @file append_rank_edge_map_selection.cc
 ///
 ///  Populates a mapping between node indices and edge values.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include <vector>
@@ -24,8 +24,9 @@ namespace neuroh5
     /**************************************************************************
      * Append src/dst node pairs to a map of edges
      **************************************************************************/
-    int append_edge_map_selection
+    int append_rank_edge_map_selection
     (
+     const size_t                      num_ranks,
      const NODE_IDX_T&                 dst_start,
      const NODE_IDX_T&                 src_start,
      const vector<NODE_IDX_T>&         selection_dst_idx,
@@ -33,8 +34,9 @@ namespace neuroh5
      const vector<NODE_IDX_T>&         src_idx,
      const vector<string>&             attr_namespaces,
      const map<string, NamedAttrVal>&  edge_attr_map,
+     const map<NODE_IDX_T, rank_t>&    node_rank_map,
      size_t&                           num_edges,
-     edge_map_t &                      edge_map,
+     rank_edge_map_t &                 rank_edge_map,
      EdgeMapType                       edge_map_type
      )
     {
@@ -47,6 +49,8 @@ namespace neuroh5
 
       for (size_t i = 0; i < dst_ptr_size-1; ++i)
         {
+          size_t num_dst = i;
+
           NODE_IDX_T dst = selection_dst_idx[i];
           size_t low = selection_dst_ptr[i], high = selection_dst_ptr[i+1];
           if (high > low)
@@ -55,7 +59,14 @@ namespace neuroh5
                 {
                 case EdgeMapDst:
                   {
-                    edge_tuple_t& et = edge_map[dst];
+                    auto it = node_rank_map.find(dst);
+                    rank_t myrank=0;
+                    if (it == node_rank_map.end())
+                      { myrank = num_dst % num_ranks; }
+                    else
+                      { myrank = it->second; }
+
+                    edge_tuple_t& et = rank_edge_map[myrank][dst];
                     vector<NODE_IDX_T> &my_srcs = get<0>(et);
                     
                     vector <AttrVal> &edge_attr_vec = get<1>(et);
@@ -82,8 +93,14 @@ namespace neuroh5
                     for (size_t j = low; j < high; ++j)
                       {
                         NODE_IDX_T src = src_idx[j] + src_start;
+                        rank_t myrank = 0;
+                        auto it = node_rank_map.find(src);
+                        if (it == node_rank_map.end())
+                          { myrank = src % num_ranks; }
+                        else
+                          { myrank = it->second; }
                         
-                        edge_tuple_t& et = edge_map[src];
+                        edge_tuple_t& et = rank_edge_map[myrank][src];
                         
                         vector<NODE_IDX_T> &my_dsts = get<0>(et);
                         

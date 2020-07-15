@@ -85,6 +85,19 @@ namespace neuroh5
      const std::vector<CELL_IDX_T>&  selection,
      data::NamedAttrMap& attr_values
      );
+
+    void scatter_read_cell_attribute_selection
+    (
+     MPI_Comm         comm,
+     const string& file_name,
+     const int io_size,
+     const string& name_space,
+     const set<string>& attr_mask,
+     const string& pop_name,
+     const CELL_IDX_T& pop_start,
+     const std::vector<CELL_IDX_T>&  selection,
+     data::NamedAttrMap& attr_values
+     );
     
     int scatter_read_cell_attributes
     (

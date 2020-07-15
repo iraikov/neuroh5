@@ -619,8 +619,8 @@ namespace neuroh5
       herr_t status; 
 
       unsigned int rank, size;
-      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
-      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+      throw_assert(MPI_Comm_size(comm, (int*)&size) >= 0, "read_cell_attributes: error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, (int*)&rank) >= 0, "read_cell_attributes: error in MPI_Comm_rank");
 
       vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
       map<CELL_IDX_T, rank_t> node_rank_map;
@@ -1292,140 +1292,391 @@ namespace neuroh5
           }
       }
 
-      // get a file handle and retrieve the MPI info
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
-                   "read_cell_attribute_selection: error setting MPI driver for file access");
-
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-      throw_assert(file >= 0,
-                   "read_cell_attribute_selection: unable to open file " << file_name);
-
-      status = H5Pclose(fapl);
-      throw_assert(status == 0,
-                   "read_cell_attribute_selection: unable to close file access property list");
-
-      for (size_t i=0; i<attr_info.size(); i++)
+      size_t selection_size = selection.size();
+      int data_color = 2;
+      MPI_Comm data_comm;
+      // In cases where some ranks do not have any data to read, split
+      // the communicator, so that collective operations can be executed
+      // only on the ranks that do have data.
+      if (selection_size > 0)
         {
-          vector<ATTR_PTR_T> value_ptr;
-          vector<CELL_IDX_T> value_index;
+          MPI_Comm_split(comm,data_color,0,&data_comm);
+        }
+      else
+        {
+          MPI_Comm_split(comm,0,0,&data_comm);
+        }
+      MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
 
-          string attr_name  = get<0>(attr_info[i]);
-          AttrKind attr_kind = get<1>(attr_info[i]);
-          size_t attr_size  = attr_kind.size;
-          const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
-          const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
-          string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
 
-          if ((attr_mask.size() > 0) && (attr_mask.count(attr_name) == 0))
-            continue;
+      if (selection_size > 0)
+        {
+          // get a file handle and retrieve the MPI info
+          hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+          throw_assert(H5Pset_fapl_mpio(fapl, data_comm, MPI_INFO_NULL) >= 0,
+                       "read_cell_attribute_selection: error setting MPI driver for file access");
           
-          switch (attr_kind.type)
+          hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+          throw_assert(file >= 0,
+                       "read_cell_attribute_selection: unable to open file " << file_name);
+          
+          status = H5Pclose(fapl);
+          throw_assert(status == 0,
+                       "read_cell_attribute_selection: unable to close file access property list");
+          
+          for (size_t i=0; i<attr_info.size(); i++)
             {
-            case UIntVal:
-              {
-                if (attr_size == 4)
+              vector<ATTR_PTR_T> value_ptr;
+              vector<CELL_IDX_T> value_index;
+              
+              string attr_name  = get<0>(attr_info[i]);
+              AttrKind attr_kind = get<1>(attr_info[i]);
+              size_t attr_size  = attr_kind.size;
+              const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
+              const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
+              string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
+              
+              if ((attr_mask.size() > 0) && (attr_mask.count(attr_name) == 0))
+                continue;
+              
+              switch (attr_kind.type)
+                {
+                case UIntVal:
                   {
-                    vector<uint32_t> attr_values_uint32;
-                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_uint32);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint32);
+                    if (attr_size == 4)
+                      {
+                        vector<uint32_t> attr_values_uint32;
+                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                                                                     selection, index, ptr, value_index, value_ptr,
+                                                                     attr_values_uint32);
+                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint32);
+                      }
+                    else if (attr_size == 2)
+                      {
+                        vector<uint16_t> attr_values_uint16;
+                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                                                                     selection, index, ptr, value_index, value_ptr,
+                                                                     attr_values_uint16);
+                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint16);
+                      }
+                    else if (attr_size == 1)
+                      {
+                        vector<uint8_t> attr_values_uint8;
+                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                                                                     selection, index, ptr, value_index, value_ptr,
+                                                                     attr_values_uint8);
+                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
+                      }
+                    else
+                      {
+                        throw runtime_error("Unsupported integer attribute size");
+                      };
                   }
-                else if (attr_size == 2)
+                  break;
+                case SIntVal:
                   {
-                    vector<uint16_t> attr_values_uint16;
-                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_uint16);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint16);
+                    if (attr_size == 4)
+                      {
+                        vector<int32_t> attr_values_int32;
+                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                                                                     selection, index, ptr, value_index, value_ptr,
+                                                                     attr_values_int32);
+                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_int32);
+                      }
+                    else if (attr_size == 2)
+                      {
+                        vector<int16_t> attr_values_int16;
+                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                                                                     selection, index, ptr, value_index, value_ptr,
+                                                                     attr_values_int16);
+                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_int16);
+                      }
+                    else if (attr_size == 1)
+                      {
+                        vector<int8_t> attr_values_int8;
+                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                                                                     selection, index, ptr, value_index, value_ptr,
+                                                                     attr_values_int8);
+                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_int8);
+                      }
+                    else
+                      {
+                        throw runtime_error("Unsupported integer attribute size");
+                      };
                   }
-                else if (attr_size == 1)
+                  break;
+                case FloatVal:
                   {
-                    vector<uint8_t> attr_values_uint8;
-                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                    vector<float> attr_values_float;
+                    status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
                                                                  selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_uint8);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
+                                                                 attr_values_float);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_float);
                   }
-                else
+                  break;
+                case EnumVal:
                   {
-                    throw runtime_error("Unsupported integer attribute size");
-                  };
-              }
-              break;
-            case SIntVal:
-              {
-                if (attr_size == 4)
-                  {
-                    vector<int32_t> attr_values_int32;
-                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_int32);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int32);
+                    if (attr_size == 1)
+                      {
+                        vector<uint8_t> attr_values_uint8;
+                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                                                                     selection, index, ptr, value_index, value_ptr,
+                                                                     attr_values_uint8);
+                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
+                      }
+                    else
+                      {
+                        throw runtime_error("Unsupported enumerated attribute size");
+                      };
                   }
-                else if (attr_size == 2)
-                  {
-                    vector<int16_t> attr_values_int16;
-                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_int16);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int16);
-                  }
-                else if (attr_size == 1)
-                  {
-                    vector<int8_t> attr_values_int8;
-                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_int8);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int8);
-                  }
-                else
-                  {
-                    throw runtime_error("Unsupported integer attribute size");
-                  };
-              }
-              break;
-            case FloatVal:
-              {
-                vector<float> attr_values_float;
-                status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                             selection, index, ptr, value_index, value_ptr,
-                                                             attr_values_float);
-                attr_values.insert(attr_name, value_index, value_ptr, attr_values_float);
-              }
-              break;
-            case EnumVal:
-              {
-                if (attr_size == 1)
-                  {
-                    vector<uint8_t> attr_values_uint8;
-                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                 selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_uint8);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
-                  }
-                else
-                  {
-                    throw runtime_error("Unsupported enumerated attribute size");
-                  };
-              }
-              break;
-            default:
-              throw runtime_error("Unsupported attribute type");
-              break;
+                  break;
+                default:
+                  throw runtime_error("Unsupported attribute type");
+                  break;
+                }
+
             }
 
+          status = H5Fclose(file);
+          throw_assert(status == 0,
+                       "read_cell_attribute_selection: unable to close file " << file_name);
         }
 
-
-      status = H5Fclose(file);
-      throw_assert(status == 0,
-                   "read_cell_attribute_selection: unable to close file " << file_name);
-
-             
+      MPI_Barrier(data_comm);
+      MPI_Barrier(comm);
+      throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
+                   "read_cell_attribute_selection: error in MPI_Comm_free ");
+      
     }
 
+    
+    void scatter_read_cell_attribute_selection
+    (
+     MPI_Comm      comm,
+     const string& file_name,
+     const int     io_size,
+     const string& attr_name_space,
+     const set<string>& attr_mask,
+     const string& pop_name,
+     const CELL_IDX_T& pop_start,
+     const std::vector<CELL_IDX_T>&  selection,
+     data::NamedAttrMap& attr_values
+     )
+    {
+      herr_t status; 
+      throw_assert_nomsg(io_size > 0);
+
+      size_t selection_size = selection.size();
+      int data_color = 2;
+      MPI_Comm data_comm;
+      // In cases where some ranks do not have any data to read, split
+      // the communicator, so that collective operations can be executed
+      // only on the ranks that do have data.
+      if (selection_size > 0)
+        {
+          MPI_Comm_split(comm,data_color,0,&data_comm);
+        }
+      else
+        {
+          MPI_Comm_split(comm,0,0,&data_comm);
+        }
+      MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
+      unsigned int data_rank, data_size;
+      throw_assert_nomsg(MPI_Comm_size(data_comm, (int*)&data_size) >= 0);
+      throw_assert_nomsg(MPI_Comm_rank(data_comm, (int*)&data_rank) >= 0);
+
+      if (selection_size > 0)
+        {
+          map<CELL_IDX_T, rank_t> node_rank_map;
+          {
+            vector<size_t> sendbuf_selection_size(data_size, selection_size);
+            vector<size_t> recvbuf_selection_size(data_size);
+            vector<int> recvcounts(data_size, 0);
+            vector<int> displs(data_size+1, 0);
+
+            // Each DATA_COMM rank sends its selection to every other DATA_COMM rank
+            throw_assert_nomsg(MPI_Allgather(&sendbuf_selection_size[0], 1, MPI_SIZE_T,
+                                             &recvbuf_selection_size[0], 1, MPI_SIZE_T, data_comm)
+                               == MPI_SUCCESS);
+            throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
+
+            size_t total_selection_size = 0;
+            for (size_t p=0; p<data_size; p++)
+              {
+                total_selection_size = total_selection_size + recvbuf_selection_size[p];
+                displs[p+1] = displs[p] + recvbuf_selection_size[p];
+                recvcounts[p] = recvbuf_selection_size[p];
+              }
+
+            vector<CELL_IDX_T> all_selections(total_selection_size);
+            throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
+                                              &all_selections[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
+                                              data_comm) == MPI_SUCCESS);
+            throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
+
+            // Construct node rank map based on selection information.
+            for (rank_t p=0; p<data_size; p++)
+              {
+                for (size_t i = displs[p]; i<displs[p+1]; i++)
+                  {
+                    node_rank_map.insert ( make_pair(all_selections[i], p) );
+                  }
+
+              }
+            
+          }
+          
+          vector<int> sendcounts(data_size,0), sdispls(data_size,0), recvcounts(data_size,0), rdispls(data_size,0);
+          vector<char> sendbuf; 
+
+          vector< size_t > num_attrs;
+          num_attrs.resize(data::AttrMap::num_attr_types);
+          vector< vector<string> > attr_names;
+          attr_names.resize(data::AttrMap::num_attr_types);
+
+          // MPI Communicator for I/O ranks
+          MPI_Comm io_comm;
+          // MPI group color value used for I/O ranks
+          int io_color = 1;
+          size_t io_data_size = io_size;
+          
+          if (io_data_size > data_size)
+            io_data_size = data_size;
+      
+          set<size_t> io_rank_set;
+          data::range_sample(data_size, io_data_size, io_rank_set);
+          bool is_io_rank = false;
+          if (io_rank_set.find(data_rank) != io_rank_set.end())
+            is_io_rank = true;
+
+          if (is_io_rank)
+            {
+              // Am I an I/O rank?
+              MPI_Comm_split(data_comm,io_color,data_rank,&io_comm);
+              MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+
+              map <rank_t, data::AttrMap > rank_attr_map;
+              {
+                data::NamedAttrMap  attr_values;
+                read_cell_attribute_selection(io_comm, file_name, attr_name_space, attr_mask, pop_name, pop_start,
+                                              selection, attr_values);
+                data::append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
+                attr_values.num_attrs(num_attrs);
+                attr_values.attr_names(attr_names);
+              }
+              
+              data::serialize_rank_attr_map (data_size, data_rank, rank_attr_map, sendcounts, sendbuf, sdispls);
+            }
+          else
+            {
+              
+              MPI_Comm_split(data_comm,0,data_rank,&io_comm);
+            }
+          MPI_Barrier(io_comm);
+          MPI_Barrier(data_comm);
+          throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+
+          vector<size_t> num_attrs_bcast(num_attrs.size());
+          for (size_t i=0; i<num_attrs.size(); i++)
+            {
+              num_attrs_bcast[i] = num_attrs[i];
+            }
+          // 4. Broadcast the number of attributes of each type to all ranks
+          throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, data_comm) >= 0);
+          for (size_t i=0; i<num_attrs.size(); i++)
+            {
+              num_attrs[i] = num_attrs_bcast[i];
+            }
+          
+          // 5. Broadcast the names of each attributes of each type to all data ranks
+          {
+            vector<char> sendbuf; size_t sendbuf_size=0;
+            if (data_rank == 0)
+              {
+                data::serialize_data(attr_names, sendbuf);
+                sendbuf_size = sendbuf.size();
+              }
+
+            throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, data_comm) >= 0);
+            sendbuf.resize(sendbuf_size);
+            throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, data_comm) >= 0);
+            
+            if (data_rank != 0)
+              {
+                data::deserialize_data(sendbuf, attr_names);
+              }
+          }
+      
+          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
+            {
+              attr_values.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i]);
+            }
+          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint8]; i++)
+            {
+              attr_values.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i]);
+            }
+          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int8]; i++)
+            {
+              attr_values.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i]);
+            }
+          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint16]; i++)
+            {
+              attr_values.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i]);
+            }
+          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int16]; i++)
+            {
+              attr_values.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i]);
+            }
+          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint32]; i++)
+            {
+              attr_values.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i]);
+            }
+          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int32]; i++)
+            {
+              attr_values.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
+            }
+          
+          // 6. Each DATA_COMM rank sends an attribute set size to
+          //    every other DATA_COMM rank (non IO_COMM ranks pass zero)
+          throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
+                                          &recvcounts[0], 1, MPI_INT, data_comm) >= 0);
+          MPI_Barrier(data_comm);
+          
+          // 7. Each DATA_COMM rank accumulates the vector sizes and allocates
+          //    a receive buffer, recvcounts, and rdispls
+          size_t recvbuf_size;
+          vector<char> recvbuf;
+          
+          recvbuf_size = recvcounts[0];
+          for (rank_t p = 1; p < data_size; ++p)
+            {
+              rdispls[p] = rdispls[p-1] + recvcounts[p-1];
+              recvbuf_size += recvcounts[p];
+            }
+          if (recvbuf_size > 0)
+            recvbuf.resize(recvbuf_size);
+          
+          // 8. Each DATA_COMM rank participates in the MPI_Alltoallv
+          throw_assert_nomsg(mpi::alltoallv_vector<char>(data_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                         recvcounts, rdispls, recvbuf) >= 0);
+
+          sendbuf.clear();
+          MPI_Barrier(data_comm);
+          
+          if (recvbuf.size() > 0)
+            {
+              data::deserialize_rank_attr_map (data_size, recvbuf, recvcounts, rdispls, attr_values);
+            }
+          recvbuf.clear();
+        }
+
+      MPI_Barrier(data_comm);
+      MPI_Barrier(comm);
+      throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
+                   "scatter_read_cell_attribute_selection: error in MPI_Comm_free ");
+      
+
+    }
 
     
   }

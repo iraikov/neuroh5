@@ -5,7 +5,7 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -16,8 +16,8 @@
 #include "read_projection_dataset_selection.hh"
 #include "validate_selection_edge_list.hh"
 #include "append_edge_map_selection.hh"
-#include "mpi_debug.hh"
 #include "throw_assert.hh"
+#include "mpi_debug.hh"
 
 #include <iostream>
 #include <sstream>

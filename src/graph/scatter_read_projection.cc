@@ -165,8 +165,8 @@ namespace neuroh5
               
               // append to the edge map
               throw_assert_nomsg(data::append_rank_edge_map(size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
-                                                edge_map_type) >= 0);
+                                                            attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
+                                                            edge_map_type) >= 0);
               
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: read ", num_edges,
                         " edges from projection ", src_pop_name, " -> ", dst_pop_name);

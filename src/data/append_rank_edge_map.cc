@@ -1,11 +1,10 @@
-
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
 ///  @file append_rank_edge_map.cc
 ///
 ///  Populates a mapping between ranks and edge values.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include <vector>

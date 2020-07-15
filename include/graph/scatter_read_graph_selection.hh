@@ -8,8 +8,8 @@
 ///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
-#ifndef READ_GRAPH_SELECTION_HH
-#define READ_GRAPH_SELECTION_HH
+#ifndef SCATTER_READ_GRAPH_SELECTION_HH
+#define SCATTER_READ_GRAPH_SELECTION_HH
 
 #include "neuroh5_types.hh"
 
@@ -50,10 +50,11 @@ namespace neuroh5
     ///
     /// @return              HDF5 error code
 
-    int read_graph_selection
+    int scatter_read_graph_selection
     (
      MPI_Comm              comm,
      const std::string&    file_name,
+     const int             io_size,
      const vector<string>& edge_attr_name_spaces,
      const vector< pair<string, string> >& prj_names,
      const std::vector<NODE_IDX_T>&  selection,

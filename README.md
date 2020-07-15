@@ -1,4 +1,4 @@
-# neurographdf5
+# neuroh5
 
 An HDF5-based library for storage of large-scale graphs and parallel operations on them.
 

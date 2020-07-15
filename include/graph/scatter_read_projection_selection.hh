@@ -8,8 +8,8 @@
 ///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
-#ifndef READ_PROJECTION_SELECTION_HH
-#define READ_PROJECTION_SELECTION_HH
+#ifndef SCATTER_READ_PROJECTION_SELECTION_HH
+#define SCATTER_READ_PROJECTION_SELECTION_HH
 
 #include "neuroh5_types.hh"
 
@@ -59,9 +59,10 @@ namespace neuroh5
     /// @param src_idx       Source Index (source indices of edges)
     ///
     /// @return              HDF5 error code
-    herr_t read_projection_selection
+    herr_t scatter_read_projection_selection
     (
      MPI_Comm                   comm,
+     const int                  io_size,
      const std::string&         file_name,
      const pop_range_map_t&     pop_ranges,
      const set < pair<pop_t, pop_t> >& pop_pairs,
@@ -71,6 +72,7 @@ namespace neuroh5
      const NODE_IDX_T&          dst_start,
      const vector<string>&      attr_namespaces,
      const std::vector<NODE_IDX_T>&  selection,
+     const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
      vector<edge_map_t>&       prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&                    local_num_nodes,

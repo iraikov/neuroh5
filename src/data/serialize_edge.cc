@@ -48,8 +48,7 @@ namespace neuroh5
       sendcounts.resize(num_ranks);
       sdispls.resize(num_ranks);
 
-      int end_rank = num_ranks;
-      throw_assert(end_rank > 0, "serialize_rank_edge_map: zero end rank");
+      size_t end_rank = num_ranks;
       throw_assert(start_rank < end_rank, "serialize_rank_edge_map: invalid start rank");
       
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;

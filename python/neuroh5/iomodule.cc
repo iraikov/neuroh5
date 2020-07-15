@@ -53,6 +53,7 @@
 #include "read_projection.hh"
 #include "read_graph.hh"
 #include "read_graph_selection.hh"
+#include "scatter_read_graph_selection.hh"
 #include "scatter_read_graph.hh"
 #include "scatter_read_projection.hh"
 #include "bcast_graph.hh"
@@ -2431,6 +2432,8 @@ NeuroH5EdgeIter_FromMap(const edge_map_t& prj_edge_map,
   return (PyObject *)p;
 }
 
+
+
 extern "C"
 {
 
@@ -2648,13 +2651,11 @@ extern "C"
         sort(edge_attr_name_spaces.begin(), edge_attr_name_spaces.end());
       }
     
-
     // Read population info to determine total_num_nodes
     status = cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes);
     throw_assert(status >= 0,
                  "py_scatter_read_graph: unable to read population ranges");
-
-
+ 
     // Create C++ map for node_rank_map:
     if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
       {
@@ -2978,6 +2979,154 @@ extern "C"
                                 total_num_nodes, local_num_edges, total_num_edges);
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_read_graph_selection: unable to free MPI communicator");
+    
+    PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
+                                                                edge_attr_name_spaces,
+                                                                edge_attr_name_vector);
+    
+    for (size_t i = 0; i < prj_vector.size(); i++)
+      {
+        edge_map_t prj_edge_map = prj_vector[i];
+
+        PyObject *py_edge_iter = NeuroH5EdgeIter_FromMap(prj_edge_map, edge_attr_name_spaces);
+
+        PyObject *py_src_dict = PyDict_GetItemString(py_prj_dict, prj_names[i].second.c_str());
+        if (py_src_dict == NULL)
+          {
+            py_src_dict = PyDict_New();
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+            PyDict_SetItemString(py_prj_dict, prj_names[i].second.c_str(), py_src_dict);
+            Py_DECREF(py_src_dict);
+          }
+        else
+          {
+            PyDict_SetItemString(py_src_dict, prj_names[i].first.c_str(), py_edge_iter);
+          }
+        Py_DECREF(py_edge_iter);
+        
+      }
+
+    PyObject *py_prj_tuple = PyTuple_New(2);
+    PyTuple_SetItem(py_prj_tuple, 0, py_prj_dict);
+    PyTuple_SetItem(py_prj_tuple, 1, py_attribute_info);
+
+    return py_prj_tuple;
+  }
+
+  
+  static PyObject *py_scatter_read_graph_selection (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status;
+    int opt_edge_map_type=0;
+    vector < map <string, vector < vector <string> > > > edge_attr_name_vector;
+    vector<edge_map_t> prj_vector;
+    vector< pair<string,string> > prj_names;
+    char *input_file_name;
+    PyObject *py_selection=NULL;
+    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_comm = NULL;
+    PyObject *py_prj_names = NULL;
+    MPI_Comm *comm_ptr  = NULL;
+    vector <NODE_IDX_T> selection;
+    size_t total_num_nodes, total_num_edges = 0, local_num_edges = 0;
+    unsigned long io_size; int size;
+    
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "selection",
+                                   "comm",
+                                   "projections",
+                                   "namespaces",
+                                   "map_type",
+                                   "io_size",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|OOOik", (char **)kwlist,
+                                     &input_file_name, &py_selection, &py_comm, 
+                                     &py_prj_names, &py_attr_name_spaces,
+                                     &opt_edge_map_type, &io_size))
+      return NULL;
+
+    
+    PyObject *py_prj_dict = PyDict_New();
+    MPI_Comm comm;
+
+    if (py_comm != NULL)
+      {
+        comm_ptr = PyMPIComm_Get(py_comm);
+        throw_assert(comm_ptr != NULL,
+                     "py_scatter_read_graph_selection: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_scatter_read_graph_selection: invalid MPI communicator");
+        status = MPI_Comm_dup(*comm_ptr, &comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_graph_selection: unable to duplicate MPI communicator");
+
+      }
+    else
+      {
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_graph_selection: unable to duplicate MPI communicator");
+      }
+    
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_graph_selection: unable to obtain size of MPI communicator");
+    
+    if (io_size == 0)
+      {
+        io_size = size;
+      }
+
+    vector <string> edge_attr_name_spaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            const char *str = PyStr_ToCString (pyval);
+            edge_attr_name_spaces.push_back(string(str));
+          }
+      }
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
+            CELL_IDX_T n = PyLong_AsLong(pyval);
+            selection.push_back(n);
+          }
+      }
+
+    if (py_prj_names != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_prj_names); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_prj_names, (Py_ssize_t)i);
+            PyObject *p1    = PyTuple_GetItem(pyval, 0);
+            PyObject *p2    = PyTuple_GetItem(pyval, 1);
+            const char *s1        = PyStr_ToCString (p1);
+            const char *s2        = PyStr_ToCString (p2);
+            prj_names.push_back(make_pair(string(s1), string(s2)));
+          }
+      }
+    else
+      {
+        status = graph::read_projection_names(comm, input_file_name, prj_names);
+        throw_assert(status >= 0,
+                     "py_scatter_read_graph_selection: unable to read projection names");
+      }
+
+    
+    
+    graph::scatter_read_graph_selection(comm, std::string(input_file_name), io_size, edge_attr_name_spaces,
+                                        prj_names, selection, prj_vector, edge_attr_name_vector, 
+                                        total_num_nodes, local_num_edges, total_num_edges);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
+                 "py_scatter_read_graph_selection: unable to free MPI communicator");
     
     PyObject *py_attribute_info = py_build_edge_attribute_info (prj_names,
                                                                 edge_attr_name_spaces,
@@ -4899,8 +5048,7 @@ extern "C"
     "read_cell_attribute_selection(file_name, population_name, selection, namespace, comm=None)\n"
     "--\n"
     "\n"
-    "Reads cell attributes for the given cell gids from the given file and namespace. "
-    "Each rank will be assigned an equal number of cell gids, with the exception of the last rank if the number of cells is not evenly divisible by the number of ranks. \n"
+    "Reads cell attributes for the given cell gids from the given file and namespace. \n"
     "\n"
     "Parameters\n"
     "----------\n"
@@ -5074,6 +5222,223 @@ extern "C"
     attr_values.attr_names(attr_names);
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_read_cell_attribute_selection: unable to free MPI communicator");
+
+    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                              attr_names,
+                                                              attr_values,
+                                                              return_tp);
+
+    if (return_tp == return_tuple)
+      {
+        PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
+        PyObject *py_result_tuple = PyTuple_New(2);
+        PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
+        PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
+        return py_result_tuple;
+      }
+    else
+      {
+        return py_cell_attr_iter;
+      }
+  }
+  
+  PyDoc_STRVAR(
+    scatter_read_cell_attribute_selection_doc,
+    "scatter_read_cell_attribute_selection(file_name, population_name, selection, namespace, io_size=0, comm=None)\n"
+    "--\n"
+    "\n"
+    "Reads cell attributes for the given cell gids from the given file and namespace, using the specified io_size number of ranks for I/O operations and scattering the data to the respective ranks according to the selection. \n"
+    "\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "population_name : string\n"
+    "    Name of population from which to read.\n"
+    "\n"
+    "selection : int list\n"
+    "    A list of gids to read.\n"
+    "\n"
+    "namespace : string\n"
+    "    The namespace for which cell attributes will be read.\n"
+    "\n"
+    "io_size : int\n"
+    "    Optional number of ranks to use for I/O operations. If 0, use the same number of ranks as the given communicator.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "cell_iter : iterator\n"
+    "   An iterator that returns pairs (gid, attr_dict) where gid is the cell id and attr_dict is a dictionary with attribute key-value pairs. \n"
+    "\n");
+
+  static PyObject *py_scatter_read_cell_attribute_selection (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    herr_t status;
+    PyObject *py_comm = NULL;
+    PyObject *py_mask = NULL;
+    MPI_Comm *comm_ptr  = NULL;
+    const string default_namespace = "Attributes";
+    char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
+    PyObject *py_selection = NULL;
+    vector <CELL_IDX_T> selection;
+    unsigned long io_size = 0;
+    return_type return_tp = return_dict;
+    char *return_type_arg = NULL;
+    
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "pop_name",
+                                   "selection",
+                                   "namespace",
+                                   "comm",
+                                   "mask",
+                                   "io_size",
+                                   "return_type",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOOks", (char **)kwlist,
+                                     &file_name, &pop_name, &py_selection,
+                                     &attr_namespace, &py_comm, &py_mask,
+                                     &io_size, &return_type_arg))
+      return NULL;
+
+    if (return_type_arg != NULL)
+      {
+        string return_type_str = string(return_type_arg);
+        if (return_type_str == "dict")
+          return_tp = return_dict;
+        if (return_type_str == "tuple")
+          return_tp = return_tuple;
+#if HAS_STRUCT_SEQUENCE
+        if (return_type_str == "struct")
+          return_tp = return_struct;
+#endif
+      }
+    
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_read_trees: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
+
+    
+    MPI_Comm comm;
+
+    if (py_comm != NULL)
+      {
+        comm_ptr = PyMPIComm_Get(py_comm);
+        throw_assert(comm_ptr != NULL, 
+                     "py_read_cell_attribute_selection: pointer to MPI communicator is null");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_cell_attribute_selection: MPI communicator is null");
+        status = MPI_Comm_dup(*comm_ptr, &comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_cell_attribute_selection: unable to duplicate MPI communicator");
+      }
+    else
+      {
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+                     
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_cell_attribute_selection: unable to duplicate MPI communicator");
+      }
+
+    int rank, size;
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_cell_attribute_selection: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &rank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_cell_attribute_selection: unable to obtain rank of MPI communicator");
+    if (io_size == 0)
+      {
+        io_size = size;
+      }
+    
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(comm, string(file_name), pop_labels);
+    throw_assert (status >= 0,
+                  "py_read_cell_attribute_selection: unable to read population labels");
+
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err(std::string("py_scatter_read_cell_attribute_selection: ") + "Population " + pop_name + " not found");
+      }
+
+    size_t n_nodes;
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    throw_assert(cell::read_population_ranges(comm,
+                                              string(file_name),
+                                              pop_ranges, pop_vector,
+                                              n_nodes) >= 0,
+                 "py_scatter_read_cell_attribute_selection: unable to read population ranges");
+
+
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
+            CELL_IDX_T n = PyLong_AsLong(pyval);
+            selection.push_back(n);
+          }
+      }
+    else
+      {
+        size_t population_n = pop_vector[pop_idx].count;
+        size_t population_start = pop_vector[pop_idx].start;
+        for (size_t i = 0; (Py_ssize_t)i < population_n; i++)
+          {
+            selection.push_back(i + population_start);
+          }
+        
+      }
+
+    NamedAttrMap attr_values;
+    cell::scatter_read_cell_attribute_selection (comm, string(file_name), io_size,
+                                                 string(attr_namespace), attr_mask,
+                                                 string(pop_name), pop_vector[pop_idx].start,
+                                                 selection, attr_values);
+    vector<vector<string>> attr_names;
+    attr_values.attr_names(attr_names);
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
+                 "py_scatter_read_cell_attribute_selection: unable to free MPI communicator");
 
     PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
                                                               attr_names,
@@ -7309,6 +7674,8 @@ extern "C"
       read_cell_attribute_info_doc },
     { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
        read_cell_attribute_selection_doc },
+    { "scatter_read_cell_attribute_selection", (PyCFunction)py_scatter_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
+       scatter_read_cell_attribute_selection_doc },
     { "read_cell_attributes", (PyCFunction)py_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
       read_cell_attributes_doc },
     { "scatter_read_cell_attributes", (PyCFunction)py_scatter_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
@@ -7328,7 +7695,9 @@ extern "C"
     { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
     { "read_graph_selection", (PyCFunction)py_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
-      "Reads graph connectivity in Destination Block Sparse format." },
+      "Reads subset of graph connectivity in Destination Block Sparse format." },
+    { "scatter_read_graph_selection", (PyCFunction)py_scatter_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
+      "Reads subset of graph connectivity in Destination Block Sparse format." },
     { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS | METH_KEYWORDS,
       "Writes graph connectivity in Destination Block Sparse format." },
     { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,
