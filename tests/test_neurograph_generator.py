@@ -21,18 +21,19 @@ path = './data/dentate_test_connectivity.h5'
 path = '/home/igr/src/model/dentate/datasets/DG_test_connections_20171022.h5'
 path = '/home/igr/src/model/dentate/datasets/Test_GC_1000/DGC_test_connections_20171019.h5'
 path = '/home/igr/src/model/dentate/datasets/Test_GC_1000/DG_GC_test_connections_20180402.h5'
+path = '/scratch1/03320/iraikov/striped/dentate/Test_GC_1000/DG_Test_GC_1000_connections_20190625_compressed.h5'
 cache_size = 10
 destination = 'GC'
 sources = ['MC', 'MPP', 'LPP']
-gg = [ NeuroH5ProjectionGen (path, source, destination, cache_size=cache_size, comm=comm) for source in sources ]
+#cache_size=cache_size
+gg = [ NeuroH5ProjectionGen (path, source, destination, comm=comm) for source in sources ]
     
 for prj_gen_tuple in zip_longest(*gg):
     destination_gid = prj_gen_tuple[0][0]
     if destination_gid is not None:
+        print ('rank %d: destination_gid = %d' % (rank, destination_gid))
         for (source, (i,rest)) in zip_longest(sources, prj_gen_tuple):
-            print ('source = ', source)
-            print ('i = ', i)
-            print ('rest = ', rest)
+            print ('rank %d: destination_gid = %d source = %s' % (rank, destination_gid, str(source)))
 
 if rank == 0:
     import h5py

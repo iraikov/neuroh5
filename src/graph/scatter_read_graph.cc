@@ -72,6 +72,7 @@ namespace neuroh5
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_names.size(); i++)
         {
+          hsize_t total_read_blocks;
 
           string src_pop_name = prj_names[i].first;
           string dst_pop_name = prj_names[i].second;
@@ -79,8 +80,9 @@ namespace neuroh5
           scatter_read_projection(all_comm, io_size, edge_map_type,
                                   file_name, src_pop_name, dst_pop_name, attr_namespaces,
                                   node_rank_map, pop_vector, pop_ranges, pop_labels, pop_pairs,
-                                  prj_vector, edge_attr_names_vector,
-                                  local_num_nodes, local_num_edges, total_num_edges);
+                                  prj_vector, edge_attr_names_vector, 
+                                  local_num_nodes, local_num_edges, total_num_edges,
+                                  total_read_blocks);
 
         }
       return ierr;

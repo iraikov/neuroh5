@@ -6319,13 +6319,15 @@ extern "C"
     set< pair<pop_t, pop_t> > pop_pairs;
     vector<pair <pop_t, string> > pop_labels;
     vector<pair<string,string> > prj_names;
+    map <CELL_IDX_T, rank_t> node_rank_map;
+
     edge_map_t edge_map;
     edge_map_iter_t edge_map_iter;
     map <string, vector< vector<string> > > edge_attr_names;
     vector<string> edge_attr_name_spaces;
     string src_pop_name, dst_pop_name;
     size_t total_num_nodes, local_num_nodes, total_num_edges, local_num_edges;
-    hsize_t total_read_blocks, local_read_blocks;
+    hsize_t total_read_blocks;
     NODE_IDX_T dst_start, src_start;
 
   } NeuroH5ProjectionGenState;
@@ -6422,7 +6424,7 @@ extern "C"
     EdgeMapType edge_map_type = EdgeMapDst;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned int cache_size=1;
+    unsigned int io_size=0, cache_size=1;
     char *file_name, *src_pop_name, *dst_pop_name;
     PyObject* py_attr_name_spaces = NULL;
     vector<pop_range_t> pop_vector;
@@ -6439,13 +6441,14 @@ extern "C"
                                    "namespaces",
                                    "edge_map_type",
                                    "comm",
+                                   "io_size",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OiOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OiOii", (char **)kwlist,
                                      &file_name, &src_pop_name, &dst_pop_name, 
                                      &py_attr_name_spaces, &opt_edge_map_type,
-                                     &py_comm, &cache_size))
+                                     &py_comm, &io_size, &cache_size))
       return NULL;
 
     MPI_Comm comm;
@@ -6476,6 +6479,8 @@ extern "C"
     throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
                  "NeuroH5ProjectionGen: unable to obtain MPI communicator rank");
 
+    if ((size > 0) && ((io_size == 0) || (io_size > (unsigned int)size)))
+      io_size = size;
 
     if (cache_size <= 0)
       {
@@ -6528,6 +6533,7 @@ extern "C"
     py_ngg->state->node_count      = 0;
     py_ngg->state->block_index     = 0;
     py_ngg->state->block_count     = num_blocks;
+    py_ngg->state->io_size         = io_size;
     py_ngg->state->cache_size      = cache_size;
     py_ngg->state->file_name       = string(file_name);
     py_ngg->state->src_pop_name    = string(src_pop_name);
@@ -6544,7 +6550,6 @@ extern "C"
     py_ngg->state->total_num_edges = 0;
     py_ngg->state->local_num_edges = 0;
     py_ngg->state->total_read_blocks = 0;
-    py_ngg->state->local_read_blocks = 0;
 
     uint32_t dst_pop_idx = 0, src_pop_idx = 0;
     bool src_pop_set = false, dst_pop_set = false;
@@ -6582,7 +6587,7 @@ extern "C"
     int topology_flag=1;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned int io_size, cache_size=100;
+    unsigned int io_size=0, cache_size=100;
     char *file_name, *pop_name;
     PyObject* py_attr_name_spaces = NULL;
     vector<string> attr_name_spaces;
@@ -7348,24 +7353,26 @@ extern "C"
     vector <edge_map_t> prj_vector;
 
     
-    status = graph::read_projection(py_ngg->state->comm,
-                                    py_ngg->state->file_name,
-                                    py_ngg->state->pop_ranges,
-                                    py_ngg->state->pop_pairs,
-                                    py_ngg->state->src_pop_name,
-                                    py_ngg->state->dst_pop_name,
-                                    py_ngg->state->src_start,
-                                    py_ngg->state->dst_start,
-                                    py_ngg->state->edge_attr_name_spaces,
-                                    prj_vector,
-                                    edge_attr_name_vector,
-                                    py_ngg->state->local_num_nodes,
-                                    py_ngg->state->local_num_edges,
-                                    py_ngg->state->total_num_edges,
-                                    py_ngg->state->local_read_blocks,
-                                    py_ngg->state->total_read_blocks,
-                                    py_ngg->state->block_index,
-                                    py_ngg->state->cache_size);
+    status = graph::scatter_read_projection(py_ngg->state->comm,
+                                            py_ngg->state->io_size,
+                                            py_ngg->state->edge_map_type,
+                                            py_ngg->state->file_name,
+                                            py_ngg->state->src_pop_name,
+                                            py_ngg->state->dst_pop_name,
+                                            py_ngg->state->edge_attr_name_spaces,
+                                            py_ngg->state->node_rank_map,
+                                            py_ngg->state->pop_vector,
+                                            py_ngg->state->pop_ranges,
+                                            py_ngg->state->pop_labels,
+                                            py_ngg->state->pop_pairs,
+                                            prj_vector,
+                                            edge_attr_name_vector,
+                                            py_ngg->state->local_num_nodes,
+                                            py_ngg->state->local_num_edges,
+                                            py_ngg->state->total_num_edges,
+                                            py_ngg->state->total_read_blocks,
+                                            py_ngg->state->block_index,
+                                            py_ngg->state->cache_size);
 
     throw_assert (status >= 0, "NeuroH5ProjectionGen: read_projection error");
     throw_assert(prj_vector.size() > 0, "NeuroH5ProjectionGen: empty projection");

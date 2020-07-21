@@ -66,13 +66,13 @@ namespace neuroh5
                             {
                             case EdgeMapDst:
                               {
+                                rank_t dst_rank=0;
                                 auto it = node_rank_map.find(dst);
-                                rank_t myrank=0;
                                 if (it == node_rank_map.end())
-                                  { myrank = num_dst % num_ranks; }
+                                  { dst_rank = dst % num_ranks; }
                                 else
-                                  { myrank = it->second; }
-                                edge_tuple_t& et = rank_edge_map[myrank][dst];
+                                  { dst_rank = it->second; }
+                                edge_tuple_t& et = rank_edge_map[dst_rank][dst];
                                 vector<NODE_IDX_T> &my_srcs = get<0>(et);
 
                                 vector <AttrVal> &edge_attr_vec = get<1>(et);
@@ -98,13 +98,13 @@ namespace neuroh5
                                 for (size_t j = low, jj=0; j < high; ++j, ++jj)
                                   {
                                     NODE_IDX_T src = src_idx[j] + src_start;
-                                    rank_t myrank = 0;
+                                    rank_t dst_rank = 0;
                                     auto it = node_rank_map.find(src);
                                     if (it == node_rank_map.end())
-                                      { myrank = src % num_ranks; }
+                                      { dst_rank = dst % num_ranks; }
                                     else
-                                      { myrank = it->second; }
-                                    edge_tuple_t& et = rank_edge_map[myrank][src];
+                                      { dst_rank = it->second; }
+                                    edge_tuple_t& et = rank_edge_map[dst_rank][src];
 
                                     vector<NODE_IDX_T> &my_dsts = get<0>(et);
 

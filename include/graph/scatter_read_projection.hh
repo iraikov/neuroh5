@@ -39,6 +39,7 @@ namespace neuroh5
                                  std::vector < edge_map_t >& prj_vector,
                                  std::vector < map <string, std::vector < std::vector<string> > > > & edge_attr_names_vector,
                                  size_t &local_num_nodes, size_t &local_num_edges, size_t &total_num_edges,
+                                 hsize_t &total_read_blocks,
                                  size_t offset = 0, size_t numitems = 0);
   }
 }

@@ -45,17 +45,18 @@ namespace neuroh5
      *****************************************************************************/
 
     int scatter_read_projection (MPI_Comm all_comm, const int io_size, EdgeMapType edge_map_type, 
-                            const string& file_name, const string& src_pop_name, const string& dst_pop_name, 
-                            const vector<string> &attr_namespaces,
-                            const map<NODE_IDX_T, rank_t>&  node_rank_map,
-                            const vector<pop_range_t>& pop_vector,
-                            const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
-                            const vector< pair<pop_t, string> >& pop_labels,
-                            const set< pair<pop_t, pop_t> >& pop_pairs,
-                            vector < edge_map_t >& prj_vector,
-                            vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
-                            size_t &local_num_nodes, size_t &local_num_edges, size_t &total_num_edges,
-                            size_t offset, size_t numitems)
+                                 const string& file_name, const string& src_pop_name, const string& dst_pop_name, 
+                                 const vector<string> &attr_namespaces,
+                                 const map<NODE_IDX_T, rank_t>&  node_rank_map,
+                                 const vector<pop_range_t>& pop_vector,
+                                 const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
+                                 const vector< pair<pop_t, string> >& pop_labels,
+                                 const set< pair<pop_t, pop_t> >& pop_pairs,
+                                 vector < edge_map_t >& prj_vector,
+                                 vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
+                                 size_t &local_num_nodes, size_t &local_num_edges, size_t &total_num_edges,
+                                 hsize_t& total_read_blocks,
+                                 size_t offset, size_t numitems)
     {
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
@@ -71,6 +72,12 @@ namespace neuroh5
       bool is_io_rank = false;
       if (io_rank_set.find(rank) != io_rank_set.end())
         is_io_rank = true;
+
+      size_t io_rank_root = 0;
+      if (io_rank_set.size() > 0)
+        {
+          io_rank_root = *(io_rank_set.begin());
+        }
 
       // Am I an I/O rank?
       if (is_io_rank)
@@ -111,8 +118,7 @@ namespace neuroh5
               vector<DST_PTR_T> dst_ptr;
               vector<NODE_IDX_T> src_idx;
               map<string, data::NamedAttrVal> edge_attr_map;
-              hsize_t local_read_blocks, total_read_blocks;
-              
+              hsize_t local_read_blocks;
               uint32_t dst_pop_idx=0, src_pop_idx=0;
               bool src_pop_set = false, dst_pop_set = false;
             
@@ -136,15 +142,15 @@ namespace neuroh5
 
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading projection ", src_pop_name, " -> ", dst_pop_name);
               throw_assert_nomsg(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                    dst_start, src_start, block_base, edge_base,
-                                                    dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                    total_num_edges, total_read_blocks, local_read_blocks,
-                                                    offset, numitems) >= 0);
+                                                                dst_start, src_start, block_base, edge_base,
+                                                                dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                                total_num_edges, total_read_blocks, local_read_blocks,
+                                                                offset, numitems) >= 0);
           
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges
               throw_assert_nomsg(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                        pop_ranges, pop_pairs) == true);
+                                                    pop_ranges, pop_pairs) == true);
           
               edge_count = src_idx.size();
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading attributes for ", src_pop_name, " -> ", dst_pop_name);
@@ -152,12 +158,12 @@ namespace neuroh5
                 {
                   vector< pair<string,AttrKind> > edge_attr_info;
                   throw_assert_nomsg(graph::get_edge_attributes(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                    attr_namespace, edge_attr_info) >= 0);
+                                                                attr_namespace, edge_attr_info) >= 0);
 
                   throw_assert_nomsg(graph::read_all_edge_attributes(io_comm, file_name,
-                                                         src_pop_name, dst_pop_name, attr_namespace,
-                                                         edge_base, edge_count, edge_attr_info,
-                                                         edge_attr_map[attr_namespace]) >= 0);
+                                                                     src_pop_name, dst_pop_name, attr_namespace,
+                                                                     edge_base, edge_count, edge_attr_info,
+                                                                     edge_attr_map[attr_namespace]) >= 0);
                   
                   edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
                 }
@@ -186,11 +192,13 @@ namespace neuroh5
 
             } // is_io_rank
 
+          
+          throw_assert_nomsg(MPI_Bcast(&total_read_blocks, 1, MPI_SIZE_T, io_rank_root, all_comm) == MPI_SUCCESS);
           MPI_Barrier(all_comm);
           MPI_Barrier(io_comm);
           MPI_Comm_free(&io_comm);
           throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                             recvcounts, rdispls, recvbuf) >= 0);
+                                                         recvcounts, rdispls, recvbuf) >= 0);
         }
 
         if (recvbuf.size() > 0)
