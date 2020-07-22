@@ -110,6 +110,10 @@ namespace neuroh5
 
           if (is_io_rank)
             {
+              int io_rank;
+              throw_assert_nomsg(MPI_Comm_rank(io_comm, &io_rank) == MPI_SUCCESS);
+
+
               DST_BLK_PTR_T block_base;
               DST_PTR_T edge_base, edge_count;
               NODE_IDX_T dst_start, src_start;
@@ -145,7 +149,7 @@ namespace neuroh5
                                                                 dst_start, src_start, block_base, edge_base,
                                                                 dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                                 total_num_edges, total_read_blocks, local_read_blocks,
-                                                                offset, numitems) >= 0);
+                                                                offset, numitems * size) >= 0);
           
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges
@@ -170,7 +174,7 @@ namespace neuroh5
 
               
               // append to the edge map
-              throw_assert_nomsg(data::append_rank_edge_map(size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+              throw_assert_nomsg(data::append_rank_edge_map(rank, size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                             attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
                                                             edge_map_type) >= 0);
               

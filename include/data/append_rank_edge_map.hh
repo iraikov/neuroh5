@@ -21,6 +21,7 @@ namespace neuroh5
 
     int append_rank_edge_map
     (
+     const size_t                                initial_rank,
      const size_t                                num_ranks,
      const NODE_IDX_T&                           dst_start,
      const NODE_IDX_T&                           src_start,

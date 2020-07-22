@@ -88,7 +88,7 @@ namespace neuroh5
         {
           if (offset < num_blocks)
             {
-              read_blocks = min((hsize_t)numitems*size, num_blocks-offset);
+              read_blocks = min((hsize_t)numitems, num_blocks-offset);
             }
         }
       else

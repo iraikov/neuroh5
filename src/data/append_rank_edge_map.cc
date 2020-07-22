@@ -27,6 +27,7 @@ namespace neuroh5
      **************************************************************************/
     int append_rank_edge_map
     (
+     const size_t                     initial_rank,
      const size_t                     num_ranks,
      const NODE_IDX_T&                dst_start,
      const NODE_IDX_T&                src_start,
@@ -43,7 +44,7 @@ namespace neuroh5
      )
     {
       int ierr = 0; size_t dst_ptr_size;
-
+      
       if (dst_blk_ptr.size() > 0)
         {
           dst_ptr_size = dst_ptr.size();
@@ -69,7 +70,7 @@ namespace neuroh5
                                 rank_t dst_rank=0;
                                 auto it = node_rank_map.find(dst);
                                 if (it == node_rank_map.end())
-                                  { dst_rank = dst % num_ranks; }
+                                  { dst_rank = (initial_rank + num_dst) % num_ranks; }
                                 else
                                   { dst_rank = it->second; }
                                 edge_tuple_t& et = rank_edge_map[dst_rank][dst];
@@ -101,7 +102,7 @@ namespace neuroh5
                                     rank_t dst_rank = 0;
                                     auto it = node_rank_map.find(src);
                                     if (it == node_rank_map.end())
-                                      { dst_rank = dst % num_ranks; }
+                                      { dst_rank = j % num_ranks; }
                                     else
                                       { dst_rank = it->second; }
                                     edge_tuple_t& et = rank_edge_map[dst_rank][src];
