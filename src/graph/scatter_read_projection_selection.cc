@@ -110,6 +110,7 @@ namespace neuroh5
               vector<NODE_IDX_T> src_idx;
               vector< pair<hsize_t,hsize_t> > src_idx_ranges;
               map<string, data::NamedAttrVal> edge_attr_map;
+              hsize_t local_read_blocks;
               
               mpi::MPI_DEBUG(io_comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name, " : "
                              "selection of size ", selection.size());

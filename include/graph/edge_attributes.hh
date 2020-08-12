@@ -19,6 +19,30 @@ namespace neuroh5
 {
   namespace graph
   {
+    /// @brief Checks if a particular edge attribute namespace exists in the given file.
+    ///
+    /// @param file_name      Input file name
+    ///
+    /// @param src_pop_name   The name of the source population
+    ///
+    /// @param dst_pop_name   The name of the destination population
+    ///
+    /// @param name_space    Name space.
+    ///
+    /// @param has_name_space    Boolean flag, set to true if the name space exists.
+    ///
+    /// @return                  HDF5 error code.
+    herr_t has_edge_attribute_namespace
+    (
+     MPI_Comm                      comm,
+     const string&                 file_name,
+     const string&                 src_pop_name,
+     const string&                 dst_pop_name,
+     const string&                 name_space,
+     bool &has_namespace
+     );
+
+    
     /// @brief Discovers the list of edge attributes.
     ///
     /// @param file_name      Input file name

@@ -52,6 +52,7 @@
 #include "mpe_seq.hh"
 #include "read_projection.hh"
 #include "read_graph.hh"
+#include "read_graph_info.hh"
 #include "read_graph_selection.hh"
 #include "scatter_read_graph_selection.hh"
 #include "scatter_read_graph.hh"
@@ -3969,6 +3970,267 @@ extern "C"
   }
 
   PyDoc_STRVAR(
+    read_graph_info_doc,
+    "read_graph_info(file_name, namespaces, read_node_index=False, comm=None)\n"
+    "--\n"
+    "\n"
+    "Returns the names of the projections contained in the given file, their edge attributes, and optionally the node index.\n"
+    "Parameters\n"
+    "----------\n"
+    "file_name : string\n"
+    "    The NeuroH5 file to read.\n"
+    "    \n"
+    "    .. warning::\n"
+    "       The given file must be a valid HDF5 file that contains /H5Types and /Populations groups.\n"
+    "\n"
+    "comm : MPI communicator\n"
+    "    Optional MPI communicator. If None, the world communicator will be used.\n"
+    "\n"
+    "Returns\n"
+    "-------\n"
+    "projection_info : (source, destination) : {namespaces : attrinbte list}\n"
+    "    A dictionary where the keys are tuples (source, destination) population names corresponding to each projection.\n"
+    "\n");
+
+
+  static PyObject *py_read_graph_info (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status; 
+    char *input_file_name;
+    bool read_node_index = false;
+    int read_node_index_flag = 0;
+    PyObject *py_edge_attr_name_spaces=NULL;
+    PyObject *py_comm = NULL, *py_pop_names = NULL;
+    MPI_Comm *comm_ptr  = NULL;
+
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "namespaces",
+                                   "read_node_index",
+                                   "comm",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|iO", (char **)kwlist,
+                                     &input_file_name, &py_edge_attr_name_spaces, &read_node_index_flag, &py_comm))
+      return NULL;
+
+    status = PyList_Check(py_edge_attr_name_spaces);
+    throw_assert(status > 0,
+                 "py_read_graph_info: invalid attribute namespace list");
+
+    read_node_index = read_node_index_flag>0;
+
+    MPI_Comm comm;
+
+    if (py_comm != NULL)
+      {
+        comm_ptr = PyMPIComm_Get(py_comm);
+        throw_assert(comm_ptr != NULL,
+                     "py_read_graph_info: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_read_graph_info: invalid MPI communicator");
+        status = MPI_Comm_dup(*comm_ptr, &comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph_info: unable to duplicate MPI communicator");
+      }
+    else
+      {
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_read_graph_info: unable to duplicate MPI communicator");
+      }
+
+    int srank, ssize; size_t rank, size;
+    status = MPI_Comm_size(comm, &ssize);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_graph_info: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &srank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_graph_info: unable to obtain rank of MPI communicator");
+
+    size = ssize;
+    rank = srank;
+    
+    vector <string> edge_attr_name_spaces;
+    if (py_edge_attr_name_spaces != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_edge_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_edge_attr_name_spaces, (Py_ssize_t)i);
+            const char *str = PyStr_ToCString (pyval);
+            edge_attr_name_spaces.push_back(string(str));
+          }
+      }
+
+    rank_t root = 0;
+    
+    vector< pair<string, string> > prj_names;
+    vector < map <string, vector < vector<string> > > > edge_attr_names_vector;
+    std::vector<std::vector<NODE_IDX_T>> prj_node_index;
+
+    status = graph::read_graph_info(comm, input_file_name, edge_attr_name_spaces, true, 
+                                    prj_names, edge_attr_names_vector, prj_node_index);
+    throw_assert(status == 0, "py_read_graph_info: error in read_graph_info");
+    throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                 "py_read_graph_info: barrier error");
+    
+    {
+      vector<char> sendbuf;
+      size_t sendbuf_size=0;
+      if ((rank == root) && (prj_names.size() > 0) )
+        {
+          data::serialize_data(prj_names, sendbuf);
+          sendbuf_size = sendbuf.size();
+        }
+
+      status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_graph_info: broadcast error");
+      
+      sendbuf.resize(sendbuf_size);
+      status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_graph_info: broadcast error");
+      
+      if ((rank != root) && (sendbuf_size > 0))
+        {
+          data::deserialize_data(sendbuf, prj_names);
+        }
+    }
+
+    {
+      vector<char> sendbuf;
+      size_t sendbuf_size=0;
+      if ((rank == root) && (edge_attr_names_vector.size() > 0) )
+        {
+          data::serialize_data(edge_attr_names_vector, sendbuf);
+          sendbuf_size = sendbuf.size();
+        }
+
+      status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_graph_info: broadcast error");
+      
+      sendbuf.resize(sendbuf_size);
+      status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_graph_info: broadcast error");
+      
+      if ((rank != root) && (sendbuf_size > 0))
+        {
+          data::deserialize_data(sendbuf, edge_attr_names_vector);
+        }
+    }
+
+    {
+      vector<char> sendbuf;
+      size_t sendbuf_size=0;
+      if ((rank == root) && (prj_node_index.size() > 0) )
+        {
+          data::serialize_data(prj_node_index, sendbuf);
+          sendbuf_size = sendbuf.size();
+        }
+      
+      status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_cell_attribute_info: broadcast error");
+      
+      sendbuf.resize(sendbuf_size);
+      status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "py_read_cell_attribute_info: broadcast error");
+      
+      if ((rank != root) && (sendbuf_size > 0))
+        {
+          data::deserialize_data(sendbuf, prj_node_index);
+        }
+    }
+
+    PyObject *py_graph_info = PyDict_New();
+
+    ptrdiff_t pos = 0;
+    for (auto const& prj_it : prj_names)
+      {
+        PyObject *py_ns_attribute_info = PyDict_New();
+
+        for (auto const& it_edge_attr : edge_attr_names_vector[pos])
+          {
+            const string &ns = it_edge_attr.first;
+            PyObject *py_attribute_names  = PyList_New(0);
+            
+            for (auto const& it_attr_type_vector: it_edge_attr.second)
+              {
+                for (const string& attr_name : it_attr_type_vector)
+                  {
+                    PyObject *py_attr_name = PyStr_FromCString(attr_name.c_str());
+                    status = PyList_Append(py_attribute_names, py_attr_name);
+                    throw_assert(status == 0,
+                             "py_read_graph_info: list append error");
+                
+                    Py_DECREF(py_attr_name);
+                  }
+              }
+            PyDict_SetItemString(py_ns_attribute_info,
+                                 ns.c_str(),
+                                 py_attribute_names);
+            Py_DECREF(py_attribute_names);        
+          }
+
+        PyObject *py_projection_info  = PyList_New(0);
+        status = PyList_Append(py_projection_info, py_ns_attribute_info);
+        throw_assert(status == 0,
+                     "py_read_graph_info: list append error");
+        Py_DECREF(py_ns_attribute_info);
+
+        if (prj_node_index[pos].size() > 0)
+          {
+            PyObject *py_node_index = PyList_New(0);
+                
+            for(auto const& value: prj_node_index[pos])
+              {
+                status = PyList_Append(py_node_index, PyLong_FromLong((long)value));
+                throw_assert(status == 0,
+                             "py_read_cell_attribute_info: list append error");
+                
+              }
+            status = PyList_Append(py_projection_info, py_node_index);
+            
+            Py_DECREF(py_node_index);
+          }
+        else
+          {
+            status = PyList_Append(py_projection_info, Py_None);
+            throw_assert(status == 0,
+                         "py_read_graph_info: list append error");
+            
+          }
+        
+        PyObject* py_projection_key = PyTuple_New(2);
+        throw_assert(py_projection_key != NULL,
+                     "py_read_graph_info: tuple allocation error");
+        PyObject *py_src_name = PyStr_FromCString(prj_it.first.c_str());
+        PyObject *py_dst_name = PyStr_FromCString(prj_it.second.c_str());
+        PyTuple_SetItem(py_projection_key, 0, py_src_name);
+        PyTuple_SetItem(py_projection_key, 1, py_dst_name);
+        
+        PyDict_SetItem(py_graph_info, py_projection_key, py_projection_info);
+        Py_DECREF(py_projection_info);
+        Py_DECREF(py_projection_key);
+        Py_DECREF(py_graph_info);        
+
+        pos++;
+      }
+
+    status = MPI_Comm_free(&comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_read_graph_info: unable to free MPI communicator");
+
+                 
+    return py_graph_info;
+  }
+
+  
+  PyDoc_STRVAR(
     read_trees_doc,
     "read_trees(file_name, population_name, namespaces=[], topology=True, comm=None)\n"
     "--\n"
@@ -7671,6 +7933,8 @@ extern "C"
       read_population_names_doc },
     { "read_projection_names", (PyCFunction)py_read_projection_names, METH_VARARGS | METH_KEYWORDS,
       read_projection_names_doc },
+    { "read_graph_info", (PyCFunction)py_read_graph_info, METH_VARARGS | METH_KEYWORDS,
+      read_graph_info_doc },
     { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS | METH_KEYWORDS,
       read_trees_doc },
     { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,

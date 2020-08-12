@@ -150,7 +150,58 @@ namespace neuroh5
 
       return 0;
     }
-  
+
+    /////////////////////////////////////////////////////////////////////////
+    herr_t has_edge_attribute_namespace
+    (
+     MPI_Comm                      comm,
+     const string&                 file_name,
+     const string&                 src_pop_name,
+     const string&                 dst_pop_name,
+     const string&                 name_space,
+     bool &has_namespace
+     )
+    {
+      herr_t ierr=0;
+      int root=0;
+      int rank, size;
+      throw_assert_nomsg(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      uint8_t has_namespace_flag = 0;
+
+      if (rank == root)
+        {
+          hid_t in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+          throw_assert_nomsg(in_file >= 0);
+          
+          string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
+          
+          ierr = hdf5::exists_dataset (in_file, path.c_str());
+          if (ierr > 0)
+            {
+              has_namespace_flag = 1;
+            }
+          else
+            {
+              has_namespace_flag = 0;
+            }
+          ierr = H5Fclose(in_file);
+        }
+
+      throw_assert_nomsg(MPI_Bcast(&has_namespace_flag, 1, MPI_UINT8_T, root, comm) == MPI_SUCCESS);
+      
+      if (has_namespace_flag > 0)
+        {
+          has_namespace = true;
+        }
+      else
+        {
+          has_namespace = false;
+        }
+      return ierr;
+    }
+
+    
     /////////////////////////////////////////////////////////////////////////
     herr_t get_edge_attributes
     (
