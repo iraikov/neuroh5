@@ -43,6 +43,16 @@ namespace neuroh5
      std::vector<std::vector<NODE_IDX_T>>& prj_node_index
      
      );
+
+    herr_t has_projection
+    (
+     MPI_Comm                      comm,
+     const string&                 file_name,
+     const string&                 src_pop_name,
+     const string&                 dst_pop_name,
+     bool &has_projection
+     );
+
   }
 }
 

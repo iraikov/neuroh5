@@ -10,7 +10,7 @@
 #include "debug.hh"
 
 #include "neuroh5_types.hh"
-#include "read_projection.hh"
+#include "read_projection_info.hh"
 #include "edge_attributes.hh"
 #include "read_projection_datasets.hh"
 #include "validate_edge_list.hh"
@@ -59,7 +59,10 @@ namespace neuroh5
       throw_assert(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS,
                    "read_projection: invalid MPI communicator");
 
-      
+      bool has_projection_flag = false;
+      has_projection(comm, file_name, src_pop_name, dst_pop_name, has_projection_flag);
+      if (!has_projection_flag)
+        return ierr;
       
       DST_BLK_PTR_T block_base;
       DST_PTR_T edge_base;
@@ -67,7 +70,6 @@ namespace neuroh5
       vector<NODE_IDX_T> dst_idx;
       vector<DST_PTR_T> dst_ptr;
 
-      map<string, data::NamedAttrVal> edge_attr_map;
       std::vector<NODE_IDX_T> node_index;
       if (read_node_index)
         {
@@ -122,28 +124,142 @@ namespace neuroh5
       for (string attr_namespace : edge_attr_name_spaces) 
         {
           bool has_namespace = false;
-          throw_assert(has_edge_attribute_namespace(comm, file_name, src_pop_name, dst_pop_name, attr_namespace, has_namespace),
+          throw_assert(has_edge_attribute_namespace(comm, file_name, src_pop_name, dst_pop_name, attr_namespace, has_namespace) >= 0,
                        "read_projection: has_edge_attribute_namespace error");
           if (has_namespace)
             {
+              edge_attr_names[attr_namespace].resize(data::AttrVal::num_attr_types);
               vector< pair<string,AttrKind> > edge_attr_info;
-              
               throw_assert(graph::get_edge_attributes(comm, file_name, src_pop_name, dst_pop_name,
                                                       attr_namespace, edge_attr_info) >= 0,
                            "read_projection: get_edge_attributes error");
-              
-              edge_attr_map[attr_namespace].attr_names(edge_attr_names[attr_namespace]);
+
+              for (auto &attr_it : edge_attr_info)
+                {
+                  const AttrKind attr_kind = attr_it.second;
+                  size_t attr_size = attr_kind.size;
+
+                  size_t attr_index;
+                  switch (attr_kind.type)
+                    {
+                    case UIntVal:
+                      if (attr_size == 4)
+                        {
+                          attr_index = data::AttrVal::attr_index_uint32;
+                        }
+                      else if (attr_size == 2)
+                        {
+                          attr_index = data::AttrVal::attr_index_uint16;
+                        }
+                      else if (attr_size == 1)
+                        {
+                          attr_index = data::AttrVal::attr_index_uint8;
+                        }
+                      else
+                        {
+                          throw runtime_error("Unsupported integer attribute size");
+                        };
+                      break;
+                    case SIntVal:
+                      if (attr_size == 4)
+                        {
+                          attr_index = data::AttrVal::attr_index_int32;
+                        }
+                      else if (attr_size == 2)
+                        {
+                          attr_index = data::AttrVal::attr_index_int16;
+                        }
+                      else if (attr_size == 1)
+                        {
+                          attr_index = data::AttrVal::attr_index_int8;
+                        }
+                      else
+                        {
+                          throw runtime_error("Unsupported integer attribute size");
+                        };
+                      break;
+                    case FloatVal:
+                      attr_index = data::AttrVal::attr_index_float;
+                      break;
+                    case EnumVal:
+                      if (attr_size == 1)
+                        {
+                          attr_index = data::AttrVal::attr_index_uint8;
+                        }
+                      else
+                        {
+                          throw runtime_error("Unsupported enumerated attribute size");
+                        };
+                      break;
+                    default:
+                      throw runtime_error("Unsupported attribute type");
+                      break;
+                    }
+                  
+                  edge_attr_names[attr_namespace][attr_index].push_back(attr_it.first);
+                }
             }
         }
       
       size_t local_prj_num_edges=0;
 
+      prj_names.push_back(make_pair(src_pop_name, dst_pop_name));
       edge_attr_names_vector.push_back (edge_attr_names);
-
+          
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "read_projection_info: error in MPI_Barrier");
 
       
+      return ierr;
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////
+    herr_t has_projection
+    (
+     MPI_Comm                      comm,
+     const string&                 file_name,
+     const string&                 src_pop_name,
+     const string&                 dst_pop_name,
+     bool &has_projection
+     )
+    {
+      herr_t ierr=0;
+      int root=0;
+      int rank, size;
+      throw_assert_nomsg(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+      uint8_t has_projection_flag = 0;
+
+      if (rank == root)
+        {
+          hid_t in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+          throw_assert_nomsg(in_file >= 0);
+          
+          string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
+          
+          ierr = hdf5::exists_dataset (in_file, path);
+          if (ierr > 0)
+            {
+              has_projection_flag = 1;
+            }
+          else
+            {
+              has_projection_flag = 0;
+            }
+          ierr = H5Fclose(in_file);
+        }
+
+      throw_assert_nomsg(MPI_Bcast(&has_projection_flag, 1, MPI_UINT8_T, root, comm) == MPI_SUCCESS);
+      
+      if (has_projection_flag > 0)
+        {
+          has_projection = true;
+        }
+      else
+        {
+          has_projection = false;
+        }
       return ierr;
     }
 

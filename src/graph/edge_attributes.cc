@@ -11,6 +11,7 @@
 #include "attr_kind_datatype.hh"
 #include "edge_attributes.hh"
 #include "exists_dataset.hh"
+#include "exists_group.hh"
 #include "path_names.hh"
 #include "serialize_data.hh"
 #include "read_template.hh"
@@ -176,7 +177,7 @@ namespace neuroh5
           
           string path = hdf5::edge_attribute_prefix(src_pop_name, dst_pop_name, name_space);
           
-          ierr = hdf5::exists_dataset (in_file, path.c_str());
+          ierr = hdf5::exists_group (in_file, path.c_str());
           if (ierr > 0)
             {
               has_namespace_flag = 1;

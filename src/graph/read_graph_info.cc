@@ -59,17 +59,17 @@ namespace neuroh5
           pop_t src_pop_idx = it.first, dst_pop_idx = it.second;
           string src_pop_name, dst_pop_name;
           bool src_pop_set = false, dst_pop_set = false;
-          
+
           for (auto const& label_it : pop_labels)
             {
-              if (it.first == src_pop_idx)
+              if (label_it.first == src_pop_idx)
                 {
-                  src_pop_name = it.second;
+                  src_pop_name = label_it.second;
                   src_pop_set = true;
                 }
-              if (it.first == dst_pop_idx)
+              if (label_it.first == dst_pop_idx)
                 {
-                  dst_pop_name = it.second;
+                  dst_pop_name = label_it.second;
                   dst_pop_set = true;
                 }
             }

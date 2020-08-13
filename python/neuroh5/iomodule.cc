@@ -4010,7 +4010,7 @@ extern "C"
                                    "comm",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|iO", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|OiO", (char **)kwlist,
                                      &input_file_name, &py_edge_attr_name_spaces, &read_node_index_flag, &py_comm))
       return NULL;
 
@@ -4068,7 +4068,7 @@ extern "C"
     vector < map <string, vector < vector<string> > > > edge_attr_names_vector;
     std::vector<std::vector<NODE_IDX_T>> prj_node_index;
 
-    status = graph::read_graph_info(comm, input_file_name, edge_attr_name_spaces, true, 
+    status = graph::read_graph_info(comm, input_file_name, edge_attr_name_spaces, read_node_index, 
                                     prj_names, edge_attr_names_vector, prj_node_index);
     throw_assert(status == 0, "py_read_graph_info: error in read_graph_info");
     throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
@@ -4149,7 +4149,7 @@ extern "C"
     PyObject *py_graph_info = PyDict_New();
 
     ptrdiff_t pos = 0;
-    for (auto const& prj_it : prj_names)
+    for (auto& prj_it : prj_names)
       {
         PyObject *py_ns_attribute_info = PyDict_New();
 
@@ -4157,7 +4157,6 @@ extern "C"
           {
             const string &ns = it_edge_attr.first;
             PyObject *py_attribute_names  = PyList_New(0);
-            
             for (auto const& it_attr_type_vector: it_edge_attr.second)
               {
                 for (const string& attr_name : it_attr_type_vector)
@@ -4182,7 +4181,7 @@ extern "C"
                      "py_read_graph_info: list append error");
         Py_DECREF(py_ns_attribute_info);
 
-        if (prj_node_index[pos].size() > 0)
+        if (read_node_index)
           {
             PyObject *py_node_index = PyList_New(0);
                 
@@ -4216,7 +4215,6 @@ extern "C"
         PyDict_SetItem(py_graph_info, py_projection_key, py_projection_info);
         Py_DECREF(py_projection_info);
         Py_DECREF(py_projection_key);
-        Py_DECREF(py_graph_info);        
 
         pos++;
       }

@@ -58,7 +58,7 @@ namespace neuroh5
      vector<DST_PTR_T>&         dst_ptr,
      bool collective = true
      );
-    
+
   }
 }
 

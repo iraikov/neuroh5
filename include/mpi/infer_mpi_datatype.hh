@@ -1,7 +1,8 @@
 #ifndef INFER_MPI_DATATYPE
 #define INFER_MPI_DATATYPE
 
-#include <cassert>
+#include "throw_assert.hh"
+
 #include <mpi.h>
 
 #include <type_traits>
@@ -53,7 +54,7 @@ MPI_Datatype infer_mpi_datatype(const T& x)
     }
   else
     {
-      assert(result != MPI_DATATYPE_NULL);
+      throw_assert_nomsg(result != MPI_DATATYPE_NULL);
     }
 
   return result;
