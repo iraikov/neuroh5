@@ -111,11 +111,24 @@ namespace neuroh5
               vector< pair<hsize_t,hsize_t> > src_idx_ranges;
               map<string, data::NamedAttrVal> edge_attr_map;
               hsize_t local_read_blocks;
+
+              unsigned int io_rank, io_size;
+              throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_size) >= 0);
+              throw_assert_nomsg(MPI_Comm_rank(io_comm, (int*)&io_rank) >= 0);
+      
+              std::vector<CELL_IDX_T> io_selection;
+              for (const CELL_IDX_T& s : selection)
+                {
+                  if (s % io_size == io_rank)
+                    {
+                      io_selection.push_back(s);
+                    }
+                }
               
               mpi::MPI_DEBUG(io_comm, "read_projection_selection: ", src_pop_name, " -> ", dst_pop_name, " : "
-                             "selection of size ", selection.size());
+                             "selection of size ", io_selection.size());
               throw_assert(hdf5::read_projection_dataset_selection(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                                   src_start, dst_start, selection, edge_base,
+                                                                   src_start, dst_start, io_selection, edge_base,
                                                                    selection_dst_idx, selection_dst_ptr, src_idx_ranges,
                                                                    src_idx, total_num_edges) >= 0,
                            "error in read_projection_dataset_selection");
