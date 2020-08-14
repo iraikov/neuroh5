@@ -59,6 +59,7 @@ namespace neuroh5
         }
       MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
  
+      vector<CELL_IDX_T> all_selections;
       if (selection_size > 0)
         {
           int data_rank=-1, data_size=-1;
@@ -87,7 +88,7 @@ namespace neuroh5
                 recvcounts[p] = recvbuf_selection_size[p];
               }
 
-            vector<CELL_IDX_T> all_selections(total_selection_size);
+            all_selections.resize(total_selection_size);
             throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
                                               &all_selections[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
                                               data_comm) == MPI_SUCCESS);
@@ -169,7 +170,7 @@ namespace neuroh5
                                (data_comm, io_size, file_name, pop_ranges, pop_pairs,
                                 src_pop_name, dst_pop_name, 
                                 src_start, dst_start, edge_attr_name_spaces, 
-                                selection, node_rank_map, prj_vector, edge_attr_names_vector,
+                                all_selections, node_rank_map, prj_vector, edge_attr_names_vector,
                                 local_prj_num_nodes,
                                 local_prj_num_edges, total_prj_num_edges) >= 0,
                                "error in scatter_read_projection_selection");
