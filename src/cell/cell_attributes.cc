@@ -1485,6 +1485,7 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_size(data_comm, (int*)&data_size) >= 0);
       throw_assert_nomsg(MPI_Comm_rank(data_comm, (int*)&data_rank) >= 0);
 
+      vector<CELL_IDX_T> all_selections;
       if (selection_size > 0)
         {
           map<CELL_IDX_T, rank_t> node_rank_map;
@@ -1508,7 +1509,7 @@ namespace neuroh5
                 recvcounts[p] = recvbuf_selection_size[p];
               }
 
-            vector<CELL_IDX_T> all_selections(total_selection_size);
+            all_selections.resize(total_selection_size);
             throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
                                               &all_selections[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
                                               data_comm) == MPI_SUCCESS);
@@ -1555,11 +1556,23 @@ namespace neuroh5
               MPI_Comm_split(data_comm,io_color,data_rank,&io_comm);
               MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
+              unsigned int io_rank, io_size;
+              throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_size) >= 0);
+              throw_assert_nomsg(MPI_Comm_rank(io_comm, (int*)&io_rank) >= 0);
+      
+              std::vector<CELL_IDX_T> io_selection;
+              for (const CELL_IDX_T& s : all_selections)
+                {
+                  if (s % io_size == io_rank)
+                    {
+                      io_selection.push_back(s);
+                    }
+                }
               map <rank_t, data::AttrMap > rank_attr_map;
               {
                 data::NamedAttrMap  attr_values;
                 read_cell_attribute_selection(io_comm, file_name, attr_name_space, attr_mask, pop_name, pop_start,
-                                              selection, attr_values);
+                                              io_selection, attr_values);
                 data::append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
                 attr_values.num_attrs(num_attrs);
                 attr_values.attr_names(attr_names);

@@ -135,7 +135,6 @@ namespace neuroh5
               edge_count = src_idx.size();
               local_num_edges = edge_count;
 
-              map <string, vector < vector<string> > > edge_attr_names;
               for (string attr_namespace : attr_namespaces) 
                 {
                   vector< pair<string,AttrKind> > edge_attr_info;

@@ -4,6 +4,7 @@
 #include <hdf5.h>
 
 #include <vector>
+#include <algorithm>
 
 #include "neuroh5_types.hh"
 #include "rank_range.hh"
@@ -14,6 +15,7 @@
 #include "read_template.hh"
 #include "write_template.hh"
 #include "mpe_seq.hh"
+#include "sort_permutation.hh"
 #include "throw_assert.hh"
 
 
@@ -144,6 +146,7 @@ namespace neuroh5
       return status;
     }
 
+    auto compare_idx = [](const CELL_IDX_T& a, const CELL_IDX_T& b) { return (a < b); };
     
     template <typename T>
     herr_t read_cell_attribute_selection
@@ -181,13 +184,17 @@ namespace neuroh5
           ATTR_PTR_T selection_ptr_pos = 0;
           if (ptr.size() > 0)
             {
+	      vector<size_t> p = data::sort_permutation(index, compare_idx);
+	      std::vector<CELL_IDX_T> sorted_index = data::apply_permutation(index, p);
+
               for (const CELL_IDX_T& s : selection) 
                 {
                   if (s < pop_start) continue;
-                  auto it = std::find(index.begin(), index.end(), s);
-                  while (it != index.end())
+		  auto rp = std::equal_range(sorted_index.begin(), sorted_index.end(), s);
+		  for ( auto it = rp.first; it != rp.second; ++it )
                     {
-                      ptrdiff_t pos = it - index.begin();
+                      ptrdiff_t spos = it - sorted_index.begin();
+		      ptrdiff_t pos = p[spos];
                       hsize_t value_start=ptr[pos];
                       hsize_t value_block=ptr[pos+1]-value_start;
 
@@ -195,9 +202,6 @@ namespace neuroh5
                       selection_ptr.push_back(selection_ptr_pos);
                       selection_ptr_pos += value_block;
                       selection_index.push_back(s);
-
-                      ++it;
-                      it = std::find(it, index.end(), s);
                     }
                 }
               selection_ptr.push_back(selection_ptr_pos);

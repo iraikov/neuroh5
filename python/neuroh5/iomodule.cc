@@ -340,8 +340,8 @@ PyObject *py_build_edge_attribute_info (const vector< pair<string,string> >& prj
                         attr_index++;
                       }
                   }
+                PyDict_SetItemString(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
               }
-            PyDict_SetItemString(py_prj_attr_info, attr_namespace.c_str(), py_prj_ns_attr_info);
             Py_DECREF(py_prj_ns_attr_info);
           }
 
