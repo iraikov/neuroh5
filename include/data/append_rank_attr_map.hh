@@ -5,10 +5,11 @@
 ///
 ///  Populates a mapping between node indices and attribute values.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include <vector>
+#include <set>
 #include <map>
 
 #include "neuroh5_types.hh"
@@ -26,6 +27,12 @@ namespace neuroh5
     (
      const data::NamedAttrMap   &attr_values,
      const map<CELL_IDX_T, rank_t> &node_rank_map,
+     map <rank_t, data::AttrMap> &rank_attr_map);
+
+    void append_rank_attr_map
+    (
+     const data::NamedAttrMap   &attr_values,
+     const map<CELL_IDX_T, set <rank_t> > &node_rank_map,
      map <rank_t, data::AttrMap> &rank_attr_map);
   }
   

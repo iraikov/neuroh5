@@ -1488,7 +1488,7 @@ namespace neuroh5
       vector<CELL_IDX_T> all_selections;
       if (selection_size > 0)
         {
-          map<CELL_IDX_T, rank_t> node_rank_map;
+          map<CELL_IDX_T, set<rank_t> > node_rank_map;
           {
             vector<size_t> sendbuf_selection_size(data_size, selection_size);
             vector<size_t> recvbuf_selection_size(data_size);
@@ -1511,7 +1511,7 @@ namespace neuroh5
 
             all_selections.resize(total_selection_size);
             throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
-                                              &all_selections[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
+                                              &all_selections[0], &recvcounts[0], &displs[0], MPI_CELL_IDX_T,
                                               data_comm) == MPI_SUCCESS);
             throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
 
@@ -1520,7 +1520,7 @@ namespace neuroh5
               {
                 for (size_t i = displs[p]; i<displs[p+1]; i++)
                   {
-                    node_rank_map.insert ( make_pair(all_selections[i], p) );
+                    node_rank_map[all_selections[i]].insert(p);
                   }
 
               }
@@ -1561,13 +1561,20 @@ namespace neuroh5
               throw_assert_nomsg(MPI_Comm_rank(io_comm, (int*)&io_rank) >= 0);
       
               std::vector<CELL_IDX_T> io_selection;
-              for (const CELL_IDX_T& s : all_selections)
-                {
-                  if (s % io_size == io_rank)
-                    {
-                      io_selection.push_back(s);
-                    }
-                }
+              {
+                std::set<CELL_IDX_T> io_selection_set;
+                for (const CELL_IDX_T& s : all_selections)
+                  {
+                    if ((s % io_size) == io_rank)
+                      {
+                        io_selection_set.insert(s);
+                      }
+                  }
+                for (const CELL_IDX_T& s : io_selection_set)
+                  {
+                    io_selection.push_back(s);
+                  }
+              }
               map <rank_t, data::AttrMap > rank_attr_map;
               {
                 data::NamedAttrMap  attr_values;
