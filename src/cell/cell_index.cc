@@ -108,6 +108,7 @@ namespace neuroh5
           throw_assert_nomsg(ierr == 0);
         }
 
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       
       return ierr;
     }
@@ -153,6 +154,8 @@ namespace neuroh5
       cell_index.resize(numitems);
       ierr = MPI_Bcast(&(cell_index[0]), numitems, MPI_CELL_IDX_T, 0, comm);
       throw_assert_nomsg(ierr == MPI_SUCCESS);
+
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
     
       return ierr;
     }
@@ -184,6 +187,7 @@ namespace neuroh5
       index_size_vector.resize(size);
       ierr = MPI_Allgather(&local_index_size, 1, MPI_SIZE_T, &index_size_vector[0], 1, MPI_SIZE_T, comm);
       throw_assert_nomsg(ierr == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       hsize_t local_index_start = 0;
       for (size_t i=0; i<rank; i++)
@@ -217,6 +221,7 @@ namespace neuroh5
       throw_assert_nomsg(ierr == 0);
       ierr = H5Fclose (file);
       throw_assert_nomsg(ierr == 0);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       return ierr;
     }

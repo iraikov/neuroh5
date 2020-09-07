@@ -6324,7 +6324,7 @@ extern "C"
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
 
-    unsigned long create_index = 0, io_size = 0;
+    unsigned long io_size = 0;
     unsigned long chunk_size = default_chunk_size;
     unsigned long value_chunk_size = default_value_chunk_size;
     unsigned long cache_size = default_cache_size;
@@ -6335,7 +6335,6 @@ extern "C"
                                    "file_name",
                                    "pop_name",
                                    "values",
-                                   "create_index",
                                    "comm",
                                    "io_size",
                                    "chunk_size",
@@ -6343,9 +6342,9 @@ extern "C"
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|kOkkkkk", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|Okkkk", (char **)kwlist,
                                      &file_name_arg, &pop_name_arg, &idx_values,
-                                     &create_index, &py_comm, &io_size,
+                                     &py_comm, &io_size,
                                      &chunk_size, &value_chunk_size, &cache_size))
       return NULL;
 
@@ -6397,148 +6396,154 @@ extern "C"
     throw_assert(srank >= 0, "py_append_cell_trees: invalid data communicator rank");
 
     size = ssize;
-    
-    if ((io_size == 0) || (io_size > size))
-      {
-        io_size = size;
-      }
-    throw_assert(io_size <= size,
-                 "py_append_cell_trees: invalid I/O size");
-    
-    string file_name      = string(file_name_arg);
-    string pop_name       = string(pop_name_arg);
 
-    vector<pair <pop_t, string> > pop_labels;
-    status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
-    throw_assert (status >= 0,
-                  "py_append_cell_trees: unable to read population labels");
-    
-    // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    if (dict_size > 0)
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+    
+        if ((io_size == 0) || (io_size > size))
           {
-            pop_idx = get<0>(pop_labels[i]);
-            pop_idx_set = true;
+            io_size = size;
           }
-      }
-    if (!pop_idx_set)
-      {
-        throw_err(std::string("py_append_cell_trees: ") + "Population " + pop_name + " not found");
-      }
-
-    
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    size_t n_nodes;
-    
-    // Read population info
-    throw_assert(cell::read_population_ranges(data_comm, string(file_name),
-                                              pop_ranges, pop_vector,
-                                              n_nodes) >= 0,
-                 "py_append_cell_trees: unable to read population ranges");
-    
-    map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-    map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
-    map<string, map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-    map<string, map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
-    map<string, map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-    map<string, map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
-    map<string, map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
-    
-    build_cell_attr_value_maps(idx_values,
-                               all_attr_values_uint32,
-                               all_attr_values_uint16,
-                               all_attr_values_uint8,
-                               all_attr_values_int32,
-                               all_attr_values_int16,
-                               all_attr_values_int8,
-                               all_attr_values_float);
-
-    auto xcoord_map_it = all_attr_values_float.find("x");
-    throw_assert(xcoord_map_it != all_attr_values_float.end(),
-                 "py_append_cell_trees: input data has no x array");
-    auto ycoord_map_it = all_attr_values_float.find("y");
-    throw_assert(ycoord_map_it != all_attr_values_float.end(),
-                 "py_append_cell_trees: input data has no y array");
-    auto zcoord_map_it = all_attr_values_float.find("z");
-    throw_assert(zcoord_map_it != all_attr_values_float.end(),
-                 "py_append_cell_trees: input data has no z array");
-    auto radius_map_it = all_attr_values_float.find("radius");
-    throw_assert(radius_map_it != all_attr_values_float.end(),
-                 "py_append_cell_trees: input data has no radius array");
-    auto layer_map_it = all_attr_values_int8.find("layer");
-    throw_assert(layer_map_it != all_attr_values_int8.end(),
-                 "py_append_cell_trees: input data has no layer array");
-    auto parent_map_it = all_attr_values_int32.find("parent");
-    throw_assert(parent_map_it != all_attr_values_int32.end(),
-                 "py_append_cell_trees: input data has no parent array");
-    auto swc_type_map_it = all_attr_values_int8.find("swc_type");
-    throw_assert(swc_type_map_it != all_attr_values_int8.end(),
-                 "py_append_cell_trees: input data has no int8 array");
-    auto sections_map_it = all_attr_values_uint16.find("sections");
-    throw_assert(sections_map_it != all_attr_values_uint16.end(),
-                 "py_append_cell_trees: input data has no sections array");
-    auto src_map_it = all_attr_values_uint16.find("src");
-    throw_assert(src_map_it != all_attr_values_uint16.end(),
-                 "py_append_cell_trees: input data has no src array");
-    auto dst_map_it = all_attr_values_uint16.find("dst");
-    throw_assert(dst_map_it != all_attr_values_uint16.end(),
-                 "py_append_cell_trees: input data has no dst array");
-    
-    vector<neurotree_t> tree_vector;
-
-    map<CELL_IDX_T, vector<float> >& xcoord_values = xcoord_map_it->second;
-    map<CELL_IDX_T, vector<float> >& ycoord_values = ycoord_map_it->second;
-    map<CELL_IDX_T, vector<float> >& zcoord_values = zcoord_map_it->second;
-    map<CELL_IDX_T, vector<float> >& radius_values = radius_map_it->second;
-    map<CELL_IDX_T, vector<int32_t> >& parent_values = parent_map_it->second;
-    map<CELL_IDX_T, vector<uint16_t> >& src_values = src_map_it->second;
-    map<CELL_IDX_T, vector<uint16_t> >& dst_values = dst_map_it->second;
-    map<CELL_IDX_T, vector<uint16_t> >& sections_values = sections_map_it->second;
-    map<CELL_IDX_T, vector<int8_t> >& layer_values = layer_map_it->second;
-    map<CELL_IDX_T, vector<int8_t> >& swc_type_values = swc_type_map_it->second;
-
-
-    auto sections_it  = sections_values.begin();
-    auto src_it  = src_values.begin();
-    auto dst_it  = dst_values.begin();
-
-    auto parent_it  = parent_values.begin();
-    
-    auto xcoord_it  = xcoord_values.begin();
-    auto ycoord_it  = ycoord_values.begin();
-    auto zcoord_it  = zcoord_values.begin();
-    auto radius_it  = radius_values.begin();
-
-    auto layer_it   = layer_values.begin();
-    auto swc_type_it  = swc_type_values.begin();
-
-    while (sections_it != sections_values.end())
-      {
-        CELL_IDX_T id = sections_it->first;
-        tree_vector.push_back(make_tuple(id,
-                                         src_it->second,
-                                         dst_it->second,
-                                         sections_it->second,
-                                         xcoord_it->second,
-                                         ycoord_it->second,
-                                         zcoord_it->second,
-                                         radius_it->second,
-                                         layer_it->second,
-                                         parent_it->second,
-                                         swc_type_it->second));
+        throw_assert(io_size <= size,
+                     "py_append_cell_trees: invalid I/O size");
         
-        ++sections_it, ++src_it, ++dst_it, ++parent_it,
-          ++xcoord_it, ++ycoord_it, ++zcoord_it, ++radius_it,
-          ++layer_it, ++swc_type_it;
-      }
+        string file_name      = string(file_name_arg);
+        string pop_name       = string(pop_name_arg);
+        
+        vector<pair <pop_t, string> > pop_labels;
+        status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
+        throw_assert (status >= 0,
+                      "py_append_cell_trees: unable to read population labels");
+        
+        // Determine index of population to be read
+        size_t pop_idx=0; bool pop_idx_set=false;
+        for (size_t i=0; i<pop_labels.size(); i++)
+          {
+            if (get<1>(pop_labels[i]) == pop_name)
+              {
+                pop_idx = get<0>(pop_labels[i]);
+                pop_idx_set = true;
+              }
+          }
+        if (!pop_idx_set)
+          {
+            throw_err(std::string("py_append_cell_trees: ") + "Population " + pop_name + " not found");
+          }
+        
+        
+        map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+        vector<pop_range_t> pop_vector;
+        size_t n_nodes;
+        
+        // Read population info
+        throw_assert(cell::read_population_ranges(data_comm, string(file_name),
+                                                  pop_ranges, pop_vector,
+                                                  n_nodes) >= 0,
+                     "py_append_cell_trees: unable to read population ranges");
+        
+        map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
+        map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
+        map<string, map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
+        map<string, map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
+        map<string, map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
+        map<string, map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
+        map<string, map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
+        
+        build_cell_attr_value_maps(idx_values,
+                                   all_attr_values_uint32,
+                                   all_attr_values_uint16,
+                                   all_attr_values_uint8,
+                                   all_attr_values_int32,
+                                   all_attr_values_int16,
+                                   all_attr_values_int8,
+                                   all_attr_values_float);
+        
+        auto xcoord_map_it = all_attr_values_float.find("x");
+        auto ycoord_map_it = all_attr_values_float.find("y");
+        auto zcoord_map_it = all_attr_values_float.find("z");
+        auto radius_map_it = all_attr_values_float.find("radius");
+        auto layer_map_it = all_attr_values_int8.find("layer");
+        auto parent_map_it = all_attr_values_int32.find("parent");
+        auto swc_type_map_it = all_attr_values_int8.find("swc_type");
+        auto sections_map_it = all_attr_values_uint16.find("sections");
+        auto src_map_it = all_attr_values_uint16.find("src");
+        auto dst_map_it = all_attr_values_uint16.find("dst");
+        
+        
+        throw_assert(xcoord_map_it != all_attr_values_float.end(),
+                     "py_append_cell_trees: input data has no x array");
+        throw_assert(ycoord_map_it != all_attr_values_float.end(),
+                     "py_append_cell_trees: input data has no y array");
+        throw_assert(zcoord_map_it != all_attr_values_float.end(),
+                     "py_append_cell_trees: input data has no z array");
+        throw_assert(radius_map_it != all_attr_values_float.end(),
+                     "py_append_cell_trees: input data has no radius array");
+        throw_assert(layer_map_it != all_attr_values_int8.end(),
+                     "py_append_cell_trees: input data has no layer array");
+        throw_assert(parent_map_it != all_attr_values_int32.end(),
+                     "py_append_cell_trees: input data has no parent array");
+        throw_assert(swc_type_map_it != all_attr_values_int8.end(),
+                     "py_append_cell_trees: input data has no int8 array");
+        throw_assert(sections_map_it != all_attr_values_uint16.end(),
+                     "py_append_cell_trees: input data has no sections array");
+        throw_assert(src_map_it != all_attr_values_uint16.end(),
+                     "py_append_cell_trees: input data has no src array");
+        throw_assert(dst_map_it != all_attr_values_uint16.end(),
+                     "py_append_cell_trees: input data has no dst array");
     
-    CELL_IDX_T pop_start = pop_vector[pop_idx].start;
-
-    throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0,
-                 "py_append_cell_trees: unable to append trees");
+        vector<neurotree_t> tree_vector;
+        
+        map<CELL_IDX_T, vector<float> >& xcoord_values = xcoord_map_it->second;
+        map<CELL_IDX_T, vector<float> >& ycoord_values = ycoord_map_it->second;
+        map<CELL_IDX_T, vector<float> >& zcoord_values = zcoord_map_it->second;
+        map<CELL_IDX_T, vector<float> >& radius_values = radius_map_it->second;
+        map<CELL_IDX_T, vector<int32_t> >& parent_values = parent_map_it->second;
+        map<CELL_IDX_T, vector<uint16_t> >& src_values = src_map_it->second;
+        map<CELL_IDX_T, vector<uint16_t> >& dst_values = dst_map_it->second;
+        map<CELL_IDX_T, vector<uint16_t> >& sections_values = sections_map_it->second;
+        map<CELL_IDX_T, vector<int8_t> >& layer_values = layer_map_it->second;
+        map<CELL_IDX_T, vector<int8_t> >& swc_type_values = swc_type_map_it->second;
+        
+        
+        auto sections_it  = sections_values.begin();
+        auto src_it  = src_values.begin();
+        auto dst_it  = dst_values.begin();
+        
+        auto parent_it  = parent_values.begin();
+        
+        auto xcoord_it  = xcoord_values.begin();
+        auto ycoord_it  = ycoord_values.begin();
+        auto zcoord_it  = zcoord_values.begin();
+        auto radius_it  = radius_values.begin();
+        
+        auto layer_it   = layer_values.begin();
+        auto swc_type_it  = swc_type_values.begin();
+        
+        while (sections_it != sections_values.end())
+          {
+            CELL_IDX_T id = sections_it->first;
+            tree_vector.push_back(make_tuple(id,
+                                             src_it->second,
+                                             dst_it->second,
+                                             sections_it->second,
+                                             xcoord_it->second,
+                                             ycoord_it->second,
+                                             zcoord_it->second,
+                                             radius_it->second,
+                                             layer_it->second,
+                                             parent_it->second,
+                                             swc_type_it->second));
+            
+            ++sections_it, ++src_it, ++dst_it, ++parent_it,
+              ++xcoord_it, ++ycoord_it, ++zcoord_it, ++radius_it,
+              ++layer_it, ++swc_type_it;
+          }
+    
+        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+        
+        throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0,
+                     "py_append_cell_trees: unable to append trees");
+      }
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
                  "py_append_cell_trees: MPI barrier error");
     throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,

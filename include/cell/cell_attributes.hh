@@ -180,32 +180,44 @@ namespace neuroh5
       nbytes = cache_size; w0 = 1.;
       throw_assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0,
                    "error in H5Pset_cache");
-      
-      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-      throw_assert(file >= 0,
-                   "append_cell_attribute: HDF5 file open error");
-
-      T dummy;
-      hid_t ftype;
-      if (data_type.has_value())
-        {
-          ftype = data_type.value();
-        }
-      else
-        ftype = infer_datatype(dummy);
-      throw_assert(ftype >= 0,
-                   "append_cell_attribute: unable to infer HDF5 data type");
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
 
-      if (!(hdf5::exists_dataset (file, attr_path) > 0))
+      if (rank == 0)
         {
-          create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
-                                         ftype, index_type, ptr_type,
-                                         chunk_size, value_chunk_size
-                                         );
+          hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+          throw_assert(file >= 0,
+                       "append_cell_attribute: HDF5 file open error");
+
+          T dummy;
+          hid_t ftype;
+          if (data_type.has_value())
+            {
+              ftype = data_type.value();
+            }
+          else
+            ftype = infer_datatype(dummy);
+          throw_assert(ftype >= 0,
+                       "append_cell_attribute: unable to infer HDF5 data type");
+          
+          
+          if (!(hdf5::exists_dataset (file, attr_path) > 0))
+            {
+              create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
+                                             ftype, index_type, ptr_type,
+                                             chunk_size, value_chunk_size
+                                             );
+            }
+          status = H5Fclose(file);
+          throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file");
         }
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
+
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+      throw_assert(file >= 0,
+                   "append_cell_attribute: HDF5 file open error");
 
       vector<CELL_IDX_T> rindex;
 
@@ -221,6 +233,10 @@ namespace neuroh5
       throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file");
       status = H5Pclose(fapl);
       throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file properties list");
+
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
+
     }
 
 
