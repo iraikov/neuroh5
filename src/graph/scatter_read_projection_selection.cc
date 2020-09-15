@@ -224,7 +224,10 @@ namespace neuroh5
             
             if (rank != 0)
               {
-                data::deserialize_data(sendbuf, edge_attr_names);
+                if (sendbuf.size() > 0)
+                  {
+                    data::deserialize_data(sendbuf, edge_attr_names);
+                  }
               }
             edge_attr_names_vector.push_back(edge_attr_names);
             

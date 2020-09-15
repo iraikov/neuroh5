@@ -895,7 +895,7 @@ namespace neuroh5
         {
           num_attrs[i] = num_attrs_bcast[i];
         }
-    
+
       // 5. Broadcast the names of each attributes of each type to all ranks
       {
         vector<char> sendbuf; size_t sendbuf_size=0;
@@ -1527,6 +1527,8 @@ namespace neuroh5
             
           }
           
+
+          
           vector<int> sendcounts(data_size,0), sdispls(data_size,0), recvcounts(data_size,0), rdispls(data_size,0);
           vector<char> sendbuf; 
 
@@ -1550,6 +1552,9 @@ namespace neuroh5
           if (io_rank_set.find(data_rank) != io_rank_set.end())
             is_io_rank = true;
 
+          // I/O rank with lowest data rank 
+          size_t io_root_data_rank = *(io_rank_set.begin());
+
           if (is_io_rank)
             {
               // Am I an I/O rank?
@@ -1559,21 +1564,24 @@ namespace neuroh5
               unsigned int io_rank, io_size;
               throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_size) >= 0);
               throw_assert_nomsg(MPI_Comm_rank(io_comm, (int*)&io_rank) >= 0);
-      
+
               std::vector<CELL_IDX_T> io_selection;
               {
                 std::set<CELL_IDX_T> io_selection_set;
+                size_t s_index = 0;
                 for (const CELL_IDX_T& s : all_selections)
                   {
-                    if ((s % io_size) == io_rank)
+                    if ((s_index % io_size) == io_rank)
                       {
                         io_selection_set.insert(s);
                       }
+                    s_index++;
                   }
                 for (const CELL_IDX_T& s : io_selection_set)
                   {
                     io_selection.push_back(s);
                   }
+                
               }
               map <rank_t, data::AttrMap > rank_attr_map;
               {
@@ -1585,15 +1593,16 @@ namespace neuroh5
                 attr_values.attr_names(attr_names);
               }
               
-              data::serialize_rank_attr_map (data_size, data_rank, rank_attr_map, sendcounts, sendbuf, sdispls);
+              data::serialize_rank_attr_map (data_size, data_rank, rank_attr_map, sendcounts, sendbuf, 
+                                             sdispls);
             }
           else
             {
               
               MPI_Comm_split(data_comm,0,data_rank,&io_comm);
             }
-          MPI_Barrier(io_comm);
-          MPI_Barrier(data_comm);
+          throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
           throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
           vector<size_t> num_attrs_bcast(num_attrs.size());
@@ -1602,7 +1611,7 @@ namespace neuroh5
               num_attrs_bcast[i] = num_attrs[i];
             }
           // 4. Broadcast the number of attributes of each type to all ranks
-          throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, 0, data_comm) >= 0);
+          throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, io_root_data_rank, data_comm) == MPI_SUCCESS);
           for (size_t i=0; i<num_attrs.size(); i++)
             {
               num_attrs[i] = num_attrs_bcast[i];
@@ -1610,20 +1619,24 @@ namespace neuroh5
           
           // 5. Broadcast the names of each attributes of each type to all data ranks
           {
-            vector<char> sendbuf; size_t sendbuf_size=0;
-            if (data_rank == 0)
+            vector <char> attr_names_sendbuf;
+            size_t sendbuf_size=0;
+            if (io_root_data_rank == data_rank)
               {
-                data::serialize_data(attr_names, sendbuf);
-                sendbuf_size = sendbuf.size();
+                data::serialize_data(attr_names, attr_names_sendbuf);
+                sendbuf_size = attr_names_sendbuf.size();
               }
 
-            throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, data_comm) >= 0);
-            sendbuf.resize(sendbuf_size);
-            throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, data_comm) >= 0);
-            
-            if (data_rank != 0)
+            throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, io_root_data_rank, data_comm) == MPI_SUCCESS);
+            if (io_root_data_rank != data_rank)
               {
-                data::deserialize_data(sendbuf, attr_names);
+                attr_names_sendbuf.resize(sendbuf_size, 0);
+              }
+            throw_assert_nomsg(MPI_Bcast(&attr_names_sendbuf[0], sendbuf_size, MPI_CHAR, io_root_data_rank, data_comm) == MPI_SUCCESS);
+            
+            if ((data_rank != io_root_data_rank) && (attr_names_sendbuf.size() > 0))
+              {
+                data::deserialize_data(attr_names_sendbuf, attr_names);
               }
           }
       
@@ -1659,8 +1672,9 @@ namespace neuroh5
           // 6. Each DATA_COMM rank sends an attribute set size to
           //    every other DATA_COMM rank (non IO_COMM ranks pass zero)
           throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                                          &recvcounts[0], 1, MPI_INT, data_comm) >= 0);
-          MPI_Barrier(data_comm);
+                                          &recvcounts[0], 1, MPI_INT, data_comm) == MPI_SUCCESS);
+
+          throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
           
           // 7. Each DATA_COMM rank accumulates the vector sizes and allocates
           //    a receive buffer, recvcounts, and rdispls
@@ -1675,13 +1689,13 @@ namespace neuroh5
             }
           if (recvbuf_size > 0)
             recvbuf.resize(recvbuf_size);
-          
+            
           // 8. Each DATA_COMM rank participates in the MPI_Alltoallv
           throw_assert_nomsg(mpi::alltoallv_vector<char>(data_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                                         recvcounts, rdispls, recvbuf) >= 0);
+                                                         recvcounts, rdispls, recvbuf) == MPI_SUCCESS);
 
           sendbuf.clear();
-          MPI_Barrier(data_comm);
+          throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
           
           if (recvbuf.size() > 0)
             {
@@ -1689,12 +1703,11 @@ namespace neuroh5
             }
           recvbuf.clear();
         }
-
-      MPI_Barrier(data_comm);
-      MPI_Barrier(comm);
+    
+      throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
                    "scatter_read_cell_attribute_selection: error in MPI_Comm_free ");
-      
 
     }
 
