@@ -5563,7 +5563,7 @@ extern "C"
                                    "return_type",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|sOOks", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssOs|OOks", (char **)kwlist,
                                      &file_name, &pop_name, &py_selection,
                                      &attr_namespace, &py_comm, &py_mask,
                                      &io_size, &return_type_arg))
