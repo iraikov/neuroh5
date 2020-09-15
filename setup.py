@@ -25,9 +25,12 @@ class cmake_build_ext(build_ext.build_ext):
         except OSError:
             raise RuntimeError('Cannot find CMake executable')
 
-        options = { 'debug': False }
+        options = { 'debug': False, 'HDF5_ROOT': False }
         if os.environ.get('NEUROH5_DEBUG', False):
             options['debug'] = True
+        if os.environ.get('HDF5_ROOT', False):
+            options['HDF5_ROOT'] = os.environ.get('HDF5_ROOT')
+            
             
         for ext in self.extensions:
 
@@ -74,7 +77,12 @@ class cmake_build_ext(build_ext.build_ext):
                 mdt = python_config_vars.get("MACOSX_DEPLOYMENT_TARGET", None)
             if mdt:
                 cmake_args.append("-DCMAKE_OSX_DEPLOYMENT_TARGET={}".format(mdt))
-                    
+
+            if options.get('HDF5_ROOT', False):
+                cmake_args += [
+                    '-DHDF5_ROOT=%s' % options.get('HDF5_ROOT'),
+                    ]
+
             cmake_args += cmake_cmd_args
 
             if not os.path.exists(self.build_temp):
