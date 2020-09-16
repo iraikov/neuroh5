@@ -8,6 +8,9 @@
 ///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
+#ifndef APPEND_RANK_EDGE_MAP_HH
+#define APPEND_RANK_EDGE_MAP_HH
+
 #include <vector>
 #include <map>
 
@@ -38,3 +41,4 @@ namespace neuroh5
      );
   }
 }
+#endif

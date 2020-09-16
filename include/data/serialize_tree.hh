@@ -4,8 +4,11 @@
 ///
 ///  Functions for serializing tree data.
 ///
-///  Copyright (C) 2017 Project Neuroh5.
+///  Copyright (C) 2017-2020 Project Neuroh5.
 //==============================================================================
+
+#ifndef SERIALIZE_TREE_HH
+#define SERIALIZE_TREE_HH
 
 #include <mpi.h>
 #include <cstring>
@@ -40,3 +43,5 @@ namespace neuroh5
                                        vector<neurotree_t> &all_tree_vector);
   }
 }
+#endif
+

@@ -8,6 +8,9 @@
 ///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
+#ifndef APPEND_RANK_ATTR_MAP_HH
+#define APPEND_RANK_ATTR_MAP_HH
+
 #include <vector>
 #include <set>
 #include <map>
@@ -38,3 +41,4 @@ namespace neuroh5
   
 }
 
+#endif

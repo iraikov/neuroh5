@@ -12,12 +12,17 @@
 ///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
+
+#ifndef SORT_PERMUTATION_HH
+#define SORT_PERMUTATION_HH
+
 #include <vector>
 #include <algorithm>
 #include <functional>
 #include <numeric>
 
 #include "throw_assert.hh"
+
 
 namespace neuroh5
 {
@@ -87,3 +92,5 @@ namespace neuroh5
   }
 
 }
+
+#endif

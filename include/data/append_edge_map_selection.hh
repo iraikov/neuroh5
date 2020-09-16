@@ -8,6 +8,9 @@
 ///  Copyright (C) 2016-2018 Project NeuroH5.
 //==============================================================================
 
+#ifndef APPEND_EDGE_MAP_SELECTION_HH
+#define APPEND_EDGE_MAP_SELECTION_HH
+
 #include <vector>
 #include <map>
 
@@ -34,3 +37,4 @@ namespace neuroh5
   }
 }
 
+#endif

@@ -4,8 +4,11 @@
 ///
 ///  Functions for serializing cell attributes.
 ///
-///  Copyright (C) 2017 Project Neuroh5.
+///  Copyright (C) 2017-2020 Project Neuroh5.
 //==============================================================================
+
+#ifndef SERIALIZE_CELL_ATTRIBUTES_HH
+#define SERIALIZE_CELL_ATTRIBUTES_HH
 
 #include <mpi.h>
 #include <cstring>
@@ -37,3 +40,4 @@ namespace neuroh5
     
   }
 }
+#endif

@@ -7,6 +7,9 @@
 ///  Copyright (C) 2017 Project Neuroh5.
 //==============================================================================
 
+#ifndef SERIALIZE_EDGE_HH
+#define SERIALIZE_EDGE_HH
+
 #include <mpi.h>
 #include <cstring>
 #include <vector>
@@ -49,3 +52,4 @@ namespace neuroh5
 
   }
 }
+#endif

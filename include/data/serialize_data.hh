@@ -7,6 +7,9 @@
 ///  Copyright (C) 2016-2017 Project NeuroH5.
 //==============================================================================
 
+#ifndef SERIALIZE_DATA_HH
+#define SERIALIZE_DATA_HH
+
 #include "debug.hh"
 
 #include <cstdio>
@@ -74,3 +77,4 @@ namespace neuroh5
 
   }
 }
+#endif
