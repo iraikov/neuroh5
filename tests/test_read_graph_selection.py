@@ -431,6 +431,7 @@ connectivity_file_path='/oasis/scratch/comet/iraikov/temp_project/dentate/Full_S
 (graph, a) = read_graph_selection(connectivity_file_path, selection=gid_range, projections=[('MPP', 'GC'), ('MC', 'GC'), ('BC', 'GC')],
                                   comm=comm, namespaces=['Synapses', 'Connections'])
 
+print(a)
 for dst, edges in graph['GC']['MPP']:
     presyn_gids, _ = edges
     print("rank %d: %d %s edges for node %d" % (rank, len(presyn_gids), "MPP", dst))

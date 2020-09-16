@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.12)
 
 project(NeuroH5)
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
@@ -10,7 +10,7 @@ if ( CMAKE_COMPILER_IS_GNUCC )
 endif()
   
 include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
-set(NEUROH5_VERSION 0.0.4)
+set(NEUROH5_VERSION 0.0.5)
 
 # Set the build type.  Options are:
 #  Debug          : w/ debug symbols, w/o optimization
