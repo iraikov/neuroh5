@@ -146,7 +146,6 @@ namespace neuroh5
       return status;
     }
 
-    auto compare_idx = [](const CELL_IDX_T& a, const CELL_IDX_T& b) { return (a < b); };
     
     template <typename T>
     herr_t read_cell_attribute_selection
@@ -175,6 +174,7 @@ namespace neuroh5
       hsize_t dset_size = index.size();
       vector< pair<hsize_t,hsize_t> > ranges;
 
+      auto compare_idx = [](const CELL_IDX_T& a, const CELL_IDX_T& b) { return (a < b); };
       
       if (dset_size > 0)
         {
