@@ -89,7 +89,7 @@ namespace neuroh5
       hsize_t len = 0;
 
       vector <hsize_t> coords;
-      for ( const std::pair<hsize_t,hsize_t> &range : ranges )
+      for (const auto& range : ranges)
         {
           hsize_t start = range.first;
           hsize_t count = range.second;

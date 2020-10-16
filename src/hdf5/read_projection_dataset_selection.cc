@@ -21,6 +21,7 @@
 #include "path_names.hh"
 #include "rank_range.hh"
 #include "read_projection_datasets.hh"
+#include "sort_permutation.hh"
 #include "mpi_debug.hh"
 #include "throw_assert.hh"
 
@@ -252,8 +253,6 @@ namespace neuroh5
                           hsize_t src_idx_block=dst_ptr[pos+1]-src_idx_start;
 
                           src_idx_ranges.push_back(make_pair(src_idx_start+dst_rebase, src_idx_block));
-                          selection_dst_ptr.push_back(selection_dst_ptr_pos);
-                          selection_dst_ptr_pos += src_idx_block;
                         }
                       else
                         {
@@ -265,14 +264,34 @@ namespace neuroh5
                         }
                     }
                 }
+
+              auto compare_range_idx = [](const std::pair<hsize_t, hsize_t>& a, const std::pair<hsize_t, hsize_t>& b) 
+                { return (a.first < b.first); };
+	  
+              vector<size_t> range_sort_p = data::sort_permutation(src_idx_ranges, compare_range_idx);
+              
+              data::apply_permutation_in_place(selection_dst_idx, range_sort_p);
+              data::apply_permutation_in_place(src_idx_ranges, range_sort_p);
+
+              for (const auto& range : src_idx_ranges)
+                {
+                  hsize_t src_idx_start=range.first;
+                  hsize_t src_idx_block=range.second;
+
+                  selection_dst_ptr.push_back(selection_dst_ptr_pos);
+                  selection_dst_ptr_pos += src_idx_block;
+                }
               selection_dst_ptr.push_back(selection_dst_ptr_pos);
             }
+
 
           if (src_idx_ranges.size() > 0)
             {
               // allocate buffer and memory dataspace
               src_idx.resize(selection_dst_ptr_pos, 0);
             }
+
+
         
           mpi::MPI_DEBUG(comm, "read_projection_dataset_selection: reading source indices for: ", 
                          src_pop_name, " -> ", dst_pop_name, ": ", src_idx.size(), " elements");

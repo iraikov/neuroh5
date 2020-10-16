@@ -108,7 +108,6 @@ namespace neuroh5
       read_cell_attribute_selection (comm, file_name, hdf5::TREES, attr_mask,
                                      pop_name, pop_start, 
                                      selection, attr_values);
-
       append_tree_list (pop_start, attr_values, tree_list);
     
       return 0;

@@ -199,14 +199,29 @@ namespace neuroh5
                       hsize_t value_block=ptr[pos+1]-value_start;
 
                       ranges.push_back(make_pair(value_start, value_block));
-                      selection_ptr.push_back(selection_ptr_pos);
-                      selection_ptr_pos += value_block;
                       selection_index.push_back(s);
                     }
                 }
-              selection_ptr.push_back(selection_ptr_pos);
-            }
           
+
+	      auto compare_range_idx = [](const std::pair<hsize_t, hsize_t>& a, const std::pair<hsize_t, hsize_t>& b) 
+		{ return (a.first < b.first); };
+	  
+	      vector<size_t> range_sort_p = data::sort_permutation(ranges, compare_range_idx);
+	      
+	      data::apply_permutation_in_place(selection_index, range_sort_p);
+	      data::apply_permutation_in_place(ranges, range_sort_p);
+
+	      for (const auto& range: ranges)
+		{
+		  hsize_t value_start=range.first;
+		  hsize_t value_block=range.second;
+
+		  selection_ptr.push_back(selection_ptr_pos);
+		  selection_ptr_pos += value_block;
+		}
+	      selection_ptr.push_back(selection_ptr_pos);
+            }
 
           hid_t dset = H5Dopen(loc, value_path.c_str(), H5P_DEFAULT);
           throw_assert(dset >= 0, "error in H5Dopen");
@@ -225,7 +240,6 @@ namespace neuroh5
           status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
           throw_assert(H5Pclose(rapl)   >= 0, "error in H5Pclose");
           throw_assert(H5Tclose(ntype)  >= 0, "error in H5Tclose");
-
         }
 
       return status;

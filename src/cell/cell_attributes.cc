@@ -1335,7 +1335,6 @@ namespace neuroh5
               const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
               const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
               string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
-              
               if ((attr_mask.size() > 0) && (attr_mask.count(attr_name) == 0))
                 continue;
               
@@ -1441,6 +1440,7 @@ namespace neuroh5
           throw_assert(status == 0,
                        "read_cell_attribute_selection: unable to close file " << file_name);
         }
+
 
       MPI_Barrier(data_comm);
       MPI_Barrier(comm);

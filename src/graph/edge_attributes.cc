@@ -577,6 +577,13 @@ namespace neuroh5
           ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
         }
 
+      for ( const std::pair<hsize_t,hsize_t> &range : ranges )
+        {
+          hsize_t start = range.first;
+          hsize_t count = range.second;
+
+
+        }
       
       string dset_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, name_space, attr_name);
       ierr = hdf5::exists_dataset (file, dset_path.c_str());
