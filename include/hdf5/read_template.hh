@@ -88,21 +88,13 @@ namespace neuroh5
     {
       hsize_t len = 0;
 
-      vector <hsize_t> coords;
       for (const auto& range : ranges)
         {
           hsize_t start = range.first;
           hsize_t count = range.second;
-
-          for (hsize_t i = start; i<start+count; ++i)
-            {
-              coords.push_back(i);
-            }
           
           len += count;
         }
-      throw_assert(coords.size() == len,
-                   "hdf5::read_selection: mismatch in coordinate length");
       herr_t ierr = 0;
 
       ierr = exists_dataset (loc, name.c_str());
@@ -111,9 +103,6 @@ namespace neuroh5
 	  hid_t mspace = H5Screate_simple(1, &len, NULL);
 	  throw_assert(mspace >= 0,
                        "hdf5::read_selection: error in H5Screate_simple");
-	  ierr = H5Sselect_all(mspace);
-	  throw_assert(ierr >= 0,
-                       "hdf5::read_selection: error in H5Sselect_all");
 
 	  hid_t dset = H5Dopen(loc, name.c_str(), H5P_DEFAULT);
 	  throw_assert(dset >= 0,
@@ -126,25 +115,54 @@ namespace neuroh5
 	  
 	  if (len > 0)
 	    {
-	      ierr = H5Sselect_elements (fspace, H5S_SELECT_SET, len, (const hsize_t *)coords.data());
+	      bool first_iter = true;
+	      for (const auto& range : ranges)
+		{
+		  hsize_t start = range.first;
+		  hsize_t count = range.second;
+		  
+		  if (count > 1)
+		    {
+		      hsize_t one = 1;
+		      ierr = H5Sselect_hyperslab(fspace, first_iter ? H5S_SELECT_SET : H5S_SELECT_OR, &start, NULL, &one, &count);
+		      throw_assert(ierr >= 0,
+				   "hdf5::read_selection: error in H5Sselect_hyperslab");
+		      
+		    }
+		  else
+		    {
+		      hsize_t coords_len = 0;
+		      vector <hsize_t> coords;
+		      for (hsize_t i = start; i<start+count; ++i)
+			{
+			  coords.push_back(i);
+			  coords_len += 1;
+			}
+		      ierr = H5Sselect_elements (fspace, first_iter ? H5S_SELECT_SET : H5S_SELECT_APPEND, coords_len, (const hsize_t *)coords.data());
+		      throw_assert(ierr >= 0,
+				   "hdf5::read_selection: error in H5Sselect_elements");
+		    }
+		  if (first_iter)
+		    first_iter = false;
+		}
 	    }
 	  else
 	    {
 	      ierr = H5Sselect_none(fspace);
+	      throw_assert(ierr >= 0,
+			   "hdf5::read_selection: error in H5Sselect_none");
 	    }
-	  throw_assert(ierr >= 0,
-                       "hdf5::read_selection: error in H5Sselect_elements");
 
           v.resize(len);
 	  ierr = H5Dread(dset, ntype, mspace, fspace, rapl, v.data());
 	  throw_assert(ierr >= 0,
                        "hdf5::read_selection: error in H5Dread");
 	  
+	  throw_assert(H5Sclose(mspace) >= 0,
+                       "hdf5::read_selection: error in H5Sclose");
 	  throw_assert(H5Dclose(dset) >= 0,
                        "hdf5::read_selection: error in H5Dclose");
 	  throw_assert(H5Sclose(fspace) >= 0,
-                       "hdf5::read_selection: error in H5Sclose");
-	  throw_assert(H5Sclose(mspace) >= 0,
                        "hdf5::read_selection: error in H5Sclose");
 	}
     
