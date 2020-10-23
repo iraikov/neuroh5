@@ -115,35 +115,39 @@ namespace neuroh5
 	  
 	  if (len > 0)
 	    {
-	      bool first_iter = true;
-	      for (const auto& range : ranges)
+	      bool use_hyperslab = (len > 1000);
+	      if (use_hyperslab)
 		{
-		  hsize_t start = range.first;
-		  hsize_t count = range.second;
-		  
-		  if (count > 1)
+		  bool first_iter = true;
+		  for (const auto& range : ranges)
 		    {
+		      hsize_t start = range.first;
+		      hsize_t count = range.second;
+		      
 		      hsize_t one = 1;
 		      ierr = H5Sselect_hyperslab(fspace, first_iter ? H5S_SELECT_SET : H5S_SELECT_OR, &start, NULL, &one, &count);
 		      throw_assert(ierr >= 0,
 				   "hdf5::read_selection: error in H5Sselect_hyperslab");
-		      
+		      if (first_iter)
+			first_iter = false;
 		    }
-		  else
+		}
+	      else
+		{
+		  vector <hsize_t> coords;
+		  for (const auto& range : ranges)
 		    {
-		      hsize_t coords_len = 0;
-		      vector <hsize_t> coords;
+		      hsize_t start = range.first;
+		      hsize_t count = range.second;
 		      for (hsize_t i = start; i<start+count; ++i)
 			{
 			  coords.push_back(i);
-			  coords_len += 1;
 			}
-		      ierr = H5Sselect_elements (fspace, first_iter ? H5S_SELECT_SET : H5S_SELECT_APPEND, coords_len, (const hsize_t *)coords.data());
-		      throw_assert(ierr >= 0,
-				   "hdf5::read_selection: error in H5Sselect_elements");
 		    }
-		  if (first_iter)
-		    first_iter = false;
+		  ierr = H5Sselect_elements (fspace, H5S_SELECT_SET,
+					     len, (const hsize_t *)coords.data());
+		  throw_assert(ierr >= 0,
+			       "hdf5::read_selection: error in H5Sselect_elements");
 		}
 	    }
 	  else
