@@ -20,8 +20,10 @@
 #include "rank_range.hh"
 #include "range_sample.hh"
 #include "append_rank_tree_map.hh"
+#include "append_rank_attr_map.hh"
 #include "alltoallv_template.hh"
 #include "serialize_tree.hh"
+#include "serialize_cell_attributes.hh"
 #include "dataset_num_elements.hh"
 #include "path_names.hh"
 #include "read_template.hh"
@@ -145,5 +147,141 @@ namespace neuroh5
     
       return 0;
     }
+
+
+    int scatter_read_tree_selection
+    (
+     MPI_Comm                        all_comm,
+     const string                   &file_name,
+     const int                       io_size,
+     const vector<string>           &attr_name_spaces,
+     // A vector that maps nodes to compute ranks
+     const map<CELL_IDX_T, rank_t>   &node_rank_map,
+     const string                    &pop_name,
+     const CELL_IDX_T                 pop_start,
+     const std::vector<CELL_IDX_T>&  selection,
+     map<CELL_IDX_T, neurotree_t>    &tree_map,
+     map<string, data::NamedAttrMap> &attr_maps
+     )
+    {
+      vector<char> sendbuf; 
+      vector<int> sendcounts, sdispls;
+    
+      // MPI Communicator for I/O ranks
+      MPI_Comm io_comm;
+      // MPI group color value used for I/O ranks
+      int io_color = 1;
+
+      throw_assert_nomsg(io_size > 0);
+    
+      int srank, ssize; size_t rank=0, size=0, io_rank;
+      throw_assert_nomsg(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(all_comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(srank >= 0);
+      throw_assert_nomsg(ssize > 0);
+      rank = srank;
+      size = ssize;
+
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+
+      // Am I an I/O rank?
+      if (is_io_rank)
+        {
+          throw_assert(MPI_Comm_split(all_comm,io_color,rank,&io_comm) == MPI_SUCCESS,
+                       "scatter_read_tree_selection: error in MPI_Comm_split");
+          MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+          throw_assert_nomsg(MPI_Comm_rank(io_comm, &srank) == MPI_SUCCESS);
+          io_rank = srank;
+        }
+      else
+        {
+          MPI_Comm_split(all_comm,0,rank,&io_comm);
+        }
+    
+      sendcounts.resize(size,0);
+      sdispls.resize(size,0);
+      sendbuf.resize(0);
+
+      if (is_io_rank)
+        {
+          map <rank_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
+
+          {
+            data::NamedAttrMap attr_values;
+            set <string> attr_mask;
+            
+            read_cell_attribute_selection (io_comm, file_name, hdf5::TREES, attr_mask,
+                                           pop_name, pop_start, selection, attr_values);
+
+            data::append_rank_tree_map(attr_values, node_rank_map, rank_tree_map);
+          }
+
+          data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
+        }
+
+      MPI_Barrier(all_comm);
+
+      {
+        vector<int> recvcounts, rdispls;
+        vector<char> recvbuf;
+
+        throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                       recvcounts, rdispls, recvbuf) >= 0);
+        
+        if (recvbuf.size() > 0)
+          {
+            data::deserialize_rank_tree_map (size, recvbuf, recvcounts, rdispls, tree_map);
+          }
+      }
+
+      for (string attr_name_space : attr_name_spaces)
+        {
+          sendcounts.resize(size,0);
+          sdispls.resize(size,0);
+          sendbuf.resize(0);
+
+          if (is_io_rank)
+            {
+              map <rank_t, data::AttrMap > rank_attr_map;
+              {
+                data::NamedAttrMap attr_map;
+                set <string> attr_mask;
+                
+                read_cell_attribute_selection(io_comm, file_name, 
+                                              attr_name_space, attr_mask, 
+                                              pop_name, pop_start, selection, attr_map);
+                
+                data::append_rank_attr_map(attr_map, node_rank_map, rank_attr_map);
+              }
+              data::serialize_rank_attr_map (size, rank, rank_attr_map, sendcounts, sendbuf, sdispls);
+              
+            }
+
+          {
+            vector<int> recvcounts, rdispls;
+            vector<char> recvbuf;
+            
+            throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                           recvcounts, rdispls, recvbuf) >= 0);
+            
+            if (recvbuf.size() > 0)
+              {
+                data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_maps[attr_name_space]);
+              }
+
+            MPI_Barrier(all_comm);
+          }
+        }
+
+      MPI_Barrier(all_comm);
+      throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+    
+      return 0;
+    }
+
   }
 }

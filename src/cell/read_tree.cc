@@ -112,7 +112,6 @@ namespace neuroh5
     
       return 0;
     }
-
     
   }
 }

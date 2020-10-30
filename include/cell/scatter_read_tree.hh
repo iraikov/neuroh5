@@ -35,6 +35,21 @@ namespace neuroh5
      size_t offset = 0,
      size_t numitems = 0
      );
+
+    int scatter_read_tree_selection
+    (
+     MPI_Comm                        all_comm,
+     const string                   &file_name,
+     const int                       io_size,
+     const vector<string>           &attr_name_spaces,
+     // A vector that maps nodes to compute ranks
+     const map<CELL_IDX_T, rank_t>   &node_rank_map,
+     const string                    &pop_name,
+     const CELL_IDX_T                 pop_start,
+     const std::vector<CELL_IDX_T>&  selection,
+     map<CELL_IDX_T, neurotree_t>    &tree_map,
+     map<string, data::NamedAttrMap> &attr_maps
+     );
   }
 }
 

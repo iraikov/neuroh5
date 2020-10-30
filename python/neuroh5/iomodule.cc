@@ -4777,7 +4777,7 @@ extern "C"
       {
         status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         throw_assert(status == MPI_SUCCESS,
-                     "py_scatter_read_tree_selection: unable to duplicate MPI communicator");
+                     "py_read_tree_selection: unable to duplicate MPI communicator");
       }
 
     vector <string> attr_name_spaces;
@@ -4785,7 +4785,7 @@ extern "C"
     if (py_attr_name_spaces != NULL)
       {
         throw_assert(PyList_Check(py_attr_name_spaces) > 0,
-                     "py_scatter_read_tree_selection: attribute name spaces argument is not a list");
+                     "py_read_tree_selection: attribute name spaces argument is not a list");
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
           {
             PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
@@ -4808,7 +4808,7 @@ extern "C"
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
-                  "py_scatter_read_tree_selection: unable to read population labels");
+                  "py_read_tree_selection: unable to read population labels");
 
     
     // Determine index of population to be read
@@ -4871,6 +4871,196 @@ extern "C"
 
     return py_result_tuple;
   }
+
+  
+
+  static PyObject *py_scatter_read_tree_selection (PyObject *self, PyObject *args, PyObject *kwds)
+  {
+    int status; int topology_flag=1;
+    unsigned long io_size = 0;
+    PyObject *py_comm = NULL;
+    PyObject *py_node_rank_map=NULL;
+    PyObject *py_mask = NULL;
+    MPI_Comm *comm_ptr  = NULL;
+    char *file_name, *pop_name;
+    PyObject *py_attr_name_spaces=NULL;
+    PyObject *py_selection=NULL;
+    vector <CELL_IDX_T> selection;
+    map<CELL_IDX_T, rank_t> node_rank_map;
+
+
+    static const char *kwlist[] = {
+                                   "file_name",
+                                   "pop_name",
+                                   "selection",
+                                   "comm",
+                                   "node_rank_map",
+                                   "mask",
+                                   "namespaces",
+                                   "topology",
+                                   "io_size",
+                                   NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOOik", (char **)kwlist,
+                                     &file_name, &pop_name,
+                                     &py_selection, &py_comm, &py_node_rank_map, 
+                                     &py_attr_name_spaces, &py_mask,
+                                     &topology_flag, &io_size))
+      return NULL;
+    throw_assert(PyList_Check(py_selection) > 0,
+                 "py_scatter_read_tree_selection: unable to read tree selection");
+
+    set<string> attr_mask;
+
+    if (py_mask != NULL)
+      {
+        throw_assert(PySet_Check(py_mask),
+                     "py_scatter_read_tree_selection: argument mask must be a set of strings");
+        
+        PyObject *py_iter = PyObject_GetIter(py_mask);
+        if (py_iter != NULL)
+          {
+            PyObject *pyval;
+            while((pyval = PyIter_Next(py_iter)))
+              {
+                const char* str = PyStr_ToCString (pyval);
+                attr_mask.insert(string(str));
+                Py_DECREF(pyval);
+              }
+          }
+
+        Py_DECREF(py_iter);
+      }
+
+    MPI_Comm comm;
+
+    if (py_comm != NULL)
+      {
+        comm_ptr = PyMPIComm_Get(py_comm);
+        throw_assert(comm_ptr != NULL,
+                     "py_scatter_read_tree_selection: invalid MPI communicator");
+        throw_assert(*comm_ptr != MPI_COMM_NULL,
+                     "py_scatter_read_tree_selection: invalid MPI communicator");
+        status = MPI_Comm_dup(*comm_ptr, &comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_tree_selection: unable to duplicate MPI communicator");
+      }
+    else
+      {
+        status = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+        throw_assert(status == MPI_SUCCESS,
+                     "py_scatter_read_tree_selection: unable to duplicate MPI communicator");
+      }
+
+    int rank, size;
+    status = MPI_Comm_size(comm, &size);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_tree_selection: unable to obtain size of MPI communicator");
+    status = MPI_Comm_rank(comm, &rank);
+    throw_assert(status == MPI_SUCCESS,
+                 "py_scatter_read_tree_selection: unable to obtain rank of MPI communicator");
+
+    if (io_size == 0)
+      {
+        io_size = size;
+      }
+
+    vector <string> attr_name_spaces;
+    // Create C++ vector of namespace strings:
+    if (py_attr_name_spaces != NULL)
+      {
+        throw_assert(PyList_Check(py_attr_name_spaces) > 0,
+                     "py_scatter_read_tree_selection: attribute name spaces argument is not a list");
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_attr_name_spaces); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_attr_name_spaces, (Py_ssize_t)i);
+            const char *str = PyStr_ToCString (pyval);
+            attr_name_spaces.push_back(string(str));
+          }
+      }
+
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
+          {
+            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
+            CELL_IDX_T n = PyLong_AsLong(pyval);
+            selection.push_back(n);
+          }
+      }
+
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(comm, string(file_name), pop_labels);
+    throw_assert (status >= 0,
+                  "py_scatter_read_tree_selection: unable to read population labels");
+
+    
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err(std::string("py_scatter_read_tree_selection: ") + "Population " + pop_name + " not found");
+      }
+
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+    size_t n_nodes;
+    
+    // Read population info
+    status = cell::read_population_ranges(comm, string(file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert(status >= 0,
+                 "py_scatter_read_tree_selection: unable to read population ranges");
+
+    // Create C++ map for node_rank_map:
+    if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
+      {
+        build_node_rank_map(py_node_rank_map, node_rank_map);
+      }
+    else
+      {
+        // round-robin node to rank assignment from file
+        for (size_t i = 0; i < n_nodes; i++)
+          {
+            node_rank_map.insert(make_pair(i, i%size));
+          }
+      }
+
+    map <string, NamedAttrMap> attr_maps;
+    map<CELL_IDX_T, neurotree_t> tree_map;
+
+    status = cell::scatter_read_tree_selection (comm, string(file_name), io_size,
+                                                attr_name_spaces, node_rank_map,
+                                                string(pop_name), pop_vector[pop_idx].start,
+                                                selection, tree_map, attr_maps);
+    throw_assert (status >= 0,
+                  "py_scatter_read_tree_selection: unable to read trees");
+
+    throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
+                 "py_scatter_read_tree_selection: unable to free MPI communicator");
+
+    PyObject* py_tree_iter = NeuroH5TreeIter_FromMap(tree_map,
+                                                     attr_name_spaces,
+                                                     attr_maps,
+                                                     topology_flag>0);
+
+    PyObject *py_result_tuple = PyTuple_New(2);
+    PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
+    PyTuple_SetItem(py_result_tuple, 1, PyLong_FromLong((long)n_nodes));
+
+    return py_result_tuple;
+  }
+
 
   PyDoc_STRVAR(
     scatter_read_cell_attributes_doc,
@@ -7943,6 +8133,8 @@ extern "C"
     { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
       read_tree_selection_doc },
     { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
+      scatter_read_trees_doc },
+    { "scatter_read_tree_selection", (PyCFunction)py_scatter_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
       scatter_read_trees_doc },
     { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS | METH_KEYWORDS,
       read_cell_attribute_info_doc },
