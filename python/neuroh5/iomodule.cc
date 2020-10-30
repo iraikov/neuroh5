@@ -5030,9 +5030,10 @@ extern "C"
     else
       {
         // round-robin node to rank assignment from file
-        for (size_t i = 0; i < n_nodes; i++)
+        size_t n_selection = selection.size();
+        for (size_t i = 0; i < n_selection; i++)
           {
-            node_rank_map.insert(make_pair(i, i%size));
+            node_rank_map.insert(make_pair(selection[i], i%size));
           }
       }
 
