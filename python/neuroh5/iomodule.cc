@@ -6615,6 +6615,8 @@ extern "C"
                                                   n_nodes) >= 0,
                      "py_append_cell_trees: unable to read population ranges");
         
+        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+
         map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
         map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
         map<string, map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
@@ -6713,8 +6715,6 @@ extern "C"
               ++layer_it, ++swc_type_it;
           }
     
-        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
-        
         throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0,
                      "py_append_cell_trees: unable to append trees");
       }

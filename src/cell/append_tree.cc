@@ -327,8 +327,8 @@ namespace neuroh5
         }
 
             
-      throw_assert_nomsg(append_cell_index (comm, file_name, pop_name, hdf5::TREES,
-                                            all_index_vector) == 0);
+      throw_assert_nomsg(append_cell_index (comm, file_name, pop_name, pop_start,
+                                            hdf5::TREES, all_index_vector) == 0);
 
       const data::optional_hid dflt_data_type;
       const data::optional_hid coord_data_type(COORD_H5_NATIVE_T);

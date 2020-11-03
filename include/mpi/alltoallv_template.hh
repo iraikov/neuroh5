@@ -62,6 +62,8 @@ namespace neuroh5
                               &recvcounts[0], 1, MPI_INT, comm);
         throw_assert(status == MPI_SUCCESS,
                      "alltoallv: error in MPI_Alltoallv: status: " << status);
+        throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                     "alltoallv: error in MPI_Barrier");
       }
         
       // 2. Each rank accumulates the vector sizes and allocates
@@ -83,6 +85,8 @@ namespace neuroh5
         status = MPI_Allreduce(&recvbuf_size, &global_recvbuf_size, 1, MPI_SIZE_T, MPI_SUM,
                                comm);
         throw_assert (status == MPI_SUCCESS, "error in MPI_Allreduce: status = " << status);
+        throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                     "alltoallv: error in MPI_Barrier");
       }
       if (global_recvbuf_size > 0)
         {
@@ -93,7 +97,8 @@ namespace neuroh5
                                  &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,
                                  comm);
           throw_assert (status == MPI_SUCCESS, "error in MPI_Alltoallv: status = " << status);
-                        
+          throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                       "alltoallv: error in MPI_Barrier");
         }
 
       return 0;

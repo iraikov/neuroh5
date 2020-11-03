@@ -707,8 +707,6 @@ namespace neuroh5
                                          recvcounts, rdispls, recvbuf) >= 0);
     
       sendbuf.clear();
-    
-      MPI_Barrier(all_comm);
 
       data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
       recvbuf.clear();

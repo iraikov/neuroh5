@@ -1527,8 +1527,6 @@ namespace neuroh5
             
           }
           
-
-          
           vector<int> sendcounts(data_size,0), sdispls(data_size,0), recvcounts(data_size,0), rdispls(data_size,0);
           vector<char> sendbuf; 
 
@@ -1675,7 +1673,7 @@ namespace neuroh5
                                           &recvcounts[0], 1, MPI_INT, data_comm) == MPI_SUCCESS);
 
           throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-          
+        
           // 7. Each DATA_COMM rank accumulates the vector sizes and allocates
           //    a receive buffer, recvcounts, and rdispls
           size_t recvbuf_size;
@@ -1695,7 +1693,6 @@ namespace neuroh5
                                                          recvcounts, rdispls, recvbuf) == MPI_SUCCESS);
 
           sendbuf.clear();
-          throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
           
           if (recvbuf.size() > 0)
             {

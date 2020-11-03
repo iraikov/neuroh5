@@ -166,6 +166,7 @@ namespace neuroh5
      MPI_Comm             comm,
      const string&        file_name,
      const string&        pop_name,
+     const CELL_IDX_T&    pop_start,
      const string&        attr_name_space,
      const vector<CELL_IDX_T>&  cell_index
      )
@@ -182,6 +183,11 @@ namespace neuroh5
       size = (size_t)ssize;
       
       hsize_t local_index_size = cell_index.size();
+      vector<CELL_IDX_T>  rel_cell_index;
+      for (auto idx : cell_index)
+        {
+          rel_cell_index.push_back(idx - pop_start);
+        }
 
       std::vector<size_t> index_size_vector;
       index_size_vector.resize(size);
@@ -217,7 +223,7 @@ namespace neuroh5
 
       ierr = hdf5::write<CELL_IDX_T> (file, path,
                                       start+global_index_size, start+local_index_start, local_index_size,
-                                      CELL_IDX_H5_NATIVE_T, cell_index, wapl);
+                                      CELL_IDX_H5_NATIVE_T, rel_cell_index, wapl);
       throw_assert_nomsg(ierr == 0);
       ierr = H5Fclose (file);
       throw_assert_nomsg(ierr == 0);
