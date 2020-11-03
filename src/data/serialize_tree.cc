@@ -71,6 +71,7 @@ namespace neuroh5
           if (it1 != rank_tree_map.end())
             {
               const map<CELL_IDX_T, neurotree_t>& tree_map = it1->second;
+              printf("key_rank %d: treemap.size() = %u\n", key_rank, tree_map.size());
               {
                 
                 cereal::BinaryOutputArchive oarchive(ss); // Create an output archive

@@ -4879,14 +4879,12 @@ extern "C"
     int status; int topology_flag=1;
     unsigned long io_size = 0;
     PyObject *py_comm = NULL;
-    PyObject *py_node_rank_map=NULL;
     PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
     char *file_name, *pop_name;
     PyObject *py_attr_name_spaces=NULL;
     PyObject *py_selection=NULL;
     vector <CELL_IDX_T> selection;
-    map<CELL_IDX_T, rank_t> node_rank_map;
 
 
     static const char *kwlist[] = {
@@ -4894,16 +4892,15 @@ extern "C"
                                    "pop_name",
                                    "selection",
                                    "comm",
-                                   "node_rank_map",
                                    "mask",
                                    "namespaces",
                                    "topology",
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOOik", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOik", (char **)kwlist,
                                      &file_name, &pop_name,
-                                     &py_selection, &py_comm, &py_node_rank_map, 
+                                     &py_selection, &py_comm, 
                                      &py_attr_name_spaces, &py_mask,
                                      &topology_flag, &io_size))
       return NULL;
@@ -5022,26 +5019,12 @@ extern "C"
     throw_assert(status >= 0,
                  "py_scatter_read_tree_selection: unable to read population ranges");
 
-    // Create C++ map for node_rank_map:
-    if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
-      {
-        build_node_rank_map(py_node_rank_map, node_rank_map);
-      }
-    else
-      {
-        // round-robin node to rank assignment from file
-        size_t n_selection = selection.size();
-        for (size_t i = 0; i < n_selection; i++)
-          {
-            node_rank_map.insert(make_pair(selection[i], i%size));
-          }
-      }
 
     map <string, NamedAttrMap> attr_maps;
     map<CELL_IDX_T, neurotree_t> tree_map;
 
     status = cell::scatter_read_tree_selection (comm, string(file_name), io_size,
-                                                attr_name_spaces, node_rank_map,
+                                                attr_name_spaces, 
                                                 string(pop_name), pop_vector[pop_idx].start,
                                                 selection, tree_map, attr_maps);
     throw_assert (status >= 0,

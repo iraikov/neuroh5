@@ -43,7 +43,6 @@ namespace neuroh5
      const int                       io_size,
      const vector<string>           &attr_name_spaces,
      // A vector that maps nodes to compute ranks
-     const map<CELL_IDX_T, rank_t>   &node_rank_map,
      const string                    &pop_name,
      const CELL_IDX_T                 pop_start,
      const std::vector<CELL_IDX_T>&  selection,
