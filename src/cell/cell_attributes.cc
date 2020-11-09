@@ -191,6 +191,65 @@ namespace neuroh5
 
 
     // Callback for H5Literate
+    static herr_t cell_attribute_index_cb
+    (
+     hid_t             grp,
+     const char*       name,
+     const H5L_info_t* info,
+     void*             op_data
+     )
+    {
+      herr_t ierr;
+      
+      /* Save old error handler */
+      H5E_auto2_t error_handler;
+      void *client_data;
+      H5Eget_auto(H5E_DEFAULT, &error_handler, &client_data);
+      
+      /* Turn off error handling */
+      H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+ 
+      ierr = H5Gget_objinfo (grp, name, 0, NULL);
+      if (ierr == 0)
+        {
+          string value_path = string(name) + "/" + hdf5::ATTR_VAL;
+
+          /* Restore previous error handler */
+          hid_t dset = H5Dopen2(grp, value_path.c_str(), H5P_DEFAULT);
+          if (dset < 0) // skip the link, if this is not a dataset
+            {
+              H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
+              return 0;
+            }
+    
+          H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
+          
+          hid_t ftype = H5Dget_type(dset);
+          throw_assert(ftype >= 0,
+                       "cell_attributes_cb: unable to get data set type");
+          
+          vector< tuple<string,AttrKind,vector<CELL_IDX_T> > >* ptr =
+            (vector< tuple<string,AttrKind,vector<CELL_IDX_T> > >*) op_data;
+
+
+          vector<CELL_IDX_T> attr_index; 
+          string attr_path = string(name);
+          ierr = hdf5::read_cell_index(grp, attr_path, attr_index);
+          throw_assert(ierr >= 0,
+                       "cell_attributes_index_cb: error in hdf5::read_cell_index");
+
+          ptr->push_back(make_tuple(name, hdf5::h5type_attr_kind(ftype), attr_index));
+          
+          throw_assert(H5Dclose(dset) >= 0,
+                       "cell_attributes_cb: unable to close data set");
+        }
+      
+      H5Eset_auto(H5E_DEFAULT, error_handler, client_data);
+      return 0;
+    }
+
+
+    // Callback for H5Literate
     static herr_t cell_attribute_index_ptr_cb
     (
      hid_t             grp,
@@ -287,7 +346,56 @@ namespace neuroh5
     }
 
 
-    herr_t get_cell_attributes_index_ptr
+    herr_t get_cell_attribute_index
+    (
+     const string&                 file_name,
+     const string&                 name_space,
+     const string&                 pop_name,
+     const CELL_IDX_T&             pop_start,
+     vector < tuple<string,AttrKind,vector <CELL_IDX_T> > >& out_attributes
+     )
+    {
+      hid_t in_file;
+      herr_t ierr;
+    
+      in_file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+      throw_assert(in_file >= 0, "get_call_attributes_index_ptr: unable to open file " << file_name);
+      out_attributes.clear();
+    
+      string path = hdf5::cell_attribute_prefix(name_space, pop_name);
+
+      if (hdf5::exists_dataset (in_file, path) > 0)
+        {
+          hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
+          throw_assert(grp >= 0,
+                       "get_cell_attribute_index_ptr: unable to open group " << path);
+
+          
+          hsize_t idx = 0;
+          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                            &cell_attribute_index_cb, (void*) &out_attributes);
+
+          for (size_t i=0; i<out_attributes.size(); i++)
+            {
+              vector<CELL_IDX_T>& index  = get<2>(out_attributes[i]);
+                
+              for (size_t j=0; j<index.size(); j++)
+                {
+                  index[j] += pop_start;
+                }
+            }
+          
+          ierr = H5Gclose(grp);
+          throw_assert(ierr >= 0,
+                       "get_cell_attribute_index_ptr: unable to close group " << path);
+        }
+      
+      ierr = H5Fclose(in_file);
+      return ierr;
+    }
+
+
+    herr_t get_cell_attribute_index_ptr
     (
      const string&                 file_name,
      const string&                 name_space,
@@ -309,7 +417,7 @@ namespace neuroh5
         {
           hid_t grp = H5Gopen2(in_file, path.c_str(), H5P_DEFAULT);
           throw_assert(grp >= 0,
-                       "get_cell_attributes_index_ptr: unable to open group " << path);
+                       "get_cell_attribute_index_ptr: unable to open group " << path);
 
           
           hsize_t idx = 0;
@@ -328,13 +436,12 @@ namespace neuroh5
           
           ierr = H5Gclose(grp);
           throw_assert(ierr >= 0,
-                       "get_cell_attributes_index_ptr: unable to close group " << path);
+                       "get_cell_attribute_index_ptr: unable to close group " << path);
         }
       
       ierr = H5Fclose(in_file);
       return ierr;
     }
-
     
 
     herr_t num_cell_attributes
@@ -627,9 +734,9 @@ namespace neuroh5
 
       if (rank == 0)
         {
-          status = get_cell_attributes_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
+          status = get_cell_attribute_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
           throw_assert(status == 0,
-                       "read_cell_attributes: error in get_cell_attributes_index_ptr");
+                       "read_cell_attributes: error in get_cell_attribute_index_ptr");
           // round-robin node to rank assignment from file
           if (attr_info.size() > 0)
             {
@@ -863,6 +970,8 @@ namespace neuroh5
           MPI_Comm_split(all_comm,io_color,rank,&io_comm);
           MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
+
+
           map <rank_t, data::AttrMap > rank_attr_map;
           {
             data::NamedAttrMap  attr_values;
@@ -1007,9 +1116,9 @@ namespace neuroh5
 
       if (rank == (unsigned int)root)
         {
-          status = get_cell_attributes_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
+          status = get_cell_attribute_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
           throw_assert(status == 0,
-                       "read_cell_attributes: error in get_cell_attributes_index_ptr");
+                       "read_cell_attributes: error in get_cell_attribute_index_ptr");
         }
 
 
@@ -1267,9 +1376,9 @@ namespace neuroh5
 
       if (rank == 0)
         {
-          status = get_cell_attributes_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
+          status = get_cell_attribute_index_ptr (file_name, name_space, pop_name, pop_start, attr_info);
           throw_assert(status == 0,
-                       "read_cell_attributes: error in get_cell_attributes_index_ptr");
+                       "read_cell_attributes: error in get_cell_attribute_index_ptr");
         }
       // Broadcast the attribute names, types, indices, and pointers
       {

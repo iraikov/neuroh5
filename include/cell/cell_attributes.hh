@@ -60,6 +60,26 @@ namespace neuroh5
      vector< pair<string,AttrKind> >& out_attributes
      );
 
+
+    herr_t get_cell_attribute_index
+    (
+     const string&                 file_name,
+     const string&                 name_space,
+     const string&                 pop_name,
+     const CELL_IDX_T&             pop_start,
+     vector < tuple<string,AttrKind,vector <CELL_IDX_T> > >& out_attributes
+     );
+
+
+    herr_t get_cell_attribute_index_ptr
+    (
+     const string&                 file_name,
+     const string&                 name_space,
+     const string&                 pop_name,
+     const CELL_IDX_T&             pop_start,
+     vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > >& out_attributes
+     );
+
     
     void read_cell_attributes
     (

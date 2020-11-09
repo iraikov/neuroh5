@@ -36,6 +36,15 @@ namespace neuroh5
      );
 
     
+    herr_t read_cell_index
+    (
+     const hid_t&              loc,
+     const std::string&        path,
+     std::vector<CELL_IDX_T> & index,
+     bool collective = false
+     );
+
+
     herr_t read_cell_index_ptr
     (
      const hid_t&              loc,
