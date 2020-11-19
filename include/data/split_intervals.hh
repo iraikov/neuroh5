@@ -13,7 +13,7 @@ namespace neuroh5
   {
     // based on https://stackoverflow.com/questions/40656792/c-best-way-to-split-vector-into-n-vector
     template<typename V>
-    auto split_intervals(const V& v, unsigned numitems) 
+    auto split_intervals(const V& v, unsigned numitems)  -> std::vector<V>
     {
       using Iterator = typename V::const_iterator;
       std::vector<V> rtn;
