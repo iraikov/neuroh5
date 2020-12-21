@@ -2146,7 +2146,7 @@ NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
   p->state = new NeuroH5CellAttrIterState();
   p->state->seq_index     = 0;
   p->state->count         = attr_map.index_set.size();
-  p->state->attr_map      = attr_map;
+  p->state->attr_map      = std::move(attr_map);
   p->state->attr_namespace = attr_namespace;
   p->state->attr_names    = attr_names;
   p->state->it_idx        = p->state->attr_map.index_set.cbegin();
@@ -2655,7 +2655,7 @@ NeuroH5EdgeIter_FromMap(const edge_map_t& prj_edge_map,
 
   p->state->seq_index     = 0;
   p->state->count         = prj_edge_map.size();
-  p->state->edge_map      = prj_edge_map;
+  p->state->edge_map      = std::move(prj_edge_map);
   p->state->edge_attr_name_spaces = edge_attr_name_spaces;
   p->state->it_edge       = p->state->edge_map.cbegin();
   
@@ -7444,7 +7444,7 @@ extern "C"
     PyObject *py_tuple_index_dict = NULL;
     PyObject *py_node_rank_map = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned long io_size=1, cache_size=100;
+    unsigned long io_size=1, cache_size=1;
     const string default_namespace = "Attributes";
     char *file_name, *pop_name, *attr_namespace = (char *)default_namespace.c_str();
     return_type return_tp = return_dict;
@@ -7529,9 +7529,6 @@ extern "C"
     
     if (io_size > (unsigned int)size)
       io_size = size;
-
-    if ((size > 0) && (cache_size < (unsigned int)size))
-      cache_size = size;
 
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);

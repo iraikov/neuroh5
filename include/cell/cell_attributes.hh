@@ -249,6 +249,8 @@ namespace neuroh5
       hdf5::append_cell_attribute<T>(file, attr_path, rindex, attr_ptr, values,
                                      data_type, index_type, ptr_type);
     
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
       status = H5Fclose(file);
       throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file");
       status = H5Pclose(fapl);
@@ -344,6 +346,8 @@ namespace neuroh5
                                  &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
                    == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
       sendbuf_size_values.clear();
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Barrier");
     
       // Create gid, attr_ptr, value arrays
       vector<ATTR_PTR_T>  attr_ptr;
@@ -494,6 +498,8 @@ namespace neuroh5
       idx_recvcounts.clear();
       idx_rdispls.clear();
 
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Barrier");
     
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
@@ -509,7 +515,8 @@ namespace neuroh5
         {
           color = 0;
         }
-      MPI_Comm_split(comm,color,rank,&io_comm);
+      throw_assert(MPI_Comm_split(comm,color,rank,&io_comm) == MPI_SUCCESS,
+		   "append_cell_attribute_map: error in MPI_Comm_split");
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
       if (is_io_rank)
@@ -521,12 +528,12 @@ namespace neuroh5
                                    chunk_size, value_chunk_size, cache_size);
         }
       
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Barrier");
       throw_assert(MPI_Barrier(io_comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Comm_free");
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Barrier");
     }
 
 
