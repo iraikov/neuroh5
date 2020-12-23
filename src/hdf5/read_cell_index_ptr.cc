@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading NeuroH5 cell attribute index and pointer.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include <hdf5.h>
@@ -27,6 +27,50 @@ namespace neuroh5
   namespace hdf5
   {
     
+
+    herr_t read_cell_index
+    (
+     const hid_t&              loc,
+     const std::string&        path,
+     std::vector<CELL_IDX_T> & index,
+     bool collective
+     )
+    {
+      herr_t status = 0;
+
+
+      status = exists_group (loc, path.c_str());
+      throw_assert(status > 0,
+                   "read_cell_index_ptr: group " << path << " does not exist");
+      
+      hsize_t dset_size = dataset_num_elements (loc, path + "/" + CELL_INDEX);
+      
+      if (dset_size > 0)
+        {
+          /* Create property list for collective dataset operations. */
+          hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+          if (collective)
+            {
+              status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+              throw_assert(status >= 0,
+                           "read_cell_index_ptr: error in H5Pset_dxpl_mpio");
+            }
+          
+          string index_path = path + "/" + CELL_INDEX;
+
+          // read index
+          index.resize(dset_size);
+          status = read<NODE_IDX_T> (loc, index_path, 0, dset_size,
+                                     NODE_IDX_H5_NATIVE_T, index, rapl);
+
+          status = H5Pclose(rapl);
+          throw_assert(status == 0, "read_cell_index_ptr: unable to close property list");
+          
+        }
+      
+      return status;
+    }
+
 
     herr_t read_cell_index_ptr
     (

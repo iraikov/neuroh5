@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading and writing cell indices from an HDF5 file.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -134,14 +134,21 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           throw_assert_nomsg(file >= 0);
 
-          size_t dset_size = hdf5::dataset_num_elements(file, hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX));
-          cell_index.resize(dset_size);
-          ierr = hdf5::read<CELL_IDX_T> (file,
-                                         hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX),
-                                         0, dset_size,
-                                         CELL_IDX_H5_NATIVE_T,
-                                         cell_index, H5P_DEFAULT);
-          throw_assert_nomsg(ierr >= 0);
+          string cell_index_path = hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX);
+          bool has_index = hdf5::exists_dataset (file, cell_index_path) > 0;
+
+          if (has_index)
+            {
+              size_t dset_size = hdf5::dataset_num_elements(file, cell_index_path);
+              cell_index.resize(dset_size);
+              ierr = hdf5::read<CELL_IDX_T> (file,
+                                             cell_index_path,
+                                             0, dset_size,
+                                             CELL_IDX_H5_NATIVE_T,
+                                             cell_index, H5P_DEFAULT);
+              throw_assert_nomsg(ierr >= 0);
+            }
+
           ierr = H5Fclose (file);
           throw_assert_nomsg(ierr == 0);
 

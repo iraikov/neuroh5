@@ -64,6 +64,7 @@
 #include "projection_names.hh"
 #include "edge_attributes.hh"
 #include "serialize_data.hh"
+#include "split_intervals.hh"
 
 #if PY_MAJOR_VERSION >= 3
 #define Py_TPFLAGS_HAVE_ITER ((Py_ssize_t)0)
@@ -149,6 +150,234 @@ void build_node_rank_map (PyObject *py_node_rank_map,
       rank_t rank = PyLong_AsLong(idx_value);
       node_rank_map.insert(make_pair(idx,rank));
     }
+}
+
+
+void ldbal_cell_attr (MPI_Comm comm,
+                      const string& file_name,
+                      const vector<pop_range_t>& pop_vector,
+                      const vector<pair <pop_t, string> >& pop_labels,
+                      const string& pop_name,
+                      const size_t& pop_idx,    
+                      const vector<string>& attr_name_spaces,
+                      PyObject *py_node_rank_map,
+                      map<NODE_IDX_T, rank_t>& node_rank_map)
+{
+  int status;
+  int rank, size;
+  int root = 0;
+
+  status = MPI_Comm_size(comm, &size);
+  throw_assert(status == MPI_SUCCESS,
+               "ldbal_cell_attr: unable to obtain size of MPI communicator");
+  status = MPI_Comm_rank(comm, &rank);
+  throw_assert(status == MPI_SUCCESS,
+               "ldbal_cell_attr: unable to obtain rank of MPI communicator");
+
+  if (rank == root)
+    {
+      if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
+        {
+          build_node_rank_map(py_node_rank_map, node_rank_map);
+        }
+      else
+        {
+          // round-robin node to rank assignment from file
+          set<CELL_IDX_T> attr_index;
+          for (const auto& attr_name_space : attr_name_spaces)
+            {
+              vector < tuple<string,AttrKind,vector <CELL_IDX_T> > > ns_attr_infos;
+              throw_assert(cell::get_cell_attribute_index (file_name, attr_name_space,
+                                                           get<1>(pop_labels[pop_idx]), 
+                                                           pop_vector[pop_idx].start,
+                                                           ns_attr_infos) >= 0,
+                           "ldbal_cell_attr: unable to read cell attributes metadata");
+              for (auto& ns_attr_info: ns_attr_infos)
+                {
+                  vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
+                  for (size_t i = 0; i < ns_attr_index.size(); i++)
+                    {
+                      throw_assert((ns_attr_index[i] >= pop_vector[pop_idx].start) &&
+                                   (ns_attr_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
+                                   "ldbal_cell_attr: invalid index " << ns_attr_index[i]);
+                    }
+                  for (const auto& gid : ns_attr_index)
+                    {
+                      attr_index.insert(gid);
+                    }
+                }
+            }
+          
+          size_t i = 0;
+          for (const auto& gid : attr_index)
+            {
+              node_rank_map.insert(make_pair(gid, i%size));
+              i++;
+            }
+        }
+    }
+
+  status = MPI_Barrier(comm);
+  throw_assert(status == MPI_SUCCESS,
+               "ldbal_cell_attr: barrier error");
+  
+  {
+    vector<char> sendbuf;
+    size_t sendbuf_size=0;
+    if ((rank == root) && (node_rank_map.size() > 0) )
+      {
+        data::serialize_data(node_rank_map, sendbuf);
+        sendbuf_size = sendbuf.size();
+      }
+    
+    status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr: broadcast error");
+    
+    sendbuf.resize(sendbuf_size);
+    status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr: broadcast error");
+
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr: barrier error");
+    
+    if ((rank != root) && (sendbuf_size > 0))
+      {
+        data::deserialize_data(sendbuf, node_rank_map);
+      }
+  }
+
+}
+
+
+
+void ldbal_cell_attr_gen (MPI_Comm comm,
+                          const string& file_name,
+                          const vector<pop_range_t>& pop_vector,
+                          const vector<pair <pop_t, string> >& pop_labels,
+                          const string& pop_name,
+                          const size_t& pop_idx,    
+                          const string& attr_name_space,
+                          const size_t& numitems,
+                          PyObject *py_node_rank_map,
+                          map<NODE_IDX_T, rank_t>& node_rank_map,
+                          size_t& count, size_t& local_count)
+{
+  int status;
+  int rank, size;
+  int root = 0;
+
+  status = MPI_Comm_size(comm, &size);
+  throw_assert(status == MPI_SUCCESS,
+               "ldbal_cell_attr_gen: unable to obtain size of MPI communicator");
+  status = MPI_Comm_rank(comm, &rank);
+  throw_assert(status == MPI_SUCCESS,
+               "ldbal_cell_attr_gen: unable to obtain rank of MPI communicator");
+  count = 0;
+  if (rank == root)
+    {
+      if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
+        {
+          build_node_rank_map(py_node_rank_map, node_rank_map);
+        }
+      else
+        {
+          // round-robin node to rank assignment from file
+          vector < tuple<string,AttrKind,vector <CELL_IDX_T> > > ns_attr_infos;
+          throw_assert(cell::get_cell_attribute_index (file_name, attr_name_space,
+                                                       get<1>(pop_labels[pop_idx]), 
+                                                       pop_vector[pop_idx].start,
+                                                       ns_attr_infos) >= 0,
+                       "ldbal_cell_attr_gen: unable to read cell attributes metadata");
+          for (auto& ns_attr_info: ns_attr_infos)
+            {
+              vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
+              for (size_t i = 0; i < ns_attr_index.size(); i++)
+                {
+                  throw_assert((ns_attr_index[i] >= pop_vector[pop_idx].start) &&
+                               (ns_attr_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
+                               "ldbal_cell_attr_gen: invalid index " << ns_attr_index[i]);
+                }
+              count = max(count, ns_attr_index.size());
+            }
+
+          vector < set<CELL_IDX_T> > attr_index_sets;
+          for (auto& ns_attr_info : ns_attr_infos)
+          {
+            vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
+            auto attr_index_intervals = data::split_intervals(ns_attr_index, numitems);
+            attr_index_sets.resize(max(attr_index_intervals.size(), attr_index_sets.size()));
+            size_t i = 0;
+            for (const auto& attr_index_interval : attr_index_intervals)
+              {
+                set<CELL_IDX_T>& attr_index_set = attr_index_sets[i];
+                for (const auto& gid : attr_index_interval)
+                  {
+                    attr_index_set.insert(gid);
+                  }
+                i++;
+              }
+          }
+
+          rank_t r=0; 
+          for (const auto& attr_index_set : attr_index_sets)
+            {
+              if ((unsigned int)rank == r) local_count++;
+              for (const auto& gid : attr_index_set)
+                {
+                  auto it = node_rank_map.find(gid);
+                  if (it == node_rank_map.end())
+                    {
+                      node_rank_map.insert(make_pair(gid, r++));
+                    }
+                  if ((unsigned int)size <= r) r=0;
+                }
+            }
+        }
+    }
+
+
+  status = MPI_Barrier(comm);
+  throw_assert(status == MPI_SUCCESS,
+               "ldbal_cell_attr: barrier error");
+  
+  {
+    vector<char> sendbuf;
+    size_t sendbuf_size=0;
+    if ((rank == root) && (node_rank_map.size() > 0) )
+      {
+        data::serialize_data(node_rank_map, sendbuf);
+        sendbuf_size = sendbuf.size();
+      }
+    
+    status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr_gen: broadcast error");
+    
+    sendbuf.resize(sendbuf_size);
+    status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr_gen: broadcast error");
+    
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr_gen: barrier error");
+
+    if ((rank != root) && (sendbuf_size > 0))
+      {
+        data::deserialize_data(sendbuf, node_rank_map);
+      }
+
+
+    status = MPI_Bcast(&count, 1, MPI_SIZE_T, root, comm);
+
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr_gen: barrier error");
+  }
+
 }
 
 PyObject* PyStr_FromCString(const char *string)
@@ -4576,6 +4805,28 @@ extern "C"
       {
         io_size = size;
       }
+
+    
+    vector<pair <pop_t, string> > pop_labels;
+    status = cell::read_population_labels(comm, string(file_name), pop_labels);
+    throw_assert (status >= 0,
+                  "py_scatter_read_cell_trees: unable to read population labels");
+
+    // Determine index of population to be read
+    size_t pop_idx=0; bool pop_idx_set=false;
+    for (size_t i=0; i<pop_labels.size(); i++)
+      {
+        if (get<1>(pop_labels[i]) == pop_name)
+          {
+            pop_idx = get<0>(pop_labels[i]);
+            pop_idx_set = true;
+          }
+      }
+    if (!pop_idx_set)
+      {
+        throw_err(std::string("py_scatter_read_tree_selection: ") + "Population " + pop_name + " not found");
+      }
+
     
     vector <string> attr_name_spaces;
     map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
@@ -4609,37 +4860,36 @@ extern "C"
     else
       {
         // round-robin node to rank assignment from file
-        for (size_t i = 0; i < n_nodes; i++)
-          {
-            node_rank_map.insert(make_pair(i, i%size));
-          }
-      }
-    
-    vector<pair <pop_t, string> > pop_labels;
-    status = cell::read_population_labels(comm, string(file_name), pop_labels);
-    throw_assert (status >= 0,
-                  "py_scatter_read_trees: unable to read population labels");
+        vector<CELL_IDX_T> cell_index;
+        throw_assert(cell::read_cell_index(comm,
+                                           string(file_name),
+                                           get<1>(pop_labels[pop_idx]),
+                                           hdf5::TREES,
+                                           cell_index) >= 0,
+                     "scatter_read_trees: unable to read cell index");
 
-    
-    // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
-      {
-        if (get<1>(pop_labels[i]) == pop_name)
+        for (size_t i = 0; i < cell_index.size(); i++)
           {
-            pop_idx = get<0>(pop_labels[i]);
-            pop_idx_set = true;
+            cell_index[i] += pop_vector[pop_idx].start;
+            throw_assert((cell_index[i] >= pop_vector[pop_idx].start) &&
+                         (cell_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
+                         "scatter_read_trees: invalid index " << cell_index[i]);
+            
           }
-      }
-    if (!pop_idx_set)
-      {
-        throw_err(std::string("py_scatter_read_trees: ") + "Population " + pop_name + " not found");
+
+        std::sort(cell_index.begin(), cell_index.end());
+        size_t i = 0;
+        for (const auto& gid : cell_index)
+          {
+            node_rank_map.insert(make_pair(gid, i%size));
+            i++;
+          }
       }
     
 
     map<CELL_IDX_T, neurotree_t> tree_map;
     map<string, NamedAttrMap> attr_maps;
-
+    
     status = cell::scatter_read_trees (comm, string(file_name),
                                        io_size, attr_name_spaces,
                                        node_rank_map, string(pop_name),
@@ -5228,37 +5478,10 @@ extern "C"
           }
       }
 
-    
-    size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-
-    status = cell::read_population_ranges(comm,
-                                          string(file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
-    throw_assert(status >= 0,
-                 "py_scatter_read_cell_attributes: unable to read population ranges");
-
-
-    // Create C++ map for node_rank_map:
-    if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
-      {
-        build_node_rank_map(py_node_rank_map, node_rank_map);
-      }
-    else
-      {
-        // round-robin node to rank assignment from file
-        for (size_t i = 0; i < n_nodes; i++)
-          {
-            node_rank_map.insert(make_pair(i, i%size));
-          }
-      }
-    
     vector<pair <pop_t, string> > pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
-                 "py_scatter_read_cell_attributes: unable to read population labels");
+                  "py_scatter_read_cell_attributes: unable to read population labels");
 
     // Determine index of population to be read
     size_t pop_idx=0; bool pop_idx_set=false;
@@ -5272,8 +5495,25 @@ extern "C"
       }
     if (!pop_idx_set)
       {
-        throw_err(std::string("py_scatter_read_cell_attributes") + "Population " + pop_name + " not found");
+        throw_err(std::string("py_scatter_read_cell_attributes: ") + "Population " + pop_name + " not found");
       }
+
+    
+    size_t n_nodes;
+    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+    vector<pop_range_t> pop_vector;
+
+    status = cell::read_population_ranges(comm,
+                                          string(file_name),
+                                          pop_ranges, pop_vector,
+                                          n_nodes);
+    throw_assert(status >= 0,
+                 "py_scatter_read_cell_attributes: unable to read population ranges");
+
+    ldbal_cell_attr (comm, string(file_name),
+                     pop_vector, pop_labels, pop_name, pop_idx, 
+                     attr_name_spaces, py_node_rank_map,
+                     node_rank_map);
 
     PyObject *py_namespace_dict = PyDict_New();
     for (string attr_name_space : attr_name_spaces)
@@ -7153,6 +7393,7 @@ extern "C"
                                        hdf5::TREES,
                                        tree_index) >= 0,
                  "NeuroH5TreeGen: unable to read cell index");
+    std::sort(tree_index.begin(), tree_index.end());
     
     size_t count = tree_index.size();
     for (size_t i=0; i<tree_index.size(); i++)
@@ -7232,6 +7473,7 @@ extern "C"
     PyObject *py_comm = NULL;
     PyObject *py_mask = NULL;
     PyObject *py_tuple_index_dict = NULL;
+    PyObject *py_node_rank_map = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size=1, cache_size=100;
     const string default_namespace = "Attributes";
@@ -7244,6 +7486,7 @@ extern "C"
                                    "pop_name",
                                    "namespace",
                                    "comm",
+                                   "node_rank_map",
                                    "mask",
                                    "io_size",
                                    "cache_size",
@@ -7251,9 +7494,10 @@ extern "C"
                                    "tuple_index_dict",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|sOOkisO", (char **)kwlist,
-                                     &file_name, &pop_name, &attr_namespace,
-                                     &py_comm, &py_mask, &io_size, &cache_size,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OOOkisO", (char **)kwlist,
+                                     &file_name, &pop_name, &attr_namespace, 
+                                     &py_comm, &py_node_rank_map, &py_mask, 
+                                     &io_size, &cache_size,
                                      &return_type_arg, &py_tuple_index_dict))
       return NULL;
 
@@ -7348,29 +7592,6 @@ extern "C"
                                               pop_ranges, pop_vector,
                                               n_nodes) >= 0,
                  "NeuroH5CellAttrGen: unable to read population ranges");
-                 
-
-    vector< pair<string,AttrKind> > attr_info;
-    throw_assert(cell::get_cell_attributes (string(file_name), string(attr_namespace),
-                                            get<1>(pop_labels[pop_idx]), attr_info) >= 0,
-                 "NeuroH5CellAttrGen: unable to read cell attributes metadata");
-
-    vector<CELL_IDX_T> cell_index;
-    if (attr_info.size() > 0)
-      {
-        throw_assert(cell::read_cell_index(comm,
-                                           string(file_name),
-                                           get<1>(pop_labels[pop_idx]),
-                                           string(attr_namespace) + "/" + attr_info[0].first,
-                                           cell_index) >= 0,
-                     "NeuroH5CellAttrGen: unable to read cell index");
-      }
-    
-    size_t count = cell_index.size();
-    for (size_t i=0; i<count; i++)
-      {
-        cell_index[i] += pop_vector[pop_idx].start;
-      }
     
     /* Create a new generator state and initialize its state - pointing to the last
      * index in the sequence.
@@ -7380,23 +7601,13 @@ extern "C"
 
     py_ntrg->state = new NeuroH5CellAttrGenState();
 
-    // Create C++ map for node_rank_map:
-    // round-robin node to rank assignment from file
-    rank_t r=0; size_t local_count=0; 
-    for (size_t i = 0; i < cell_index.size(); i++)
-      {
-        if ((unsigned int)rank == r) local_count++;
-        auto it = py_ntrg->state->node_rank_map.find(cell_index[i]);
-        if (it == py_ntrg->state->node_rank_map.end())
-          {
-            py_ntrg->state->node_rank_map.insert(make_pair(cell_index[i], r++));
-          }
-        else
-          {
-            throw_err("NeuroH5CellAttrGen: cell attribute generator requires a unique index set");
-          }
-        if ((unsigned int)size <= r) r=0;
-      }
+    size_t count=0, local_count=0;
+    ldbal_cell_attr_gen (comm, string(file_name),
+                         pop_vector, pop_labels, pop_name, pop_idx, 
+                         string(attr_namespace), io_size*cache_size,
+                         py_node_rank_map, py_ntrg->state->node_rank_map,
+                         count, local_count);
+        
     
     throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS,
                  "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
