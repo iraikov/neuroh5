@@ -14,6 +14,7 @@
 
 #include "neuroh5_types.hh"
 #include "throw_assert.hh"
+#include "ngraph.hh"
 
 
 using namespace std;
@@ -52,9 +53,12 @@ namespace neuroh5
       throw_assert_nomsg(num_xpoints == parents.size());
       throw_assert_nomsg(num_xpoints == swc_types.size());
 
+      size_t num_sections = sections[0];
+
       size_t num_nodes = num_xpoints, sections_ptr=1;
 
       set<NODE_IDX_T> all_section_nodes;
+      
       while (sections_ptr < sections.size())
         {
           std::vector<NODE_IDX_T> section_nodes;
@@ -62,6 +66,7 @@ namespace neuroh5
           sections_ptr++;
           for (size_t p = 0; p < num_section_nodes; p++)
             {
+                        
               NODE_IDX_T node_idx = sections[sections_ptr];
               if (!(node_idx <= num_nodes))
                 {
@@ -77,6 +82,31 @@ namespace neuroh5
         }
   
       throw_assert_nomsg(all_section_nodes.size() == num_nodes);
+
+      Graph S;
+
+      for (size_t s = 0; s < num_sections; s++)
+        {
+          S.insert_vertex(s);
+        }
+      for (size_t e = 0; e < src_vector.size(); e++)
+        {
+          S.insert_edge(src_vector[e], dst_vector[e]);
+        }
+
+      size_t root_count = 0;
+      for (Graph::const_iterator p=S.begin(); p != S.end(); p++)
+          {
+            Graph::vertex v = Graph::node (p); 
+            Graph::vertex_set in = S.in_neighbors(v);
+            if (in.size() == 0)
+              {
+                root_count++;
+              }
+            
+          }
+
+      throw_assert(root_count == 1, "tree must have only one root");
     }
 
   }
