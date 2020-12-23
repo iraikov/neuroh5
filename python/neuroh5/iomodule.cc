@@ -43,6 +43,7 @@
 #include "path_names.hh"
 #include "create_file_toplevel.hh"
 #include "read_tree.hh"
+#include "validate_tree.hh"
 #include "append_tree.hh"
 #include "scatter_read_tree.hh"
 #include "cell_index.hh"
@@ -930,11 +931,16 @@ void build_edge_maps (int rank, PyObject *py_edge_dict,
 
 PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                               const map <string, NamedAttrMap>& attr_maps,
-                              const bool topology)
+                              const bool topology, const bool validate)
 {
   const CELL_IDX_T idx = get<0>(tree);
   throw_assert(idx == key,
                "py_build_tree_value: tree index mismatch");
+
+  if (validate)
+    {
+      cell::validate_tree(tree);
+    }
 
   const vector<SECTION_IDX_T> & src_vector=get<1>(tree);
   const vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
@@ -1315,6 +1321,7 @@ typedef struct {
   map <string, NamedAttrMap> attr_maps;
   vector<neurotree_t>::const_iterator it_tree;
   bool topology_flag;
+  bool validate_flag;
   
 } NeuroH5TreeIterState;
 
@@ -1346,7 +1353,9 @@ PyObject* NeuroH5TreeIter_iternext(PyObject *self)
       const CELL_IDX_T key = get<0>(tree);
       const map <string, NamedAttrMap>& attr_maps = py_state->state->attr_maps;
 
-      PyObject *treeval = py_build_tree_value(key, tree, attr_maps, py_state->state->topology_flag);
+      PyObject *treeval = py_build_tree_value(key, tree, attr_maps,
+                                              py_state->state->topology_flag,
+                                              py_state->state->validate_flag);
       throw_assert(treeval != NULL,
                    "NeuroH5TreeIter: invalid tree value");
       
@@ -1404,7 +1413,7 @@ static PyObject *
 NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
                            const vector<string>& attr_name_spaces,
                            const map <string, NamedAttrMap>& attr_maps,
-                           const bool topology_flag)
+                           const bool topology_flag, const bool validate_flag)
 {
 
   PyNeuroH5TreeIterState *p = PyObject_New(PyNeuroH5TreeIterState, &PyNeuroH5TreeIter_Type);
@@ -1425,6 +1434,7 @@ NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
   p->state->attr_maps  = attr_maps;
   p->state->it_tree    = p->state->tree_vector.cbegin();
   p->state->topology_flag = topology_flag;
+  p->state->validate_flag = validate_flag;
 
                            
   return (PyObject *)p;
@@ -1436,7 +1446,7 @@ static PyObject *
 NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
                         const vector<string>& attr_name_spaces,
                         const map <string, NamedAttrMap>& attr_maps,
-                        const bool topology_flag)
+                        const bool topology_flag, const bool validate_flag)
 
 {
   vector <neurotree_t> tree_vector;
@@ -1450,7 +1460,8 @@ NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
   return (PyObject *)NeuroH5TreeIter_FromVector(tree_vector,
                                                 attr_name_spaces,
                                                 attr_maps,
-                                                topology_flag);
+                                                topology_flag,
+                                                validate_flag);
 }
 
 
@@ -2039,10 +2050,10 @@ PyObject* NeuroH5CellAttrIter_iter(PyObject *self)
 static void NeuroH5CellAttrIter_dealloc(PyNeuroH5CellAttrIterState *py_state)
 {
 #if HAS_STRUCT_SEQUENCE
-  Py_DECREF(py_state->state->struct_type);
+  //Py_DECREF(py_state->state->struct_type);
 #endif
-  delete py_state->state;
-  Py_TYPE(py_state)->tp_free(py_state);
+  //delete py_state->state;
+  //Py_TYPE(py_state)->tp_free(py_state);
 }
 
 
@@ -4459,7 +4470,7 @@ extern "C"
   
   PyDoc_STRVAR(
     read_trees_doc,
-    "read_trees(file_name, population_name, namespaces=[], topology=True, comm=None)\n"
+    "read_trees(file_name, population_name, namespaces=[], topology=True, validate=True, comm=None)\n"
     "--\n"
     "\n"
     "Reads neuronal tree morphologies contained in the given file. "
@@ -4481,6 +4492,9 @@ extern "C"
     "\n"
     "topology : boolean\n"
     "    An optional flag that specifies whether section topology dictionary should be returned.\n"
+    "\n"
+    "validate : boolean\n"
+    "    An optional flag that specifies whether the tree should be validated.\n"
     "\n"
     "comm : MPI communicator\n"
     "    Optional MPI communicator. If None, the world communicator will be used.\n"
@@ -4517,7 +4531,7 @@ extern "C"
   
   static PyObject *py_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; int topology_flag=1; 
+    int status; int topology_flag=1; int validate_flag=1;  
     PyObject *py_comm = NULL;
     PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
@@ -4531,13 +4545,13 @@ extern "C"
                                    "mask",
                                    "namespaces",
                                    "topology",
-                                   "io_size",
+                                   "validate",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOik", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOii", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, &py_mask, 
                                      &py_attr_name_spaces, 
-                                     &topology_flag))
+                                     &topology_flag, &validate_flag))
       return NULL;
 
     set<string> attr_mask;
@@ -4654,7 +4668,8 @@ extern "C"
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
                                                         attr_name_spaces,
                                                         attr_maps,
-                                                        topology_flag>0);
+                                                        topology_flag>0,
+                                                        validate_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -4667,7 +4682,7 @@ extern "C"
 
   PyDoc_STRVAR(
     scatter_read_trees_doc,
-    "scatter_read_trees(file_name, population_name, namespaces=[], topology=True, node_rank_map=None, comm=None, io_size=0)\n"
+    "scatter_read_trees(file_name, population_name, namespaces=[], topology=True, validate=True, node_rank_map=None, comm=None, io_size=0)\n"
     "--\n"
     "\n"
     "Reads neuronal tree morphologies contained in the given file and scatters them to their assigned ranks. "
@@ -4692,6 +4707,9 @@ extern "C"
     "\n"
     "topology : boolean\n"
     "    An optional flag that specifies whether section topology dictionary should be returned.\n"
+    "\n"
+    "validate : boolean\n"
+    "    An optional flag that specifies whether the tree should be validated.\n"
     "\n"
     "comm : MPI communicator\n"
     "    Optional MPI communicator. If None, the world communicator will be used.\n"
@@ -4731,7 +4749,7 @@ extern "C"
   
   static PyObject *py_scatter_read_trees (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; int topology_flag = 1;
+    int status; int topology_flag = 1; int validate_flag=1;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size = 0;
@@ -4746,13 +4764,14 @@ extern "C"
                                    "node_rank_map",
                                    "namespaces",
                                    "topology",
+                                   "validate",
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOik", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOiik", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, 
                                      &py_node_rank_map, &py_attr_name_spaces,
-                                     &topology_flag, &io_size))
+                                     &topology_flag, &validate_flag, &io_size))
       return NULL;
     MPI_Comm comm;
 
@@ -4883,7 +4902,8 @@ extern "C"
     PyObject* py_tree_iter = NeuroH5TreeIter_FromMap(tree_map,
                                                      attr_name_spaces,
                                                      attr_maps,
-                                                     topology_flag>0);
+                                                     topology_flag>0,
+                                                     validate_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -4900,7 +4920,7 @@ extern "C"
 
   PyDoc_STRVAR(
     read_tree_selection_doc,
-    "read_tree_selection(file_name, population_name, selection, namespaces=[], topology=True, comm=None)\n"
+    "read_tree_selection(file_name, population_name, selection, namespaces=[], topology=True, validate=True, comm=None)\n"
     "--\n"
     "\n"
     "Reads selected neuronal tree morphologies contained in the given file. "
@@ -4925,6 +4945,9 @@ extern "C"
     "\n"
     "topology : boolean\n"
     "    An optional flag that specifies whether section topology dictionary should be returned.\n"
+    "\n"
+    "validate : boolean\n"
+    "    An optional flag that specifies whether the tree should be validated.\n"
     "\n"
     "comm : MPI communicator\n"
     "    Optional MPI communicator. If None, the world communicator will be used.\n"
@@ -4960,7 +4983,7 @@ extern "C"
 
   static PyObject *py_read_tree_selection (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; int topology_flag=1;
+    int status; int topology_flag=1; int validate_flag=1;
     PyObject *py_comm = NULL;
     PyObject *py_mask = NULL;
     MPI_Comm *comm_ptr  = NULL;
@@ -4977,13 +5000,14 @@ extern "C"
                                    "mask",
                                    "namespaces",
                                    "topology",
+                                   "validate",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOi", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOii", (char **)kwlist,
                                      &file_name, &pop_name,
                                      &py_selection, &py_comm, 
                                      &py_attr_name_spaces, &py_mask,
-                                     &topology_flag))
+                                     &topology_flag, &validate_flag))
       return NULL;
     throw_assert(PyList_Check(py_selection) > 0,
                  "py_read_tree_selection: unable to read tree selection");
@@ -5113,7 +5137,8 @@ extern "C"
     PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
                                                         attr_name_spaces,
                                                         attr_maps,
-                                                        topology_flag>0);
+                                                        topology_flag>0,
+                                                        validate_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -5126,7 +5151,7 @@ extern "C"
 
   static PyObject *py_scatter_read_tree_selection (PyObject *self, PyObject *args, PyObject *kwds)
   {
-    int status; int topology_flag=1;
+    int status; int topology_flag=1; int validate_flag=1;
     unsigned long io_size = 0;
     PyObject *py_comm = NULL;
     PyObject *py_mask = NULL;
@@ -5145,6 +5170,7 @@ extern "C"
                                    "mask",
                                    "namespaces",
                                    "topology",
+                                   "validate",
                                    "io_size",
                                    NULL};
 
@@ -5152,7 +5178,7 @@ extern "C"
                                      &file_name, &pop_name,
                                      &py_selection, &py_comm, 
                                      &py_attr_name_spaces, &py_mask,
-                                     &topology_flag, &io_size))
+                                     &topology_flag, &validate_flag, &io_size))
       return NULL;
     throw_assert(PyList_Check(py_selection) > 0,
                  "py_scatter_read_tree_selection: unable to read tree selection");
@@ -5286,7 +5312,8 @@ extern "C"
     PyObject* py_tree_iter = NeuroH5TreeIter_FromMap(tree_map,
                                                      attr_name_spaces,
                                                      attr_maps,
-                                                     topology_flag>0);
+                                                     topology_flag>0,
+                                                     validate_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -7044,6 +7071,7 @@ extern "C"
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
     map<CELL_IDX_T, rank_t> node_rank_map;
     bool topology_flag;
+    bool validate_flag;
     
   } NeuroH5TreeGenState;
 
@@ -7264,6 +7292,7 @@ extern "C"
   {
     int status;
     int topology_flag=1;
+    int validate_flag=1;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned int io_size=0, cache_size=100;
@@ -7276,14 +7305,15 @@ extern "C"
                                    "pop_name",
                                    "namespaces",
                                    "topology",
+                                   "validate",
                                    "comm",
                                    "io_size",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OiOii", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OiiOii", (char **)kwlist,
                                      &file_name, &pop_name, 
-                                     &py_attr_name_spaces, &topology_flag,
+                                     &py_attr_name_spaces, &topology_flag, &validate_flag,
                                      &py_comm, &io_size, &cache_size))
       return NULL;
 
@@ -7426,6 +7456,7 @@ extern "C"
     py_ntrg->state->cache_size = cache_size;
     py_ntrg->state->attr_name_spaces  = attr_name_spaces;
     py_ntrg->state->topology_flag  = topology_flag;
+    py_ntrg->state->validate_flag  = validate_flag;
 
     map<CELL_IDX_T, neurotree_t> tree_map;
     py_ntrg->state->tree_map = tree_map;
@@ -7745,7 +7776,9 @@ extern "C"
             {
               CELL_IDX_T key = py_ntrg->state->it_tree->first;
               const neurotree_t &tree = py_ntrg->state->it_tree->second;
-              PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps, py_ntrg->state->topology_flag);
+              PyObject *elem = py_build_tree_value(key, tree, py_ntrg->state->attr_maps,
+                                                   py_ntrg->state->topology_flag,
+                                                   py_ntrg->state->validate_flag);
               throw_assert(elem != NULL,
                            "NeuroH5TreeGen: invalid tree value");
 
