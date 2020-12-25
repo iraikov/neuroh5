@@ -64,7 +64,7 @@ int main(int argc, char** argv)
   // MPI Communicator for I/O ranks
   MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
-  map<NODE_IDX_T, rank_t> node_rank_map;
+  node_rank_map_t node_rank_map;
   vector<pop_range_t> pop_vector;
   map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
   vector<pair<string,string>> prj_names;
@@ -226,7 +226,7 @@ int main(int argc, char** argv)
       // round-robin node to rank assignment from file
       for (size_t i = 0; i < n_nodes; i++)
         {
-          node_rank_map.insert(make_pair(i, i%size));
+          node_rank_map[i].insert(i%size);
         }
     }
   else
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
           throw_assert (iss >> n,
                         "neurograph_scatter_read: invalid entry in node to rank assignment file");
 
-          node_rank_map.insert(make_pair(i, n));
+          node_rank_map[i].insert(n);
           i++;
         }
 

@@ -207,6 +207,7 @@ namespace neuroh5
   
   typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
 
+  typedef map<CELL_IDX_T, set<rank_t> > node_rank_map_t;
   
 // In-memory HDF5 datatype of attribute pointers
 #define ATTR_PTR_H5_NATIVE_T H5T_NATIVE_UINT64

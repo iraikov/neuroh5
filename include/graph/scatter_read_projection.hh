@@ -31,7 +31,7 @@ namespace neuroh5
                                  const string& src_pop_name,
                                  const string& dst_pop_name, 
                                  const std::vector< std::string >&  attr_namespaces,
-                                 const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
+                                 const node_rank_map_t&  node_rank_map,
                                  const std::vector<pop_range_t>& pop_vector,
                                  const std::map<NODE_IDX_T, std::pair<uint32_t,pop_t> >& pop_ranges,
                                  const std::vector< std::pair<pop_t, string> >& pop_labels,

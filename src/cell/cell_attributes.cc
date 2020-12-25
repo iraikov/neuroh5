@@ -730,7 +730,7 @@ namespace neuroh5
       throw_assert(MPI_Comm_rank(comm, (int*)&rank) >= 0, "read_cell_attributes: error in MPI_Comm_rank");
 
       vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
-      map<CELL_IDX_T, rank_t> node_rank_map;
+      node_rank_map_t node_rank_map;
 
       if (rank == 0)
         {
@@ -746,7 +746,7 @@ namespace neuroh5
                   auto it = node_rank_map.find(index[i]);
                   if (it == node_rank_map.end())
                     {
-                      node_rank_map.insert(make_pair(index[i], i%size));
+                      node_rank_map[index[i]].insert(i%size);
                     }
                 }
             }
@@ -927,7 +927,7 @@ namespace neuroh5
      const string                 &attr_name_space,
      const set<string>            &attr_mask,
      // A vector that maps nodes to compute ranks
-     const map<CELL_IDX_T, rank_t> &node_rank_map,
+     const node_rank_map_t        &node_rank_map,
      const string                 &pop_name,
      const CELL_IDX_T             &pop_start,
      data::NamedAttrMap           &attr_map,
@@ -1597,7 +1597,7 @@ namespace neuroh5
       vector<CELL_IDX_T> all_selections;
       if (selection_size > 0)
         {
-          map<CELL_IDX_T, set<rank_t> > node_rank_map;
+          node_rank_map_t node_rank_map;
           {
             vector<size_t> sendbuf_selection_size(data_size, selection_size);
             vector<size_t> recvbuf_selection_size(data_size);

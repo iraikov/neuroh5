@@ -27,7 +27,7 @@ namespace neuroh5
      const int                             io_size,
      const std::vector<std::string>       &attr_name_spaces,
      // A vector that maps nodes to compute ranks
-     const std::map<CELL_IDX_T, rank_t>&    node_rank_map,
+     const node_rank_map_t                &node_rank_map,
      const string                         &pop_name,
      const CELL_IDX_T                      pop_start,
      std::map<CELL_IDX_T, neurotree_t>    &tree_map,

@@ -78,7 +78,7 @@ void compute_node_rank_map
 (
  size_t num_ranks,
  vector <CELL_IDX_T> index_vector, 
- map< CELL_IDX_T, rank_t > &node_rank_map
+ node_rank_map_t &node_rank_map
  )
 {
   hsize_t remainder=0, offset=0, buckets=0;
@@ -90,7 +90,7 @@ void compute_node_rank_map
       buckets    = num_ranks - i;
       for (size_t j = 0; j < remainder / buckets; j++)
         {
-          node_rank_map.insert(make_pair(index_vector[offset+j], i));
+          node_rank_map[index_vector[offset+j]].insert(i);
         }
       offset    += remainder / buckets;
     }
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
   string pop_name, input_file_name, output_file_name, selection_namespace, selection_attr, rank_file_name;
   vector<string> attr_name_spaces;
   size_t n_nodes;
-  map<CELL_IDX_T, rank_t> node_rank_map;
+  node_rank_map_t node_rank_map;
   stringstream ss;
 
   throw_assert(MPI_Init(&argc, &argv) >= 0,
@@ -325,7 +325,7 @@ int main(int argc, char** argv)
       // round-robin node to rank assignment from file
       for (size_t i = 0; i < n_nodes; i++)
         {
-          node_rank_map.insert(make_pair(i,i%size));
+          node_rank_map[i].insert(i%size);
         }
     }
   else
@@ -342,7 +342,7 @@ int main(int argc, char** argv)
           throw_assert (iss >> n,
                         "neurotrees_select: invalid entry in node to rank assignment file"); 
 
-          node_rank_map.insert(make_pair(i,n));
+          node_rank_map[i].insert(n);
           i++;
         }
 

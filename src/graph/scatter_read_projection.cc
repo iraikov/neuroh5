@@ -47,7 +47,7 @@ namespace neuroh5
     int scatter_read_projection (MPI_Comm all_comm, const int io_size, EdgeMapType edge_map_type, 
                                  const string& file_name, const string& src_pop_name, const string& dst_pop_name, 
                                  const vector<string> &attr_namespaces,
-                                 const map<NODE_IDX_T, rank_t>&  node_rank_map,
+                                 const node_rank_map_t&  node_rank_map,
                                  const vector<pop_range_t>& pop_vector,
                                  const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
                                  const vector< pair<pop_t, string> >& pop_labels,

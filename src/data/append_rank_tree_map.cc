@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
@@ -26,7 +27,7 @@ namespace neuroh5
   {
 
     void append_rank_tree_map (NamedAttrMap& attr_values,
-                               const map<CELL_IDX_T, rank_t>& node_rank_map,
+                               const node_rank_map_t& node_rank_map,
                                map <rank_t, map<CELL_IDX_T, neurotree_t> > &rank_tree_map)
     {
       for (CELL_IDX_T gid : attr_values.index_set)
@@ -45,7 +46,7 @@ namespace neuroh5
           const vector<PARENT_NODE_IDX_T>& parents = attr_values.find_name<PARENT_NODE_IDX_T>(hdf5::PARENT, gid);
           const vector<SWC_TYPE_T> swc_types   = attr_values.find_name<SWC_TYPE_T>(hdf5::SWCTYPE, gid);
 
-          size_t dst_rank;
+          set <rank_t> dst_rank_set;
           auto it = node_rank_map.find(gid);
           if (it == node_rank_map.end())
             {
@@ -54,15 +55,18 @@ namespace neuroh5
           throw_assert(it != node_rank_map.end(),
                        "append_rank_tree_map: index not found in node rank map");
 
-          dst_rank = it->second;
+          dst_rank_set = it->second;
           
-          neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sections,
-                                        xcoords,ycoords,zcoords,
-                                        radiuses,layers,parents,
+          neurotree_t tree = make_tuple(gid, src_vector, dst_vector, sections,
+                                        xcoords, ycoords, zcoords,
+                                        radiuses, layers, parents,
                                         swc_types);
-          
-          map<CELL_IDX_T, neurotree_t> &tree_map = rank_tree_map[dst_rank];
-          tree_map.insert(make_pair(gid, tree));
+
+          for (auto dst_rank : dst_rank_set)
+            {
+              map<CELL_IDX_T, neurotree_t> &tree_map = rank_tree_map[dst_rank];
+              tree_map.insert(make_pair(gid, tree));
+            }
                                    
         }
     }

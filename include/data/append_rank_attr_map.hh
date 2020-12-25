@@ -25,18 +25,12 @@ namespace neuroh5
   namespace data
   {
   
-
     void append_rank_attr_map
     (
      const data::NamedAttrMap   &attr_values,
-     const map<CELL_IDX_T, rank_t> &node_rank_map,
+     const node_rank_map_t &node_rank_map,
      map <rank_t, data::AttrMap> &rank_attr_map);
-
-    void append_rank_attr_map
-    (
-     const data::NamedAttrMap   &attr_values,
-     const map<CELL_IDX_T, set <rank_t> > &node_rank_map,
-     map <rank_t, data::AttrMap> &rank_attr_map);
+    
   }
   
 }

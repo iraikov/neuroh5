@@ -5,7 +5,7 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
 
@@ -59,7 +59,7 @@ namespace neuroh5
      const std::vector< std::string >&  attr_namespaces,
      const std::vector< std::pair<std::string,std::string> >&    prj_names,
      // A vector that maps nodes to compute ranks
-     const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
+     const node_rank_map_t&  node_rank_map,
      std::vector < edge_map_t >& prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t &local_num_nodes, size_t &total_num_nodes,

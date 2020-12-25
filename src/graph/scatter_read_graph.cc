@@ -43,7 +43,7 @@ namespace neuroh5
      const vector<string> &        attr_namespaces,
      const vector< pair<string, string> >&         prj_names,
      // A vector that maps nodes to compute ranks
-     const map<NODE_IDX_T, rank_t>&  node_rank_map,
+     const node_rank_map_t&  node_rank_map,
      vector < edge_map_t >& prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t                       &local_num_nodes,
