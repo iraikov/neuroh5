@@ -45,18 +45,18 @@ namespace neuroh5
     (
      size_t num_ranks,
      size_t num_nodes,
-     map< NODE_IDX_T, rank_t > &node_rank_map
+     node_rank_map_t &node_rank_map
      )
     {
       // round-robin node to rank assignment from file
       for (size_t i = 0; i < num_nodes; i++)
         {
-            node_rank_map.insert(make_pair(i, i%num_ranks));
+            node_rank_map[i].insert(i%num_ranks);
         }
     }
 
 
-    void append_vertex_degree_map (MPI_Comm comm, const map<NODE_IDX_T, rank_t>& node_rank_map,
+    void append_vertex_degree_map (MPI_Comm comm, const node_rank_map_t& node_rank_map,
                                    const std::vector< std::pair<std::string, std::string> >& prj_names,
                                    size_t total_num_nodes,
                                    const std::vector < map< NODE_IDX_T, size_t> > & vertex_degree_maps,
@@ -99,7 +99,7 @@ namespace neuroh5
           attr_ptr.push_back(0);
           for (auto it=node_rank_map.begin(); it != node_rank_map.end(); it++)
             {
-              if (it->second == rank)
+              if (it->second.count(rank) > 0)
                 {
                   const auto it_degree_value = vertex_degree_map.find(it->first);
                   if (it_degree_value != vertex_degree_map.cend())
@@ -154,7 +154,7 @@ namespace neuroh5
       throw_assert_nomsg(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
-      map<NODE_IDX_T, rank_t> node_rank_map;
+      node_rank_map_t node_rank_map;
       compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
@@ -225,7 +225,7 @@ namespace neuroh5
       throw_assert_nomsg(cell::read_population_ranges(comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
-      map<NODE_IDX_T, rank_t> node_rank_map;
+      node_rank_map_t node_rank_map;
       compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges

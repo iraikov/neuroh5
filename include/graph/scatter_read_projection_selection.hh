@@ -72,7 +72,7 @@ namespace neuroh5
      const NODE_IDX_T&          dst_start,
      const vector<string>&      attr_namespaces,
      const std::vector<NODE_IDX_T>&  selection,
-     const std::map<NODE_IDX_T, rank_t>&  node_rank_map,
+     const node_rank_map_t&    node_rank_map,
      vector<edge_map_t>&       prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      size_t&                    local_num_nodes,

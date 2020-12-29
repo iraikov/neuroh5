@@ -438,7 +438,7 @@ namespace neuroh5
      const int                     io_size,
      const string                 &attr_name_space,
      // A vector that maps nodes to compute ranks
-     const map<NODE_IDX_T,size_t> &node_rank_map,
+     const node_rank_map_t &node_rank_map,
      const NODE_IDX_T              pop_start,
      data::NamedAttrMap           &attr_map,
      // if positive, these arguments specify offset and number of entries to read

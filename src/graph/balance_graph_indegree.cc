@@ -63,7 +63,7 @@ namespace neuroh5
     (
      size_t num_ranks,
      size_t num_nodes,
-     map< NODE_IDX_T, rank_t > &node_rank_map
+     node_rank_map_t &node_rank_map
      )
     {
       hsize_t remainder=0, offset=0, buckets=0;
@@ -74,7 +74,7 @@ namespace neuroh5
           buckets    = num_ranks - i;
           for (size_t j = 0; j < remainder / buckets; j++)
             {
-              node_rank_map.insert(make_pair(offset+j, i));
+              node_rank_map[offset+j].insert(i);
             }
           offset    += remainder / buckets;
         }
@@ -131,7 +131,7 @@ namespace neuroh5
       throw_assert_nomsg(cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
-      map<NODE_IDX_T, rank_t> node_rank_map;
+      node_rank_map_t node_rank_map;
       compute_node_rank_map(size, total_num_nodes, node_rank_map);
     
       // read the edges
