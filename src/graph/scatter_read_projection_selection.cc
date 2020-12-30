@@ -192,11 +192,11 @@ namespace neuroh5
                         " edges from projection ", src_pop_name, " -> ", dst_pop_name);
 
               
+              MPI_Barrier(io_comm);
             } // is_io_rank
 
-          MPI_Barrier(comm);
-          MPI_Barrier(io_comm);
           MPI_Comm_free(&io_comm);
+          MPI_Barrier(comm);
           throw_assert_nomsg(mpi::alltoallv_vector<char>(comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                          recvcounts, rdispls, recvbuf) >= 0);
 

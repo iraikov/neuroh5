@@ -981,6 +981,7 @@ namespace neuroh5
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
           }
+          MPI_Barrier(io_comm);
 
           data::serialize_rank_attr_map (size, rank, rank_attr_map, sendcounts, sendbuf, sdispls);
         }
@@ -989,9 +990,8 @@ namespace neuroh5
 
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      MPI_Barrier(io_comm);
-      MPI_Barrier(all_comm);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      MPI_Barrier(all_comm);
     
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
@@ -1552,9 +1552,9 @@ namespace neuroh5
 
 
       MPI_Barrier(data_comm);
-      MPI_Barrier(comm);
       throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
                    "read_cell_attribute_selection: error in MPI_Comm_free ");
+      MPI_Barrier(comm);
       
     }
 
@@ -1576,247 +1576,222 @@ namespace neuroh5
       throw_assert_nomsg(io_size > 0);
 
       size_t selection_size = selection.size();
-      int data_color = 2;
-      MPI_Comm data_comm;
-      // In cases where some ranks do not have any data to read, split
-      // the communicator, so that collective operations can be executed
-      // only on the ranks that do have data.
-      if (selection_size > 0)
+
+      int size, rank;
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) >= 0);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
+
+      vector<CELL_IDX_T> all_selections;
+
+      map<CELL_IDX_T, set<rank_t> > node_rank_map;
+      {
+        vector<size_t> sendbuf_selection_size(size, selection_size);
+        vector<size_t> recvbuf_selection_size(size);
+        vector<int> recvcounts(size, 0);
+        vector<int> displs(size+1, 0);
+        
+        // Each rank sends its selection to every other rank
+        throw_assert_nomsg(MPI_Allgather(&sendbuf_selection_size[0], 1, MPI_SIZE_T,
+                                         &recvbuf_selection_size[0], 1, MPI_SIZE_T, comm)
+                           == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+        
+        size_t total_selection_size = 0;
+        for (size_t p=0; p<size; p++)
+          {
+            total_selection_size = total_selection_size + recvbuf_selection_size[p];
+            displs[p+1] = displs[p] + recvbuf_selection_size[p];
+            recvcounts[p] = recvbuf_selection_size[p];
+          }
+        
+        all_selections.resize(total_selection_size);
+        throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
+                                          &all_selections[0], &recvcounts[0], &displs[0], MPI_CELL_IDX_T,
+                                          comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+        
+        // Construct node rank map based on selection information.
+        for (rank_t p=0; p<size; p++)
+          {
+            for (size_t i = displs[p]; i<displs[p+1]; i++)
+              {
+                node_rank_map[all_selections[i]].insert(p);
+              }
+            
+          }
+        
+      }
+          
+      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      vector<char> sendbuf; 
+
+      vector< size_t > num_attrs;
+      num_attrs.resize(data::AttrMap::num_attr_types);
+      vector< vector<string> > attr_names;
+      attr_names.resize(data::AttrMap::num_attr_types);
+      
+      // MPI Communicator for I/O ranks
+      MPI_Comm io_comm;
+      // MPI group color value used for I/O ranks
+      int io_color = 1;
+      size_t io_data_size = io_size;
+      
+      if (io_data_size > size)
+        io_data_size = size;
+      
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_data_size, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+      
+      // I/O rank with lowest data rank 
+      size_t io_root_data_rank = *(io_rank_set.begin());
+      
+      if (is_io_rank)
         {
-          MPI_Comm_split(comm,data_color,0,&data_comm);
+          // Am I an I/O rank?
+          MPI_Comm_split(comm, io_color, rank, &io_comm);
+          MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+          
+          unsigned int io_rank, io_size;
+          throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_size) >= 0);
+          throw_assert_nomsg(MPI_Comm_rank(io_comm, (int*)&io_rank) >= 0);
+          
+          std::vector<CELL_IDX_T> io_selection;
+          {
+            std::set<CELL_IDX_T> io_selection_set;
+            size_t s_index = 0;
+            for (const CELL_IDX_T& s : all_selections)
+              {
+                if ((s_index % io_size) == io_rank)
+                  {
+                    io_selection_set.insert(s);
+                  }
+                s_index++;
+              }
+            for (const CELL_IDX_T& s : io_selection_set)
+              {
+                io_selection.push_back(s);
+              }
+            
+          }
+          map <rank_t, data::AttrMap > rank_attr_map;
+          {
+            data::NamedAttrMap  attr_values;
+            read_cell_attribute_selection(io_comm, file_name, attr_name_space, attr_mask, pop_name, pop_start,
+                                          io_selection, attr_values);
+            throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
+            data::append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
+            attr_values.num_attrs(num_attrs);
+            attr_values.attr_names(attr_names);
+          }
+          
+          data::serialize_rank_attr_map (size, rank, rank_attr_map, sendcounts, sendbuf, sdispls);
         }
       else
         {
-          MPI_Comm_split(comm,0,0,&data_comm);
+          MPI_Comm_split(comm, 0, rank, &io_comm);
         }
-      MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
-      unsigned int data_rank, data_size;
-      throw_assert_nomsg(MPI_Comm_size(data_comm, (int*)&data_size) >= 0);
-      throw_assert_nomsg(MPI_Comm_rank(data_comm, (int*)&data_rank) >= 0);
-
-      vector<CELL_IDX_T> all_selections;
-      if (selection_size > 0)
-        {
-          map<CELL_IDX_T, set<rank_t> > node_rank_map;
-          {
-            vector<size_t> sendbuf_selection_size(data_size, selection_size);
-            vector<size_t> recvbuf_selection_size(data_size);
-            vector<int> recvcounts(data_size, 0);
-            vector<int> displs(data_size+1, 0);
-
-            // Each DATA_COMM rank sends its selection to every other DATA_COMM rank
-            throw_assert_nomsg(MPI_Allgather(&sendbuf_selection_size[0], 1, MPI_SIZE_T,
-                                             &recvbuf_selection_size[0], 1, MPI_SIZE_T, data_comm)
-                               == MPI_SUCCESS);
-            throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-
-            size_t total_selection_size = 0;
-            for (size_t p=0; p<data_size; p++)
-              {
-                total_selection_size = total_selection_size + recvbuf_selection_size[p];
-                displs[p+1] = displs[p] + recvbuf_selection_size[p];
-                recvcounts[p] = recvbuf_selection_size[p];
-              }
-
-            all_selections.resize(total_selection_size);
-            throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
-                                              &all_selections[0], &recvcounts[0], &displs[0], MPI_CELL_IDX_T,
-                                              data_comm) == MPI_SUCCESS);
-            throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-
-            // Construct node rank map based on selection information.
-            for (rank_t p=0; p<data_size; p++)
-              {
-                for (size_t i = displs[p]; i<displs[p+1]; i++)
-                  {
-                    node_rank_map[all_selections[i]].insert(p);
-                  }
-
-              }
-            
-          }
-          
-          vector<int> sendcounts(data_size,0), sdispls(data_size,0), recvcounts(data_size,0), rdispls(data_size,0);
-          vector<char> sendbuf; 
-
-          vector< size_t > num_attrs;
-          num_attrs.resize(data::AttrMap::num_attr_types);
-          vector< vector<string> > attr_names;
-          attr_names.resize(data::AttrMap::num_attr_types);
-
-          // MPI Communicator for I/O ranks
-          MPI_Comm io_comm;
-          // MPI group color value used for I/O ranks
-          int io_color = 1;
-          size_t io_data_size = io_size;
-          
-          if (io_data_size > data_size)
-            io_data_size = data_size;
-      
-          set<size_t> io_rank_set;
-          data::range_sample(data_size, io_data_size, io_rank_set);
-          bool is_io_rank = false;
-          if (io_rank_set.find(data_rank) != io_rank_set.end())
-            is_io_rank = true;
-
-          // I/O rank with lowest data rank 
-          size_t io_root_data_rank = *(io_rank_set.begin());
-
-          if (is_io_rank)
-            {
-              // Am I an I/O rank?
-              MPI_Comm_split(data_comm,io_color,data_rank,&io_comm);
-              MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
-
-              unsigned int io_rank, io_size;
-              throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_size) >= 0);
-              throw_assert_nomsg(MPI_Comm_rank(io_comm, (int*)&io_rank) >= 0);
-
-              std::vector<CELL_IDX_T> io_selection;
-              {
-                std::set<CELL_IDX_T> io_selection_set;
-                size_t s_index = 0;
-                for (const CELL_IDX_T& s : all_selections)
-                  {
-                    if ((s_index % io_size) == io_rank)
-                      {
-                        io_selection_set.insert(s);
-                      }
-                    s_index++;
-                  }
-                for (const CELL_IDX_T& s : io_selection_set)
-                  {
-                    io_selection.push_back(s);
-                  }
-                
-              }
-              map <rank_t, data::AttrMap > rank_attr_map;
-              {
-                data::NamedAttrMap  attr_values;
-                read_cell_attribute_selection(io_comm, file_name, attr_name_space, attr_mask, pop_name, pop_start,
-                                              io_selection, attr_values);
-                data::append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
-                attr_values.num_attrs(num_attrs);
-                attr_values.attr_names(attr_names);
-              }
-              
-              data::serialize_rank_attr_map (data_size, data_rank, rank_attr_map, sendcounts, sendbuf, 
-                                             sdispls);
-            }
-          else
-            {
-              
-              MPI_Comm_split(data_comm,0,data_rank,&io_comm);
-            }
-          throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
-          throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-          throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-
-          vector<size_t> num_attrs_bcast(num_attrs.size());
-          for (size_t i=0; i<num_attrs.size(); i++)
-            {
-              num_attrs_bcast[i] = num_attrs[i];
-            }
-          // 4. Broadcast the number of attributes of each type to all ranks
-          throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, io_root_data_rank, data_comm) == MPI_SUCCESS);
-          for (size_t i=0; i<num_attrs.size(); i++)
-            {
-              num_attrs[i] = num_attrs_bcast[i];
-            }
-          
-          // 5. Broadcast the names of each attributes of each type to all data ranks
-          {
-            vector <char> attr_names_sendbuf;
-            size_t sendbuf_size=0;
-            if (io_root_data_rank == data_rank)
-              {
-                data::serialize_data(attr_names, attr_names_sendbuf);
-                sendbuf_size = attr_names_sendbuf.size();
-              }
-
-            throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, io_root_data_rank, data_comm) == MPI_SUCCESS);
-            if (io_root_data_rank != data_rank)
-              {
-                attr_names_sendbuf.resize(sendbuf_size, 0);
-              }
-            throw_assert_nomsg(MPI_Bcast(&attr_names_sendbuf[0], sendbuf_size, MPI_CHAR, io_root_data_rank, data_comm) == MPI_SUCCESS);
-            
-            if ((data_rank != io_root_data_rank) && (attr_names_sendbuf.size() > 0))
-              {
-                data::deserialize_data(attr_names_sendbuf, attr_names);
-              }
-          }
-      
-          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
-            {
-              attr_values.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i]);
-            }
-          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint8]; i++)
-            {
-              attr_values.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i]);
-            }
-          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int8]; i++)
-            {
-              attr_values.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i]);
-            }
-          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint16]; i++)
-            {
-              attr_values.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i]);
-            }
-          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int16]; i++)
-            {
-              attr_values.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i]);
-            }
-          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint32]; i++)
-            {
-              attr_values.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i]);
-            }
-          for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int32]; i++)
-            {
-              attr_values.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
-            }
-          
-          // 6. Each DATA_COMM rank sends an attribute set size to
-          //    every other DATA_COMM rank (non IO_COMM ranks pass zero)
-          throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                                          &recvcounts[0], 1, MPI_INT, data_comm) == MPI_SUCCESS);
-
-          throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-        
-          // 7. Each DATA_COMM rank accumulates the vector sizes and allocates
-          //    a receive buffer, recvcounts, and rdispls
-          size_t recvbuf_size;
-          vector<char> recvbuf;
-          
-          recvbuf_size = recvcounts[0];
-          for (rank_t p = 1; p < data_size; ++p)
-            {
-              rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-              recvbuf_size += recvcounts[p];
-            }
-          if (recvbuf_size > 0)
-            recvbuf.resize(recvbuf_size);
-            
-          // 8. Each DATA_COMM rank participates in the MPI_Alltoallv
-          throw_assert_nomsg(mpi::alltoallv_vector<char>(data_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
-                                                         recvcounts, rdispls, recvbuf) == MPI_SUCCESS);
-
-          sendbuf.clear();
-          
-          if (recvbuf.size() > 0)
-            {
-              data::deserialize_rank_attr_map (data_size, recvbuf, recvcounts, rdispls, attr_values);
-            }
-          recvbuf.clear();
-        }
-    
-      throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-      throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
-                   "scatter_read_cell_attribute_selection: error in MPI_Comm_free ");
-
+      
+      vector<size_t> num_attrs_bcast(num_attrs.size());
+      for (size_t i=0; i<num_attrs.size(); i++)
+        {
+          num_attrs_bcast[i] = num_attrs[i];
+        }
+      // 4. Broadcast the number of attributes of each type to all ranks
+      throw_assert_nomsg(MPI_Bcast(&num_attrs_bcast[0], num_attrs_bcast.size(), MPI_SIZE_T, io_root_data_rank, comm) == MPI_SUCCESS);
+      for (size_t i=0; i<num_attrs.size(); i++)
+        {
+          num_attrs[i] = num_attrs_bcast[i];
+        }
+      
+      // 5. Broadcast the names of each attributes of each type to all data ranks
+      {
+        vector <char> attr_names_sendbuf;
+        size_t sendbuf_size=0;
+        if (io_root_data_rank == rank)
+          {
+            data::serialize_data(attr_names, attr_names_sendbuf);
+            sendbuf_size = attr_names_sendbuf.size();
+          }
+        
+        throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, io_root_data_rank, comm) == MPI_SUCCESS);
+        if (io_root_data_rank != rank)
+          {
+            attr_names_sendbuf.resize(sendbuf_size, 0);
+          }
+        throw_assert_nomsg(MPI_Bcast(&attr_names_sendbuf[0], sendbuf_size, MPI_CHAR, io_root_data_rank, comm) == MPI_SUCCESS);
+        
+        if ((rank != io_root_data_rank) && (attr_names_sendbuf.size() > 0))
+          {
+            data::deserialize_data(attr_names_sendbuf, attr_names);
+          }
+      }
+      
+      for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_float]; i++)
+        {
+          attr_values.insert_name<float>(attr_names[data::AttrMap::attr_index_float][i]);
+        }
+      for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint8]; i++)
+        {
+          attr_values.insert_name<uint8_t>(attr_names[data::AttrMap::attr_index_uint8][i]);
+        }
+      for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int8]; i++)
+        {
+          attr_values.insert_name<int8_t>(attr_names[data::AttrMap::attr_index_int8][i]);
+        }
+      for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint16]; i++)
+        {
+          attr_values.insert_name<uint16_t>(attr_names[data::AttrMap::attr_index_uint16][i]);
+        }
+      for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int16]; i++)
+        {
+          attr_values.insert_name<int16_t>(attr_names[data::AttrMap::attr_index_int16][i]);
+        }
+      for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_uint32]; i++)
+        {
+          attr_values.insert_name<uint32_t>(attr_names[data::AttrMap::attr_index_uint32][i]);
+        }
+      for (size_t i=0; i<num_attrs[data::AttrMap::attr_index_int32]; i++)
+        {
+          attr_values.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
+        }
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+      
+      // 6. Each rank sends an attribute set size to
+      //    every other rank (non IO_COMM ranks pass zero)
+      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
+                                      &recvcounts[0], 1, MPI_INT, comm) == MPI_SUCCESS);
+      
+      // 7. Each COMM rank accumulates the vector sizes and allocates
+      //    a receive buffer, recvcounts, and rdispls
+      size_t recvbuf_size;
+      vector<char> recvbuf;
+      
+      recvbuf_size = recvcounts[0];
+      for (rank_t p = 1; p < size; ++p)
+        {
+          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
+          recvbuf_size += recvcounts[p];
+        }
+      if (recvbuf_size > 0)
+        recvbuf.resize(recvbuf_size);
+      
+      // 8. Each COMM rank participates in the MPI_Alltoallv
+      throw_assert_nomsg(mpi::alltoallv_vector<char>(comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                     recvcounts, rdispls, recvbuf) == MPI_SUCCESS);
+      
+      sendbuf.clear();
+      
+      if (recvbuf.size() > 0)
+        {
+          data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_values);
+        }
+      recvbuf.clear();
     }
-
     
   }
   
