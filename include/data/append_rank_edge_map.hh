@@ -34,7 +34,7 @@ namespace neuroh5
      const std::vector<NODE_IDX_T>&              src_idx,
      const vector<string>&                       attr_namespaces,
      const std::map<string, data::NamedAttrVal>& edge_attr_map,
-     const std::map<NODE_IDX_T, rank_t>&         node_rank_map,
+     const node_rank_map_t&                      node_rank_map,
      size_t&                                     num_edges,
      rank_edge_map_t &                           rank_edge_map,
      EdgeMapType                                 edge_map_type

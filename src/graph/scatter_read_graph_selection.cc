@@ -67,7 +67,7 @@ namespace neuroh5
           throw_assert(MPI_Comm_size(data_comm, &data_size) == MPI_SUCCESS, "unable to obtain MPI communicator size");
           throw_assert(MPI_Comm_rank(data_comm, &data_rank) == MPI_SUCCESS, "unable to obtain MPI communicator rank");
 
-          map<CELL_IDX_T, rank_t> node_rank_map;
+          node_rank_map_t node_rank_map;
           {
             vector<size_t> sendbuf_selection_size(data_size, selection_size);
             vector<size_t> recvbuf_selection_size(data_size);
@@ -99,7 +99,7 @@ namespace neuroh5
               {
                 for (size_t i = displs[p]; i<displs[p+1]; i++)
                   {
-                    node_rank_map.insert ( make_pair(all_selections[i], p) );
+                    node_rank_map[all_selections[i]].insert(p);
                   }
 
               }

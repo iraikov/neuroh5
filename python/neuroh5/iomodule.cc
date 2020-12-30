@@ -138,18 +138,82 @@ void throw_err(char const* err_message, int32_t task, int32_t thread)
 }
 
                            
-void build_node_rank_map (PyObject *py_node_rank_map,
-                          map<NODE_IDX_T, rank_t>& node_rank_map)
+void build_node_rank_map (MPI_Comm comm,
+                          PyObject *py_node_allocation,
+                          node_rank_map_t& node_rank_map)
 {
-  PyObject *idx_key, *idx_value;
-  Py_ssize_t map_pos = 0;
-                           
-  while (PyDict_Next(py_node_rank_map, &map_pos, &idx_key, &idx_value))
+  int status;
+  int comm_rank, comm_size;
+  status = MPI_Comm_size(comm, &comm_size);
+  throw_assert(status == MPI_SUCCESS,
+               "build_node_rank_map: unable to obtain size of MPI communicator");
+  status = MPI_Comm_rank(comm, &comm_rank);
+  throw_assert(status == MPI_SUCCESS,
+               "build_node_rank_map: unable to obtain rank of MPI communicator");
+
+  PyObject *seq = PyObject_GetIter(py_node_allocation);
+  throw_assert (seq != NULL,
+                "build_node_rank_map: unable to obtain iterator for node allocation sequence");
+
+  set<NODE_IDX_T> node_allocation;
+  PyObject *item;
+  while ((item = PyIter_Next(seq)))
     {
-      NODE_IDX_T idx = PyLong_AsLong(idx_key);
-      rank_t rank = PyLong_AsLong(idx_value);
-      node_rank_map.insert(make_pair(idx,rank));
+      NODE_IDX_T idx = PyLong_AsLong(item);
+      node_allocation.insert(idx);
+      Py_DECREF(item); 
     }
+  Py_DECREF(seq);
+  
+  {
+    vector<char> sendbuf; size_t sendbuf_size=0;
+    if (comm_rank == 0)
+      {
+        data::serialize_data(node_allocation, sendbuf);
+        sendbuf_size = sendbuf.size();
+      }
+
+    int sendcount = sendbuf_size; vector<int> recvcounts(comm_size, 0), rdispls(comm_size, 0);
+    throw_assert_nomsg(MPI_Allgather(&sendcount, 1, MPI_INT,
+                                     &recvcounts[0], 1, MPI_INT, comm) >= 0);
+
+    size_t recvbuf_size;
+    vector<char> recvbuf;
+
+    recvbuf_size = recvcounts[0];
+    for (int p = 1; p < comm_size; ++p)
+      {
+        rdispls[p] = rdispls[p-1] + recvcounts[p-1];
+        recvbuf_size += recvcounts[p];
+      }
+    if (recvbuf_size > 0)
+      recvbuf.resize(recvbuf_size);
+
+    
+    throw_assert_nomsg(MPI_Allgatherv(&sendbuf[0], sendcount, MPI_CHAR,
+                                      &recvbuf[0], &recvcounts[0], &rdispls[0],
+                                      MPI_CHAR, comm) >= 0);
+    sendbuf.clear();
+    
+    if (recvbuf.size() > 0)
+      {
+        for (rank_t rank_idx=0; rank_idx < comm_size; rank_idx++)
+          {
+            set<NODE_IDX_T> node_allocation_i;
+            vector<char>::const_iterator first = recvbuf.begin() + rdispls[rank_idx];
+            vector<char>::const_iterator last = (rank_idx < comm_size-1) ? recvbuf.begin() + rdispls[rank_idx+1] : recvbuf.end();
+            vector<char> recvbuf_slice(first, last);
+            data::deserialize_data (recvbuf_slice, node_allocation_i);
+            for (const auto& gid : node_allocation_i)
+              {
+                node_rank_map[gid].insert(rank_idx);
+              }
+          }
+      }
+    recvbuf.clear();
+
+  }
+  
 }
 
 
@@ -160,8 +224,8 @@ void ldbal_cell_attr (MPI_Comm comm,
                       const string& pop_name,
                       const size_t& pop_idx,    
                       const vector<string>& attr_name_spaces,
-                      PyObject *py_node_rank_map,
-                      map<NODE_IDX_T, rank_t>& node_rank_map)
+                      PyObject *py_node_allocation,
+                      node_rank_map_t& node_rank_map)
 {
   int status;
   int rank, size;
@@ -176,9 +240,9 @@ void ldbal_cell_attr (MPI_Comm comm,
 
   if (rank == root)
     {
-      if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
+      if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
         {
-          build_node_rank_map(py_node_rank_map, node_rank_map);
+          build_node_rank_map(comm, py_node_allocation, node_rank_map);
         }
       else
         {
@@ -211,7 +275,7 @@ void ldbal_cell_attr (MPI_Comm comm,
           size_t i = 0;
           for (const auto& gid : attr_index)
             {
-              node_rank_map.insert(make_pair(gid, i%size));
+              node_rank_map[gid].insert(i%size);
               i++;
             }
         }
@@ -261,8 +325,8 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
                           const size_t& pop_idx,    
                           const string& attr_name_space,
                           const size_t& numitems,
-                          PyObject *py_node_rank_map,
-                          map<NODE_IDX_T, rank_t>& node_rank_map,
+                          PyObject *py_node_allocation,
+                          node_rank_map_t& node_rank_map,
                           size_t& count, size_t& local_count)
 {
   int status;
@@ -278,9 +342,9 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
   count = 0;
   if (rank == root)
     {
-      if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
+      if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
         {
-          build_node_rank_map(py_node_rank_map, node_rank_map);
+          build_node_rank_map(comm, py_node_allocation, node_rank_map);
         }
       else
         {
@@ -330,7 +394,7 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
                   auto it = node_rank_map.find(gid);
                   if (it == node_rank_map.end())
                     {
-                      node_rank_map.insert(make_pair(gid, r++));
+                      node_rank_map[gid].insert(r++);
                     }
                   if ((unsigned int)size <= r) r=0;
                 }
@@ -451,6 +515,30 @@ void append_value_map (CELL_IDX_T idx,
       all_attr_values.insert(make_pair(idx, attr_values));
     }
   Py_DECREF(pyarr);
+}
+
+
+
+
+void build_selection (PyObject *py_selection, vector<NODE_IDX_T>& selection)
+{
+    // Create C++ vector of selection indices:
+    if (py_selection != NULL)
+      {
+        PyObject *seq = PyObject_GetIter(py_selection);
+        throw_assert (seq != NULL,
+                      "build_selection: unable to obtain iterator for node allocation sequence");
+
+        PyObject *item;
+        while ((item = PyIter_Next(seq)))
+          {
+            NODE_IDX_T idx = PyLong_AsLong(item);
+            selection.push_back(idx);
+            Py_DECREF(item); 
+          }
+        Py_DECREF(seq);
+      }
+                           
 }
 
 
@@ -2791,10 +2879,10 @@ extern "C"
     int opt_edge_map_type=0;
     EdgeMapType edge_map_type = EdgeMapDst;
     // A vector that maps nodes to compute ranks
-    PyObject *py_node_rank_map=NULL;
+    PyObject *py_node_allocation=NULL;
     PyObject *py_attr_name_spaces=NULL;
     PyObject *py_prj_names=NULL;
-    map<NODE_IDX_T, rank_t> node_rank_map;
+    node_rank_map_t node_rank_map;
     vector < edge_map_t > prj_vector;
     vector < map <string, vector < vector<string> > > > edge_attr_name_vector;
     vector<pop_range_t> pop_vector;
@@ -2811,7 +2899,7 @@ extern "C"
     static const char *kwlist[] = {
                                    "file_name",
                                    "comm",
-                                   "node_rank_map",
+                                   "node_allocation",
                                    "projections",
                                    "namespaces",
                                    "map_type",
@@ -2820,7 +2908,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|OOOOik", (char **)kwlist,
                                      &input_file_name, &py_comm, 
-                                     &py_node_rank_map, &py_prj_names,
+                                     &py_node_allocation, &py_prj_names,
                                      &py_attr_name_spaces,
                                      &opt_edge_map_type, &io_size))
       return NULL;
@@ -2898,16 +2986,16 @@ extern "C"
                  "py_scatter_read_graph: unable to read population ranges");
  
     // Create C++ map for node_rank_map:
-    if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
+    if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
       {
-        build_node_rank_map(py_node_rank_map, node_rank_map);
+        build_node_rank_map(comm, py_node_allocation, node_rank_map);
       }
     else
       {
         // round-robin node to rank assignment from file
         for (size_t i = 0; i < total_num_nodes; i++)
           {
-            node_rank_map.insert(make_pair(i, i%size));
+            node_rank_map[i].insert(i%size);
           }
       }
 
@@ -3188,12 +3276,7 @@ extern "C"
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
-          {
-            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyLong_AsLong(pyval);
-            selection.push_back(n);
-          }
+        build_selection(py_selection, selection);
       }
 
     if (py_prj_names != NULL)
@@ -3334,12 +3417,7 @@ extern "C"
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
-          {
-            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyLong_AsLong(pyval);
-            selection.push_back(n);
-          }
+        build_selection(py_selection, selection);
       }
 
     if (py_prj_names != NULL)
@@ -4682,7 +4760,7 @@ extern "C"
 
   PyDoc_STRVAR(
     scatter_read_trees_doc,
-    "scatter_read_trees(file_name, population_name, namespaces=[], topology=True, validate=True, node_rank_map=None, comm=None, io_size=0)\n"
+    "scatter_read_trees(file_name, population_name, namespaces=[], topology=True, validate=True, node_allocation=None, comm=None, io_size=0)\n"
     "--\n"
     "\n"
     "Reads neuronal tree morphologies contained in the given file and scatters them to their assigned ranks. "
@@ -4702,8 +4780,8 @@ extern "C"
     "namespaces : string list\n"
     "    An optional list of namespaces from which additional attributes for the trees will be read.\n"
     "\n"
-    "node_rank_map : { gid: rank }\n"
-    "    An optional dictionary that specifies the mapping of cell gids to MPI ranks.\n"
+    "node_allocation : iterable\n"
+    "    An optional iterable that specifies the assignment of cell gids to the current MPI rank.\n"
     "\n"
     "topology : boolean\n"
     "    An optional flag that specifies whether section topology dictionary should be returned.\n"
@@ -4754,14 +4832,14 @@ extern "C"
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size = 0;
     char *file_name, *pop_name;
-    PyObject *py_node_rank_map=NULL;
+    PyObject *py_node_allocation=NULL;
     PyObject *py_attr_name_spaces=NULL;
-    map<CELL_IDX_T, rank_t> node_rank_map;
+    node_rank_map_t node_rank_map;
     static const char *kwlist[] = {
                                    "file_name",
                                    "population_name",
                                    "comm",
-                                   "node_rank_map",
+                                   "node_allocation",
                                    "namespaces",
                                    "topology",
                                    "validate",
@@ -4770,7 +4848,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOiik", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, 
-                                     &py_node_rank_map, &py_attr_name_spaces,
+                                     &py_node_allocation, &py_attr_name_spaces,
                                      &topology_flag, &validate_flag, &io_size))
       return NULL;
     MPI_Comm comm;
@@ -4853,9 +4931,9 @@ extern "C"
       }
     
     // Create C++ map for node_rank_map:
-    if ((py_node_rank_map != NULL) && (py_node_rank_map != Py_None))
+    if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
       {
-        build_node_rank_map(py_node_rank_map, node_rank_map);
+        build_node_rank_map(comm, py_node_allocation, node_rank_map);
       }
     else
       {
@@ -4881,7 +4959,7 @@ extern "C"
         size_t i = 0;
         for (const auto& gid : cell_index)
           {
-            node_rank_map.insert(make_pair(gid, i%size));
+            node_rank_map[gid].insert(i%size);
             i++;
           }
       }
@@ -5071,12 +5149,7 @@ extern "C"
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
-          {
-            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyLong_AsLong(pyval);
-            selection.push_back(n);
-          }
+        build_selection(py_selection, selection);
       }
 
     vector<pair <pop_t, string> > pop_labels;
@@ -5180,8 +5253,6 @@ extern "C"
                                      &py_attr_name_spaces, &py_mask,
                                      &topology_flag, &validate_flag, &io_size))
       return NULL;
-    throw_assert(PyList_Check(py_selection) > 0,
-                 "py_scatter_read_tree_selection: unable to read tree selection");
 
     set<string> attr_mask;
 
@@ -5255,12 +5326,7 @@ extern "C"
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
-          {
-            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyLong_AsLong(pyval);
-            selection.push_back(n);
-          }
+        build_selection(py_selection, selection);
       }
 
     vector<pair <pop_t, string> > pop_labels;
@@ -5325,7 +5391,7 @@ extern "C"
 
   PyDoc_STRVAR(
     scatter_read_cell_attributes_doc,
-    "scatter_read_cell_attributes(file_name, population_name, namespaces, node_rank_map=None, comm=None, io_size=0)\n"
+    "scatter_read_cell_attributes(file_name, population_name, namespaces, node_allocation=None, comm=None, io_size=0)\n"
     "--\n"
     "\n"
     "Reads cell attributes for all cell gids contained in the given file and namespaces, using scalable parallel read/scatter."
@@ -5351,8 +5417,8 @@ extern "C"
     "io_size : \n"
     "    Optional number of ranks performing I/O operations. If 0, this number will be equal to the size of the MPI communicator.\n"
     "\n"
-    "node_rank_map : \n"
-    "    Optional dictionary mapping gid to rank. If None, round-robin assignment will be used.\n"
+    "node_allocation : \n"
+    "    Optional iterable that with gids assigned to rank. If None, round-robin assignment will be used.\n"
     "\n"
     "mask : set of string\n"
     "    Optional set of attributes to be read. If not set, all attributes in the namespace will be read.\n"
@@ -5372,9 +5438,9 @@ extern "C"
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size = 0;
     char *file_name, *pop_name;
-    PyObject *py_node_rank_map=NULL;
+    PyObject *py_node_allocation=NULL;
     PyObject *py_attr_name_spaces=NULL;
-    map<CELL_IDX_T, rank_t> node_rank_map;
+    node_rank_map_t node_rank_map;
     vector <string> attr_name_spaces;
     char *return_type_arg = NULL;
     return_type return_tp = return_dict;
@@ -5384,7 +5450,7 @@ extern "C"
                                    "pop_name",
                                    "comm",
                                    "mask",
-                                   "node_rank_map",
+                                   "node_allocation",
                                    "namespaces",
                                    "io_size",
                                    "return_type",
@@ -5392,7 +5458,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|OOOOks", (char **)kwlist,
                                      &file_name, &pop_name, &py_comm, &py_mask, 
-                                     &py_node_rank_map, &py_attr_name_spaces,
+                                     &py_node_allocation, &py_attr_name_spaces,
                                      &io_size, &return_type_arg))
       return NULL;
 
@@ -5512,7 +5578,7 @@ extern "C"
 
     ldbal_cell_attr (comm, string(file_name),
                      pop_vector, pop_labels, pop_name, pop_idx, 
-                     attr_name_spaces, py_node_rank_map,
+                     attr_name_spaces, py_node_allocation,
                      node_rank_map);
 
     PyObject *py_namespace_dict = PyDict_New();
@@ -5897,12 +5963,7 @@ extern "C"
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
-          {
-            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyLong_AsLong(pyval);
-            selection.push_back(n);
-          }
+        build_selection(py_selection, selection);
       }
     else
       {
@@ -6113,12 +6174,7 @@ extern "C"
     // Create C++ vector of selection indices:
     if (py_selection != NULL)
       {
-        for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_selection); i++)
-          {
-            PyObject *pyval = PyList_GetItem(py_selection, (Py_ssize_t)i);
-            CELL_IDX_T n = PyLong_AsLong(pyval);
-            selection.push_back(n);
-          }
+        build_selection(py_selection, selection);
       }
     else
       {
@@ -7025,7 +7081,7 @@ extern "C"
     set< pair<pop_t, pop_t> > pop_pairs;
     vector<pair <pop_t, string> > pop_labels;
     vector<pair<string,string> > prj_names;
-    map <CELL_IDX_T, rank_t> node_rank_map;
+    node_rank_map_t node_rank_map;
 
     edge_map_t edge_map;
     edge_map_iter_t edge_map_iter;
@@ -7069,7 +7125,7 @@ extern "C"
     map <string, NamedAttrMap> attr_maps;
     map <string, vector< vector <string> > > attr_names;
     map<CELL_IDX_T, neurotree_t>::const_iterator it_tree;
-    map<CELL_IDX_T, rank_t> node_rank_map;
+    node_rank_map_t node_rank_map;
     bool topology_flag;
     bool validate_flag;
     
@@ -7109,7 +7165,7 @@ extern "C"
     NamedAttrMap attr_map;
     vector< vector <string> > attr_names;
     set<CELL_IDX_T>::const_iterator it_idx;
-    map <CELL_IDX_T, rank_t> node_rank_map;
+    node_rank_map_t node_rank_map;
     PyTypeObject* struct_type;
     vector<PyStructSequence_Field> struct_descr_fields;
     PyObject *tuple_index_info;
@@ -7406,7 +7462,7 @@ extern "C"
     if (!py_ntrg) return NULL;
     py_ntrg->state = new NeuroH5TreeGenState();
 
-    map<CELL_IDX_T, rank_t> node_rank_map;
+    node_rank_map_t node_rank_map;
     // Create C++ map for node_rank_map:
     // round-robin node to rank assignment from file
     rank_t r=0; size_t local_count=0; 
@@ -7416,7 +7472,7 @@ extern "C"
         auto it = py_ntrg->state->node_rank_map.find(tree_index[i]);
         if (it == py_ntrg->state->node_rank_map.end())
           {
-            py_ntrg->state->node_rank_map.insert(make_pair(tree_index[i], r++));
+            py_ntrg->state->node_rank_map[tree_index[i]].insert(r++);
           }
         else
           {
@@ -7473,7 +7529,7 @@ extern "C"
     PyObject *py_comm = NULL;
     PyObject *py_mask = NULL;
     PyObject *py_tuple_index_dict = NULL;
-    PyObject *py_node_rank_map = NULL;
+    PyObject *py_node_allocation = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned long io_size=1, cache_size=1;
     const string default_namespace = "Attributes";
@@ -7486,7 +7542,7 @@ extern "C"
                                    "pop_name",
                                    "namespace",
                                    "comm",
-                                   "node_rank_map",
+                                   "node_allocation",
                                    "mask",
                                    "io_size",
                                    "cache_size",
@@ -7496,7 +7552,7 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|OOOkisO", (char **)kwlist,
                                      &file_name, &pop_name, &attr_namespace, 
-                                     &py_comm, &py_node_rank_map, &py_mask, 
+                                     &py_comm, &py_node_allocation, &py_mask, 
                                      &io_size, &cache_size,
                                      &return_type_arg, &py_tuple_index_dict))
       return NULL;
@@ -7602,7 +7658,7 @@ extern "C"
     ldbal_cell_attr_gen (comm, string(file_name),
                          pop_vector, pop_labels, pop_name, pop_idx, 
                          string(attr_namespace), io_size*cache_size,
-                         py_node_rank_map, py_ntrg->state->node_rank_map,
+                         py_node_allocation, py_ntrg->state->node_rank_map,
                          count, local_count);
         
     

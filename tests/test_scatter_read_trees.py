@@ -8,7 +8,9 @@ size = comm.Get_size()
 print("rank %d / %d" % (rank, size))
 sys.stdout.flush()
 #(g,n)  = scatter_read_trees("/scratch1/03320/iraikov/dentate/Full_Scale_Control/DG_IN_forest_20190325_compressed.h5", "AAC", io_size=4, comm=comm)
-(g,n)  = scatter_read_trees("/scratch1/03320/iraikov/striped/dentate/Full_Scale_Control/DGC_forest_reindex_20190717_compressed.h5", "GC", io_size=8, comm=comm, topology=True)
+#(g,n)  = scatter_read_trees("/scratch1/03320/iraikov/striped/dentate/Full_Scale_Control/DGC_forest_reindex_20190717_compressed.h5", "GC", io_size=8, comm=comm, topology=True)
+(g,_) = scatter_read_trees("data/dentatenet_Full_Scale_GC_Exc_Sat_SLN_extent_arena_margin_20201221_compressed.h5", "GC",
+                           topology=True, io_size=2, validate=True)
 
 for (gid, tree) in g:
     print ("rank %d: gid %d = %s" % (rank, gid, str(tree)))

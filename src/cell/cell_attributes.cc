@@ -730,7 +730,7 @@ namespace neuroh5
       throw_assert(MPI_Comm_rank(comm, (int*)&rank) >= 0, "read_cell_attributes: error in MPI_Comm_rank");
 
       vector< tuple<string,AttrKind,vector<CELL_IDX_T>,vector<ATTR_PTR_T> > > attr_info;
-      map<CELL_IDX_T, rank_t> node_rank_map;
+      node_rank_map_t node_rank_map;
 
       if (rank == 0)
         {
@@ -746,7 +746,7 @@ namespace neuroh5
                   auto it = node_rank_map.find(index[i]);
                   if (it == node_rank_map.end())
                     {
-                      node_rank_map.insert(make_pair(index[i], i%size));
+                      node_rank_map[index[i]].insert(i%size);
                     }
                 }
             }
@@ -927,7 +927,7 @@ namespace neuroh5
      const string                 &attr_name_space,
      const set<string>            &attr_mask,
      // A vector that maps nodes to compute ranks
-     const map<CELL_IDX_T, rank_t> &node_rank_map,
+     const node_rank_map_t        &node_rank_map,
      const string                 &pop_name,
      const CELL_IDX_T             &pop_start,
      data::NamedAttrMap           &attr_map,
@@ -1582,34 +1582,27 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) >= 0);
 
       vector<CELL_IDX_T> all_selections;
-
-      map<CELL_IDX_T, set<rank_t> > node_rank_map;
+      node_rank_map_t node_rank_map;
       {
-        vector<size_t> sendbuf_selection_size(size, selection_size);
-        vector<size_t> recvbuf_selection_size(size);
-        vector<int> recvcounts(size, 0);
-        vector<int> displs(size+1, 0);
+        vector<size_t> sendbuf_selection_size(data_size, selection_size);
+        vector<size_t> recvbuf_selection_size(data_size);
+        vector<int> recvcounts(data_size, 0);
+        vector<int> displs(data_size+1, 0);
         
-        // Each rank sends its selection to every other rank
+        // Each DATA_COMM rank sends its selection to every other DATA_COMM rank
         throw_assert_nomsg(MPI_Allgather(&sendbuf_selection_size[0], 1, MPI_SIZE_T,
-                                         &recvbuf_selection_size[0], 1, MPI_SIZE_T, comm)
+                                         &recvbuf_selection_size[0], 1, MPI_SIZE_T, data_comm)
                            == MPI_SUCCESS);
-        throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
         
         size_t total_selection_size = 0;
-        for (size_t p=0; p<size; p++)
+        for (size_t p=0; p<data_size; p++)
           {
             total_selection_size = total_selection_size + recvbuf_selection_size[p];
             displs[p+1] = displs[p] + recvbuf_selection_size[p];
             recvcounts[p] = recvbuf_selection_size[p];
           }
-        
-        all_selections.resize(total_selection_size);
-        throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
-                                          &all_selections[0], &recvcounts[0], &displs[0], MPI_CELL_IDX_T,
-                                          comm) == MPI_SUCCESS);
-        throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-        
+
         // Construct node rank map based on selection information.
         for (rank_t p=0; p<size; p++)
           {

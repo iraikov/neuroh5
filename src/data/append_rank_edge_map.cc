@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 
 #include "neuroh5_types.hh"
 #include "attr_val.hh"
@@ -37,7 +38,7 @@ namespace neuroh5
      const vector<NODE_IDX_T>&        src_idx,
      const vector<string>&            attr_namespaces,
      const map<string, NamedAttrVal>& edge_attr_map,
-     const map<NODE_IDX_T, rank_t>&   node_rank_map,
+     const node_rank_map_t&           node_rank_map,
      size_t&                          num_edges,
      rank_edge_map_t &                rank_edge_map,
      EdgeMapType                      edge_map_type
@@ -67,31 +68,35 @@ namespace neuroh5
                             {
                             case EdgeMapDst:
                               {
-                                rank_t dst_rank=0;
+                                set<rank_t> dst_rank_set;
                                 auto it = node_rank_map.find(dst);
                                 if (it == node_rank_map.end())
-                                  { dst_rank = (initial_rank + num_dst) % num_ranks; }
+                                  { dst_rank_set.insert((initial_rank + num_dst) % num_ranks); }
                                 else
-                                  { dst_rank = it->second; }
-                                edge_tuple_t& et = rank_edge_map[dst_rank][dst];
-                                vector<NODE_IDX_T> &my_srcs = get<0>(et);
+                                  { dst_rank_set = it->second; }
 
-                                vector <AttrVal> &edge_attr_vec = get<1>(et);
-                                edge_attr_vec.resize(edge_attr_map.size());
-                                
-                                for (size_t j = low; j < high; ++j)
+                                for (auto dst_rank : dst_rank_set)
                                   {
-                                    NODE_IDX_T src = src_idx[j] + src_start;
-                                    my_srcs.push_back (src);
-                                    num_edges++;
+                                    edge_tuple_t& et = rank_edge_map[dst_rank][dst];
+                                    vector<NODE_IDX_T> &my_srcs = get<0>(et);
+
+                                    vector <AttrVal> &edge_attr_vec = get<1>(et);
+                                    edge_attr_vec.resize(edge_attr_map.size());
+                                
+                                    for (size_t j = low; j < high; ++j)
+                                      {
+                                        NODE_IDX_T src = src_idx[j] + src_start;
+                                        my_srcs.push_back (src);
+                                        num_edges++;
+                                      }
+                                    fill_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                    fill_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                    fill_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                    fill_attr_vec<uint32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                    fill_attr_vec<int8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                    fill_attr_vec<int16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
+                                    fill_attr_vec<int32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
                                   }
-                                fill_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
-                                fill_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
-                                fill_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
-                                fill_attr_vec<uint32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
-                                fill_attr_vec<int8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
-                                fill_attr_vec<int16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
-                                fill_attr_vec<int32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
                               }
                               break;
                             case EdgeMapSrc:
@@ -99,28 +104,31 @@ namespace neuroh5
                                 for (size_t j = low, jj=0; j < high; ++j, ++jj)
                                   {
                                     NODE_IDX_T src = src_idx[j] + src_start;
-                                    rank_t dst_rank = 0;
+                                    set <rank_t> dst_rank_set;
                                     auto it = node_rank_map.find(src);
                                     if (it == node_rank_map.end())
-                                      { dst_rank = j % num_ranks; }
+                                      { dst_rank_set.insert(j % num_ranks); }
                                     else
-                                      { dst_rank = it->second; }
-                                    edge_tuple_t& et = rank_edge_map[dst_rank][src];
+                                      { dst_rank_set = it->second; }
 
-                                    vector<NODE_IDX_T> &my_dsts = get<0>(et);
-
-                                    vector <AttrVal> &edge_attr_vec = get<1>(et);
-                                    edge_attr_vec.resize(edge_attr_map.size());
-                                    my_dsts.push_back(dst);
-
-                                    set_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
-                                    set_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
-                                    set_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
-                                    set_attr_vec<uint32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
-                                    set_attr_vec<int8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
-                                    set_attr_vec<int16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
-                                    set_attr_vec<int32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
-
+                                    for (auto dst_rank : dst_rank_set)
+                                      {
+                                        edge_tuple_t& et = rank_edge_map[dst_rank][src];
+                                        
+                                        vector<NODE_IDX_T> &my_dsts = get<0>(et);
+                                        
+                                        vector <AttrVal> &edge_attr_vec = get<1>(et);
+                                        edge_attr_vec.resize(edge_attr_map.size());
+                                        my_dsts.push_back(dst);
+                                        
+                                        set_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                        set_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                        set_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                        set_attr_vec<uint32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                        set_attr_vec<int8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                        set_attr_vec<int16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                        set_attr_vec<int32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                                      }
                                     num_edges++;
                                   }
 
