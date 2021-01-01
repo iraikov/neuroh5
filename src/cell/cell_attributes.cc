@@ -1584,24 +1584,30 @@ namespace neuroh5
       vector<CELL_IDX_T> all_selections;
       node_rank_map_t node_rank_map;
       {
-        vector<size_t> sendbuf_selection_size(data_size, selection_size);
-        vector<size_t> recvbuf_selection_size(data_size);
-        vector<int> recvcounts(data_size, 0);
-        vector<int> displs(data_size+1, 0);
+        vector<size_t> sendbuf_selection_size(size, selection_size);
+        vector<size_t> recvbuf_selection_size(size);
+        vector<int> recvcounts(size, 0);
+        vector<int> displs(size+1, 0);
         
-        // Each DATA_COMM rank sends its selection to every other DATA_COMM rank
+        // Each COMM rank sends its selection to every other COMM rank
         throw_assert_nomsg(MPI_Allgather(&sendbuf_selection_size[0], 1, MPI_SIZE_T,
-                                         &recvbuf_selection_size[0], 1, MPI_SIZE_T, data_comm)
+                                         &recvbuf_selection_size[0], 1, MPI_SIZE_T, comm)
                            == MPI_SUCCESS);
-        throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-        
+        throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+
         size_t total_selection_size = 0;
-        for (size_t p=0; p<data_size; p++)
+        for (size_t p=0; p<size; p++)
           {
             total_selection_size = total_selection_size + recvbuf_selection_size[p];
             displs[p+1] = displs[p] + recvbuf_selection_size[p];
             recvcounts[p] = recvbuf_selection_size[p];
           }
+
+        all_selections.resize(total_selection_size);
+        throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
+                                          &all_selections[0], &recvcounts[0], &displs[0], MPI_CELL_IDX_T,
+                                          comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
         // Construct node rank map based on selection information.
         for (rank_t p=0; p<size; p++)

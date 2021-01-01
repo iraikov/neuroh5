@@ -167,7 +167,7 @@ void build_node_rank_map (MPI_Comm comm,
   
   {
     vector<char> sendbuf; size_t sendbuf_size=0;
-    if (comm_rank == 0)
+    if (node_allocation.size() > 0)
       {
         data::serialize_data(node_allocation, sendbuf);
         sendbuf_size = sendbuf.size();
@@ -203,7 +203,10 @@ void build_node_rank_map (MPI_Comm comm,
             vector<char>::const_iterator first = recvbuf.begin() + rdispls[rank_idx];
             vector<char>::const_iterator last = (rank_idx < comm_size-1) ? recvbuf.begin() + rdispls[rank_idx+1] : recvbuf.end();
             vector<char> recvbuf_slice(first, last);
-            data::deserialize_data (recvbuf_slice, node_allocation_i);
+            if (recvbuf_slice.size() > 0)
+              {
+                data::deserialize_data (recvbuf_slice, node_allocation_i);
+              }
             for (const auto& gid : node_allocation_i)
               {
                 node_rank_map[gid].insert(rank_idx);
@@ -211,6 +214,10 @@ void build_node_rank_map (MPI_Comm comm,
           }
       }
     recvbuf.clear();
+
+    status = MPI_Barrier(comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "build_node_rank_map: barrier error");
 
   }
   
@@ -238,13 +245,13 @@ void ldbal_cell_attr (MPI_Comm comm,
   throw_assert(status == MPI_SUCCESS,
                "ldbal_cell_attr: unable to obtain rank of MPI communicator");
 
-  if (rank == root)
+  if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
     {
-      if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
-        {
-          build_node_rank_map(comm, py_node_allocation, node_rank_map);
-        }
-      else
+      build_node_rank_map(comm, py_node_allocation, node_rank_map);
+    }
+  else
+    {
+      if (rank == root)
         {
           // round-robin node to rank assignment from file
           set<CELL_IDX_T> attr_index;
@@ -279,39 +286,29 @@ void ldbal_cell_attr (MPI_Comm comm,
               i++;
             }
         }
+
+      vector<char> sendbuf;
+      size_t sendbuf_size=0;
+      if ((rank == root) && (node_rank_map.size() > 0) )
+        {
+          data::serialize_data(node_rank_map, sendbuf);
+          sendbuf_size = sendbuf.size();
+        }
+      
+      status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "ldbal_cell_attr: broadcast error");
+      
+      sendbuf.resize(sendbuf_size);
+      status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
+      throw_assert(status == MPI_SUCCESS,
+                   "ldbal_cell_attr: broadcast error");
+      
+      if ((rank != root) && (sendbuf_size > 0))
+        {
+          data::deserialize_data(sendbuf, node_rank_map);
+        }
     }
-
-  status = MPI_Barrier(comm);
-  throw_assert(status == MPI_SUCCESS,
-               "ldbal_cell_attr: barrier error");
-  
-  {
-    vector<char> sendbuf;
-    size_t sendbuf_size=0;
-    if ((rank == root) && (node_rank_map.size() > 0) )
-      {
-        data::serialize_data(node_rank_map, sendbuf);
-        sendbuf_size = sendbuf.size();
-      }
-    
-    status = MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, root, comm);
-    throw_assert(status == MPI_SUCCESS,
-                 "ldbal_cell_attr: broadcast error");
-    
-    sendbuf.resize(sendbuf_size);
-    status = MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, root, comm);
-    throw_assert(status == MPI_SUCCESS,
-                 "ldbal_cell_attr: broadcast error");
-
-    status = MPI_Barrier(comm);
-    throw_assert(status == MPI_SUCCESS,
-                 "ldbal_cell_attr: barrier error");
-    
-    if ((rank != root) && (sendbuf_size > 0))
-      {
-        data::deserialize_data(sendbuf, node_rank_map);
-      }
-  }
 
 }
 
@@ -340,72 +337,65 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
   throw_assert(status == MPI_SUCCESS,
                "ldbal_cell_attr_gen: unable to obtain rank of MPI communicator");
   count = 0;
+
+  if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
+    {
+      build_node_rank_map(comm, py_node_allocation, node_rank_map);
+    }
+
   if (rank == root)
     {
-      if ((py_node_allocation != NULL) && (py_node_allocation != Py_None))
+      vector < tuple<string,AttrKind,vector <CELL_IDX_T> > > ns_attr_infos;
+      throw_assert(cell::get_cell_attribute_index (file_name, attr_name_space,
+                                                   get<1>(pop_labels[pop_idx]), 
+                                                   pop_vector[pop_idx].start,
+                                                   ns_attr_infos) >= 0,
+                   "ldbal_cell_attr_gen: unable to read cell attributes metadata");
+      for (auto& ns_attr_info: ns_attr_infos)
         {
-          build_node_rank_map(comm, py_node_allocation, node_rank_map);
-        }
-      else
-        {
-          // round-robin node to rank assignment from file
-          vector < tuple<string,AttrKind,vector <CELL_IDX_T> > > ns_attr_infos;
-          throw_assert(cell::get_cell_attribute_index (file_name, attr_name_space,
-                                                       get<1>(pop_labels[pop_idx]), 
-                                                       pop_vector[pop_idx].start,
-                                                       ns_attr_infos) >= 0,
-                       "ldbal_cell_attr_gen: unable to read cell attributes metadata");
-          for (auto& ns_attr_info: ns_attr_infos)
+          vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
+          for (size_t i = 0; i < ns_attr_index.size(); i++)
             {
-              vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
-              for (size_t i = 0; i < ns_attr_index.size(); i++)
-                {
-                  throw_assert((ns_attr_index[i] >= pop_vector[pop_idx].start) &&
-                               (ns_attr_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
-                               "ldbal_cell_attr_gen: invalid index " << ns_attr_index[i]);
-                }
-              count = max(count, ns_attr_index.size());
+              throw_assert((ns_attr_index[i] >= pop_vector[pop_idx].start) &&
+                           (ns_attr_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
+                           "ldbal_cell_attr_gen: invalid index " << ns_attr_index[i]);
             }
-
-          vector < set<CELL_IDX_T> > attr_index_sets;
-          for (auto& ns_attr_info : ns_attr_infos)
-          {
-            vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
-            auto attr_index_intervals = data::split_intervals(ns_attr_index, numitems);
-            attr_index_sets.resize(max(attr_index_intervals.size(), attr_index_sets.size()));
-            size_t i = 0;
-            for (const auto& attr_index_interval : attr_index_intervals)
-              {
-                set<CELL_IDX_T>& attr_index_set = attr_index_sets[i];
-                for (const auto& gid : attr_index_interval)
-                  {
-                    attr_index_set.insert(gid);
-                  }
-                i++;
-              }
-          }
-
-          rank_t r=0; 
-          for (const auto& attr_index_set : attr_index_sets)
+          count = max(count, ns_attr_index.size());
+        }
+          
+      vector < set<CELL_IDX_T> > attr_index_sets;
+      for (auto& ns_attr_info : ns_attr_infos)
+        {
+          vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
+          auto attr_index_intervals = data::split_intervals(ns_attr_index, numitems);
+          attr_index_sets.resize(max(attr_index_intervals.size(), attr_index_sets.size()));
+          size_t i = 0;
+          for (const auto& attr_index_interval : attr_index_intervals)
             {
-              if ((unsigned int)rank == r) local_count++;
-              for (const auto& gid : attr_index_set)
+              set<CELL_IDX_T>& attr_index_set = attr_index_sets[i];
+              for (const auto& gid : attr_index_interval)
                 {
-                  auto it = node_rank_map.find(gid);
-                  if (it == node_rank_map.end())
-                    {
-                      node_rank_map[gid].insert(r++);
-                    }
-                  if ((unsigned int)size <= r) r=0;
+                  attr_index_set.insert(gid);
                 }
+              i++;
+            }
+        }
+      
+      rank_t r=0; 
+      for (const auto& attr_index_set : attr_index_sets)
+        {
+          if ((unsigned int)rank == r) local_count++;
+          for (const auto& gid : attr_index_set)
+            {
+              auto it = node_rank_map.find(gid);
+              if (it == node_rank_map.end())
+                {
+                  node_rank_map[gid].insert(r++);
+                }
+              if ((unsigned int)size <= r) r=0;
             }
         }
     }
-
-
-  status = MPI_Barrier(comm);
-  throw_assert(status == MPI_SUCCESS,
-               "ldbal_cell_attr: barrier error");
   
   {
     vector<char> sendbuf;
@@ -428,20 +418,15 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
     status = MPI_Barrier(comm);
     throw_assert(status == MPI_SUCCESS,
                  "ldbal_cell_attr_gen: barrier error");
-
+    
     if ((rank != root) && (sendbuf_size > 0))
       {
         data::deserialize_data(sendbuf, node_rank_map);
       }
-
-
+    
     status = MPI_Bcast(&count, 1, MPI_SIZE_T, root, comm);
-
-    status = MPI_Barrier(comm);
-    throw_assert(status == MPI_SUCCESS,
-                 "ldbal_cell_attr_gen: barrier error");
+    
   }
-
 }
 
 PyObject* PyStr_FromCString(const char *string)
