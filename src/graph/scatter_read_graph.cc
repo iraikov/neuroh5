@@ -5,16 +5,16 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
 
 #include "neuroh5_types.hh"
 #include "cell_populations.hh"
 #include "scatter_read_projection.hh"
 #include "scatter_read_graph.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -83,7 +83,9 @@ namespace neuroh5
                                   prj_vector, edge_attr_names_vector, 
                                   local_num_nodes, local_num_edges, total_num_edges,
                                   total_read_blocks);
-
+#ifdef NEUROH5_DEBUG
+          MPI_Barrier(all_comm); 
+#endif
         }
       return ierr;
     }

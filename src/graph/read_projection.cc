@@ -5,10 +5,9 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
 
 #include "neuroh5_types.hh"
 #include "read_projection.hh"
@@ -17,6 +16,7 @@
 #include "validate_edge_list.hh"
 #include "append_edge_map.hh"
 #include "mpi_debug.hh"
+#include "debug.hh"
 
 #include <iostream>
 #include <sstream>
@@ -130,10 +130,10 @@ namespace neuroh5
 
       prj_vector.push_back(prj_edge_map);
       edge_attr_names_vector.push_back (edge_attr_names);
-
+#ifdef NEUROH5_DEBUG
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "read_projection: error in MPI_Barrier");
-
+#endif
       
       return ierr;
     }

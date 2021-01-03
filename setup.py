@@ -25,9 +25,9 @@ class cmake_build_ext(build_ext.build_ext):
         except OSError:
             raise RuntimeError('Cannot find CMake executable')
 
-        options = { 'debug': False, 'HDF5_ROOT': False }
+        options = { 'debug_build': False, 'HDF5_ROOT': False }
         if os.environ.get('NEUROH5_DEBUG', False):
-            options['debug'] = True
+            options['debug_build'] = True
         if os.environ.get('HDF5_ROOT', False):
             options['HDF5_ROOT'] = os.environ.get('HDF5_ROOT')
             
@@ -35,7 +35,7 @@ class cmake_build_ext(build_ext.build_ext):
         for ext in self.extensions:
 
             extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-            cfg = 'Debug' if options.get('debug', False) else 'Release'
+            cfg = 'Debug' if options.get('debug_build', False) else 'RelWithDebInfo'
 
             cmake_args = [
                 '-DCMAKE_BUILD_TYPE=%s' % cfg,

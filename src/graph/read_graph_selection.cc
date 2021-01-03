@@ -5,16 +5,16 @@
 ///  Top-level functions for reading specified subsets of graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
-#include "mpi_debug.hh"
 #include "edge_attributes.hh"
 #include "cell_populations.hh"
 #include "read_projection_selection.hh"
 #include "read_graph_selection.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
+#include "mpi_debug.hh"
 
 using namespace neuroh5::data;
 using namespace std;
@@ -161,10 +161,12 @@ namespace neuroh5
 
       throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
                    "error in MPI_Barrier");
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-                   "error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
                    "error in MPI_Comm_free");
+#ifdef NEUROH5_DEBUG
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "error in MPI_Barrier");
+#endif
 
       return 0;
     }

@@ -5,11 +5,10 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 
-#include "debug.hh"
 
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
@@ -20,6 +19,7 @@
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 #include <vector>
 #include <map>
@@ -121,7 +121,6 @@ namespace neuroh5
         {
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      MPI_Barrier(all_comm);
       
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
@@ -267,7 +266,6 @@ namespace neuroh5
                                            prj_edge_map, num_unpacked_nodes,
                                            num_unpacked_edges);
         }
-      MPI_Barrier(all_comm);
 
       if ((rank_t)rank < io_size)
         {
@@ -287,6 +285,7 @@ namespace neuroh5
         }
 
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      MPI_Barrier(all_comm);
 
       return 0;
     }

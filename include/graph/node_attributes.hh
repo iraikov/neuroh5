@@ -245,7 +245,6 @@ namespace neuroh5
       throw_assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
                                  &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
                                  comm) == MPI_SUCCESS, "error in MPI_Alltoallv");
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
       value_vector.clear();
     
       vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
@@ -278,7 +277,6 @@ namespace neuroh5
       throw_assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
                                  &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
                                  comm) >= 0, "error in MPI_Alltoallv");
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
 
       if (rank < io_size)
         {

@@ -5,11 +5,9 @@
 ///  Top-level functions for appending edge information to graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-
-#include "debug.hh"
 
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
@@ -21,6 +19,7 @@
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
 #include "range_sample.hh"
+#include "debug.hh"
 #include "mpi_debug.hh"
 #include "throw_assert.hh"
 
@@ -118,8 +117,9 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
                                          &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
                            == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
         throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-
+#endif
         for (size_t p=0; p<size; p++)
           {
             total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
@@ -138,7 +138,9 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
                                           &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
                                           all_comm) == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
         throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+#endif
 
         vector<size_t> p = sort_permutation(node_index, compare_nodes);
         apply_permutation_in_place(node_index, p);
@@ -275,8 +277,9 @@ namespace neuroh5
       //    and creates sendcounts and sdispls arrays
       
       throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-
+#endif
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
       
@@ -294,8 +297,9 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
                                        &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
                                        all_comm) == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-
+#endif
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
@@ -347,9 +351,8 @@ namespace neuroh5
           throw_assert_nomsg(H5Pclose(fapl) >= 0);
         } 
       throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
-      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
       return 0;
     }
   }

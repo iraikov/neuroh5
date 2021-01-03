@@ -194,12 +194,10 @@ namespace neuroh5
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: packed ", num_packed_edges,
                         " edges from projection ", src_pop_name, " -> ", dst_pop_name);
 
-              MPI_Barrier(io_comm);
             } // is_io_rank
 
           
           MPI_Comm_free(&io_comm);
-          //MPI_Barrier(all_comm); // TODO: check if this barrier is needed
           throw_assert_nomsg(MPI_Bcast(&total_read_blocks, 1, MPI_SIZE_T, io_rank_root, all_comm) == MPI_SUCCESS);
           throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                          recvcounts, rdispls, recvbuf) >= 0);
@@ -238,7 +236,6 @@ namespace neuroh5
                      " edges for projection ", src_pop_name, " -> ", dst_pop_name);
       
       prj_vector.push_back(prj_edge_map);
-      MPI_Barrier(all_comm);
 
       return 0;
     }

@@ -5,10 +5,9 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
 
 #include "neuroh5_types.hh"
 #include "read_projection_datasets.hh"
@@ -19,6 +18,7 @@
 #include "serialize_edge.hh"
 #include "serialize_data.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 #include <cstdio>
 #include <iostream>
@@ -180,7 +180,9 @@ namespace neuroh5
       
       prj_vector.push_back(prj_edge_map);
       edge_attr_names_vector.push_back(edge_attr_names);
+#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+#endif
 
       return 0;
     }
@@ -235,7 +237,6 @@ namespace neuroh5
         {
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      MPI_Barrier(all_comm);
 
       throw_assert_nomsg(MPI_Bcast(&prj_size, 1, MPI_SIZE_T, 0, all_comm) == MPI_SUCCESS);
 
@@ -248,6 +249,7 @@ namespace neuroh5
                            prj_vector, edge_attr_names_vector);
                              
         }
+      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       MPI_Comm_free(&io_comm);
 
       return ierr;

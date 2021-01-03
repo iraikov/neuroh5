@@ -24,6 +24,7 @@
 #include "sort_permutation.hh"
 #include "mpi_debug.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 using namespace std;
 
@@ -332,9 +333,10 @@ namespace neuroh5
           
         }
 
+#ifdef NEUROH5_DEBUG
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "error in MPI_Barrier");
-      
+#endif      
 
       return ierr;
     }

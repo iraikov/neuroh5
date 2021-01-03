@@ -14,6 +14,8 @@
 #include "write_template.hh"
 #include "file_access.hh"
 #include "throw_assert.hh"
+#include "mpe_seq.hh"
+#include "debug.hh"
 
 namespace neuroh5
 {
@@ -101,8 +103,10 @@ namespace neuroh5
       throw_assert(MPI_Allgather(&my_count, 1, MPI_SIZE_T, &all_counts[0], 1,
                                  MPI_SIZE_T, comm) == MPI_SUCCESS,
                    "append_edge_attribute: error in MPI_Allgather");
+#ifdef NEUROH5_DEBUG
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_edge_attribute: error in MPI_Barrier");
+#endif
 
       // calculate the total dataset size and the offset of my piece
       hsize_t local_value_start = current_value_size,

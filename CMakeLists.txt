@@ -13,16 +13,20 @@ include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
 set(NEUROH5_VERSION 0.0.5)
 
 # Set the build type.  Options are:
+#  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  Debug          : w/ debug symbols, w/o optimization
 #  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
 
 if (NOT CMAKE_BUILD_TYPE)
-    #set(CMAKE_BUILD_TYPE Release)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
+    #set(CMAKE_BUILD_TYPE Release)
     #set(CMAKE_BUILD_TYPE Debug)
 endif()
+
+# when build type is Debug, enable additional logging functionality
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DNEUROH5_DEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DNEUROH5_DEBUG")
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

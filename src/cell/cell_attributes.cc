@@ -24,6 +24,7 @@
 #include "serialize_cell_attributes.hh"
 #include "range_sample.hh"
 #include "mpe_seq.hh"
+#include "debug.hh"
 #include "throw_assert.hh"
 
 #include <hdf5.h>
@@ -981,7 +982,6 @@ namespace neuroh5
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
           }
-          MPI_Barrier(io_comm);
 
           data::serialize_rank_attr_map (size, rank, rank_attr_map, sendcounts, sendbuf, sdispls);
         }
@@ -990,8 +990,11 @@ namespace neuroh5
 
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
+      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-      MPI_Barrier(all_comm);
+#ifdef NEUROH5_DEBUG
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+#endif
     
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
@@ -1138,7 +1141,6 @@ namespace neuroh5
         {
           MPI_Comm_split(comm,0,rank,&io_comm);
         }
-      MPI_Barrier(comm);
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -1275,11 +1277,11 @@ namespace neuroh5
           data::serialize_data(attr_map, sendrecvbuf);
 
         }
-      MPI_Barrier(io_comm);
+
       status = H5Pclose(fapl);
       throw_assert_nomsg(status == 0);
+      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-      
 
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
@@ -1551,10 +1553,9 @@ namespace neuroh5
         }
 
 
-      MPI_Barrier(data_comm);
+      throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
       throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
                    "read_cell_attribute_selection: error in MPI_Comm_free ");
-      MPI_Barrier(comm);
       
     }
 
@@ -1593,7 +1594,9 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgather(&sendbuf_selection_size[0], 1, MPI_SIZE_T,
                                          &recvbuf_selection_size[0], 1, MPI_SIZE_T, comm)
                            == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
         throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+#endif
 
         size_t total_selection_size = 0;
         for (size_t p=0; p<size; p++)
@@ -1607,8 +1610,9 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
                                           &all_selections[0], &recvcounts[0], &displs[0], MPI_CELL_IDX_T,
                                           comm) == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
         throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-
+#endif
         // Construct node rank map based on selection information.
         for (rank_t p=0; p<size; p++)
           {
@@ -1680,7 +1684,6 @@ namespace neuroh5
             data::NamedAttrMap  attr_values;
             read_cell_attribute_selection(io_comm, file_name, attr_name_space, attr_mask, pop_name, pop_start,
                                           io_selection, attr_values);
-            throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
             data::append_rank_attr_map(attr_values, node_rank_map, rank_attr_map);
             attr_values.num_attrs(num_attrs);
             attr_values.attr_names(attr_names);
@@ -1692,9 +1695,11 @@ namespace neuroh5
         {
           MPI_Comm_split(comm, 0, rank, &io_comm);
         }
+      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-      
+#endif      
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
         {
@@ -1758,7 +1763,6 @@ namespace neuroh5
         {
           attr_values.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
         }
-      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       
       // 6. Each rank sends an attribute set size to
       //    every other rank (non IO_COMM ranks pass zero)

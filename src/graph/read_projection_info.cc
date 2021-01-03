@@ -4,10 +4,9 @@
 ///
 ///  Functions for reading edge information.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
 
 #include "neuroh5_types.hh"
 #include "read_projection_info.hh"
@@ -16,6 +15,7 @@
 #include "validate_edge_list.hh"
 #include "append_edge_map.hh"
 #include "mpi_debug.hh"
+#include "debug.hh"
 
 #include <iostream>
 #include <sstream>
@@ -93,7 +93,7 @@ namespace neuroh5
                                                                dst_blk_ptr, dst_idx, dst_ptr) >= 0,
                            "read_projection_info: read_projection_node_datasets error");
             }
-          MPI_Barrier(comm);
+          throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
           MPI_Comm_free(&io_comm);
           
           if (dst_blk_ptr.size() > 0)
@@ -205,10 +205,10 @@ namespace neuroh5
 
       prj_names.push_back(make_pair(src_pop_name, dst_pop_name));
       edge_attr_names_vector.push_back (edge_attr_names);
-          
+#ifdef NEUROH5_DEBUG          
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "read_projection_info: error in MPI_Barrier");
-
+#endif
       
       return ierr;
     }

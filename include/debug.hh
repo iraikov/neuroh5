@@ -1,5 +1,5 @@
-#ifndef NGH5DEBUG_HH
-#define NGH5DEBUG_HH
+#ifndef NEUROH5_DEBUG_HH
+#define NEUROH5_DEBUG_HH
 
 #include <cassert>
 #include <cstdio>
@@ -8,9 +8,12 @@
 
 namespace neuroh5
 {
-
+#ifdef NEUROH5_DEBUG
+  static bool debug_enabled = true;
+#else
   static bool debug_enabled = false;
-  
+#endif  
+
   inline void DEBUG(){}
   
   template<typename First, typename ...Rest>

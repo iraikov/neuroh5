@@ -4,7 +4,7 @@
 ///
 ///  MPI-specific debugging routines.
 ///
-///  Copyright (C) 2017 Project Neurograph.
+///  Copyright (C) 2017-2020 Project NeuroH5.
 //==============================================================================
 
 #ifndef MPI_DEBUG_HH
@@ -15,12 +15,9 @@
 #include <vector>
 #include <string>
 
-#include <debug.hh>
-#include <mpe_seq.hh>
-
-
-#undef NDEBUG
-#include <cassert>
+#include "debug.hh"
+#include "mpe_seq.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -37,7 +34,7 @@ namespace neuroh5
         {
           MPE_Seq_begin( comm, 1 );
           int rank;
-          assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
+          throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "error in MPI_Comm_rank");
           std::cerr << "Rank " << rank << ": ";
           std::cerr << std::forward<First>(first);
           DEBUG(std::forward<Rest>(rest)...);

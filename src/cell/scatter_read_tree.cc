@@ -4,7 +4,7 @@
 ///
 ///  Read and scatter tree structures.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
@@ -29,6 +29,7 @@
 #include "path_names.hh"
 #include "read_template.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 using namespace std;
 
@@ -117,7 +118,11 @@ namespace neuroh5
           data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
         }
 
-      MPI_Barrier(all_comm);
+
+#ifdef NEUROH5_DEBUG
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+#endif
+
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       {
@@ -172,8 +177,6 @@ namespace neuroh5
                                              pop_name, pop_start, selection, attr_values);
       append_tree_map(attr_values, tree_map);
 
-      MPI_Barrier(all_comm);
-
       for (string attr_name_space : attr_name_spaces)
         {
           scatter_read_cell_attribute_selection(all_comm, file_name,  io_size,
@@ -182,8 +185,9 @@ namespace neuroh5
                                                 attr_maps[attr_name_space]);
 
         }
-      MPI_Barrier(all_comm);
-    
+#ifdef NEUROH5_DEBUG
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+#endif    
       return 0;
     }
 

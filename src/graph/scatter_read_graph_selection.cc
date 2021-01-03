@@ -5,16 +5,16 @@
 ///  Top-level functions for reading specified subsets of graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
 #include "mpi_debug.hh"
 #include "edge_attributes.hh"
 #include "cell_populations.hh"
 #include "scatter_read_projection_selection.hh"
 #include "scatter_read_graph_selection.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 using namespace neuroh5::data;
 using namespace std;
@@ -78,8 +78,9 @@ namespace neuroh5
             throw_assert_nomsg(MPI_Allgather(&sendbuf_selection_size[0], 1, MPI_SIZE_T,
                                              &recvbuf_selection_size[0], 1, MPI_SIZE_T, data_comm)
                                == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
             throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-
+#endif
             size_t total_selection_size = 0;
             for (size_t p=0; p<data_size; p++)
               {
@@ -92,8 +93,9 @@ namespace neuroh5
             throw_assert_nomsg(MPI_Allgatherv(&selection[0], selection_size, MPI_CELL_IDX_T,
                                               &all_selections[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
                                               data_comm) == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
             throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-
+#endif
             // Construct node rank map based on selection information.
             for (rank_t p=0; p<data_size; p++)
               {
@@ -197,10 +199,12 @@ namespace neuroh5
 
       throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
                    "error in MPI_Barrier");
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-                   "error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
                    "error in MPI_Comm_free");
+#ifdef NEUROH5_DEBUG
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "error in MPI_Barrier");
+#endif
 
       return 0;
     }

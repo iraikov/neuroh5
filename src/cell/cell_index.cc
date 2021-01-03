@@ -7,7 +7,6 @@
 ///  Copyright (C) 2016-2020 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
 
 #include <hdf5.h>
 
@@ -23,6 +22,7 @@
 #include "read_template.hh"
 #include "write_template.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 using namespace std;
 
@@ -162,7 +162,9 @@ namespace neuroh5
       ierr = MPI_Bcast(&(cell_index[0]), numitems, MPI_CELL_IDX_T, 0, comm);
       throw_assert_nomsg(ierr == MPI_SUCCESS);
 
+#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+#endif
     
       return ierr;
     }
@@ -200,7 +202,9 @@ namespace neuroh5
       index_size_vector.resize(size);
       ierr = MPI_Allgather(&local_index_size, 1, MPI_SIZE_T, &index_size_vector[0], 1, MPI_SIZE_T, comm);
       throw_assert_nomsg(ierr == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+#endif
 
       hsize_t local_index_start = 0;
       for (size_t i=0; i<rank; i++)
@@ -214,8 +218,9 @@ namespace neuroh5
         }
 
       ierr = create_cell_index(comm, file_name, pop_name, attr_name_space);
+#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-      
+#endif      
       hid_t file = hdf5::open_file(comm, file_name, true, true);
       throw_assert_nomsg(file >= 0);
 

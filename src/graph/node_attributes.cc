@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a graph node.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -22,6 +22,7 @@
 #include "serialize_data.hh"
 #include "serialize_cell_attributes.hh"
 #include "throw_assert.hh"
+#include "debug.hh"
 
 #include <hdf5.h>
 #include <mpi.h>
@@ -497,7 +498,6 @@ namespace neuroh5
         {
           MPI_Comm_split(all_comm,0,rank,&io_comm);
         }
-      MPI_Barrier(all_comm);
     
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)

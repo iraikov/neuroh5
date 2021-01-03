@@ -5,10 +5,9 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
-#include "debug.hh"
 
 #include "neuroh5_types.hh"
 #include "scatter_read_projection_selection.hh"
@@ -22,6 +21,7 @@
 #include "range_sample.hh"
 #include "throw_assert.hh"
 #include "mpi_debug.hh"
+#include "debug.hh"
 
 #include <iostream>
 #include <sstream>
@@ -196,7 +196,9 @@ namespace neuroh5
             } // is_io_rank
 
           MPI_Comm_free(&io_comm);
+#ifdef NEUROH5_DEBUG
           MPI_Barrier(comm);
+#endif
           throw_assert_nomsg(mpi::alltoallv_vector<char>(comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                          recvcounts, rdispls, recvbuf) >= 0);
 
@@ -220,8 +222,9 @@ namespace neuroh5
             throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS);
             sendbuf.resize(sendbuf_size);
             throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, comm) == MPI_SUCCESS);
+#ifdef NEUROH5_DEBUG
             MPI_Barrier(comm);
-            
+#endif            
             if (rank != 0)
               {
                 if (sendbuf.size() > 0)
