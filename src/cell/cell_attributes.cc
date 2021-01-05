@@ -1404,27 +1404,12 @@ namespace neuroh5
       }
 
       size_t selection_size = selection.size();
-      int data_color = 2;
-      MPI_Comm data_comm;
-      // In cases where some ranks do not have any data to read, split
-      // the communicator, so that collective operations can be executed
-      // only on the ranks that do have data.
-      if (selection_size > 0)
-        {
-          MPI_Comm_split(comm,data_color,0,&data_comm);
-        }
-      else
-        {
-          MPI_Comm_split(comm,0,0,&data_comm);
-        }
-      MPI_Comm_set_errhandler(data_comm, MPI_ERRORS_RETURN);
-
 
       if (selection_size > 0)
         {
           // get a file handle and retrieve the MPI info
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-          throw_assert(H5Pset_fapl_mpio(fapl, data_comm, MPI_INFO_NULL) >= 0,
+          throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
                        "read_cell_attribute_selection: error setting MPI driver for file access");
           
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
@@ -1456,7 +1441,7 @@ namespace neuroh5
                     if (attr_size == 4)
                       {
                         vector<uint32_t> attr_values_uint32;
-                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                      selection, index, ptr, value_index, value_ptr,
                                                                      attr_values_uint32);
                         attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint32);
@@ -1464,7 +1449,7 @@ namespace neuroh5
                     else if (attr_size == 2)
                       {
                         vector<uint16_t> attr_values_uint16;
-                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                      selection, index, ptr, value_index, value_ptr,
                                                                      attr_values_uint16);
                         attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint16);
@@ -1472,7 +1457,7 @@ namespace neuroh5
                     else if (attr_size == 1)
                       {
                         vector<uint8_t> attr_values_uint8;
-                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                      selection, index, ptr, value_index, value_ptr,
                                                                      attr_values_uint8);
                         attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
@@ -1488,7 +1473,7 @@ namespace neuroh5
                     if (attr_size == 4)
                       {
                         vector<int32_t> attr_values_int32;
-                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                      selection, index, ptr, value_index, value_ptr,
                                                                      attr_values_int32);
                         attr_values.insert(attr_name, value_index, value_ptr, attr_values_int32);
@@ -1496,7 +1481,7 @@ namespace neuroh5
                     else if (attr_size == 2)
                       {
                         vector<int16_t> attr_values_int16;
-                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                      selection, index, ptr, value_index, value_ptr,
                                                                      attr_values_int16);
                         attr_values.insert(attr_name, value_index, value_ptr, attr_values_int16);
@@ -1504,7 +1489,7 @@ namespace neuroh5
                     else if (attr_size == 1)
                       {
                         vector<int8_t> attr_values_int8;
-                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                      selection, index, ptr, value_index, value_ptr,
                                                                      attr_values_int8);
                         attr_values.insert(attr_name, value_index, value_ptr, attr_values_int8);
@@ -1518,7 +1503,7 @@ namespace neuroh5
                 case FloatVal:
                   {
                     vector<float> attr_values_float;
-                    status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                  selection, index, ptr, value_index, value_ptr,
                                                                  attr_values_float);
                     attr_values.insert(attr_name, value_index, value_ptr, attr_values_float);
@@ -1529,7 +1514,7 @@ namespace neuroh5
                     if (attr_size == 1)
                       {
                         vector<uint8_t> attr_values_uint8;
-                        status = hdf5::read_cell_attribute_selection(data_comm, file, attr_path, pop_start,
+                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                      selection, index, ptr, value_index, value_ptr,
                                                                      attr_values_uint8);
                         attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
@@ -1553,10 +1538,6 @@ namespace neuroh5
         }
 
 
-      throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
-      throw_assert(MPI_Comm_free(&data_comm) == MPI_SUCCESS,
-                   "read_cell_attribute_selection: error in MPI_Comm_free ");
-      
     }
 
     
