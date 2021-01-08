@@ -297,9 +297,7 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
                                        &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
                                        all_comm) == MPI_SUCCESS);
-#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-#endif
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
@@ -311,6 +309,10 @@ namespace neuroh5
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes, num_unpacked_edges);
         }
+
+      recvbuf.clear();
+      recvcounts.clear();
+      rdispls.clear();
 
       // Create an I/O communicator
       MPI_Comm  io_comm;

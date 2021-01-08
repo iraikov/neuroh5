@@ -285,6 +285,8 @@ void ldbal_cell_attr (MPI_Comm comm,
               node_rank_map[gid].insert(i%size);
               i++;
             }
+          throw_assert(node_rank_map.size() == attr_index.size(),
+                       "ldbal_cell_attr: node_rank_map is not the same size as attr_index");
         }
 
       vector<char> sendbuf;
@@ -324,7 +326,8 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
                           const size_t& numitems,
                           PyObject *py_node_allocation,
                           node_rank_map_t& node_rank_map,
-                          size_t& count, size_t& local_count)
+                          size_t& count, size_t& local_count,
+                          size_t& max_local_count)
 {
   int status;
   int rank, size;
@@ -384,19 +387,21 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
       rank_t r=0; 
       for (const auto& attr_index_set : attr_index_sets)
         {
-          if ((unsigned int)rank == r) local_count++;
           for (const auto& gid : attr_index_set)
             {
               auto it = node_rank_map.find(gid);
               if (it == node_rank_map.end())
                 {
-                  node_rank_map[gid].insert(r++);
+                  node_rank_map[gid].insert(r);
+                  r += 1;
                 }
               if ((unsigned int)size <= r) r=0;
             }
         }
+      throw_assert(node_rank_map.size() == count,
+                   "ldbal_cell_attr_gen: node_rank_map is not the same size as index");
     }
-  
+
   {
     vector<char> sendbuf;
     size_t sendbuf_size=0;
@@ -415,16 +420,26 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
     throw_assert(status == MPI_SUCCESS,
                  "ldbal_cell_attr_gen: broadcast error");
     
-    status = MPI_Barrier(comm);
-    throw_assert(status == MPI_SUCCESS,
-                 "ldbal_cell_attr_gen: barrier error");
-    
     if ((rank != root) && (sendbuf_size > 0))
       {
         data::deserialize_data(sendbuf, node_rank_map);
       }
-    
+
+    for (auto it = node_rank_map.begin(); it != node_rank_map.end(); it++)
+      {
+        if (it->second.count((rank_t)rank) > 0) 
+          local_count++;
+      }
+
     status = MPI_Bcast(&count, 1, MPI_SIZE_T, root, comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr_gen: broadcast error");
+
+    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
+                           MPI_SIZE_T, MPI_MAX, comm);
+    throw_assert(status == MPI_SUCCESS,
+                 "ldbal_cell_attr_gen: allreduce error");
+
     
   }
 }
@@ -7639,23 +7654,20 @@ extern "C"
 
     py_ntrg->state = new NeuroH5CellAttrGenState();
 
-    size_t count=0, local_count=0;
+    size_t count=0, local_count=0, max_local_count = 0;
     ldbal_cell_attr_gen (comm, string(file_name),
                          pop_vector, pop_labels, pop_name, pop_idx, 
-                         string(attr_namespace), io_size*cache_size,
+                         string(attr_namespace), size*cache_size,
                          py_node_allocation, py_ntrg->state->node_rank_map,
-                         count, local_count);
+                         count, local_count, max_local_count);
         
     
     throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS,
                  "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
 
-    size_t max_local_count=0;
-    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
-                           MPI_SIZE_T, MPI_MAX, comm);
-    throw_assert(status == MPI_SUCCESS,
-                 "NeuroH5CellAttrGen: unable to free MPI communicator");
 
+    printf("cell_attr_gen_new: count = %u local_count = %u max_local_count = %u\n",
+           count, local_count, max_local_count);
     
     py_ntrg->state->pos            = seq_next;
     py_ntrg->state->count          = count;
@@ -7889,42 +7901,30 @@ extern "C"
           if ((py_ntrg->state->it_idx == py_ntrg->state->attr_map.index_set.cend()) &&
               (py_ntrg->state->cache_index < py_ntrg->state->count))
             {
-              MPI_Comm this_comm;
-              
-              int status = MPI_Comm_dup(py_ntrg->state->comm, &this_comm);
-              throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
-              
               int size, rank;
-              throw_assert(MPI_Comm_size(this_comm, &size) == MPI_SUCCESS,
+              throw_assert(MPI_Comm_size(py_ntrg->state->comm, &size) == MPI_SUCCESS,
                            "NeuroH5CellAttrGen: unable to obtain MPI communicator size");
-              throw_assert(MPI_Comm_rank(this_comm,  &rank) == MPI_SUCCESS,
+              throw_assert(MPI_Comm_rank(py_ntrg->state->comm,  &rank) == MPI_SUCCESS,
                            "NeuroH5CellAttrGen: unable to obtain MPI communicator rank");
 
               // If the end of the current cache block has been reached,
               // read the next block
               py_ntrg->state->attr_map.clear();
               
-              status = cell::scatter_read_cell_attributes (this_comm,
-                                                           py_ntrg->state->file_name,
-                                                           py_ntrg->state->io_size,
-                                                           py_ntrg->state->attr_namespace,
-                                                           py_ntrg->state->attr_mask,
-                                                           py_ntrg->state->node_rank_map,
-                                                           py_ntrg->state->pop_name,
-                                                           py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
-                                                           py_ntrg->state->attr_map,
-                                                           py_ntrg->state->cache_index,
-                                                           py_ntrg->state->cache_size);
+              int status = cell::scatter_read_cell_attributes (py_ntrg->state->comm,
+                                                               py_ntrg->state->file_name,
+                                                               py_ntrg->state->io_size,
+                                                               py_ntrg->state->attr_namespace,
+                                                               py_ntrg->state->attr_mask,
+                                                               py_ntrg->state->node_rank_map,
+                                                               py_ntrg->state->pop_name,
+                                                               py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
+                                                               py_ntrg->state->attr_map,
+                                                               py_ntrg->state->cache_index,
+                                                               py_ntrg->state->cache_size);
               
               throw_assert (status >= 0,
                             "NeuroH5CellAttrGen: error in call to cell::scatter_read_cell_attributes");
-              status = MPI_Barrier(this_comm);
-              throw_assert(status == MPI_SUCCESS,
-                           "NeuroH5CellAttrGen: MPI barrier error");
-
-              status = MPI_Comm_free(&(this_comm));
-              throw_assert(status == MPI_SUCCESS,
-                           "NeuroH5CellAttrGen: unable to free MPI communicator");
 
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();
