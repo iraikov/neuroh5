@@ -793,6 +793,7 @@ namespace neuroh5
               ni++;
             }
 	}
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
                                        edge_attr_map, edge_attr_index);
@@ -810,13 +811,13 @@ namespace neuroh5
                                          edge_attr_map, edge_attr_index);
         
       // clean-up
+      throw_assert_nomsg(H5Pclose(fapl) >= 0);
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
       if (info != MPI_INFO_NULL)
         {
           throw_assert_nomsg(MPI_Info_free(&info) == MPI_SUCCESS);
         }
-      throw_assert_nomsg(H5Pclose(fapl) >= 0);
     }
   }
 }

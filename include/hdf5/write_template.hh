@@ -80,7 +80,7 @@ namespace neuroh5
 	    H5Eprint2(H5E_DEFAULT, stdout);
 	  }
         throw_assert(ierr >= 0, "write_template: error in H5Dwrite on dataset "
-                     << name << " length: " << len);
+                     << name << " start: " << start << " length: " << len);
 
         ierr = H5Sclose(mspace);
         throw_assert(ierr >= 0, "error in H5Sclose");

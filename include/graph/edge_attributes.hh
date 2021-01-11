@@ -342,6 +342,7 @@ namespace neuroh5
           hdf5::create_edge_attribute_datasets(file, src_pop_name, dst_pop_name,
                                                attr_namespace, attr_name,
                                                ftype, chunk_size);
+	  throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
         }
 
       hdf5::append_edge_attribute<T>(file, src_pop_name, dst_pop_name,
