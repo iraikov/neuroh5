@@ -437,6 +437,8 @@ namespace neuroh5
             }
 	}
 
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+
       write_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
                                       edge_attr_map, edge_attr_index);
       write_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,
@@ -457,6 +459,7 @@ namespace neuroh5
       throw_assert_nomsg(H5Pclose(lcpl) >= 0);
       throw_assert_nomsg(H5Pclose(wapl) >= 0);
 
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
     }
   }

@@ -1671,16 +1671,15 @@ namespace neuroh5
           }
           
           data::serialize_rank_attr_map (size, rank, rank_attr_map, sendcounts, sendbuf, sdispls);
+          throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
         }
       else
         {
           MPI_Comm_split(comm, 0, rank, &io_comm);
         }
-      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-#endif      
+
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
         {

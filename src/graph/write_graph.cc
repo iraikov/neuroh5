@@ -254,6 +254,7 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
                            &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
                            all_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
       sendbuf.clear();
       sendcounts.clear();
       sdispls.clear();
@@ -282,6 +283,7 @@ namespace neuroh5
           
           throw_assert_nomsg(H5Fclose(file) >= 0);
           throw_assert_nomsg(H5Pclose(fapl) >= 0);
+          throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
         }
 
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
