@@ -7664,10 +7664,6 @@ extern "C"
     
     throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS,
                  "NeuroH5CellAttrGen: unable to duplicate MPI communicator");
-
-
-    printf("cell_attr_gen_new: count = %u local_count = %u max_local_count = %u\n",
-           count, local_count, max_local_count);
     
     py_ntrg->state->pos            = seq_next;
     py_ntrg->state->count          = count;
