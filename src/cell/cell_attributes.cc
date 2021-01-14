@@ -1403,141 +1403,134 @@ namespace neuroh5
           }
       }
 
-      size_t selection_size = selection.size();
-
-      if (selection_size > 0)
+      // get a file handle and retrieve the MPI info
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+      throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
+                   "read_cell_attribute_selection: error setting MPI driver for file access");
+      
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
+      throw_assert(file >= 0,
+                   "read_cell_attribute_selection: unable to open file " << file_name);
+      
+      status = H5Pclose(fapl);
+      throw_assert(status == 0,
+                   "read_cell_attribute_selection: unable to close file access property list");
+      
+      for (size_t i=0; i<attr_info.size(); i++)
         {
-          // get a file handle and retrieve the MPI info
-          hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-          throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
-                       "read_cell_attribute_selection: error setting MPI driver for file access");
+          vector<ATTR_PTR_T> value_ptr;
+          vector<CELL_IDX_T> value_index;
           
-          hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
-          throw_assert(file >= 0,
-                       "read_cell_attribute_selection: unable to open file " << file_name);
+          string attr_name  = get<0>(attr_info[i]);
+          AttrKind attr_kind = get<1>(attr_info[i]);
+          size_t attr_size  = attr_kind.size;
+          const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
+          const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
+          string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
+          if ((attr_mask.size() > 0) && (attr_mask.count(attr_name) == 0))
+            continue;
           
-          status = H5Pclose(fapl);
-          throw_assert(status == 0,
-                       "read_cell_attribute_selection: unable to close file access property list");
-          
-          for (size_t i=0; i<attr_info.size(); i++)
+          switch (attr_kind.type)
             {
-              vector<ATTR_PTR_T> value_ptr;
-              vector<CELL_IDX_T> value_index;
-              
-              string attr_name  = get<0>(attr_info[i]);
-              AttrKind attr_kind = get<1>(attr_info[i]);
-              size_t attr_size  = attr_kind.size;
-              const vector<CELL_IDX_T>& index  = get<2>(attr_info[i]);
-              const vector<ATTR_PTR_T>& ptr  = get<3>(attr_info[i]);
-              string attr_path  = hdf5::cell_attribute_path (name_space, pop_name, attr_name);
-              if ((attr_mask.size() > 0) && (attr_mask.count(attr_name) == 0))
-                continue;
-              
-              switch (attr_kind.type)
-                {
-                case UIntVal:
+            case UIntVal:
+              {
+                if (attr_size == 4)
                   {
-                    if (attr_size == 4)
-                      {
-                        vector<uint32_t> attr_values_uint32;
-                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                     selection, index, ptr, value_index, value_ptr,
-                                                                     attr_values_uint32);
-                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint32);
-                      }
-                    else if (attr_size == 2)
-                      {
-                        vector<uint16_t> attr_values_uint16;
-                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                     selection, index, ptr, value_index, value_ptr,
-                                                                     attr_values_uint16);
-                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint16);
-                      }
-                    else if (attr_size == 1)
-                      {
-                        vector<uint8_t> attr_values_uint8;
-                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                     selection, index, ptr, value_index, value_ptr,
-                                                                     attr_values_uint8);
-                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
-                      }
-                    else
-                      {
-                        throw runtime_error("Unsupported integer attribute size");
-                      };
-                  }
-                  break;
-                case SIntVal:
-                  {
-                    if (attr_size == 4)
-                      {
-                        vector<int32_t> attr_values_int32;
-                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                     selection, index, ptr, value_index, value_ptr,
-                                                                     attr_values_int32);
-                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_int32);
-                      }
-                    else if (attr_size == 2)
-                      {
-                        vector<int16_t> attr_values_int16;
-                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                     selection, index, ptr, value_index, value_ptr,
-                                                                     attr_values_int16);
-                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_int16);
-                      }
-                    else if (attr_size == 1)
-                      {
-                        vector<int8_t> attr_values_int8;
-                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                     selection, index, ptr, value_index, value_ptr,
-                                                                     attr_values_int8);
-                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_int8);
-                      }
-                    else
-                      {
-                        throw runtime_error("Unsupported integer attribute size");
-                      };
-                  }
-                  break;
-                case FloatVal:
-                  {
-                    vector<float> attr_values_float;
+                    vector<uint32_t> attr_values_uint32;
                     status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
                                                                  selection, index, ptr, value_index, value_ptr,
-                                                                 attr_values_float);
-                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_float);
+                                                                 attr_values_uint32);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint32);
                   }
-                  break;
-                case EnumVal:
+                else if (attr_size == 2)
                   {
-                    if (attr_size == 1)
-                      {
-                        vector<uint8_t> attr_values_uint8;
-                        status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
-                                                                     selection, index, ptr, value_index, value_ptr,
-                                                                     attr_values_uint8);
-                        attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
-                      }
-                    else
-                      {
-                        throw runtime_error("Unsupported enumerated attribute size");
-                      };
+                    vector<uint16_t> attr_values_uint16;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_uint16);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint16);
                   }
-                  break;
-                default:
-                  throw runtime_error("Unsupported attribute type");
-                  break;
-                }
-
+                else if (attr_size == 1)
+                  {
+                    vector<uint8_t> attr_values_uint8;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_uint8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
+                  }
+                else
+                  {
+                    throw runtime_error("Unsupported integer attribute size");
+                  };
+              }
+              break;
+            case SIntVal:
+              {
+                if (attr_size == 4)
+                  {
+                    vector<int32_t> attr_values_int32;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_int32);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int32);
+                  }
+                else if (attr_size == 2)
+                  {
+                    vector<int16_t> attr_values_int16;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_int16);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int16);
+                  }
+                else if (attr_size == 1)
+                  {
+                    vector<int8_t> attr_values_int8;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_int8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_int8);
+                  }
+                else
+                  {
+                    throw runtime_error("Unsupported integer attribute size");
+                  };
+              }
+              break;
+            case FloatVal:
+              {
+                vector<float> attr_values_float;
+                status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                             selection, index, ptr, value_index, value_ptr,
+                                                             attr_values_float);
+                attr_values.insert(attr_name, value_index, value_ptr, attr_values_float);
+              }
+              break;
+            case EnumVal:
+              {
+                if (attr_size == 1)
+                  {
+                    vector<uint8_t> attr_values_uint8;
+                    status = hdf5::read_cell_attribute_selection(comm, file, attr_path, pop_start,
+                                                                 selection, index, ptr, value_index, value_ptr,
+                                                                 attr_values_uint8);
+                    attr_values.insert(attr_name, value_index, value_ptr, attr_values_uint8);
+                  }
+                else
+                  {
+                    throw runtime_error("Unsupported enumerated attribute size");
+                  };
+              }
+              break;
+            default:
+              throw runtime_error("Unsupported attribute type");
+              break;
             }
-
-          status = H5Fclose(file);
-          throw_assert(status == 0,
-                       "read_cell_attribute_selection: unable to close file " << file_name);
+          
         }
-
-
+      
+      status = H5Fclose(file);
+      throw_assert(status == 0,
+                   "read_cell_attribute_selection: unable to close file " << file_name);
     }
 
     

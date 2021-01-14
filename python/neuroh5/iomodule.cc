@@ -5247,10 +5247,10 @@ extern "C"
                                    "io_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOik", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOiik", (char **)kwlist,
                                      &file_name, &pop_name,
-                                     &py_selection, &py_comm, 
-                                     &py_attr_name_spaces, &py_mask,
+                                     &py_selection, &py_comm, &py_mask,
+                                     &py_attr_name_spaces, 
                                      &topology_flag, &validate_flag, &io_size))
       return NULL;
 
