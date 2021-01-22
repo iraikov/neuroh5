@@ -2794,7 +2794,7 @@ extern "C"
     PyObject *py_prj_dict = PyDict_New();
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -2915,7 +2915,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -3076,7 +3076,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -3243,7 +3243,7 @@ extern "C"
     PyObject *py_prj_dict = PyDict_New();
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -3375,7 +3375,7 @@ extern "C"
     PyObject *py_prj_dict = PyDict_New();
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -3505,7 +3505,7 @@ extern "C"
       return NULL;
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -3614,7 +3614,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -3750,7 +3750,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -3855,7 +3855,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -4142,7 +4142,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -4244,7 +4244,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -4340,7 +4340,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -4656,7 +4656,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -4853,7 +4853,7 @@ extern "C"
       return NULL;
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -5114,7 +5114,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -5278,7 +5278,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -5499,7 +5499,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -5527,7 +5527,7 @@ extern "C"
 
     if (io_size == 0)
       {
-        io_size = size;
+        io_size = size > 0 ? size : 1;
       }
 
     // Create C++ vector of namespace strings:
@@ -5730,7 +5730,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL,
@@ -5910,7 +5910,7 @@ extern "C"
     
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, 
@@ -6109,7 +6109,7 @@ extern "C"
     
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, 
@@ -6286,7 +6286,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, 
@@ -6418,7 +6418,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, 
@@ -6621,7 +6621,7 @@ extern "C"
       return NULL;
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, 
@@ -6847,7 +6847,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, 
@@ -7216,7 +7216,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, "NeuroH5ProjectionGen: invalid MPI communicator");
@@ -7375,7 +7375,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, "NeuroH5TreeGen: invalid MPI communicator");
@@ -7594,7 +7594,7 @@ extern "C"
 
     MPI_Comm comm;
 
-    if (py_comm != NULL)
+    if ((py_comm != NULL) && (py_comm != Py_None))
       {
         comm_ptr = PyMPIComm_Get(py_comm);
         throw_assert(comm_ptr != NULL, "NeuroH5CellAttrGen: invalid MPI communicator");
