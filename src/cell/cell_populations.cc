@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading population names from an HDF5 enumerated type.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -128,7 +128,7 @@ namespace neuroh5
     (
      MPI_Comm                   comm,
      const std::string&         file_name,
-     set< pair<pop_t,pop_t> >&  pop_pairs
+     set< pair<pop_t, pop_t> >&  pop_pairs
      )
     {
       herr_t ierr = 0;
@@ -206,11 +206,10 @@ namespace neuroh5
 
     herr_t read_population_ranges
     (
-     MPI_Comm                                comm,
-     const std::string&                      file_name,
-     map<NODE_IDX_T, pair<uint32_t,pop_t> >& pop_ranges,
-     vector<pop_range_t> &pop_vector,
-     size_t &n_nodes
+     MPI_Comm                    comm,
+     const std::string&          file_name,
+     pop_range_map_t&            pop_ranges,              
+     size_t &                    n_nodes
      )
     {
       herr_t ierr = 0;
@@ -220,6 +219,7 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
       // MPI rank 0 reads and broadcasts the number of ranges
+      vector<pop_range_t> pop_vector;
 
       size_t num_ranges;
 
@@ -267,9 +267,7 @@ namespace neuroh5
       n_nodes = 0;
       for(size_t i = 0; i < pop_vector.size(); ++i)
         {
-          pop_ranges.insert(make_pair(pop_vector[i].start,
-                                      make_pair(pop_vector[i].count,
-                                                pop_vector[i].pop)));
+          pop_ranges.insert(make_pair(pop_vector[i].pop, pop_vector[i]));
           n_nodes = n_nodes + pop_vector[i].count;
         }
 
@@ -286,7 +284,7 @@ namespace neuroh5
     (
      MPI_Comm comm,
      const string& file_name,
-     vector< pair<pop_t, string> > & pop_labels
+     pop_label_map_t& pop_labels
      )
     {
       herr_t ierr = 0;
@@ -295,9 +293,7 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_size(comm, &size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      // MPI rank 0 reads and broadcasts the number of ranges
-
-      vector <string> pop_name_vector;
+      // MPI rank 0 reads and broadcasts the names of populations
 
       // process 0 reads the number of populations and broadcasts
       if (rank == 0)
@@ -321,9 +317,12 @@ namespace neuroh5
               for (size_t i=0; i<num_labels; i++)
                 {
                   char namebuf[MAX_POP_NAME_LEN];
-                  ierr = H5Tenum_nameof(pop_labels_type, &i, namebuf, MAX_POP_NAME_LEN);
-                  pop_name_vector.push_back(string(namebuf));
+                  int member_val;
+                  ierr = H5Tget_member_value(pop_labels_type, i, &member_val);
                   throw_assert_nomsg(ierr >= 0);
+                  ierr = H5Tenum_nameof(pop_labels_type, &member_val, namebuf, MAX_POP_NAME_LEN);
+                  throw_assert_nomsg(ierr >= 0);
+                  pop_labels.insert ( make_pair((pop_t)member_val, string(namebuf)) );
                 }
               
               throw_assert_nomsg(H5Tclose(pop_labels_type) >= 0);
@@ -337,7 +336,7 @@ namespace neuroh5
         vector<char> sendbuf; size_t sendbuf_size=0;
         if (rank == 0)
           {
-            data::serialize_data(pop_name_vector, sendbuf);
+            data::serialize_data(pop_labels, sendbuf);
             sendbuf_size = sendbuf.size();
           }
 
@@ -348,15 +347,10 @@ namespace neuroh5
         
         if (rank != 0)
           {
-            data::deserialize_data(sendbuf, pop_name_vector);
+            data::deserialize_data(sendbuf, pop_labels);
           }
       }
 
-      for (uint16_t i=0; i<pop_name_vector.size(); i++)
-        {
-          pop_labels.push_back(make_pair(i, pop_name_vector[i]));
-        }
-        
       return ierr;
     }
 

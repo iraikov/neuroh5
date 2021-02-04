@@ -4,7 +4,7 @@
 ///
 ///  Driver program for scatter_read_graph function.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -65,8 +65,7 @@ int main(int argc, char** argv)
   MPI_Comm all_comm;
   // A vector that maps nodes to compute ranks
   node_rank_map_t node_rank_map;
-  vector<pop_range_t> pop_vector;
-  map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
+  pop_range_map_t pop_ranges;
   vector<pair<string,string>> prj_names;
   vector < edge_map_t > prj_vector;
   vector < map <string, vector <vector<string> > > > edge_attr_name_vector;
@@ -214,11 +213,8 @@ int main(int argc, char** argv)
   MPI_Comm_dup(MPI_COMM_WORLD,&all_comm);
 
   // Read population info to determine n_nodes
-  throw_assert(cell::read_population_ranges(all_comm, input_file_name, pop_ranges,
-                                            pop_vector, n_nodes) >= 0,
+  throw_assert(cell::read_population_ranges(all_comm, input_file_name, pop_ranges, n_nodes) >= 0,
                "neurograph_scatter_read: error in reading population ranges");
-
-
 
   // Determine which nodes are assigned to which compute ranks
   if (!opt_rankfile)

@@ -4,7 +4,7 @@
 ///
 ///  Python module for reading and writing neuronal connectivity and morphological information.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -226,10 +226,10 @@ void build_node_rank_map (MPI_Comm comm,
 
 void ldbal_cell_attr (MPI_Comm comm,
                       const string& file_name,
-                      const vector<pop_range_t>& pop_vector,
-                      const vector<pair <pop_t, string> >& pop_labels,
+                      const pop_range_map_t& pop_ranges,
+                      const pop_label_map_t& pop_labels,
                       const string& pop_name,
-                      const size_t& pop_idx,    
+                      const pop_t& pop_idx,    
                       const vector<string>& attr_name_spaces,
                       PyObject *py_node_allocation,
                       node_rank_map_t& node_rank_map)
@@ -260,7 +260,7 @@ void ldbal_cell_attr (MPI_Comm comm,
               vector < tuple<string,AttrKind,vector <CELL_IDX_T> > > ns_attr_infos;
               throw_assert(cell::get_cell_attribute_index (file_name, attr_name_space,
                                                            get<1>(pop_labels[pop_idx]), 
-                                                           pop_vector[pop_idx].start,
+                                                           pop_ranges[pop_idx].start,
                                                            ns_attr_infos) >= 0,
                            "ldbal_cell_attr: unable to read cell attributes metadata");
               for (auto& ns_attr_info: ns_attr_infos)
@@ -268,8 +268,8 @@ void ldbal_cell_attr (MPI_Comm comm,
                   vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
                   for (size_t i = 0; i < ns_attr_index.size(); i++)
                     {
-                      throw_assert((ns_attr_index[i] >= pop_vector[pop_idx].start) &&
-                                   (ns_attr_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
+                      throw_assert((ns_attr_index[i] >= pop_ranges[pop_idx].start) &&
+                                   (ns_attr_index[i] < (pop_ranges[pop_idx].start + pop_ranges[pop_idx].count)),
                                    "ldbal_cell_attr: invalid index " << ns_attr_index[i]);
                     }
                   for (const auto& gid : ns_attr_index)
@@ -318,10 +318,10 @@ void ldbal_cell_attr (MPI_Comm comm,
 
 void ldbal_cell_attr_gen (MPI_Comm comm,
                           const string& file_name,
-                          const vector<pop_range_t>& pop_vector,
-                          const vector<pair <pop_t, string> >& pop_labels,
+                          const pop_range_map_t& pop_ranges,
+                          const pop_label_map_t& pop_labels,
                           const string& pop_name,
-                          const size_t& pop_idx,    
+                          const pop_t& pop_idx,    
                           const string& attr_name_space,
                           const size_t& numitems,
                           PyObject *py_node_allocation,
@@ -351,7 +351,7 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
       vector < tuple<string,AttrKind,vector <CELL_IDX_T> > > ns_attr_infos;
       throw_assert(cell::get_cell_attribute_index (file_name, attr_name_space,
                                                    get<1>(pop_labels[pop_idx]), 
-                                                   pop_vector[pop_idx].start,
+                                                   pop_ranges[pop_idx].start,
                                                    ns_attr_infos) >= 0,
                    "ldbal_cell_attr_gen: unable to read cell attributes metadata");
       for (auto& ns_attr_info: ns_attr_infos)
@@ -359,8 +359,8 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
           vector <CELL_IDX_T>& ns_attr_index = get<2>(ns_attr_info);
           for (size_t i = 0; i < ns_attr_index.size(); i++)
             {
-              throw_assert((ns_attr_index[i] >= pop_vector[pop_idx].start) &&
-                           (ns_attr_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
+              throw_assert((ns_attr_index[i] >= pop_ranges[pop_idx].start) &&
+                           (ns_attr_index[i] < (pop_ranges[pop_idx].start + pop_ranges[pop_idx].count)),
                            "ldbal_cell_attr_gen: invalid index " << ns_attr_index[i]);
             }
           count = max(count, ns_attr_index.size());
@@ -2885,8 +2885,7 @@ extern "C"
     node_rank_map_t node_rank_map;
     vector < edge_map_t > prj_vector;
     vector < map <string, vector < vector<string> > > > edge_attr_name_vector;
-    vector<pop_range_t> pop_vector;
-    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    pop_range_map_t pop_ranges;
     vector<pair<string,string> > prj_names;
     PyObject *py_prj_dict = PyDict_New();
     unsigned long io_size; int size;
@@ -2981,7 +2980,7 @@ extern "C"
       }
     
     // Read population info to determine total_num_nodes
-    status = cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes);
+    status = cell::read_population_ranges(comm, input_file_name, pop_ranges, total_num_nodes);
     throw_assert(status >= 0,
                  "py_scatter_read_graph: unable to read population ranges");
  
@@ -3051,8 +3050,7 @@ extern "C"
     EdgeMapType edge_map_type = EdgeMapDst;
     vector < edge_map_t > prj_vector;
     vector < map < string, vector <vector<string> > > > edge_attr_name_vector;
-    vector<pop_range_t> pop_vector;
-    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    pop_range_map_t pop_ranges;
     vector< pair<string,string> > prj_names;
     PyObject *py_prj_dict = PyDict_New();
     int size;
@@ -3120,7 +3118,7 @@ extern "C"
 
 
     // Read population info to determine total_num_nodes
-    status = cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes);
+    status = cell::read_population_ranges(comm, input_file_name, pop_ranges, total_num_nodes);
     throw_assert(status >= 0,
                  "py_bcast_graph: unable to read population ranges");
 
@@ -3897,18 +3895,14 @@ extern "C"
 
     size_t root = 0;
 
-    vector< pair<pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, input_file_name, pop_labels);
     throw_assert(status >= 0,
                  "py_read_cell_attribute_info: unable to read population labels");
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    status = cell::read_population_ranges(comm,
-                                          string(input_file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
+    pop_range_map_t pop_ranges;
+    status = cell::read_population_ranges(comm, string(input_file_name), pop_ranges, n_nodes);
     throw_assert(status >= 0,
                  "py_read_cell_attribute_info: unable to read population ranges");
 
@@ -3921,12 +3915,12 @@ extern "C"
         for (const string& pop_name : pop_names)
           {
             // Determine index of population to be read
-            size_t pop_idx=0; bool pop_idx_set=false;
-            for (size_t i=0; i<pop_labels.size(); i++)
+            pop_t pop_idx=0; bool pop_idx_set=false;
+            for (std::pair<pop_t, string>& x: pop_labels) 
               {
-                if (get<1>(pop_labels[i]) == pop_name)
+                if (get<1>(x) == pop_name)
                   {
-                    pop_idx = get<0>(pop_labels[i]);
+                    pop_idx = get<0>(x);
                     pop_idx_set = true;
                   }
               }
@@ -3966,7 +3960,7 @@ extern "C"
                         vector<CELL_IDX_T>& cell_index_vector = cell_index_info[pop_name][name_space][attr_name];
                         for (size_t i=0; i<cell_index_vector.size(); i++)
                           {
-                            cell_index_vector[i] += pop_vector[pop_idx].start;
+                            cell_index_vector[i] += pop_ranges[pop_idx].start;
                           }
                       }
                   }
@@ -4125,7 +4119,7 @@ extern "C"
   static PyObject *py_read_population_ranges (PyObject *self, PyObject *args, PyObject *kwds)
   {
     int status; 
-    vector< pair<pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     
@@ -4165,12 +4159,8 @@ extern "C"
                   "py_read_population_ranges: unable to read population labels");
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    status = cell::read_population_ranges(comm,
-                                          string(input_file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
+    pop_range_map_t pop_ranges;
+    status = cell::read_population_ranges(comm, string(input_file_name), pop_ranges, n_nodes);
     throw_assert(status >= 0,
                  "py_read_population_ranges: unable to read population labels");
     status = MPI_Comm_free(&comm);
@@ -4180,17 +4170,20 @@ extern "C"
     PyObject *py_population_ranges_dict = PyDict_New();
     for (auto range: pop_ranges)
       {
+        pop_t pop_idx = range.first;
         PyObject *py_range_tuple = PyTuple_New(2);
-        PyTuple_SetItem(py_range_tuple, 0, PyLong_FromLong((long)range.first));
-        PyTuple_SetItem(py_range_tuple, 1, PyLong_FromLong((long)range.second.first));
-
-        if (range.second.second < pop_labels.size())
+        PyTuple_SetItem(py_range_tuple, 0, PyLong_FromLong((long)range.second.first));
+        PyTuple_SetItem(py_range_tuple, 1, PyLong_FromLong((long)range.second.second));
+        
+        for (std::pair<pop_t, string>& x: pop_labels) 
           {
-            PyDict_SetItemString(py_population_ranges_dict,
-                                 get<1>(pop_labels[range.second.second]).c_str(),
-                                 py_range_tuple);
-            Py_DECREF(py_range_tuple);
-
+            if (get<0>(x) == pop_idx)
+              {
+                PyDict_SetItemString(py_population_ranges_dict,
+                                     get<1>(x).c_str(),
+                                     py_range_tuple);
+                Py_DECREF(py_range_tuple);
+              }
           }
       }
 
@@ -4686,19 +4679,19 @@ extern "C"
           }
       }
 
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_read_trees: unable to read population labels");
 
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -4707,14 +4700,11 @@ extern "C"
         throw_err(std::string("py_read_cell_attribute_info; ") + "Population " + pop_name + " not found");
       }
 
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
+    pop_range_map_t pop_ranges;
     size_t n_nodes;
     
     // Read population info
-    status = cell::read_population_ranges(comm, string(file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
+    status = cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes);
     throw_assert(status >= 0,
                  "py_read_trees: unable to read population ranges");
 
@@ -4722,7 +4712,7 @@ extern "C"
     vector<neurotree_t> tree_vector;
 
     status = cell::read_trees (comm, string(file_name),
-                               string(pop_name), pop_vector[pop_idx].start,
+                               string(pop_name), pop_ranges[pop_idx].start,
                                tree_vector);
     throw_assert (status >= 0,
                  "py_read_trees: unable to read trees");
@@ -4735,7 +4725,7 @@ extern "C"
         data::NamedAttrMap attr_map;
         cell::read_cell_attributes(comm, string(file_name), 
                                    attr_namespace, attr_mask, pop_name,
-                                   pop_vector[pop_idx].start, attr_map);
+                                   pop_ranges[pop_idx].start, attr_map);
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
     status = MPI_Comm_free(&comm);
@@ -4885,18 +4875,18 @@ extern "C"
       }
 
     
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_scatter_read_cell_trees: unable to read population labels");
 
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -4907,14 +4897,11 @@ extern "C"
 
     
     vector <string> attr_name_spaces;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
+    pop_range_map_t pop_ranges;
     size_t n_nodes;
     
     // Read population info
-    status = cell::read_population_ranges(comm, string(file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
+    status = cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes);
     throw_assert (status >= 0,
                  "py_scatter_read_trees: unable to read population ranges");
 
@@ -4941,16 +4928,16 @@ extern "C"
         vector<CELL_IDX_T> cell_index;
         throw_assert(cell::read_cell_index(comm,
                                            string(file_name),
-                                           get<1>(pop_labels[pop_idx]),
+                                           pop_labels[pop_idx],
                                            hdf5::TREES,
                                            cell_index) >= 0,
                      "scatter_read_trees: unable to read cell index");
 
         for (size_t i = 0; i < cell_index.size(); i++)
           {
-            cell_index[i] += pop_vector[pop_idx].start;
-            throw_assert((cell_index[i] >= pop_vector[pop_idx].start) &&
-                         (cell_index[i] < (pop_vector[pop_idx].start + pop_vector[pop_idx].count)),
+            cell_index[i] += pop_ranges[pop_idx].start;
+            throw_assert((cell_index[i] >= pop_ranges[pop_idx].start) &&
+                         (cell_index[i] < (pop_ranges[pop_idx].start + pop_ranges[pop_idx].count)),
                          "scatter_read_trees: invalid index " << cell_index[i]);
             
           }
@@ -4971,7 +4958,7 @@ extern "C"
     status = cell::scatter_read_trees (comm, string(file_name),
                                        io_size, attr_name_spaces,
                                        node_rank_map, string(pop_name),
-                                       pop_vector[pop_idx].start,
+                                       pop_ranges[pop_idx].start,
                                        tree_map, attr_maps);
     throw_assert (status >= 0,
                  "py_scatter_read_trees: unable to read trees");
@@ -5152,19 +5139,19 @@ extern "C"
         build_selection(py_selection, selection);
       }
 
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_read_tree_selection: unable to read population labels");
 
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -5173,21 +5160,18 @@ extern "C"
         throw_err(std::string("py_read_tree_selection: ") + "Population " + pop_name + " not found");
       }
 
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
+    pop_range_map_t pop_ranges;
     size_t n_nodes;
     
     // Read population info
-    status = cell::read_population_ranges(comm, string(file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
+    status = cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes);
     throw_assert(status >= 0,
                  "py_read_tree_selection: unable to read population ranges");
 
     vector<neurotree_t> tree_vector;
 
     status = cell::read_tree_selection (comm, string(file_name),
-                                        string(pop_name), pop_vector[pop_idx].start,
+                                        string(pop_name), pop_ranges[pop_idx].start,
                                         tree_vector, selection);
     throw_assert (status >= 0,
                   "py_read_tree_selection: unable to read trees");
@@ -5199,7 +5183,7 @@ extern "C"
         data::NamedAttrMap attr_map;
         cell::read_cell_attribute_selection(comm, string(file_name), 
                                             attr_namespace, attr_mask,
-                                            pop_name, pop_vector[pop_idx].start,
+                                            pop_name, pop_ranges[pop_idx].start,
                                             selection, attr_map);
         attr_maps.insert(make_pair(attr_namespace, attr_map));
       }
@@ -5329,19 +5313,19 @@ extern "C"
         build_selection(py_selection, selection);
       }
 
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_scatter_read_tree_selection: unable to read population labels");
 
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -5350,14 +5334,11 @@ extern "C"
         throw_err(std::string("py_scatter_read_tree_selection: ") + "Population " + pop_name + " not found");
       }
 
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
+    pop_range_map_t pop_ranges;
     size_t n_nodes;
     
     // Read population info
-    status = cell::read_population_ranges(comm, string(file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
+    status = cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes);
     throw_assert(status >= 0,
                  "py_scatter_read_tree_selection: unable to read population ranges");
 
@@ -5367,7 +5348,7 @@ extern "C"
 
     status = cell::scatter_read_tree_selection (comm, string(file_name), io_size,
                                                 attr_name_spaces, 
-                                                string(pop_name), pop_vector[pop_idx].start,
+                                                string(pop_name), pop_ranges[pop_idx].start,
                                                 selection, tree_map, attr_maps);
     throw_assert (status >= 0,
                   "py_scatter_read_tree_selection: unable to read trees");
@@ -5544,18 +5525,18 @@ extern "C"
           }
       }
 
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_scatter_read_cell_attributes: unable to read population labels");
 
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -5566,18 +5547,14 @@ extern "C"
 
     
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
+    pop_range_map_t pop_ranges;
 
-    status = cell::read_population_ranges(comm,
-                                          string(file_name),
-                                          pop_ranges, pop_vector,
-                                          n_nodes);
+    status = cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes);
     throw_assert(status >= 0,
                  "py_scatter_read_cell_attributes: unable to read population ranges");
 
     ldbal_cell_attr (comm, string(file_name),
-                     pop_vector, pop_labels, pop_name, pop_idx, 
+                     pop_ranges, pop_labels, pop_name, pop_idx, 
                      attr_name_spaces, py_node_allocation,
                      node_rank_map);
 
@@ -5593,7 +5570,7 @@ extern "C"
                                                      attr_mask,
                                                      node_rank_map,
                                                      string(pop_name),
-                                                     pop_vector[pop_idx].start,
+                                                     pop_ranges[pop_idx].start,
                                                      attr_map);
         throw_assert (status >= 0,
                       "py_scatter_read_cell_attributes: unable to read cell attributes");
@@ -5748,18 +5725,18 @@ extern "C"
                      "py_read_cell_attributes: unable to duplicate MPI communicator");
       }
 
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_read_cell_attributes: unable to read population labels");
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -5769,19 +5746,15 @@ extern "C"
       }
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    throw_assert(cell::read_population_ranges(comm,
-                                              string(file_name),
-                                              pop_ranges, pop_vector,
-                                              n_nodes) >= 0,
+    pop_range_map_t pop_ranges;
+    throw_assert(cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes) >= 0,
                  "py_read_cell_attributes: unable to read population ranges");
 
 
     NamedAttrMap attr_values;
     cell::read_cell_attributes (comm,
                                 (file_name), string(attr_namespace), attr_mask,
-                                string(pop_name), pop_vector[pop_idx].start,
+                                string(pop_name), pop_ranges[pop_idx].start,
                                 attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
@@ -5929,19 +5902,19 @@ extern "C"
                      "py_read_cell_attribute_selection: unable to duplicate MPI communicator");
       }
     
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_read_cell_attribute_selection: unable to read population labels");
 
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -5951,12 +5924,8 @@ extern "C"
       }
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    throw_assert(cell::read_population_ranges(comm,
-                                              string(file_name),
-                                              pop_ranges, pop_vector,
-                                              n_nodes) >= 0,
+    pop_range_map_t pop_ranges;
+    throw_assert(cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes) >= 0,
                  "py_read_cell_attribute_selection: unable to read population ranges");
 
 
@@ -5967,8 +5936,8 @@ extern "C"
       }
     else
       {
-        size_t population_n = pop_vector[pop_idx].count;
-        size_t population_start = pop_vector[pop_idx].start;
+        size_t population_n = pop_ranges[pop_idx].count;
+        size_t population_start = pop_ranges[pop_idx].start;
         for (size_t i = 0; (Py_ssize_t)i < population_n; i++)
           {
             selection.push_back(i + population_start);
@@ -5978,7 +5947,7 @@ extern "C"
 
     NamedAttrMap attr_values;
     cell::read_cell_attribute_selection (comm, string(file_name), string(attr_namespace), attr_mask,
-                                         string(pop_name), pop_vector[pop_idx].start,
+                                         string(pop_name), pop_ranges[pop_idx].start,
                                          selection, attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
@@ -6140,19 +6109,19 @@ extern "C"
         io_size = size;
       }
     
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_read_cell_attribute_selection: unable to read population labels");
 
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -6162,12 +6131,8 @@ extern "C"
       }
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    throw_assert(cell::read_population_ranges(comm,
-                                              string(file_name),
-                                              pop_ranges, pop_vector,
-                                              n_nodes) >= 0,
+    pop_range_map_t pop_ranges;
+    throw_assert(cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes) >= 0,
                  "py_scatter_read_cell_attribute_selection: unable to read population ranges");
 
 
@@ -6178,8 +6143,8 @@ extern "C"
       }
     else
       {
-        size_t population_n = pop_vector[pop_idx].count;
-        size_t population_start = pop_vector[pop_idx].start;
+        size_t population_n = pop_ranges[pop_idx].count;
+        size_t population_start = pop_ranges[pop_idx].start;
         for (size_t i = 0; (Py_ssize_t)i < population_n; i++)
           {
             selection.push_back(i + population_start);
@@ -6190,7 +6155,7 @@ extern "C"
     NamedAttrMap attr_values;
     cell::scatter_read_cell_attribute_selection (comm, string(file_name), io_size,
                                                  string(attr_namespace), attr_mask,
-                                                 string(pop_name), pop_vector[pop_idx].start,
+                                                 string(pop_name), pop_ranges[pop_idx].start,
                                                  selection, attr_values);
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
@@ -6316,19 +6281,19 @@ extern "C"
     size = ssize;
     rank = srank;
 
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "py_bcast_cell_attributes: unable to read population labels");
 
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    pop_t pop_idx=0; bool pop_idx_set=false;
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -6338,17 +6303,13 @@ extern "C"
       }
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    throw_assert(cell::read_population_ranges(comm,
-                                              string(file_name),
-                                              pop_ranges, pop_vector,
-                                              n_nodes) >= 0,
+    pop_range_map_t pop_ranges;
+    throw_assert(cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes) >= 0,
                  "py_bcast_cell_attributes: unable to read population ranges");
 
     cell::bcast_cell_attributes (comm, (int)root,
                                  file_name, attr_namespace, attr_mask, 
-                                 pop_name, pop_vector[pop_idx].start,
+                                 pop_name, pop_ranges[pop_idx].start,
                                  attr_values);
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_bcast_cell_attributes: unable to free MPI communicator");
@@ -6471,18 +6432,18 @@ extern "C"
         throw_assert(io_size <= size,
                      "py_write_cell_attributes: invalid I/O size");
 
-        vector<pair <pop_t, string> > pop_labels;
+
+        pop_label_map_t pop_labels;
         status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
         throw_assert (status >= 0,
                       "py_write_cell_attributes: unable to read population labels");
         
         // Determine index of population to be read
-        size_t pop_idx=0; bool pop_idx_set=false;
-        for (size_t i=0; i<pop_labels.size(); i++)
+        for (std::pair<pop_t, string>& x: pop_labels) 
           {
-            if (get<1>(pop_labels[i]) == pop_name)
+            if (get<1>(x) == pop_name)
               {
-                pop_idx = get<0>(pop_labels[i]);
+                pop_idx = get<0>(x);
                 pop_idx_set = true;
               }
           }
@@ -6491,17 +6452,14 @@ extern "C"
             throw_err(std::string("py_write_cell_attributes: ") + "Population " + pop_name + " not found");
           }
         
-        map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-        vector<pop_range_t> pop_vector;
+        pop_range_map_t pop_ranges;
         size_t n_nodes;
         
         // Read population info
-        throw_assert(cell::read_population_ranges(data_comm, string(file_name),
-                                                  pop_ranges, pop_vector,
-                                                  n_nodes) >= 0,
+        throw_assert(cell::read_population_ranges(data_comm, string(file_name), pop_ranges, n_nodes) >= 0,
                      "py_write_cell_attributes: unable to read population ranges");
 
-        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+        CELL_IDX_T pop_start = pop_ranges[pop_idx].start;
     
         int npy_type=0;
         
@@ -6679,18 +6637,17 @@ extern "C"
         string pop_name       = string(pop_name_arg);
         string attr_namespace = string(namespace_arg);
 
-        vector<pair <pop_t, string> > pop_labels;
+        pop_label_map_t pop_labels;
         status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
         throw_assert (status >= 0,
                       "py_append_cell_attributes: unable to read population labels");
     
         // Determine index of population to be read
-        size_t pop_idx=0; bool pop_idx_set=false;
-        for (size_t i=0; i<pop_labels.size(); i++)
+        for (std::pair<pop_t, string>& x: pop_labels) 
           {
-            if (get<1>(pop_labels[i]) == pop_name)
+            if (get<1>(x) == pop_name)
               {
-                pop_idx = get<0>(pop_labels[i]);
+                pop_idx = get<0>(x);
                 pop_idx_set = true;
               }
           }
@@ -6699,17 +6656,14 @@ extern "C"
             throw_err(std::string("py_append_cell_attributes: ") + "Population " + pop_name + " not found");
           }
         
-        map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-        vector<pop_range_t> pop_vector;
+        pop_range_map_t pop_ranges;
         size_t n_nodes;
         
         // Read population info
-        throw_assert(cell::read_population_ranges(data_comm, string(file_name),
-                                                  pop_ranges, pop_vector,
-                                                  n_nodes) >= 0,
+        throw_assert(cell::read_population_ranges(data_comm, string(file_name), pop_ranges, n_nodes) >= 0,
                      "py_append_cell_attributes: unable to read population ranges");                     
 
-        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+        CELL_IDX_T pop_start = pop_ranges[pop_idx].start;
     
     
         int npy_type=0;
@@ -6907,18 +6861,17 @@ extern "C"
         string file_name      = string(file_name_arg);
         string pop_name       = string(pop_name_arg);
         
-        vector<pair <pop_t, string> > pop_labels;
+        pop_label_map_t pop_labels;
         status = cell::read_population_labels(data_comm, string(file_name), pop_labels);
         throw_assert (status >= 0,
                       "py_append_cell_trees: unable to read population labels");
         
         // Determine index of population to be read
-        size_t pop_idx=0; bool pop_idx_set=false;
-        for (size_t i=0; i<pop_labels.size(); i++)
+        for (std::pair<pop_t, string>& x: pop_labels) 
           {
-            if (get<1>(pop_labels[i]) == pop_name)
+            if (get<1>(x) == pop_name)
               {
-                pop_idx = get<0>(pop_labels[i]);
+                pop_idx = get<0>(x);
                 pop_idx_set = true;
               }
           }
@@ -6928,17 +6881,14 @@ extern "C"
           }
         
         
-        map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-        vector<pop_range_t> pop_vector;
+        pop_range_map_t pop_ranges;
         size_t n_nodes;
         
         // Read population info
-        throw_assert(cell::read_population_ranges(data_comm, string(file_name),
-                                                  pop_ranges, pop_vector,
-                                                  n_nodes) >= 0,
+        throw_assert(cell::read_population_ranges(data_comm, string(file_name), pop_ranges, n_nodes) >= 0,
                      "py_append_cell_trees: unable to read population ranges");
         
-        CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+        CELL_IDX_T pop_start = pop_ranges[pop_idx].start;
 
         map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
         map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
@@ -7076,10 +7026,9 @@ extern "C"
 
     seq_pos pos;
     EdgeMapType edge_map_type;
-    vector<pop_range_t> pop_vector;
-    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    pop_range_map_t pop_ranges;
     set< pair<pop_t, pop_t> > pop_pairs;
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     vector<pair<string,string> > prj_names;
     node_rank_map_t node_rank_map;
 
@@ -7119,7 +7068,7 @@ extern "C"
     size_t pop_idx;
     string file_name;
     MPI_Comm comm;
-    vector<pop_range_t> pop_vector;
+    pop_range_map_t pop_ranges;
     map<CELL_IDX_T, neurotree_t> tree_map;
     vector<string> attr_name_spaces;
     map <string, NamedAttrMap> attr_maps;
@@ -7159,7 +7108,7 @@ extern "C"
     string file_name;
     string att_namespace;
     MPI_Comm comm;
-    vector<pop_range_t> pop_vector;
+    pop_range_map_t pop_ranges;
     string attr_namespace;
     set <string> attr_mask;
     NamedAttrMap attr_map;
@@ -7190,10 +7139,9 @@ extern "C"
     unsigned int io_size=0, cache_size=1;
     char *file_name, *src_pop_name, *dst_pop_name;
     PyObject* py_attr_name_spaces = NULL;
-    vector<pop_range_t> pop_vector;
-    map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+    pop_range_map_t pop_ranges;
     set< pair<pop_t, pop_t> > pop_pairs;
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     vector<pair<string,string> > prj_names;
     size_t total_num_nodes;
 
@@ -7266,8 +7214,7 @@ extern "C"
                  "NeuroH5ProjectionGen: unable to read projection names");
 
     // Read population info to determine total_num_nodes
-    throw_assert(cell::read_population_ranges(comm, string(file_name),
-                                              pop_ranges, pop_vector, total_num_nodes) >= 0,
+    throw_assert(cell::read_population_ranges(comm, string(file_name), pop_ranges, total_num_nodes) >= 0,
                  "NeuroH5ProjectionGen: unable to read population ranges");                 
     throw_assert(cell::read_population_labels(comm, file_name, pop_labels) >= 0,
                  "NeuroH5ProjectionGen: unable to read population labels");
@@ -7301,7 +7248,6 @@ extern "C"
     py_ngg->state->file_name       = string(file_name);
     py_ngg->state->src_pop_name    = string(src_pop_name);
     py_ngg->state->dst_pop_name    = string(dst_pop_name);
-    py_ngg->state->pop_vector      = pop_vector;
     py_ngg->state->pop_ranges      = pop_ranges;
     py_ngg->state->pop_pairs       = pop_pairs;
     py_ngg->state->pop_labels      = pop_labels;
@@ -7314,27 +7260,28 @@ extern "C"
     py_ngg->state->local_num_edges = 0;
     py_ngg->state->total_read_blocks = 0;
 
-    uint32_t dst_pop_idx = 0, src_pop_idx = 0;
+    pop_t dst_pop_idx = 0, src_pop_idx = 0;
     bool src_pop_set = false, dst_pop_set = false;
     
-    for (size_t i=0; i< pop_labels.size(); i++)
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (string(src_pop_name) == get<1>(pop_labels[i]))
+        if (get<1>(x) == string(src_pop_name))
           {
-            src_pop_idx = get<0>(pop_labels[i]);
+            src_pop_idx = get<0>(x);
             src_pop_set = true;
           }
-        if (string(dst_pop_name) == get<1>(pop_labels[i]))
+        if (get<1>(x) == string(dst_pop_name))
           {
-            dst_pop_idx = get<0>(pop_labels[i]);
+            dst_pop_idx = get<0>(x);
             dst_pop_set = true;
           }
       }
+
     throw_assert(dst_pop_set && src_pop_set, 
                  "NeuroH5ProjectionGen: unable to determine source and destination population");
     
-    NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
-    NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
+    NODE_IDX_T dst_start = pop_ranges[dst_pop_idx].start;
+    NODE_IDX_T src_start = pop_ranges[src_pop_idx].start;
 
     py_ngg->state->dst_start = dst_start;
     py_ngg->state->src_start = src_start;
@@ -7412,19 +7359,18 @@ extern "C"
           }
       }
     
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "NeuroH5TreeGen: unable to read population labels");
     
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -7434,18 +7380,14 @@ extern "C"
       }
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    throw_assert(cell::read_population_ranges(comm,
-                                              string(file_name),
-                                              pop_ranges, pop_vector,
-                                              n_nodes) >= 0,
+    pop_range_map_t pop_ranges;
+    throw_assert(cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes) >= 0,
                  "NeuroH5TreeGen: unable to read population ranges");
     
     vector<CELL_IDX_T> tree_index;
     throw_assert(cell::read_cell_index(comm,
                                        string(file_name),
-                                       get<1>(pop_labels[pop_idx]),
+                                       pop_labels[pop_idx],
                                        hdf5::TREES,
                                        tree_index) >= 0,
                  "NeuroH5TreeGen: unable to read cell index");
@@ -7454,7 +7396,7 @@ extern "C"
     size_t count = tree_index.size();
     for (size_t i=0; i<tree_index.size(); i++)
       {
-        tree_index[i] += pop_vector[pop_idx].start;
+        tree_index[i] += pop_ranges[pop_idx].start;
       }
 
     /* Create a new generator state and initialize it */
@@ -7506,7 +7448,7 @@ extern "C"
     py_ntrg->state->file_name  = string(file_name);
     py_ntrg->state->pop_name   = string(pop_name);
     py_ntrg->state->pop_idx    = pop_idx;
-    py_ntrg->state->pop_vector = pop_vector;
+    py_ntrg->state->pop_ranges = pop_ranges;
     py_ntrg->state->io_size    = io_size;
     py_ntrg->state->comm_size  = size;
     py_ntrg->state->cache_size = cache_size;
@@ -7617,18 +7559,17 @@ extern "C"
     if (io_size > (unsigned int)size)
       io_size = size;
 
-    vector<pair <pop_t, string> > pop_labels;
+    pop_label_map_t pop_labels;
     status = cell::read_population_labels(comm, string(file_name), pop_labels);
     throw_assert (status >= 0,
                   "NeuroH5CellAttrGen: unable to read population labels");
     
     // Determine index of population to be read
-    size_t pop_idx=0; bool pop_idx_set=false;
-    for (size_t i=0; i<pop_labels.size(); i++)
+    for (std::pair<pop_t, string>& x: pop_labels) 
       {
-        if (get<1>(pop_labels[i]) == pop_name)
+        if (get<1>(x) == pop_name)
           {
-            pop_idx = get<0>(pop_labels[i]);
+            pop_idx = get<0>(x);
             pop_idx_set = true;
           }
       }
@@ -7638,12 +7579,8 @@ extern "C"
       }
 
     size_t n_nodes;
-    map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-    vector<pop_range_t> pop_vector;
-    throw_assert(cell::read_population_ranges(comm,
-                                              string(file_name),
-                                              pop_ranges, pop_vector,
-                                              n_nodes) >= 0,
+    pop_range_map_t pop_ranges;
+    throw_assert(cell::read_population_ranges(comm, string(file_name), pop_ranges, n_nodes) >= 0,
                  "NeuroH5CellAttrGen: unable to read population ranges");
     
     /* Create a new generator state and initialize its state - pointing to the last
@@ -7656,7 +7593,7 @@ extern "C"
 
     size_t count=0, local_count=0, max_local_count = 0;
     ldbal_cell_attr_gen (comm, string(file_name),
-                         pop_vector, pop_labels, pop_name, pop_idx, 
+                         pop_ranges, pop_labels, pop_name, pop_idx, 
                          string(attr_namespace), size*cache_size,
                          py_node_allocation, py_ntrg->state->node_rank_map,
                          count, local_count, max_local_count);
@@ -7674,7 +7611,7 @@ extern "C"
     py_ntrg->state->file_name      = string(file_name);
     py_ntrg->state->pop_name       = string(pop_name);
     py_ntrg->state->pop_idx        = pop_idx;
-    py_ntrg->state->pop_vector     = pop_vector;
+    py_ntrg->state->pop_ranges     = pop_ranges;
     py_ntrg->state->io_size        = io_size;
     py_ntrg->state->comm_size      = size;
     py_ntrg->state->cache_size     = cache_size;
@@ -7779,7 +7716,7 @@ extern "C"
                                                  py_ntrg->state->attr_name_spaces,
                                                  py_ntrg->state->node_rank_map,
                                                  py_ntrg->state->pop_name,
-                                                 py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
+                                                 py_ntrg->state->pop_ranges[py_ntrg->state->pop_idx].start,
                                                  py_ntrg->state->tree_map,
                                                  py_ntrg->state->attr_maps,
                                                  py_ntrg->state->cache_index,
@@ -7914,7 +7851,7 @@ extern "C"
                                                                py_ntrg->state->attr_mask,
                                                                py_ntrg->state->node_rank_map,
                                                                py_ntrg->state->pop_name,
-                                                               py_ntrg->state->pop_vector[py_ntrg->state->pop_idx].start,
+                                                               py_ntrg->state->pop_ranges[py_ntrg->state->pop_idx].start,
                                                                py_ntrg->state->attr_map,
                                                                py_ntrg->state->cache_index,
                                                                py_ntrg->state->cache_size);
@@ -8078,7 +8015,6 @@ extern "C"
                                             py_ngg->state->dst_pop_name,
                                             py_ngg->state->edge_attr_name_spaces,
                                             py_ngg->state->node_rank_map,
-                                            py_ngg->state->pop_vector,
                                             py_ngg->state->pop_ranges,
                                             py_ngg->state->pop_labels,
                                             py_ngg->state->pop_pairs,

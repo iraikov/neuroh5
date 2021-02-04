@@ -39,7 +39,7 @@ namespace neuroh5
     (
      MPI_Comm                   comm,
      const std::string&         file_name,
-     const pop_range_map_t&     pop_ranges,
+     const pop_search_range_map_t&     pop_search_ranges,
      const set < pair<pop_t, pop_t> >& pop_pairs,
      const std::string&         src_pop_name,
      const std::string&         dst_pop_name,
@@ -77,7 +77,7 @@ namespace neuroh5
 
       mpi::MPI_DEBUG(comm, "read_projection: ", src_pop_name, " -> ", dst_pop_name);
       throw_assert(hdf5::read_projection_datasets(comm, file_name, src_pop_name, dst_pop_name,
-                                                  dst_start, src_start, block_base, edge_base,
+                                                  block_base, edge_base,
                                                   dst_blk_ptr, dst_idx, dst_ptr, src_idx,
                                                   total_num_edges, total_read_blocks, local_read_blocks,
                                                   offset, numitems) >= 0,
@@ -87,7 +87,7 @@ namespace neuroh5
       
       // validate the edges
       throw_assert(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx,
-                                      dst_ptr, src_idx, pop_ranges, pop_pairs) ==
+                                      dst_ptr, src_idx, pop_search_ranges, pop_pairs) ==
                    true, "read_projection: invalid edge list");
       
       edge_count = src_idx.size();

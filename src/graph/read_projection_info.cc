@@ -44,8 +44,8 @@ namespace neuroh5
      const set < pair<pop_t, pop_t> >& pop_pairs,
      const std::string&         src_pop_name,
      const std::string&         dst_pop_name,
-     const NODE_IDX_T&          src_start,
-     const NODE_IDX_T&          dst_start,
+     const NODE_IDX_T           src_start,
+     const NODE_IDX_T           dst_start, 
      vector< pair<string, string> >& prj_names,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      std::vector<std::vector<NODE_IDX_T>>& prj_node_index
@@ -89,7 +89,7 @@ namespace neuroh5
           if (rank == 0)
             {
               throw_assert(hdf5::read_projection_node_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                               dst_start, src_start, block_base, edge_base,
+                                                               block_base, edge_base,
                                                                dst_blk_ptr, dst_idx, dst_ptr) >= 0,
                            "read_projection_info: read_projection_node_datasets error");
             }

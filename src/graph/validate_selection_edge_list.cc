@@ -5,7 +5,7 @@
 ///  Functions for validating edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "validate_selection_edge_list.hh"
@@ -26,15 +26,14 @@ namespace neuroh5
      const vector<NODE_IDX_T>& selection_dst_idx,
      const vector<DST_PTR_T>&  selection_dst_ptr,
      const vector<NODE_IDX_T>& src_idx,
-     const pop_range_map_t&           pop_ranges,
+     const pop_search_range_map_t&    pop_ranges,
      const set< pair<pop_t, pop_t> >& pop_pairs
      )
     {
       bool result = true;
 
       NODE_IDX_T src, dst;
-
-      pop_range_iter_t riter, citer;
+      pop_search_range_iter_t riter, citer;
 
       pair<pop_t,pop_t> pp;
 

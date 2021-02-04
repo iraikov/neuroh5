@@ -4,7 +4,7 @@
 ///
 ///  Driver program for read_trees function.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 
@@ -198,27 +198,40 @@ int main(int argc, char** argv)
       exit(1);
     }
 
-  map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-  vector<pop_range_t> pop_vector;
+  pop_label_map_t pop_labels;
+  pop_range_map_t pop_ranges;
   size_t n_nodes;
+
   // Read population info
-  throw_assert(cell::read_population_ranges(all_comm, input_file_name,
-                                            pop_ranges, pop_vector,
-                                            n_nodes) >= 0,
+  throw_assert(cell::read_population_ranges(all_comm, input_file_name, pop_ranges, n_nodes) >= 0,
                "neurotrees_read: error in reading population ranges");
+
+  throw_assert(cell::read_population_labels(all_comm, input_file_name, pop_labels) >= 0,
+               "neurotrees_read: error in reading population labels");
+
 
   vector<string> pop_names;
   status = cell::read_population_names(all_comm, input_file_name, pop_names);
   throw_assert (status >= 0,
                 "neurotrees_read: error in reading population names");
 
-
   size_t start=0, end=0;
   std::vector<neurotree_t> tree_list;
   for (size_t i = 0; i<pop_names.size(); i++)
     {
+      size_t pop_idx; bool pop_set=false;
+      for (auto& x : pop_labels)
+        {
+          if (pop_names[i] == get<1>(x))
+            {
+              pop_idx = get<0>(x);
+              pop_set = true;
+            }
+        }
+      throw_assert(pop_set, "neurotrees_read: unable to determine population index");
+
       status = cell::read_trees (all_comm, input_file_name,
-                                 pop_names[i], pop_vector[i].start,
+                                 pop_names[i], pop_ranges[pop_idx].start,
                                  tree_list, start, end, true);
       throw_assert (status >= 0,
                     "neurotrees_read: error in reading trees");

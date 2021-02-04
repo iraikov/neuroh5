@@ -5,7 +5,7 @@
 ///  Top-level functions for reading subsets of graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #ifndef READ_PROJECTION_INFO_HH
@@ -36,8 +36,8 @@ namespace neuroh5
      const set < pair<pop_t, pop_t> >& pop_pairs,
      const std::string&         src_pop_name,
      const std::string&         dst_pop_name,
-     const NODE_IDX_T&          src_start,
-     const NODE_IDX_T&          dst_start,
+     const NODE_IDX_T           src_start,
+     const NODE_IDX_T           dst_start, 
      vector< pair<string, string> >& prj_names,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,
      std::vector<std::vector<NODE_IDX_T>>& prj_node_index

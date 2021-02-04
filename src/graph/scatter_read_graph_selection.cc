@@ -109,17 +109,21 @@ namespace neuroh5
           }
           
           // read the population info
-          vector<pop_range_t> pop_vector;
-          vector< pair<pop_t, string> > pop_labels;
-          map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+          pop_label_map_t pop_labels;
+          pop_range_map_t pop_ranges;
           set< pair<pop_t, pop_t> > pop_pairs;
           throw_assert(cell::read_population_combos(data_comm, file_name, pop_pairs) >= 0,
                        "unable to read valid projection combination");
           throw_assert(cell::read_population_ranges
-                       (data_comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0,
+                       (data_comm, file_name, pop_ranges, total_num_nodes) >= 0,
                        "unable to read population ranges");
           throw_assert(cell::read_population_labels(data_comm, file_name, pop_labels) >= 0,
                        "unable to read population labels");
+          pop_search_range_map_t pop_search_ranges;
+          for (auto &x : pop_ranges)
+            {
+              pop_search_ranges.insert(make_pair(x.second.start, make_pair(x.second.count, x.first)));
+            }
 
           // read the edges
           for (size_t i = 0; i < prj_names.size(); i++)
@@ -131,29 +135,27 @@ namespace neuroh5
               //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
               
               string src_pop_name = prj_names[i].first, dst_pop_name = prj_names[i].second;
-
-              uint32_t dst_pop_idx = 0, src_pop_idx = 0;
+              pop_t dst_pop_idx=0, src_pop_idx=0;
               bool src_pop_set = false, dst_pop_set = false;
-              
-              for (size_t p=0; p< pop_labels.size(); p++)
+      
+              for (auto &x : pop_labels)
                 {
-                  if (src_pop_name == get<1>(pop_labels[p]))
+                  if (src_pop_name == get<1>(x))
                     {
-                      src_pop_idx = get<0>(pop_labels[p]);
+                      src_pop_idx = get<0>(x);
                       src_pop_set = true;
                     }
-                  if (dst_pop_name == get<1>(pop_labels[p]))
+                  if (dst_pop_name == get<1>(x))
                     {
-                      dst_pop_idx = get<0>(pop_labels[p]);
+                      dst_pop_idx = get<0>(x);
                       dst_pop_set = true;
                     }
                 }
-              throw_assert(dst_pop_set && src_pop_set,
-                           "unable to determine destination or source population");
+              throw_assert_nomsg(dst_pop_set && src_pop_set);
               
-              NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
-              NODE_IDX_T dst_end = pop_vector[dst_pop_idx].start + pop_vector[dst_pop_idx].count;
-              NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
+              NODE_IDX_T dst_start = pop_ranges[dst_pop_idx].start;
+              NODE_IDX_T dst_end = pop_ranges[dst_pop_idx].start + pop_ranges[dst_pop_idx].count;
+              NODE_IDX_T src_start = pop_ranges[src_pop_idx].start;
 
               bool selection_found = false;
               for (auto gid : selection)
@@ -169,7 +171,7 @@ namespace neuroh5
                 {
                   
                   throw_assert(graph::scatter_read_projection_selection
-                               (data_comm, io_size, file_name, pop_ranges, pop_pairs,
+                               (data_comm, io_size, file_name, pop_search_ranges, pop_pairs,
                                 src_pop_name, dst_pop_name, 
                                 src_start, dst_start, edge_attr_name_spaces, 
                                 all_selections, node_rank_map, prj_vector, edge_attr_names_vector,

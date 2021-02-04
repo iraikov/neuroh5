@@ -5,7 +5,7 @@
 ///  Top-level functions for reading graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -44,14 +44,19 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
       
       // read the population info
-      vector<pop_range_t> pop_vector;
-      vector< pair<pop_t, string> > pop_labels;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+      pop_label_map_t pop_labels;
+      pop_range_map_t pop_ranges;
       set< pair<pop_t, pop_t> > pop_pairs;
       throw_assert_nomsg(cell::read_population_combos(comm, file_name, pop_pairs) >= 0);
       throw_assert_nomsg(cell::read_population_ranges
-             (comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+             (comm, file_name, pop_ranges, total_num_nodes) >= 0);
       throw_assert_nomsg(cell::read_population_labels(comm, file_name, pop_labels) >= 0);
+
+      pop_search_range_map_t pop_search_ranges;
+      for (auto &x : pop_ranges)
+        {
+          pop_search_ranges.insert(make_pair(x.second.start, make_pair(x.second.count, x.first)));
+        }
 
       // read the edges
       for (size_t i = 0; i < prj_names.size(); i++)
@@ -65,26 +70,26 @@ namespace neuroh5
           //printf("Task %d reading projection %lu (%s)\n", rank, i, prj_names[i].c_str());
 
           string src_pop_name = prj_names[i].first, dst_pop_name = prj_names[i].second;
-          uint32_t dst_pop_idx = 0, src_pop_idx = 0;
+          pop_t dst_pop_idx = 0, src_pop_idx = 0;
           bool src_pop_set = false, dst_pop_set = false;
       
-          for (size_t i=0; i< pop_labels.size(); i++)
+          for (auto &x : pop_labels)
             {
-              if (src_pop_name == get<1>(pop_labels[i]))
+              if (src_pop_name == get<1>(x))
                 {
-                  src_pop_idx = get<0>(pop_labels[i]);
+                  src_pop_idx = get<0>(x);
                   src_pop_set = true;
                 }
-              if (dst_pop_name == get<1>(pop_labels[i]))
+              if (dst_pop_name == get<1>(x))
                 {
-                  dst_pop_idx = get<0>(pop_labels[i]);
+                  dst_pop_idx = get<0>(x);
                   dst_pop_set = true;
                 }
             }
           throw_assert_nomsg(dst_pop_set && src_pop_set);
-      
-          NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
-          NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
+
+          NODE_IDX_T dst_start = pop_ranges[dst_pop_idx].start;
+          NODE_IDX_T src_start = pop_ranges[src_pop_idx].start;
 
           mpi::MPI_DEBUG(comm, "read_graph: src_pop_name = ", src_pop_name,
                          " dst_pop_name = ", dst_pop_name,
@@ -92,9 +97,9 @@ namespace neuroh5
                          " src_start = ", src_start);
 
           throw_assert_nomsg(graph::read_projection
-                 (comm, file_name, pop_ranges, pop_pairs,
+                 (comm, file_name, pop_search_ranges, pop_pairs,
                   src_pop_name, dst_pop_name, 
-                  dst_start, src_start, edge_attr_name_spaces, 
+                  src_start, dst_start, edge_attr_name_spaces, 
                   prj_vector, edge_attr_names_vector,
                   local_prj_num_nodes,
                   local_prj_num_edges, total_prj_num_edges,

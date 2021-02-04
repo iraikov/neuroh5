@@ -4,7 +4,7 @@
 ///
 ///  Driver program for various import procedures.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 
@@ -543,9 +543,9 @@ int main(int argc, char** argv)
       print_usage_full(argv);
       exit(1);
     }
-  vector<pop_range_t> pop_vector;
-  map<NODE_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-  vector<pair <pop_t, string> > pop_labels;
+
+  pop_range_map_t pop_ranges;
+  pop_label_map_t pop_labels;
   size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
   size_t n_nodes;
   vector<NODE_IDX_T>  src_range(2);
@@ -558,39 +558,37 @@ int main(int argc, char** argv)
 
   if (opt_hdf5_syn)
     {
-      throw_assert(cell::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges,
-                                                pop_vector, n_nodes) >= 0,
+      throw_assert(cell::read_population_ranges(all_comm, hdf5_input_file_name, pop_ranges, n_nodes) >= 0,
                    "neurograph_import: error in reading population ranges");
       throw_assert(cell::read_population_labels(all_comm, hdf5_input_file_name, pop_labels) >= 0,
                    "neurograph_import: error in reading population labels");
     }
   else
     {
-      throw_assert(cell::read_population_ranges(all_comm, output_file_name, pop_ranges,
-                                                pop_vector, n_nodes) >= 0,
+      throw_assert(cell::read_population_ranges(all_comm, output_file_name, pop_ranges, n_nodes) >= 0,
                    "neurograph_import: error in reading population ranges");
       throw_assert(cell::read_population_labels(all_comm, output_file_name, pop_labels) >= 0,
                    "neurograph_import: error in reading population labels");
     }
 
-  for (size_t i=0; i< pop_labels.size(); i++)
+  for (auto& x : pop_labels)
     {
-      if (src_pop_name == get<1>(pop_labels[i]))
+      if (src_pop_name == get<1>(x))
         {
-          src_pop_idx = get<0>(pop_labels[i]);
+          src_pop_idx = get<0>(x);
           src_pop_set = true;
         }
-      if (dst_pop_name == get<1>(pop_labels[i]))
+      if (dst_pop_name == get<1>(x))
         {
-          dst_pop_idx = get<0>(pop_labels[i]);
+          dst_pop_idx = get<0>(x);
           dst_pop_set = true;
         }
     }
   throw_assert(dst_pop_set && src_pop_set,
                "neurograph_import: source or destination population not found");
   
-  src_range[0] = pop_vector[src_pop_idx].start;
-  src_range[1] = src_range[0] + pop_vector[src_pop_idx].count;
+  src_range[0] = pop_ranges[src_pop_idx].start;
+  src_range[1] = src_range[0] + pop_ranges[src_pop_idx].count;
   
   if (opt_hdf5_syn)
     {

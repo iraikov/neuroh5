@@ -5,7 +5,7 @@
 ///  Top-level functions for reading projections in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 
@@ -29,12 +29,12 @@ namespace neuroh5
                                  const EdgeMapType edge_map_type, 
                                  const string& file_name,
                                  const string& src_pop_name,
-                                 const string& dst_pop_name, 
+                                 const string& dst_pop_name,
+                                 const NODE_IDX_T& src_start,
+                                 const NODE_IDX_T& dst_start,
                                  const std::vector< std::string >&  attr_namespaces,
                                  const node_rank_map_t&  node_rank_map,
-                                 const std::vector<pop_range_t>& pop_vector,
-                                 const std::map<NODE_IDX_T, std::pair<uint32_t,pop_t> >& pop_ranges,
-                                 const std::vector< std::pair<pop_t, string> >& pop_labels,
+                                 const pop_search_range_map_t& pop_search_ranges,
                                  const std::set< std::pair<pop_t, pop_t> >& pop_pairs,
                                  std::vector < edge_map_t >& prj_vector,
                                  std::vector < map <string, std::vector < std::vector<string> > > > & edge_attr_names_vector,

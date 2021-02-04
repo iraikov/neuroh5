@@ -55,19 +55,24 @@ namespace neuroh5
       int ierr = 0;
       // The set of compute ranks for which the current I/O rank is responsible
       set< pair<pop_t, pop_t> > pop_pairs;
-      vector<pop_range_t> pop_vector;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      vector< pair<pop_t, string> > pop_labels;
+      pop_range_map_t pop_ranges;
+      pop_label_map_t pop_labels;
       
       int rank, size;
       throw_assert_nomsg(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
           
        throw_assert_nomsg(cell::read_population_ranges
-                          (all_comm, file_name, pop_ranges, pop_vector, total_num_nodes)
+                          (all_comm, file_name, pop_ranges, total_num_nodes)
                           >= 0);
        throw_assert_nomsg(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
        throw_assert_nomsg(cell::read_population_combos(all_comm, file_name, pop_pairs)  >= 0);
+
+       pop_search_range_map_t pop_search_ranges;
+       for (auto &x : pop_ranges)
+         {
+           pop_search_ranges.insert(make_pair(x.second.start, make_pair(x.second.count, x.first)));
+         }
           
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_names.size(); i++)
@@ -77,9 +82,32 @@ namespace neuroh5
           string src_pop_name = prj_names[i].first;
           string dst_pop_name = prj_names[i].second;
 
+          pop_t dst_pop_idx = 0, src_pop_idx = 0;
+          bool src_pop_set = false, dst_pop_set = false;
+      
+          for (auto &x : pop_labels)
+            {
+              if (src_pop_name == get<1>(x))
+                {
+                  src_pop_idx = get<0>(x);
+                  src_pop_set = true;
+                }
+              if (dst_pop_name == get<1>(x))
+                {
+                  dst_pop_idx = get<0>(x);
+                  dst_pop_set = true;
+                }
+            }
+          throw_assert_nomsg(dst_pop_set && src_pop_set);
+
+          NODE_IDX_T dst_start = pop_ranges[dst_pop_idx].start;
+          NODE_IDX_T src_start = pop_ranges[src_pop_idx].start;
+
           scatter_read_projection(all_comm, io_size, edge_map_type,
-                                  file_name, src_pop_name, dst_pop_name, attr_namespaces,
-                                  node_rank_map, pop_vector, pop_ranges, pop_labels, pop_pairs,
+                                  file_name, src_pop_name, dst_pop_name, 
+                                  src_start, dst_start,
+                                  attr_namespaces,
+                                  node_rank_map, pop_search_ranges, pop_pairs,
                                   prj_vector, edge_attr_names_vector, 
                                   local_num_nodes, local_num_edges, total_num_edges,
                                   total_read_blocks);

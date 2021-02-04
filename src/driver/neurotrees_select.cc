@@ -4,7 +4,7 @@
 ///
 ///  Program for selecting tree subsets.
 ///
-///  Copyright (C) 2016-2020 Project Neurotrees.
+///  Copyright (C) 2016-2021 Project Neurotrees.
 //==============================================================================
 
 
@@ -265,27 +265,24 @@ int main(int argc, char** argv)
       exit(1);
     }
 
-  map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-  vector<pop_range_t> pop_vector;
+  pop_range_map_t pop_ranges;
 
   // Read population info to determine n_nodes
-  throw_assert(cell::read_population_ranges(all_comm, input_file_name,
-                                            pop_ranges, pop_vector,
-                                            n_nodes) >= 0,
+  throw_assert(cell::read_population_ranges(all_comm, input_file_name, pop_ranges, n_nodes) >= 0,
                "neurotrees_select: error in reading population ranges"); 
 
-  vector<pair <pop_t, string> > pop_labels;
+  pop_label_map_t pop_labels;
   status = cell::read_population_labels(all_comm, input_file_name, pop_labels);
   throw_assert (status >= 0,
                 "neurotrees_select: error in reading population labels"); 
 
   // Determine index of population to be read
   size_t pop_idx=0; bool pop_idx_set=false;
-  for (size_t i=0; i<pop_labels.size(); i++)
+  for (auto& x : pop_labels)
     {
-      if (get<1>(pop_labels[i]) == pop_name)
+      if (get<1>(x) == pop_name)
         {
-          pop_idx = get<0>(pop_labels[i]);
+          pop_idx = get<0>(x);
           pop_idx_set = true;
         }
     }
@@ -294,7 +291,7 @@ int main(int argc, char** argv)
       throw_err("Population not found");
     }
 
-  size_t pop_start = pop_vector[pop_idx].start;
+  size_t pop_start = pop_ranges[pop_idx].start;
 
   // Read in selection indices
   set<CELL_IDX_T> tree_selection;
@@ -350,7 +347,7 @@ int main(int argc, char** argv)
     }
 
   // Compute an assignment of subset trees to IO ranks
-  map<CELL_IDX_T, rank_t> subset_node_rank_map;
+  node_rank_map_t subset_node_rank_map;
   {
     vector<CELL_IDX_T> selection_index;
     for (auto const& element : selection_map)
@@ -394,7 +391,7 @@ int main(int argc, char** argv)
   
   status = cell::scatter_read_trees (all_comm, input_file_name, io_size,
                                      attr_name_spaces, node_rank_map,
-                                     pop_name, pop_vector[pop_idx].start,
+                                     pop_name, pop_ranges[pop_idx].start,
                                      tree_map, attr_maps);
   
   
@@ -529,8 +526,11 @@ int main(int argc, char** argv)
       throw_assert(it != subset_node_rank_map.end(),
                    "neurotrees_select: tree index not found in node rank assignment"); 
 
-      rank_t tree_rank = it->second;
-      tree_subset_rank_map[tree_rank].insert(make_pair(idx, tree));
+      set<rank_t> tree_ranks = it->second;
+      for (rank_t tree_rank : tree_ranks)
+        {
+          tree_subset_rank_map[tree_rank].insert(make_pair(idx, tree));
+        }
     }
   subset_node_rank_map.clear();
   tree_subset.clear();
@@ -600,27 +600,26 @@ int main(int argc, char** argv)
       throw_assert(status == 0,
                    "neurotrees_select: error in closing output file");
 
-      map<CELL_IDX_T, pair<uint32_t,pop_t> > output_pop_ranges;
-      vector<pop_range_t> output_pop_vector;
+      pop_range_map_t output_pop_ranges;
 
       // Read population info to determine n_nodes
       throw_assert(cell::read_population_ranges(all_comm, output_file_name,
-                                                output_pop_ranges, output_pop_vector,
+                                                output_pop_ranges, 
                                                 n_nodes) >= 0,
                    "neurotrees_select: error in reading population ranges"); 
 
-      vector<pair <pop_t, string> > output_pop_labels;
+      pop_label_map_t output_pop_labels;
       status = cell::read_population_labels(all_comm, output_file_name, output_pop_labels);
       throw_assert (status >= 0,
                     "neurotrees_select: error in reading population labels"); 
       
       // Determine index of population to be read
       size_t output_pop_idx=0; bool output_pop_idx_set=false;
-      for (size_t i=0; i<output_pop_labels.size(); i++)
+      for (auto & x : output_pop_labels)
         {
-          if (get<1>(output_pop_labels[i]) == pop_name)
+          if (get<1>(x) == pop_name)
             {
-              output_pop_idx = get<0>(output_pop_labels[i]);
+              output_pop_idx = get<0>(x);
               output_pop_idx_set = true;
             }
         }
@@ -629,7 +628,7 @@ int main(int argc, char** argv)
           throw_err("Population not found");
         }
       
-      size_t output_pop_start = output_pop_vector[output_pop_idx].start;
+      size_t output_pop_start = output_pop_ranges[output_pop_idx].start;
 
       status = cell::append_trees(all_comm, output_file_name, pop_name, output_pop_start, tree_subset);
       

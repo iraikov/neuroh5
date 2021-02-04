@@ -46,9 +46,10 @@ namespace neuroh5
                           const string& file_name,
                           const string& src_pop_name, 
                           const string& dst_pop_name, 
+                          const NODE_IDX_T src_start,
+                          const NODE_IDX_T dst_start, 
                           const vector< string >& attr_namespaces,
-                          const vector<pop_range_t>& pop_vector,
-                          const map<NODE_IDX_T,pair<uint32_t,pop_t> >& pop_ranges,
+                          const pop_search_range_map_t& pop_search_ranges,
                           const set< pair<pop_t, pop_t> >& pop_pairs,
                           vector < edge_map_t >& prj_vector,
                           vector < map <string, vector < vector<string> > > > & edge_attr_names_vector)
@@ -63,20 +64,14 @@ namespace neuroh5
       vector<NODE_IDX_T> send_edges, recv_edges, total_recv_edges;
       edge_map_t prj_edge_map;
       map <string, vector < vector <string> > > edge_attr_names;
-      vector< pair<pop_t, string> > pop_labels;
       size_t num_edges = 0, total_prj_num_edges = 0;
       hsize_t local_read_blocks;
       hsize_t total_read_blocks;
-
-      
-      throw_assert_nomsg(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
-
 
       if (rank == 0)
         {
           DST_BLK_PTR_T block_base;
           DST_PTR_T edge_base, edge_count;
-          NODE_IDX_T dst_start, src_start;
           vector<DST_BLK_PTR_T> dst_blk_ptr;
           vector<NODE_IDX_T> dst_idx;
           vector<DST_PTR_T> dst_ptr;
@@ -84,36 +79,16 @@ namespace neuroh5
           vector< pair<string,hid_t> > edge_attr_info;
           map <string, data::NamedAttrVal> edge_attr_map;
           
-          uint32_t dst_pop_idx=0, src_pop_idx=0;
-          bool src_pop_set = false, dst_pop_set = false;
-      
-          for (size_t i=0; i< pop_labels.size(); i++)
-            {
-              if (src_pop_name == get<1>(pop_labels[i]))
-                {
-                  src_pop_idx = get<0>(pop_labels[i]);
-                  src_pop_set = true;
-                }
-              if (dst_pop_name == get<1>(pop_labels[i]))
-                {
-                  dst_pop_idx = get<0>(pop_labels[i]);
-                  dst_pop_set = true;
-                }
-            }
-          throw_assert_nomsg(dst_pop_set && src_pop_set);
-
-          dst_start = pop_vector[dst_pop_idx].start;
-          src_start = pop_vector[src_pop_idx].start;
 
           throw_assert_nomsg(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                dst_start, src_start, block_base, edge_base,
-                                                dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                total_prj_num_edges,
-                                                total_read_blocks, local_read_blocks) >= 0);
+                                                            block_base, edge_base,
+                                                            dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                            total_prj_num_edges,
+                                                            total_read_blocks, local_read_blocks) >= 0);
           
           // validate the edges
           throw_assert_nomsg(validate_edge_list(dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                    pop_ranges, pop_pairs) == true);
+                                                pop_search_ranges, pop_pairs) == true);
           
           
           edge_count = src_idx.size();
@@ -205,8 +180,9 @@ namespace neuroh5
       int ierr = 0;
       // The set of compute ranks for which the current I/O rank is responsible
       set< pair<pop_t, pop_t> > pop_pairs;
-      vector<pop_range_t> pop_vector;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+      pop_range_map_t pop_ranges;
+      pop_search_range_map_t pop_search_ranges;
+      pop_label_map_t pop_labels;
       size_t prj_size = 0;
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
@@ -229,8 +205,15 @@ namespace neuroh5
           throw_assert_nomsg(cell::read_population_combos(io_comm, file_name, pop_pairs)
                  >= 0);
           throw_assert_nomsg(cell::read_population_ranges
-                 (io_comm, file_name, pop_ranges, pop_vector, total_num_nodes)
+                 (io_comm, file_name, pop_ranges, total_num_nodes)
                  >= 0);
+          throw_assert_nomsg(cell::read_population_labels(io_comm, file_name, pop_labels) >= 0);
+
+          for (auto &x : pop_ranges)
+            {
+              pop_search_ranges.insert(make_pair(x.second.start, make_pair(x.second.count, x.first)));
+            }
+
           prj_size = prj_names.size();
         }
       else
@@ -243,9 +226,34 @@ namespace neuroh5
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_size; i++)
         {
+          NODE_IDX_T src_start, dst_start;
+          pop_t dst_pop_idx=0, src_pop_idx=0;
+          bool src_pop_set = false, dst_pop_set = false;
+          string src_pop_name = prj_names[i].first;
+          string dst_pop_name = prj_names[i].second;
+      
+          for (auto &x : pop_labels)
+            {
+              if (src_pop_name == get<1>(x))
+                {
+                  src_pop_idx = get<0>(x);
+                  src_pop_set = true;
+                }
+              if (dst_pop_name == get<1>(x))
+                {
+                  dst_pop_idx = get<0>(x);
+                  dst_pop_set = true;
+                }
+            }
+          throw_assert_nomsg(dst_pop_set && src_pop_set);
+
+          dst_start = pop_ranges[dst_pop_idx].start;
+          src_start = pop_ranges[src_pop_idx].start;
+
           bcast_projection(all_comm, io_comm, edge_map_type, file_name,
-                           prj_names[i].first, prj_names[i].second,
-                           attr_namespaces, pop_vector, pop_ranges, pop_pairs,
+                           src_pop_name, dst_pop_name,
+                           src_start, dst_start,
+                           attr_namespaces, pop_search_ranges, pop_pairs, 
                            prj_vector, edge_attr_names_vector);
                              
         }

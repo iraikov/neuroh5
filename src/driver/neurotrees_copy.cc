@@ -4,7 +4,7 @@
 ///
 ///  Driver program for copying tree structures.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 
@@ -179,28 +179,25 @@ int main(int argc, char** argv)
   printf("Task %d: Output file name is %s\n", rank, output_filename.c_str());
   printf("Task %d: Source id is %u\n", rank, source_gid);
 
-  map<CELL_IDX_T, pair<uint32_t,pop_t> > pop_ranges;
-  vector<pop_range_t> pop_vector;
+  pop_range_map_t pop_ranges;
   size_t n_nodes;
   
   // Read population info
-  throw_assert(cell::read_population_ranges(all_comm, input_filename,
-                                            pop_ranges, pop_vector,
-                                            n_nodes) >= 0,
+  throw_assert(cell::read_population_ranges(all_comm, input_filename, pop_ranges, n_nodes) >= 0,
                "error in read_population_ranges");
 
-  vector<pair <pop_t, string> > pop_labels;
+  pop_label_map_t pop_labels;
   throw_assert (cell::read_population_labels(all_comm, input_filename, pop_labels) >= 0,
                 "error in read_population_labels");
                 
   
   // Determine index of population to be read
   size_t pop_idx=0; bool pop_idx_set=false;
-  for (size_t i=0; i<pop_labels.size(); i++)
+  for (auto& x : pop_labels)
     {
-      if (get<1>(pop_labels[i]) == pop_name)
+      if (get<1>(x) == pop_name)
         {
-          pop_idx = get<0>(pop_labels[i]);
+          pop_idx = get<0>(x);
           pop_idx_set = true;
         }
     }
@@ -209,7 +206,7 @@ int main(int argc, char** argv)
       throw_err("Population not found");
     }
 
-  CELL_IDX_T pop_start = pop_vector[pop_idx].start;
+  CELL_IDX_T pop_start = pop_ranges[pop_idx].start;
   
   throw_assert(cell::read_trees (all_comm, input_filename,
                                  pop_name, pop_start,
@@ -247,7 +244,7 @@ int main(int argc, char** argv)
         }
         
       target_gid_list.clear();
-      for (size_t i=0; i<pop_vector[pop_idx].count; i++)
+      for (size_t i=0; i<pop_ranges[pop_idx].count; i++)
         //for (size_t i=0; i<2000; i++)
         {
           if (i != source_gid-pop_start)

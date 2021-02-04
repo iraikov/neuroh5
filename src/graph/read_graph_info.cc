@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for reading graph metadata.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -42,13 +42,12 @@ namespace neuroh5
       
       // read the population info
       size_t total_num_nodes;
-      vector<pop_range_t> pop_vector;
-      vector< pair<pop_t, string> > pop_labels;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+      pop_label_map_t pop_labels;
+      pop_range_map_t pop_ranges;
       set< pair<pop_t, pop_t> > pop_pairs;
       throw_assert_nomsg(cell::read_population_combos(comm, file_name, pop_pairs) >= 0);
       throw_assert_nomsg(cell::read_population_ranges
-             (comm, file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+             (comm, file_name, pop_ranges, total_num_nodes) >= 0);
       throw_assert_nomsg(cell::read_population_labels(comm, file_name, pop_labels) >= 0);
 
       // read the edges
@@ -76,15 +75,16 @@ namespace neuroh5
 
           throw_assert (src_pop_set && dst_pop_set,
                         "read_graph_info: invalid source or destination population index");
-          
-          NODE_IDX_T dst_start = pop_vector[dst_pop_idx].start;
-          NODE_IDX_T src_start = pop_vector[src_pop_idx].start;
 
+          NODE_IDX_T src_start, dst_start;
+          dst_start = pop_ranges[dst_pop_idx].start;
+          src_start = pop_ranges[src_pop_idx].start;
+          
           throw_assert_nomsg(graph::read_projection_info
                              (comm, file_name, edge_attr_name_spaces, read_node_index,
                               pop_ranges, pop_pairs,
                               src_pop_name, dst_pop_name, 
-                              src_start, dst_start, 
+                              src_start, dst_start,
                               prj_names, edge_attr_names_vector,
                               prj_node_index) >= 0);
         }

@@ -5,7 +5,7 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #ifndef READ_PROJECTION_HH
@@ -63,12 +63,12 @@ namespace neuroh5
     (
      MPI_Comm                        comm,
      const std::string&              file_name,
-     const pop_range_map_t&          pop_ranges,
+     const pop_search_range_map_t&          pop_search_ranges,
      const std::set< std::pair<pop_t, pop_t> >& pop_pairs,
      const std::string&              src_pop_name,
      const std::string&              dst_pop_name,
-     const NODE_IDX_T&               dst_start,
      const NODE_IDX_T&               src_start,
+     const NODE_IDX_T&               dst_start,
      const vector<string>&           edge_attr_name_spaces,
      std::vector<edge_map_t>&        prj_vector,
      vector < map <string, vector < vector<string> > > > & edge_attr_names_vector,

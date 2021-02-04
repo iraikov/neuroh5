@@ -45,7 +45,7 @@ namespace neuroh5
        const std::vector<NODE_IDX_T>&             selection_dst_idx,
        const std::vector<DST_PTR_T>&              selection_dst_ptr,
        const std::vector<NODE_IDX_T>&             src_idx,
-       const pop_range_map_t&                     pop_ranges,
+       const pop_search_range_map_t&              pop_search_ranges,
        const std::set< std::pair<pop_t, pop_t> >& pop_pairs
        );
   }

@@ -4,7 +4,7 @@
 ///
 ///  Partition graph vertices according to their degree.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 
@@ -126,9 +126,8 @@ namespace neuroh5
       size_t local_num_nodes, total_num_nodes, local_num_edges, total_num_edges;
 
       vector <string> edge_attr_name_spaces;
-      vector<pop_range_t> pop_vector;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
-      throw_assert_nomsg(cell::read_population_ranges(comm, input_file_name, pop_ranges, pop_vector, total_num_nodes) >= 0);
+      pop_range_map_t pop_ranges;
+      throw_assert_nomsg(cell::read_population_ranges(comm, input_file_name, pop_ranges, total_num_nodes) >= 0);
 
       // A vector that maps nodes to compute ranks
       node_rank_map_t node_rank_map;

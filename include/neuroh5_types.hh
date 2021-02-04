@@ -4,7 +4,7 @@
 ///
 ///  Type definitions for the fundamental datatypes used in the API
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 #ifndef NEUROH5_TYPES_HH
 #define NEUROH5_TYPES_HH
@@ -187,9 +187,12 @@ namespace neuroh5
     pop_comb_t;
 
 
-  typedef std::map<NODE_IDX_T,std::pair<uint32_t,pop_t> > pop_range_map_t;
+  typedef std::map<pop_t, string> pop_label_map_t;
+  typedef std::map<pop_t, pop_range_t > pop_range_map_t;
+
+  typedef std::map<NODE_IDX_T, std::pair<uint32_t, pop_t> > pop_search_range_map_t;
   
-  typedef pop_range_map_t::const_iterator pop_range_iter_t;
+  typedef pop_search_range_map_t::const_iterator pop_search_range_iter_t;
 
   // Type for mapping nodes and edges in the graph to MPI ranks
   

@@ -43,7 +43,7 @@ namespace neuroh5
      MPI_Comm                   comm,
      const int                  io_size,
      const std::string&         file_name,
-     const pop_range_map_t&     pop_ranges,
+     const pop_search_range_map_t&     pop_search_ranges,
      const set < pair<pop_t, pop_t> >& pop_pairs,
      const std::string&         src_pop_name,
      const std::string&         dst_pop_name,
@@ -141,7 +141,7 @@ namespace neuroh5
               
               // validate the edges
               throw_assert(validate_selection_edge_list(src_start, dst_start, selection_dst_idx,
-                                                        selection_dst_ptr, src_idx, pop_ranges, pop_pairs) ==
+                                                        selection_dst_ptr, src_idx, pop_search_ranges, pop_pairs) ==
                            true,
                            "error in validating edge list"); 
               

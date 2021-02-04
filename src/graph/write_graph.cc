@@ -63,9 +63,8 @@ namespace neuroh5
       
       // read the population info
       set< pair<pop_t, pop_t> > pop_pairs;
-      vector<pop_range_t> pop_vector;
-      vector<pair <pop_t, string> > pop_labels;
-      map<NODE_IDX_T,pair<uint32_t,pop_t> > pop_ranges;
+      pop_range_map_t pop_ranges;
+      pop_label_map_t pop_labels;
       size_t src_pop_idx, dst_pop_idx; bool src_pop_set=false, dst_pop_set=false;
       size_t total_num_nodes;
       size_t dst_start, dst_end;
@@ -84,29 +83,28 @@ namespace neuroh5
           io_size = io_size_arg > 0 ? io_size_arg : 1;
         }
       //FIXME: throw_assert_nomsg(io::hdf5::read_population_combos(comm, file_name, pop_pairs) >= 0);
-      throw_assert_nomsg(cell::read_population_ranges(all_comm, file_name,
-                                          pop_ranges, pop_vector, total_num_nodes) >= 0);
+      throw_assert_nomsg(cell::read_population_ranges(all_comm, file_name, pop_ranges, total_num_nodes) >= 0);
       throw_assert_nomsg(cell::read_population_labels(all_comm, file_name, pop_labels) >= 0);
       
-      for (size_t i=0; i< pop_labels.size(); i++)
+      for (auto& x: pop_labels)
         {
-          if (src_pop_name == get<1>(pop_labels[i]))
+          if (src_pop_name == get<1>(x))
             {
-              src_pop_idx = get<0>(pop_labels[i]);
+              src_pop_idx = get<0>(x);
               src_pop_set = true;
             }
-          if (dst_pop_name == get<1>(pop_labels[i]))
+          if (dst_pop_name == get<1>(x))
             {
-              dst_pop_idx = get<0>(pop_labels[i]);
+              dst_pop_idx = get<0>(x);
               dst_pop_set = true;
             }
         }
       throw_assert_nomsg(dst_pop_set && src_pop_set);
       
-      dst_start = pop_vector[dst_pop_idx].start;
-      dst_end   = dst_start + pop_vector[dst_pop_idx].count;
-      src_start = pop_vector[src_pop_idx].start;
-      src_end   = src_start + pop_vector[src_pop_idx].count;
+      dst_start = pop_ranges[dst_pop_idx].start;
+      dst_end   = dst_start + pop_ranges[dst_pop_idx].count;
+      src_start = pop_ranges[src_pop_idx].start;
+      src_end   = src_start + pop_ranges[src_pop_idx].count;
       
       // Create an I/O communicator
       MPI_Comm  io_comm;

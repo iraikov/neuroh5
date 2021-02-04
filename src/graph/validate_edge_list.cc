@@ -27,7 +27,7 @@ namespace neuroh5
      const vector<NODE_IDX_T>& dst_idx,
      const vector<DST_PTR_T>&  dst_ptr,
      const vector<NODE_IDX_T>& src_idx,
-     const pop_range_map_t&           pop_ranges,
+     const pop_search_range_map_t&           pop_search_ranges,
      const set< pair<pop_t, pop_t> >& pop_pairs
      )
     {
@@ -35,7 +35,7 @@ namespace neuroh5
 
       NODE_IDX_T src, dst;
 
-      pop_range_iter_t riter, citer;
+      pop_search_range_iter_t riter, citer;
 
       pair<pop_t,pop_t> pp;
 
@@ -55,13 +55,13 @@ namespace neuroh5
                   if (i < dst_ptr_size-1)
                     {
                       dst = dst_base + ii + dst_start;
-                      riter = pop_ranges.upper_bound(dst);
-                      if (riter == pop_ranges.end())
+                      riter = pop_search_ranges.upper_bound(dst);
+                      if (riter == pop_search_ranges.end())
                         {
-                          if (dst <= pop_ranges.rbegin()->first +
-                              pop_ranges.rbegin()->second.first)
+                          if (dst <= pop_search_ranges.rbegin()->first +
+                              pop_search_ranges.rbegin()->second.first)
                             {
-                              pp.second = pop_ranges.rbegin()->second.second;
+                              pp.second = pop_search_ranges.rbegin()->second.second;
                             }
                           else
                             {
@@ -85,13 +85,13 @@ namespace neuroh5
                           for (size_t j = low; j < high; ++j)
                             {
                               src = src_idx[j] + src_start;
-                              citer = pop_ranges.upper_bound(src);
-                              if (citer == pop_ranges.end())
+                              citer = pop_search_ranges.upper_bound(src);
+                              if (citer == pop_search_ranges.end())
                                 {
-                                  if (src <= pop_ranges.rbegin()->first +
-                                      pop_ranges.rbegin()->second.first)
+                                  if (src <= pop_search_ranges.rbegin()->first +
+                                      pop_search_ranges.rbegin()->second.first)
                                     {
-                                      pp.first = pop_ranges.rbegin()->second.second;
+                                      pp.first = pop_search_ranges.rbegin()->second.second;
                                     }
                                   else
                                     {

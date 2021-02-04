@@ -63,16 +63,7 @@ namespace neuroh5
     (
      MPI_Comm                         comm,
      const std::string&               file_name,
-     pop_range_map_t&          pop_ranges,
-     std::vector<pop_range_t>& pop_vector,
-     size_t&                          total_num_nodes
-     );
-
-    extern herr_t read_population_ranges_serial
-    (
-     const std::string&               file_name,
-     pop_range_map_t&          pop_ranges,
-     std::vector<pop_range_t>& pop_vector,
+     pop_range_map_t&                 pop_ranges,
      size_t&                          total_num_nodes
      );
 
@@ -80,13 +71,7 @@ namespace neuroh5
     (
      MPI_Comm                         comm,
      const std::string&               file_name,
-     std::vector< std::pair<pop_t, std::string> > & pop_labels
-     );
-
-    extern herr_t read_population_labels_serial
-    (
-     const std::string&               file_name,
-     std::vector< std::pair<pop_t, std::string> > & pop_labels
+     pop_label_map_t&                 pop_labels
      );
 
     

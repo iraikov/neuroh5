@@ -5,7 +5,7 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #ifndef SCATTER_READ_PROJECTION_SELECTION_HH
@@ -64,7 +64,7 @@ namespace neuroh5
      MPI_Comm                   comm,
      const int                  io_size,
      const std::string&         file_name,
-     const pop_range_map_t&     pop_ranges,
+     const pop_search_range_map_t&     pop_search_ranges,
      const set < pair<pop_t, pop_t> >& pop_pairs,
      const std::string&         src_pop_name,
      const std::string&         dst_pop_name,
