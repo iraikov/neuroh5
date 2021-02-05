@@ -12,19 +12,20 @@
 
 module load phdf5
 
-set -x
+export NEURONROOT=$SCRATCH/bin/nrnpython3_intel19
+export PYTHONPATH=$HOME/model:$NEURONROOT/lib/python:$SCRATCH/site-packages/intel19:$PYTHONPATH
+export PATH=$NEURONROOT/x86_64/bin:$PATH
 
-data_prefix=$SCRATCH/dentate/Full_Scale_Control
-export data_prefix
+set -x
 
 cd $SLURM_SUBMIT_DIR
 
-#export I_MPI_ADJUST_ALLTOALLV=1
-#export I_MPI_DYNAMIC_CONNECTION=0
+data_prefix=$SCRATCH/striped/dentate/Slice
+export data_prefix
 
-input_path=${data_prefix}/DG_Cells_Full_Scale_20190512.h5
+input_path=${data_prefix}/dentatenet_Full_Scale_GC_Exc_Sat_SLN_extent_arena_margin_20210203_compressed.h5
 
-ibrun ./build/neurotrees_scatter_read -a -n "Synapse Attributes" -i 512  ${input_path}
+ibrun -n 24 python3 ./tests/test_scatter_read_syn_attrs.py --syn-path=$input_path --io-size=8
       
 
 

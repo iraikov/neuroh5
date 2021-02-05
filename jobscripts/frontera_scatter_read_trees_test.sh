@@ -14,21 +14,18 @@ module load phdf5
 
 set -x
 
-export NEURONROOT=$HOME/bin/nrnpython3
-export PYTHONPATH=$HOME/model:$NEURONROOT/lib/python:$SCRATCH/site-packages:$PYTHONPATH
+export NEURONROOT=$SCRATCH/nrnpython3_intel19
+export PYTHONPATH=$HOME/model:$NEURONROOT/lib/python:$SCRATCH/site-packages/intel19:$PYTHONPATH
 export PATH=$NEURONROOT/x86_64/bin:$PATH
 
 cd $SLURM_SUBMIT_DIR
 
-export I_MPI_EXTRA_FILESYSTEM=enable
-export I_MPI_EXTRA_FILESYSTEM_LIST=lustre
 export I_MPI_ADJUST_ALLGATHER=4
 export I_MPI_ADJUST_ALLGATHERV=4
 export I_MPI_ADJUST_ALLTOALL=4
 
-export PYTHON=`which python3`
 
-ibrun env PYTHONPATH=$PYTHONPATH $PYTHON ./tests/test_scatter_read_trees.py
+ibrun -n 24 env python3 ./tests/test_scatter_read_trees.py
 
 
 
