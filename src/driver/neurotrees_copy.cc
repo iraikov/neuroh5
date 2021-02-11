@@ -270,7 +270,7 @@ int main(int argc, char** argv)
   for (size_t i=start, ii=0; i<end; i++, ii++)
     {
       CELL_IDX_T gid = target_gid_list[i];
-      CELL_IDX_T id = gid-pop_start;
+      CELL_IDX_T id = gid;
       printf("Task %d: Output local id %u (global id %u)\n", rank, id, gid);
 
       neurotree_t tree = make_tuple(id,
