@@ -6,4 +6,4 @@ from neuroh5.io import read_trees
 (gid,t) = next(g)
 print(gid)
 pprint.pprint(t)
-#pickle.dump( g, open( "DGC_trees.pkl", "wb" ) )
+

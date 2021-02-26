@@ -7447,7 +7447,7 @@ extern "C"
     int validate_flag=1;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
-    unsigned int io_size=0, cache_size=100;
+    unsigned int io_size=0, cache_size=1;
     char *file_name, *pop_name;
     PyObject* py_attr_name_spaces = NULL;
     vector<string> attr_name_spaces;
@@ -7494,9 +7494,6 @@ extern "C"
     if ((size > 0) && (io_size > (unsigned int)size))
       io_size = size;
     
-    if ((size > 0) && (cache_size > (unsigned int)size))
-      cache_size = size;
-
     // Create C++ vector of namespace strings:
     if (py_attr_name_spaces != NULL)
       {

@@ -44,7 +44,7 @@ namespace neuroh5
      *****************************************************************************/
     int scatter_read_trees
     (
-     MPI_Comm                        all_comm,
+     MPI_Comm                        comm,
      const string                   &file_name,
      const int                       io_size,
      const vector<string>           &attr_name_spaces,
@@ -61,12 +61,16 @@ namespace neuroh5
       vector<char> sendbuf; 
       vector<int> sendcounts, sdispls;
     
+      MPI_Comm all_comm;
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
       // MPI group color value used for I/O ranks
       int io_color = 1;
 
       throw_assert_nomsg(io_size > 0);
+
+      throw_assert(MPI_Comm_dup(comm, &(all_comm)) == MPI_SUCCESS,
+                   "scatter_read_tree: unable to duplicate MPI communicator");
     
       int srank, ssize; size_t rank=0, size=0, io_rank;
       throw_assert_nomsg(MPI_Comm_size(all_comm, &ssize) == MPI_SUCCESS);
@@ -150,6 +154,7 @@ namespace neuroh5
           attr_maps.insert(make_pair(attr_name_space, attr_map));
         }
 
+      throw_assert_nomsg(MPI_Comm_free(&all_comm) == MPI_SUCCESS);
     
       return 0;
     }

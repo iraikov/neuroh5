@@ -30,10 +30,11 @@ def main(coords_path, coords_namespace):
     print (population_ranges)
     
     soma_coords = {}
+    populations = ['BC']
     for population in population_ranges.keys():
 
         print('Population %s' % population)
-        it = read_cell_attributes(coords_path, population, namespace=coords_namespace, return_struct=True)
+        it = read_cell_attributes(coords_path, population, namespace=coords_namespace)
 
         print('it = %s' % str(it))
         for cell_gid, coords_dict in it:
