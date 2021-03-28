@@ -30,7 +30,7 @@ jobs:
           export FC=gfortran
           export F77=gfortran
           brew install cmake open-mpi
-          brew install install --build-from-source ./brew/hdf5-parallel.rb
+          brew install --build-from-source ./brew/hdf5-parallel.rb
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade numpy mpi4py h5py
           pip install flake8 pytest
