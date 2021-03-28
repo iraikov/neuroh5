@@ -27,6 +27,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
+          export FC=gfortran
+          export F77=gfortran
           brew install cmake open-mpi iltommi/brews/hdf5-parallel
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade numpy mpi4py h5py
@@ -34,8 +36,6 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Build
         run: |
-          export FC=gfortran
-          export F77=gfortran
           export CMAKE_BUILD_PARALLEL_LEVEL=4
           export PATH="/usr/local/opt/hdf5-parallel/bin:$PATH"
           export LDFLAGS="-L/usr/local/opt/hdf5-parallel/lib"
