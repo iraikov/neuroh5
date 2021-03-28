@@ -34,6 +34,8 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Build
         run: |
+          export FC=gfortran
+          export F77=gfortran
           export CMAKE_BUILD_PARALLEL_LEVEL=4
           export PATH="/usr/local/opt/hdf5-parallel/bin:$PATH"
           export LDFLAGS="-L/usr/local/opt/hdf5-parallel/lib"
