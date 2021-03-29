@@ -24,6 +24,10 @@ set_target_properties(
         LINKER_LANGUAGE C
 )
 
+if(APPLE)
+  set_target_properties( python_neuroh5_io PROPERTIES LINK_FLAGS "-undefined dynamic_lookup" )
+endif()
+
 if(WIN32)
     set_target_properties(
         python_neuroh5_io
@@ -40,4 +44,3 @@ target_include_directories(python_neuroh5_io PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     )
 target_link_libraries(python_neuroh5_io PUBLIC ${HDF5_LIBRARIES} mpi PRIVATE ${PYTHON_LIBRARIES})
-
