@@ -6,6 +6,11 @@ set(NEUROH5_IO_SRCS
 include_directories(${MPI_C_INCLUDE_DIRS})
 
 set(CMAKE_MACOSX_RPATH 1)
+if(APPLE)
+  # Add '-undefined dynamic_lookup' so that we can build modules that
+  # can be imported by a python that has statically linked libpython
+  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -undefined dynamic_lookup" )
+endif()
 
 add_library(python_neuroh5_io MODULE
   $<TARGET_OBJECTS:neuroh5.cell>
@@ -24,9 +29,6 @@ set_target_properties(
         LINKER_LANGUAGE C
 )
 
-if(APPLE)
-  set_target_properties( python_neuroh5_io PROPERTIES LINK_FLAGS "-undefined dynamic_lookup" )
-endif()
 
 if(WIN32)
     set_target_properties(
