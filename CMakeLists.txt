@@ -81,8 +81,7 @@ set_property(TARGET mpi PROPERTY
 # find python
 set(NEUROH5_IO_PYTHON_C_MODULE_NAME "io" CACHE STRING "Name of the C extension module")
 if (BUILD_PYTHON_BINDINGS)
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
+find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
 if (NOT PYTHON_EXECUTABLE)
   set(BUILD_PYTHON_BINDINGS OFF)
 else()

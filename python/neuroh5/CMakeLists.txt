@@ -6,11 +6,8 @@ set(NEUROH5_IO_SRCS
 include_directories(${MPI_C_INCLUDE_DIRS})
 
 set(CMAKE_MACOSX_RPATH 1)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-endif()
 
-add_library(python_neuroh5_io MODULE
+Python_add_library(python_neuroh5_io MODULE
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.graph>
@@ -43,4 +40,4 @@ target_include_directories(python_neuroh5_io PUBLIC
     ${MPI_C_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/include
     )
-target_link_libraries(python_neuroh5_io PUBLIC ${HDF5_LIBRARIES} mpi PRIVATE ${PYTHON_LIBRARIES})
+target_link_libraries(python_neuroh5_io PUBLIC ${HDF5_LIBRARIES} mpi)
