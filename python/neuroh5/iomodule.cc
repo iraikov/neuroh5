@@ -7800,12 +7800,9 @@ extern "C"
   static void
   neuroh5_tree_gen_dealloc(PyNeuroH5TreeGenState *py_ntrg)
   {
-    if (py_ntrg->state->pos == seq_next)
+    if (py_ntrg->state->comm != MPI_COMM_NULL)
       {
-        int status = MPI_Barrier(py_ntrg->state->comm);
-        throw_assert(status == MPI_SUCCESS, "NeuroH5TreeGen: MPI_Barrier error");
-
-        status = MPI_Comm_free(&(py_ntrg->state->comm));
+        int status = MPI_Comm_free(&(py_ntrg->state->comm));
         throw_assert(status == MPI_SUCCESS,
                      "NeuroH5TreeGen: unable to free MPI communicator");
       }
@@ -7822,10 +7819,7 @@ extern "C"
     Py_XDECREF(py_ntrg->state->tuple_index_info);
     if (py_ntrg->state->comm != MPI_COMM_NULL)
       {
-        int status = MPI_Barrier(py_ntrg->state->comm);
-        throw_assert(status == MPI_SUCCESS, "NeuroH5CellAttrGen: MPI_Barrier error");
-
-        status = MPI_Comm_free(&(py_ntrg->state->comm));
+        int status = MPI_Comm_free(&(py_ntrg->state->comm));
         throw_assert(status == MPI_SUCCESS,
                      "NeuroH5CellAttrGen: unable to free MPI communicator");
         py_ntrg->state->comm = MPI_COMM_NULL;
@@ -7837,12 +7831,9 @@ extern "C"
   static void
   neuroh5_prj_gen_dealloc(PyNeuroH5ProjectionGenState *py_ngg)
   {
-    if (py_ngg->state->pos == seq_next)
+    if (py_ngg->state->comm != MPI_COMM_NULL)
       {
-        int status = MPI_Barrier(py_ngg->state->comm);
-        throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
-
-        status = MPI_Comm_free(&(py_ngg->state->comm));
+        int status = MPI_Comm_free(&(py_ngg->state->comm));
         throw_assert(status == MPI_SUCCESS, 
                      "NeuroH5ProjectionGen: unable to free MPI communicator");
       }

@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for reading descriptions of neurite structures.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -35,6 +35,7 @@ namespace neuroh5
     /*****************************************************************************
      * Load tree data structures 
      *****************************************************************************/
+    
     int read_layer_swc
     (
      const std::string& file_name,
