@@ -284,6 +284,7 @@ namespace neuroh5
       hid_t fapl = H5Fget_access_plist(file);
       throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0,
                    "append_cell_attribute: unable to obtain MPI I/O communicator");
+      throw_assert(comm != MPI_COMM_NULL, "invalid MPI communicator in file access property list");
 
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
@@ -492,6 +493,7 @@ namespace neuroh5
       MPI_Info info;
       hid_t fapl = H5Fget_access_plist(file);
       throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "error in H5Fget_access_plist");
+      throw_assert(comm != MPI_COMM_NULL, "invalid MPI communicator in file access property list");
       
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");

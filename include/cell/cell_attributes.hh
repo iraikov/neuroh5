@@ -697,7 +697,7 @@ namespace neuroh5
       bool is_io_rank = false;
       if (io_rank_set.find(rank) != io_rank_set.end())
         is_io_rank = true;
-
+      throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
       
       vector< pair<hsize_t,hsize_t> > ranges;
       mpi::rank_ranges(size, io_size_value, ranges);

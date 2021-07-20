@@ -5,6 +5,7 @@
 #include <numeric>
 
 #include "range_sample.hh"
+#include "throw_assert.hh"
 
 using namespace std;
 
@@ -16,6 +17,9 @@ namespace neuroh5
 
     void range_sample (size_t N, size_t m, set<size_t>& out)
     {
+      throw_assert(N > 0, "range_sample: invalid N <= 0");
+      throw_assert(m > 0, "range_sample: invalid m <= 0");
+
       if (N < m)
 	m = N;
       size_t h =  N / m;
@@ -26,6 +30,7 @@ namespace neuroh5
 	{
 	  out.insert(val);
 	}
+      throw_assert(out.size() > 0, "range_sample: invalid output set");
 
     }
 
