@@ -46,6 +46,8 @@ jobs:
         run: |
           python -m pip show -f neuroh5
           python ./tests/test_import.py
+      - name: Test read and write
+        run: |
           python ./tests/test_write_cell_attr.py
 
  
@@ -78,4 +80,6 @@ jobs:
       run: |
         python -m pip show -f neuroh5
         python ./tests/test_import.py
+    - name: Test read and write
+      run: |
         python ./tests/test_write_cell_attr.py
