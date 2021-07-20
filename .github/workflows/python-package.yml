@@ -46,6 +46,7 @@ jobs:
         run: |
           python -m pip show -f neuroh5
           python ./tests/test_import.py
+          python ./tests/test_write_cell_attr.py
 
  
   build-linux:
@@ -77,3 +78,4 @@ jobs:
       run: |
         python -m pip show -f neuroh5
         python ./tests/test_import.py
+        python ./tests/test_write_cell_attr.py

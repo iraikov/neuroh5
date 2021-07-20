@@ -88,7 +88,7 @@ namespace neuroh5
               throw_assert_nomsg(ierr == 0);
 
 #ifdef H5_HAS_PARALLEL_DEFLATE
-              ierr = H5Pset_deflate(plist, 6);
+              ierr = H5Pset_deflate(plist, 9);
               throw_assert_nomsg(ierr == 0);
 #endif
               
