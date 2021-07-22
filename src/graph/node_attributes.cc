@@ -75,7 +75,7 @@ namespace neuroh5
       status = H5Pset_chunk(plist, 1, cdims);
       throw_assert_nomsg(status == 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
-      status = H5Pset_deflate(plist, 6);
+      status = H5Pset_deflate(plist, 9);
       throw_assert_nomsg(status == 0);
 #endif
 
@@ -84,7 +84,7 @@ namespace neuroh5
       status = H5Pset_chunk(value_plist, 1, value_cdims);
       throw_assert_nomsg(status == 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
-      status = H5Pset_deflate(value_plist, 6);
+      status = H5Pset_deflate(value_plist, 9);
       throw_assert_nomsg(status == 0);
 #endif
       
