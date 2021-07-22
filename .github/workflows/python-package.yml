@@ -29,8 +29,7 @@ jobs:
         run: |
           export FC=gfortran
           export F77=gfortran
-          brew install cmake mpich
-          brew install --build-from-source ./brew/hdf5-parallel.rb
+          brew install cmake hdf5-mpi
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade numpy mpi4py h5py
           pip install flake8 pytest
