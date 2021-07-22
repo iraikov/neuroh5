@@ -41,6 +41,8 @@ jobs:
           export PATH="/usr/local/opt/hdf5-parallel/bin:$PATH"
           export LDFLAGS="-L/usr/local/opt/hdf5-parallel/lib"
           export CPPFLAGS="-I/usr/local/opt/hdf5-parallel/include"
+          export CC=mpicc
+          export CXX=mpicxx
           python -m pip install -v .
       - name: Test import
         run: |
