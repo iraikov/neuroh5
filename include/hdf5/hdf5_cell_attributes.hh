@@ -79,8 +79,11 @@ namespace neuroh5
       throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS, "error in MPI_Comm_size");
       throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "error in MPI_Comm_rank");
 
-      status = exists_group (loc, path.c_str());
-      throw_assert(status > 0, "group " << path << " does not exist");
+      if (rank == 0) 
+	{
+	  status = exists_group (loc, path.c_str());
+	  throw_assert(status > 0, "group " << path << " does not exist");
+	}
       
       hsize_t dset_size = index.size();
       size_t read_size = 0;

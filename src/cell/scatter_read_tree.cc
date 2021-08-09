@@ -104,6 +104,10 @@ namespace neuroh5
       sdispls.resize(size,0);
       sendbuf.resize(0);
 
+#ifdef NEUROH5_DEBUG
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+#endif
+
       if (is_io_rank)
         {
           map <rank_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
@@ -127,6 +131,7 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
 #endif
 
+      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       {

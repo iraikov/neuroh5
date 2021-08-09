@@ -9,8 +9,11 @@ print("rank %d / %d" % (rank, size))
 sys.stdout.flush()
 #(g,n)  = scatter_read_trees("/scratch1/03320/iraikov/dentate/Full_Scale_Control/DG_IN_forest_20190325_compressed.h5", "AAC", io_size=4, comm=comm)
 #(g,n)  = scatter_read_trees("/scratch1/03320/iraikov/striped/dentate/Full_Scale_Control/DGC_forest_reindex_20190717_compressed.h5", "GC", io_size=8, comm=comm, topology=True)
-(g,_) = scatter_read_trees("/scratch1/03320/iraikov/striped/dentate/Slice/dentatenet_Full_Scale_GC_Exc_Sat_SLN_extent_arena_margin_20210203_compressed.h5", 
-                           "GC", topology=True, io_size=4, validate=True)
+#(g,_) = scatter_read_trees("/scratch1/03320/iraikov/striped/dentate/Slice/dentatenet_Full_Scale_GC_Exc_Sat_SLN_extent_arena_margin_20210203_compressed.h5", 
+#                           "GC", topology=True, io_size=4, validate=True)
+(g,n)  = scatter_read_trees("/scratch1/03320/iraikov/striped2/dentate/Full_Scale_Control/DG_Cells_Full_Scale_20210808.h5", "AAC", io_size=40, comm=comm)
+#(g,n)  = scatter_read_trees("/scratch1/03320/iraikov/striped/dentate/Full_Scale_Control/DG_IN_forest_syns_20210107_compressed.h5", "AAC", io_size=40, comm=comm)
+
 
 for (gid, tree) in g:
     print ("rank %d: gid %d = %s" % (rank, gid, str(tree)))
