@@ -77,7 +77,7 @@ namespace neuroh5
           throw_assert_nomsg(fspace >= 0);
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
-          throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
+          throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
 #endif
 
           dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
@@ -195,7 +195,7 @@ namespace neuroh5
 
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
-          throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
+          throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
 #endif
           dset = H5Dcreate2 (file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
                              fspace, lcpl, dcpl, H5P_DEFAULT);
@@ -299,7 +299,7 @@ namespace neuroh5
 
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
-          throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
+          throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
 #endif
           dset = H5Dcreate2 (file, path.c_str(), DST_PTR_H5_FILE_T,
                              fspace, lcpl, dcpl, H5P_DEFAULT);
@@ -419,7 +419,7 @@ namespace neuroh5
 
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
 #ifdef H5_HAS_PARALLEL_DEFLATE
-          throw_assert_nomsg(H5Pset_deflate(dcpl, 6) >= 0);
+          throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
 #endif
           
           dset = H5Dcreate2 (file, path.c_str(), NODE_IDX_H5_FILE_T,

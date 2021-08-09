@@ -1,23 +1,20 @@
 class Hdf5Parallel < Formula
   desc "File format designed to store large amounts of data"
   homepage "https://www.hdfgroup.org/HDF5"
-#   head "https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git"
-  url "https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.bz2"
-  sha256 "97906268640a6e9ce0cde703d5a71c9ac3092eded729591279bf2e3ca9765f61"
+  url "https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.1/src/hdf5-1.12.1.tar.bz2"
+  sha256 "aaf9f532b3eda83d3d3adc9f8b40a9b763152218fa45349c3bc77502ca1f8f1c"
 
   keg_only "it conflicts with hdf5 package"
 
   depends_on "gcc"
-  depends_on "open-mpi"
+  depends_on "mpich"
   depends_on "szip"
   
   fails_with :clang
   env :std
   
   def install
-    ENV["OMPI_CXX"] = ENV["CXX"]
     ENV["CXX"] = "mpicxx"
-    ENV["OMPI_CC"] = ENV["CC"]
     ENV["CC"] = "mpicc"
     
     system "env"

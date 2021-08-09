@@ -29,8 +29,7 @@ jobs:
         run: |
           export FC=gfortran
           export F77=gfortran
-          brew install cmake open-mpi
-          brew install --build-from-source ./brew/hdf5-parallel.rb
+          brew install cmake hdf5-mpi
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade numpy mpi4py h5py
           pip install flake8 pytest
@@ -41,11 +40,16 @@ jobs:
           export PATH="/usr/local/opt/hdf5-parallel/bin:$PATH"
           export LDFLAGS="-L/usr/local/opt/hdf5-parallel/lib"
           export CPPFLAGS="-I/usr/local/opt/hdf5-parallel/include"
+          export CC=mpicc
+          export CXX=mpicxx
           python -m pip install -v .
       - name: Test import
         run: |
           python -m pip show -f neuroh5
           python ./tests/test_import.py
+      - name: Test read and write
+        run: |
+          python ./tests/test_write_cell_attr.py
 
  
   build-linux:
@@ -77,3 +81,6 @@ jobs:
       run: |
         python -m pip show -f neuroh5
         python ./tests/test_import.py
+    - name: Test read and write
+      run: |
+        python ./tests/test_write_cell_attr.py

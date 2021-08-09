@@ -78,8 +78,10 @@ set_property(TARGET mpi PROPERTY
   ${MPI_C_LINK_OPTIONS})
 
 
-# find python
 set(NEUROH5_IO_PYTHON_C_MODULE_NAME "io" CACHE STRING "Name of the C extension module")
+# avoid picking system framework prematurely
+set(CMAKE_FIND_FRAMEWORK LAST)
+# find python
 if (BUILD_PYTHON_BINDINGS)
 find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
 if (NOT PYTHON_EXECUTABLE)
