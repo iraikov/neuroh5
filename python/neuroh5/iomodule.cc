@@ -7445,6 +7445,7 @@ extern "C"
     int status;
     int topology_flag=1;
     int validate_flag=1;
+    PyObject *py_node_allocation = NULL;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr  = NULL;
     unsigned int io_size=0, cache_size=1;
@@ -7459,14 +7460,15 @@ extern "C"
                                    "topology",
                                    "validate",
                                    "comm",
+                                   "node_allocation",
                                    "io_size",
                                    "cache_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OiiOii", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OiiOOii", (char **)kwlist,
                                      &file_name, &pop_name, 
                                      &py_attr_name_spaces, &topology_flag, &validate_flag,
-                                     &py_comm, &io_size, &cache_size))
+                                     &py_comm, &py_node_allocation, &io_size, &cache_size))
       return NULL;
 
     MPI_Comm comm;
@@ -7560,35 +7562,14 @@ extern "C"
     if (!py_ntrg) return NULL;
     py_ntrg->state = new NeuroH5TreeGenState();
 
-    node_rank_map_t node_rank_map;
-    // Create C++ map for node_rank_map:
-    // round-robin node to rank assignment from file
-    rank_t r=0; size_t local_count=0; 
-    for (size_t i = 0; i < tree_index.size(); i++)
-      {
-        if ((unsigned int)rank == r) local_count++;
-        auto it = py_ntrg->state->node_rank_map.find(tree_index[i]);
-        if (it == py_ntrg->state->node_rank_map.end())
-          {
-            py_ntrg->state->node_rank_map[tree_index[i]].insert(r++);
-          }
-        else
-          {
-            throw_err("NeuroH5TreeGen: tree generator requires unique index set");
-          }
-        if ((unsigned int)size <= r) r=0;
-      }
+    size_t local_count=0, max_local_count = 0;
+    ldbal_cell_attr_gen (comm, string(file_name),
+                         pop_ranges, pop_labels, pop_name, pop_idx, 
+                         string("Trees"), size*cache_size,
+                         py_node_allocation, py_ntrg->state->node_rank_map,
+                         count, local_count, max_local_count);
+
     
-
-    size_t max_local_count=0;
-    status = MPI_Allreduce(&(local_count), &max_local_count, 1,
-                           MPI_SIZE_T, MPI_MAX, comm);
-    throw_assert(status == MPI_SUCCESS,
-                 "NeuroH5TreeGen: MPI_Allreduce error");
-
-    status = MPI_Barrier(comm);
-    throw_assert(status == MPI_SUCCESS, "NeuroH5TreeGen: MPI_Barrier error");
-
     throw_assert(MPI_Comm_dup(comm, &(py_ntrg->state->comm)) == MPI_SUCCESS,
                  "NeuroH5TreeGen: unable to duplicate MPI communicator");
 
