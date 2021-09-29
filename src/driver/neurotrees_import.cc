@@ -92,7 +92,7 @@ int main(int argc, char** argv)
   std::vector<std::string> input_file_names;
   std::vector<CELL_IDX_T> gid_list;
   int tree_id_offset=0, node_id_offset=0, layer_offset=0; int swc_type=0; int include_layer=0;
-  vector<neurotree_t> tree_list, include_tree_list;
+  forward_list<neurotree_t> tree_list, include_tree_list;
   MPI_Comm all_comm;
   
   throw_assert(MPI_Init(&argc, &argv) >= 0,
@@ -259,7 +259,7 @@ int main(int argc, char** argv)
       CELL_IDX_T gid0 = 0;
       // if swc type is not given, then we are reading a regular swc file
       status = io::read_swc (include_filename, gid0, 0, include_tree_list);
-      cell::validate_tree(include_tree_list[0]);
+      cell::validate_tree(include_tree_list.front());
     }
 
   if (opt_singleton)
@@ -314,7 +314,8 @@ int main(int argc, char** argv)
         }
     }
   
-  printf("Task %d has read a total of %lu trees\n", rank,  tree_list.size());
+  printf("Task %d has read a total of %lu trees\n", rank,  
+         std::distance(tree_list.begin(), tree_list.end()));
 
   
   
@@ -322,7 +323,7 @@ int main(int argc, char** argv)
     {
       for (auto & tree : tree_list)
         {
-          cell::insert_tree_points(include_tree_list[0], tree, include_layer);
+          cell::insert_tree_points(include_tree_list.front(), tree, include_layer);
         }
     }
 

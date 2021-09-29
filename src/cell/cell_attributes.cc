@@ -1084,12 +1084,14 @@ namespace neuroh5
 
     
       sendbuf.clear();
-    
+      sendbuf.shrink_to_fit();
+
       if (recvbuf.size() > 0)
         {
           data::deserialize_rank_attr_map (size, recvbuf, recvcounts, rdispls, attr_map);
         }
       recvbuf.clear();
+      recvbuf.shrink_to_fit();
       
 
       return 0;

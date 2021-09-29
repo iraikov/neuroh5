@@ -24,6 +24,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <forward_list>
 
 #include "neuroh5_types.hh"
 #include "cell_populations.hh"
@@ -85,7 +86,7 @@ int main(int argc, char** argv)
   std::string input_filename, output_filename;
   CELL_IDX_T source_gid;
   std::vector<CELL_IDX_T> target_gid_list;
-  vector<neurotree_t> input_tree_vec, output_tree_vec;
+  forward_list<neurotree_t> input_tree_list, output_tree_list;
   MPI_Comm all_comm;
   
   throw_assert(MPI_Init(&argc, &argv) >= 0,
@@ -210,18 +211,18 @@ int main(int argc, char** argv)
   
   throw_assert(cell::read_trees (all_comm, input_filename,
                                  pop_name, pop_start,
-                                 input_tree_vec) >= 0,
+                                 input_tree_list) >= 0,
                "error in read_trees");
-  throw_assert(input_tree_vec.size() > 0,
+  throw_assert(std::distance(input_tree_list.begin(), input_tree_list.end()) > 0,
                "empty list of input trees");
   
-  for_each(input_tree_vec.cbegin(),
-           input_tree_vec.cend(),
+  for_each(input_tree_list.cbegin(),
+           input_tree_list.cend(),
            [&] (const neurotree_t& tree)
            { cell::validate_tree(tree); } 
            );
 
-  const neurotree_t& input_tree = input_tree_vec.at(source_gid-pop_start);
+  const neurotree_t input_tree = *std::next(input_tree_list.begin(), source_gid-pop_start);
       
   const vector<SECTION_IDX_T> & src_vector=get<1>(input_tree);
   const vector<SECTION_IDX_T> & dst_vector=get<2>(input_tree);
@@ -278,7 +279,7 @@ int main(int argc, char** argv)
                                     xcoords, ycoords, zcoords,
                                     radiuses, layers, parents,
                                     swc_types);
-      output_tree_vec.push_back(tree);
+      output_tree_list.push_front(tree);
 
     }
 
@@ -314,7 +315,7 @@ int main(int argc, char** argv)
     }
   MPI_Barrier(all_comm);
 
-  throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_vec) == 0,
+  throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list) == 0,
                "error in append_trees");
 
   MPI_Barrier(all_comm);

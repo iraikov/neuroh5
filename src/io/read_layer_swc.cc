@@ -17,6 +17,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <forward_list>
 
 #include "ngraph.hh"
 #include "neuroh5_types.hh"
@@ -44,7 +45,7 @@ namespace neuroh5
      const int layer_offset,
      const SWC_TYPE_T swc_type,
      const bool split_layers,
-     vector<neurotree_t> &tree_list
+     std::forward_list<neurotree_t> &tree_list
      )
     {
       int status = 0;
@@ -168,7 +169,7 @@ namespace neuroh5
 
     
       neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sec_vector,xcoords,ycoords,zcoords,radiuses,layers,parents,swc_types);
-      tree_list.push_back(tree);
+      tree_list.push_front(tree);
 
       if (debug_enabled)
         {
@@ -214,7 +215,7 @@ namespace neuroh5
      const std::string& file_name,
      const CELL_IDX_T gid,
      const int id_offset,
-     vector<neurotree_t> &tree_list
+     std::forward_list<neurotree_t> &tree_list
      )
     {
       int status = 0;
@@ -333,7 +334,7 @@ namespace neuroh5
 
     
       neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sec_vector,xcoords,ycoords,zcoords,radiuses,layers,parents,swc_types);
-      tree_list.push_back(tree);
+      tree_list.push_front(tree);
 
       if (debug_enabled)
         {

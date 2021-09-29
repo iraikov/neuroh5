@@ -41,3 +41,6 @@ target_include_directories(python_neuroh5_io PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     )
 target_link_libraries(python_neuroh5_io PUBLIC ${HDF5_LIBRARIES} mpi)
+if (JeMalloc_FOUND)
+   target_link_libraries(python_neuroh5_io PUBLIC ${JEMALLOC_LIBRARIES})
+endif()

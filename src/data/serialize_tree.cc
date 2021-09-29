@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for serializing/deserializing tree structures.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -22,6 +22,7 @@
 #include <climits>
 #include <map>
 #include <vector>
+#include <forward_list>
 
 #include "cereal/archives/binary.hpp"
 
@@ -78,6 +79,7 @@ namespace neuroh5
                 
               } // archive goes out of scope, ensuring all contents are flushed
               const string& sstr = ss.str();
+              sendbuf.reserve(sendbuf.size() + sstr.size());
               copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
               
               sendpos = sendbuf.size();
@@ -126,12 +128,12 @@ namespace neuroh5
         }
     }
 
-    void deserialize_rank_tree_vector (const size_t num_ranks,
-                                       const vector<char> &recvbuf,
-                                       const vector<int>& recvcounts,
-                                       const vector<int>& rdispls,
-                                       vector<neurotree_t> &all_tree_vector
-                                       )
+    void deserialize_rank_tree_list (const size_t num_ranks,
+                                     const vector<char> &recvbuf,
+                                     const vector<int>& recvcounts,
+                                     const vector<int>& rdispls,
+                                     forward_list<neurotree_t> &all_tree_list
+                                     )
     {
       const int recvbuf_size = recvbuf.size();
 
@@ -157,7 +159,7 @@ namespace neuroh5
 
               for (auto const& iter : tree_map)
                 {
-                  all_tree_vector.push_back(iter.second);
+                  all_tree_list.push_front(iter.second);
                 }
             }
         }

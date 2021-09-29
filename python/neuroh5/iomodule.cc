@@ -29,6 +29,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <forward_list>
 
 #include <hdf5.h>
 #include <mpi.h>
@@ -1422,10 +1423,10 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
 typedef struct {
   Py_ssize_t seq_index, count;
                            
-  vector <neurotree_t> tree_vector;
+  forward_list <neurotree_t> tree_list;
   vector<string> attr_name_spaces;
   map <string, NamedAttrMap> attr_maps;
-  vector<neurotree_t>::const_iterator it_tree;
+  forward_list<neurotree_t>::const_iterator it_tree;
   bool topology_flag;
   bool validate_flag;
   
@@ -1453,7 +1454,7 @@ static void NeuroH5TreeIter_dealloc(PyNeuroH5TreeIterState *py_state)
 PyObject* NeuroH5TreeIter_iternext(PyObject *self)
 {
   PyNeuroH5TreeIterState *py_state = (PyNeuroH5TreeIterState *)self;
-  if (py_state->state->it_tree != py_state->state->tree_vector.cend())
+  if (py_state->state->it_tree != py_state->state->tree_list.cend())
     {
       const neurotree_t &tree = *(py_state->state->it_tree);
       const CELL_IDX_T key = get<0>(tree);
@@ -1516,10 +1517,10 @@ static PyTypeObject PyNeuroH5TreeIter_Type = {
 
 
 static PyObject *
-NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
-                           const vector<string>& attr_name_spaces,
-                           const map <string, NamedAttrMap>& attr_maps,
-                           const bool topology_flag, const bool validate_flag)
+NeuroH5TreeIter_FromList(const forward_list <neurotree_t>& tree_list,
+                         const vector<string>& attr_name_spaces,
+                         const map <string, NamedAttrMap>& attr_maps,
+                         const bool topology_flag, const bool validate_flag)
 {
 
   PyNeuroH5TreeIterState *p = PyObject_New(PyNeuroH5TreeIterState, &PyNeuroH5TreeIter_Type);
@@ -1534,11 +1535,11 @@ NeuroH5TreeIter_FromVector(const vector <neurotree_t>& tree_vector,
   p->state = new NeuroH5TreeIterState();
 
   p->state->seq_index     = 0;
-  p->state->count         = tree_vector.size();
-  p->state->tree_vector   = tree_vector;
+  p->state->count         = std::distance(tree_list.cbegin(), tree_list.cend());
+  p->state->tree_list     = tree_list;
   p->state->attr_name_spaces = attr_name_spaces;
   p->state->attr_maps  = attr_maps;
-  p->state->it_tree    = p->state->tree_vector.cbegin();
+  p->state->it_tree    = p->state->tree_list.cbegin();
   p->state->topology_flag = topology_flag;
   p->state->validate_flag = validate_flag;
 
@@ -1555,19 +1556,19 @@ NeuroH5TreeIter_FromMap(const map<CELL_IDX_T, neurotree_t>& tree_map,
                         const bool topology_flag, const bool validate_flag)
 
 {
-  vector <neurotree_t> tree_vector;
+  forward_list <neurotree_t> tree_list;
 
   std::transform (tree_map.cbegin(), tree_map.cend(),
-                  std::back_inserter(tree_vector),
+                  std::front_inserter(tree_list),
                   [] (const map<CELL_IDX_T, neurotree_t>::value_type& kv)
                   { return kv.second; });
 
                            
-  return (PyObject *)NeuroH5TreeIter_FromVector(tree_vector,
-                                                attr_name_spaces,
-                                                attr_maps,
-                                                topology_flag,
-                                                validate_flag);
+  return (PyObject *)NeuroH5TreeIter_FromList(tree_list,
+                                              attr_name_spaces,
+                                              attr_maps,
+                                              topology_flag,
+                                              validate_flag);
 }
 
 
@@ -4739,11 +4740,11 @@ extern "C"
     }
 
     
-    vector<neurotree_t> tree_vector;
+    forward_list<neurotree_t> tree_list;
 
     status = cell::read_trees (comm, string(file_name),
                                string(pop_name), pop_start,
-                               tree_vector);
+                               tree_list);
     throw_assert (status >= 0,
                  "py_read_trees: unable to read trees");
 
@@ -4763,11 +4764,11 @@ extern "C"
                  "py_read_trees: unable to free MPI communicator");
 
 
-    PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
-                                                        attr_name_spaces,
-                                                        attr_maps,
-                                                        topology_flag>0,
-                                                        validate_flag>0);
+    PyObject* py_tree_iter = NeuroH5TreeIter_FromList(tree_list,
+                                                      attr_name_spaces,
+                                                      attr_maps,
+                                                      topology_flag>0,
+                                                      validate_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -5217,11 +5218,11 @@ extern "C"
         pop_count = it->second.count;
     }
 
-    vector<neurotree_t> tree_vector;
+    forward_list<neurotree_t> tree_list;
 
     status = cell::read_tree_selection (comm, string(file_name),
                                         string(pop_name), pop_start,
-                                        tree_vector, selection);
+                                        tree_list, selection);
     throw_assert (status >= 0,
                   "py_read_tree_selection: unable to read trees");
 
@@ -5240,11 +5241,11 @@ extern "C"
                  "py_read_tree_selection: unable to free MPI communicator");
 
 
-    PyObject* py_tree_iter = NeuroH5TreeIter_FromVector(tree_vector,
-                                                        attr_name_spaces,
-                                                        attr_maps,
-                                                        topology_flag>0,
-                                                        validate_flag>0);
+    PyObject* py_tree_iter = NeuroH5TreeIter_FromList(tree_list,
+                                                      attr_name_spaces,
+                                                      attr_maps,
+                                                      topology_flag>0,
+                                                      validate_flag>0);
 
     PyObject *py_result_tuple = PyTuple_New(2);
     PyTuple_SetItem(py_result_tuple, 0, py_tree_iter);
@@ -7070,7 +7071,7 @@ extern "C"
         throw_assert(dst_map_it != all_attr_values_uint16.end(),
                      "py_append_cell_trees: input data has no dst array");
     
-        vector<neurotree_t> tree_vector;
+        forward_list<neurotree_t> tree_list;
         
         map<CELL_IDX_T, vector<float> >& xcoord_values = xcoord_map_it->second;
         map<CELL_IDX_T, vector<float> >& ycoord_values = ycoord_map_it->second;
@@ -7101,24 +7102,24 @@ extern "C"
         while (sections_it != sections_values.end())
           {
             CELL_IDX_T id = sections_it->first;
-            tree_vector.push_back(make_tuple(id,
-                                             src_it->second,
-                                             dst_it->second,
-                                             sections_it->second,
-                                             xcoord_it->second,
-                                             ycoord_it->second,
-                                             zcoord_it->second,
-                                             radius_it->second,
-                                             layer_it->second,
-                                             parent_it->second,
-                                             swc_type_it->second));
+            tree_list.push_front(make_tuple(id,
+                                            src_it->second,
+                                            dst_it->second,
+                                            sections_it->second,
+                                            xcoord_it->second,
+                                            ycoord_it->second,
+                                            zcoord_it->second,
+                                            radius_it->second,
+                                            layer_it->second,
+                                            parent_it->second,
+                                            swc_type_it->second));
             
             ++sections_it, ++src_it, ++dst_it, ++parent_it,
               ++xcoord_it, ++ycoord_it, ++zcoord_it, ++radius_it,
               ++layer_it, ++swc_type_it;
           }
     
-        throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_vector) >= 0,
+        throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_list) >= 0,
                      "py_append_cell_trees: unable to append trees");
       }
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,

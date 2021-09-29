@@ -58,8 +58,8 @@ namespace neuroh5
      size_t numitems
      )
     {
-      vector<char> sendbuf; 
-      vector<int> sendcounts, sdispls;
+      std::vector<char> sendbuf; 
+      std::vector<int> sendcounts, sdispls;
     
       MPI_Comm all_comm;
       // MPI Communicator for I/O ranks
@@ -140,11 +140,15 @@ namespace neuroh5
 
         throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                        recvcounts, rdispls, recvbuf) >= 0);
-        
+        sendbuf.clear();
+        sendbuf.shrink_to_fit();
+
         if (recvbuf.size() > 0)
           {
             data::deserialize_rank_tree_map (size, recvbuf, recvcounts, rdispls, tree_map);
           }
+        recvbuf.clear();
+        recvbuf.shrink_to_fit();
       }
 
       for (string attr_name_space : attr_name_spaces)

@@ -3,7 +3,7 @@
 
 #include <hdf5.h>
 
-#include <vector>
+#include <forward_list>
 
 #include "neuroh5_types.hh"
 
@@ -21,7 +21,7 @@ namespace neuroh5
      const std::string& file_name,
      const std::string& pop_name,
      const CELL_IDX_T& pop_start,
-     std::vector<neurotree_t> &tree_list,
+     std::forward_list<neurotree_t> &tree_list,
      CellPtr ptr_type = CellPtr(PtrOwner)
      );
   }

@@ -4,7 +4,7 @@
 ///
 ///  Functions for serializing tree data.
 ///
-///  Copyright (C) 2017-2020 Project Neuroh5.
+///  Copyright (C) 2017-2021 Project Neuroh5.
 //==============================================================================
 
 #ifndef SERIALIZE_TREE_HH
@@ -15,6 +15,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <forward_list>
 
 #include "neuroh5_types.hh"
 
@@ -36,11 +37,11 @@ namespace neuroh5
                                     std::map<CELL_IDX_T, neurotree_t> &all_tree_map
                                     );
 
-    void deserialize_rank_tree_vector (const size_t num_ranks,
-                                       const vector<char> &recvbuf,
-                                       const vector<int>& recvcounts,
-                                       const vector<int>& rdispls,
-                                       vector<neurotree_t> &all_tree_vector);
+    void deserialize_rank_tree_list (const size_t num_ranks,
+                                     const vector<char> &recvbuf,
+                                     const vector<int>& recvcounts,
+                                     const vector<int>& rdispls,
+                                     forward_list<neurotree_t> &all_tree_list);
   }
 }
 #endif

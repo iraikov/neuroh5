@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <forward_list>
 
 using namespace std;
 using namespace neuroh5;
@@ -216,7 +217,7 @@ int main(int argc, char** argv)
                 "neurotrees_read: error in reading population names");
 
   size_t start=0, end=0;
-  std::vector<neurotree_t> tree_list;
+  std::forward_list<neurotree_t> tree_list;
   for (size_t i = 0; i<pop_names.size(); i++)
     {
       size_t pop_idx; bool pop_set=false;
@@ -244,20 +245,18 @@ int main(int argc, char** argv)
 
     }
   
-  size_t local_num_trees = tree_list.size();
-  
+  size_t local_num_trees = 0;
+  for_each(tree_list.cbegin(),
+           tree_list.cend(),
+           [&] (const neurotree_t& tree)
+           {
+             stringstream outfilename;
+             outfilename << string(input_file_name) << "." << local_num_trees << "." << rank
+                         << ".trees";
+             output_tree(outfilename.str(), tree);
+             local_num_trees++;
+           });
   printf("Task %d has read a total of %lu trees\n", rank,  local_num_trees);
-
-  if (tree_list.size() > 0)
-    {
-      for (size_t i = 0; i < tree_list.size(); i++)
-        {
-          stringstream outfilename;
-          outfilename << string(input_file_name) << "." << i << "." << rank
-                      << ".trees";
-          output_tree(outfilename.str(), tree_list[i]);
-        }
-    }
 
   MPI_Comm_free(&all_comm);
   

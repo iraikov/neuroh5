@@ -5,6 +5,7 @@
 #include <mpi.h>
 
 #include <vector>
+#include <forward_list>
 
 namespace neuroh5
 {
@@ -21,7 +22,7 @@ namespace neuroh5
      const std::string& file_name,
      const std::string& pop_name,
      const CELL_IDX_T& pop_start,
-     std::vector<neurotree_t> &tree_list,
+     std::forward_list<neurotree_t> &tree_list,
      size_t offset = 0,
      size_t numitems = 0,
      bool collective = true
@@ -33,7 +34,7 @@ namespace neuroh5
      const std::string& file_name,
      const std::string& pop_name,
      const CELL_IDX_T& pop_start,
-     std::vector<neurotree_t> &tree_list,
+     std::forward_list<neurotree_t> &tree_list,
      const std::vector<CELL_IDX_T>&  selection
      );
   }

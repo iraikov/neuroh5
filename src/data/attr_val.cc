@@ -4,7 +4,7 @@
 ///
 ///  Template specialization for AttrVal. 
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include <map>

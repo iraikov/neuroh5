@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <set>
+#include <forward_list>
 
 #include "neuroh5_types.hh"
 #include "cell_attributes.hh"
@@ -26,7 +27,7 @@ namespace neuroh5
 
     void append_tree_list (const CELL_IDX_T pop_start,
                            data::NamedAttrMap&       attr_values,
-                           std::vector<neurotree_t>& tree_list)
+                           std::forward_list<neurotree_t>& tree_list)
     {
       
       for (CELL_IDX_T idx : attr_values.index_set)
@@ -46,11 +47,11 @@ namespace neuroh5
           const vector<SWC_TYPE_T> swc_types   = attr_values.find_name<SWC_TYPE_T>(hdf5::SWCTYPE, idx);
 
           CELL_IDX_T gid = idx;
-          tree_list.push_back(make_tuple(gid,
-                                         src_vector, dst_vector, sections,
-                                         xcoords,ycoords,zcoords,
-                                         radiuses,layers,parents,
-                                         swc_types));
+          tree_list.push_front(make_tuple(gid,
+                                          src_vector, dst_vector, sections,
+                                          xcoords,ycoords,zcoords,
+                                          radiuses,layers,parents,
+                                          swc_types));
         }
     }
 
@@ -66,7 +67,7 @@ namespace neuroh5
      const std::string& file_name,
      const std::string& pop_name,
      const CELL_IDX_T& pop_start,
-     std::vector<neurotree_t> &tree_list,
+     std::forward_list<neurotree_t> &tree_list,
      size_t offset = 0,
      size_t numitems = 0,
      bool collective = true
@@ -98,7 +99,7 @@ namespace neuroh5
      const std::string& file_name,
      const std::string& pop_name,
      const CELL_IDX_T& pop_start,
-     std::vector<neurotree_t> &tree_list,
+     std::forward_list<neurotree_t> &tree_list,
      const std::vector<CELL_IDX_T>&  selection
      )
     {

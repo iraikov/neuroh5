@@ -25,11 +25,16 @@ class cmake_build_ext(build_ext.build_ext):
         except OSError:
             raise RuntimeError('Cannot find CMake executable')
 
-        options = { 'debug_build': False, 'HDF5_ROOT': False }
+        options = { 'debug_build': False, 
+                    'HDF5_ROOT': False,
+                    'JEMALLOC_ROOT': False }
+
         if os.environ.get('NEUROH5_DEBUG', False):
             options['debug_build'] = True
         if os.environ.get('HDF5_ROOT', False):
             options['HDF5_ROOT'] = os.environ.get('HDF5_ROOT')
+        if os.environ.get('JEMALLOC_ROOT', False):
+            options['JEMALLOC_ROOT'] = os.environ.get('JEMALLOC_ROOT')
             
             
         for ext in self.extensions:
@@ -81,6 +86,11 @@ class cmake_build_ext(build_ext.build_ext):
             if options.get('HDF5_ROOT', False):
                 cmake_args += [
                     '-DHDF5_ROOT=%s' % options.get('HDF5_ROOT'),
+                    ]
+
+            if options.get('JEMALLOC_ROOT', False):
+                cmake_args += [
+                    '-DJEMALLOC_ROOT_DIR=%s' % options.get('JEMALLOC_ROOT'),
                     ]
 
             cmake_args += cmake_cmd_args

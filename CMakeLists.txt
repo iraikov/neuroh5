@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.12)
 project(NeuroH5)
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 enable_language(CXX)
 set (CMAKE_CXX_STANDARD 11)
 
@@ -11,6 +13,7 @@ set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -DMPICH_SKIP_MPICXX=1 -DOMPI_SKIP
 endif()
   
 include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
+
 set(NEUROH5_VERSION 0.0.5)
 
 # Set the build type.  Options are:
@@ -117,6 +120,10 @@ else()
 endif()
 endif()
 
+
+# Try to link with jemalloc [optional]
+find_package(JeMalloc)
+
 #find parmetis [optional]
 find_library(PARMETIS_LIBRARY NAME libparmetis.a libparmetis.dylib
   HINTS ${METIS_DIR}/lib PATHS /usr/lib ${METIS_DIR}/lib)
@@ -203,7 +210,7 @@ add_library(neuroh5.mpi OBJECT ${mpi_SRC})
 
 
 add_executable(neurograph_reader
-  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_reader
+  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_reader.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.graph>
@@ -212,8 +219,9 @@ add_executable(neurograph_reader
   $<TARGET_OBJECTS:neuroh5.mpi>)
 target_link_libraries(neurograph_reader PUBLIC ${HDF5_LIBRARIES} mpi)
 
+
 add_executable(neurograph_scatter_read
-  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_scatter_read
+  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_scatter_read.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.graph>
@@ -223,7 +231,7 @@ add_executable(neurograph_scatter_read
 target_link_libraries(neurograph_scatter_read PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(balance_indegree
-  ${PROJECT_SOURCE_DIR}/src/driver/balance_indegree
+  ${PROJECT_SOURCE_DIR}/src/driver/balance_indegree.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.graph>
@@ -233,7 +241,7 @@ add_executable(balance_indegree
 target_link_libraries(balance_indegree PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(neurograph_vertex_metrics
-  ${PROJECT_SOURCE_DIR}/src/driver/vertex_metrics
+  ${PROJECT_SOURCE_DIR}/src/driver/vertex_metrics.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.graph>
@@ -243,7 +251,7 @@ add_executable(neurograph_vertex_metrics
 target_link_libraries(neurograph_vertex_metrics PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(neurograph_import
-  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_import
+  ${PROJECT_SOURCE_DIR}/src/driver/neurograph_import.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.graph>
@@ -253,7 +261,7 @@ add_executable(neurograph_import
 target_link_libraries(neurograph_import PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(neurotrees_copy
-  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_copy
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_copy.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.hdf5>
@@ -262,7 +270,7 @@ add_executable(neurotrees_copy
 target_link_libraries(neurotrees_copy PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(neurotrees_select
-  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_select
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_select.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.hdf5>
@@ -271,7 +279,7 @@ add_executable(neurotrees_select
 target_link_libraries(neurotrees_select PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(neurotrees_import
-  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_import
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_import.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.hdf5>
@@ -280,7 +288,7 @@ add_executable(neurotrees_import
 target_link_libraries(neurotrees_import PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(neurotrees_read
-  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_read
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_read.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.hdf5>
@@ -289,13 +297,28 @@ add_executable(neurotrees_read
 target_link_libraries(neurotrees_read PUBLIC ${HDF5_LIBRARIES} mpi)
 
 add_executable(neurotrees_scatter_read
-  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_scatter_read
+  ${PROJECT_SOURCE_DIR}/src/driver/neurotrees_scatter_read.cc
   $<TARGET_OBJECTS:neuroh5.cell>
   $<TARGET_OBJECTS:neuroh5.data>
   $<TARGET_OBJECTS:neuroh5.hdf5>
   $<TARGET_OBJECTS:neuroh5.io>
   $<TARGET_OBJECTS:neuroh5.mpi>)
 target_link_libraries(neurotrees_scatter_read PUBLIC ${HDF5_LIBRARIES} mpi)
+
+if (JeMalloc_FOUND)
+
+target_link_libraries(balance_indegree PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurograph_vertex_metrics PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurograph_reader PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurograph_scatter_read PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurograph_import PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurotrees_select PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurotrees_copy PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurotrees_import PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurotrees_read PUBLIC ${JEMALLOC_LIBRARIES})
+target_link_libraries(neurotrees_scatter_read PUBLIC ${JEMALLOC_LIBRARIES})
+
+endif()
 
 if (BUILD_PYTHON_BINDINGS)
   add_subdirectory(python/neuroh5 EXCLUDE_FROM_ALL)
