@@ -29,6 +29,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <deque>
 #include <forward_list>
 
 #include <hdf5.h>
@@ -516,7 +517,7 @@ void py_array_to_vector (PyObject *pyval,
 template<class T>
 void append_value_map (CELL_IDX_T idx,
                        PyObject *pyval,
-                       map<CELL_IDX_T, vector<T> >& all_attr_values)
+                       map<CELL_IDX_T, deque<T> >& all_attr_values)
 {
   npy_intp *dims, ind = 0;
   throw_assert(PyArray_Check(pyval), "append_value_map: argument is not an array");
@@ -526,7 +527,7 @@ void append_value_map (CELL_IDX_T idx,
     {
       size_t value_size = dims[0];
       T *pyarr_ptr = (T *)PyArray_GetPtr(pyarr, &ind);
-      vector<T> attr_values(value_size);
+      deque<T> attr_values(value_size);
       for (size_t j=0; j<value_size; j++)
         {
           attr_values[j] = pyarr_ptr[j];
@@ -562,13 +563,13 @@ void build_selection (PyObject *py_selection, vector<NODE_IDX_T>& selection)
 
 
 void build_cell_attr_value_maps (PyObject *idx_values,
-                                 map<string, map<CELL_IDX_T, vector<uint32_t>>>& all_attr_values_uint32,
-                                 map<string, map<CELL_IDX_T, vector<uint16_t>>>& all_attr_values_uint16,
-                                 map<string, map<CELL_IDX_T, vector<uint8_t>>>& all_attr_values_uint8,
-                                 map<string, map<CELL_IDX_T, vector<int32_t>>>& all_attr_values_int32,
-                                 map<string, map<CELL_IDX_T, vector<int16_t>>>& all_attr_values_int16,
-                                 map<string, map<CELL_IDX_T, vector<int8_t>>>& all_attr_values_int8,
-                                 map<string, map<CELL_IDX_T, vector<float>>>& all_attr_values_float)
+                                 map<string, map<CELL_IDX_T, deque<uint32_t>>>& all_attr_values_uint32,
+                                 map<string, map<CELL_IDX_T, deque<uint16_t>>>& all_attr_values_uint16,
+                                 map<string, map<CELL_IDX_T, deque<uint8_t>>>& all_attr_values_uint8,
+                                 map<string, map<CELL_IDX_T, deque<int32_t>>>& all_attr_values_int32,
+                                 map<string, map<CELL_IDX_T, deque<int16_t>>>& all_attr_values_int16,
+                                 map<string, map<CELL_IDX_T, deque<int8_t>>>& all_attr_values_int8,
+                                 map<string, map<CELL_IDX_T, deque<float>>>& all_attr_values_float)
 {
   PyObject *idx_key, *idx_value;
   Py_ssize_t idx_pos = 0;
@@ -1049,16 +1050,16 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       cell::validate_tree(tree);
     }
 
-  const vector<SECTION_IDX_T> & src_vector=get<1>(tree);
-  const vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
-  const vector<SECTION_IDX_T> & sections=get<3>(tree);
-  const vector<COORD_T> & xcoords=get<4>(tree);
-  const vector<COORD_T> & ycoords=get<5>(tree);
-  const vector<COORD_T> & zcoords=get<6>(tree);
-  const vector<REALVAL_T> & radiuses=get<7>(tree);
-  const vector<LAYER_IDX_T> & layers=get<8>(tree);
-  const vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
-  const vector<SWC_TYPE_T> & swc_types=get<10>(tree);
+  const deque<SECTION_IDX_T> & src_vector=get<1>(tree);
+  const deque<SECTION_IDX_T> & dst_vector=get<2>(tree);
+  const deque<SECTION_IDX_T> & sections=get<3>(tree);
+  const deque<COORD_T> & xcoords=get<4>(tree);
+  const deque<COORD_T> & ycoords=get<5>(tree);
+  const deque<COORD_T> & zcoords=get<6>(tree);
+  const deque<REALVAL_T> & radiuses=get<7>(tree);
+  const deque<LAYER_IDX_T> & layers=get<8>(tree);
+  const deque<PARENT_NODE_IDX_T> & parents=get<9>(tree);
+  const deque<SWC_TYPE_T> & swc_types=get<10>(tree);
                            
   size_t num_nodes = xcoords.size();
   npy_intp ind = 0;
@@ -1082,12 +1083,12 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       PyObject *py_section_node_map = PyDict_New();
       PyObject *py_section_key; PyObject *py_section_nodes;
       set<NODE_IDX_T> marked_nodes;
-      map <SECTION_IDX_T, vector<NODE_IDX_T> > section_node_map;
+      map <SECTION_IDX_T, deque<NODE_IDX_T> > section_node_map;
       size_t num_sections = sections[sections_ptr];
       sections_ptr++;
       while (sections_ptr < sections.size())
         {
-          vector<NODE_IDX_T> section_nodes;
+          deque<NODE_IDX_T> section_nodes;
           size_t num_section_nodes = sections[sections_ptr];
           npy_intp nodes_dims[1], nodes_ind = 0;
           nodes_dims[0]    = num_section_nodes;
@@ -1135,11 +1136,11 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           throw_assert (node_map_it != section_node_map.end(),
                         "py_build_tree_value: invalid section index in tree source vector");
           // find parent point in destination section and determine location where the two sections are located
-          vector<NODE_IDX_T>& src_section_nodes = node_map_it->second;
+          deque<NODE_IDX_T>& src_section_nodes = node_map_it->second;
           node_map_it = section_node_map.find(dst_vector[s]);
           throw_assert (node_map_it != section_node_map.end(),
                         "py_build_tree_value: invalid section index in tree source vector");
-          vector<NODE_IDX_T>& dst_section_nodes = node_map_it->second;
+          deque<NODE_IDX_T>& dst_section_nodes = node_map_it->second;
           const NODE_IDX_T dst_start = dst_section_nodes[0];
           const PARENT_NODE_IDX_T dst_start_parent = parents[dst_start];
 
@@ -1300,16 +1301,16 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
                                  
       PyObject *py_namespace_dict = PyDict_New();
 
-      const vector <vector <float>> &float_attrs     = attr_map.find<float>(idx);
-      const vector <vector <uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(idx);
-      const vector <vector <int8_t>> &int8_attrs     = attr_map.find<int8_t>(idx);
-      const vector <vector <uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(idx);
-      const vector <vector <uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(idx);
-      const vector <vector <int32_t>> &int32_attrs   = attr_map.find<int32_t>(idx);
+      const vector <deque <float>> &float_attrs     = attr_map.find<float>(idx);
+      const vector <deque <uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(idx);
+      const vector <deque <int8_t>> &int8_attrs     = attr_map.find<int8_t>(idx);
+      const vector <deque <uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(idx);
+      const vector <deque <uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(idx);
+      const vector <deque <int32_t>> &int32_attrs   = attr_map.find<int32_t>(idx);
 
       for (size_t i=0; i<float_attrs.size(); i++)
         {
-          const vector<float> &attr_value = float_attrs[i];
+          const deque<float> &attr_value = float_attrs[i];
           dims[0] = attr_value.size();
           PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
           float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1326,7 +1327,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         }
       for (size_t i=0; i<uint8_attrs.size(); i++)
         {
-          const vector<uint8_t> &attr_value = uint8_attrs[i];
+          const deque<uint8_t> &attr_value = uint8_attrs[i];
           dims[0] = attr_value.size();
           PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
           uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1342,7 +1343,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         }
       for (size_t i=0; i<int8_attrs.size(); i++)
         {
-          const vector<int8_t> &attr_value = int8_attrs[i];
+          const deque<int8_t> &attr_value = int8_attrs[i];
           dims[0] = attr_value.size();
           PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
           int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1358,7 +1359,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         }
       for (size_t i=0; i<uint16_attrs.size(); i++)
         {
-          const vector<uint16_t> &attr_value = uint16_attrs[i];
+          const deque<uint16_t> &attr_value = uint16_attrs[i];
           dims[0] = attr_value.size();
           PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
           uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1374,7 +1375,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         }
       for (size_t i=0; i<uint32_attrs.size(); i++)
         {
-          const vector<uint32_t> &attr_value = uint32_attrs[i];
+          const deque<uint32_t> &attr_value = uint32_attrs[i];
           dims[0] = attr_value.size();
           PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
           uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1390,7 +1391,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         }
       for (size_t i=0; i<int32_attrs.size(); i++)
         {
-          const vector<int32_t> &attr_value = int32_attrs[i];
+          const deque<int32_t> &attr_value = int32_attrs[i];
           dims[0] = attr_value.size();
           PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
           int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1582,17 +1583,17 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
   npy_intp dims[1];
   npy_intp ind = 0;
                            
-  const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
-  const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
-  const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
-  const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
-  const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
-  const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
-  const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+  const vector < deque <float>> &float_attrs      = attr_map.find<float>(key);
+  const vector < deque <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+  const vector < deque <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+  const vector < deque <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+  const vector < deque <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+  const vector < deque <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+  const vector < deque <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
                            
   for (size_t i=0; i<float_attrs.size(); i++)
     {
-      const vector<float> &attr_value = float_attrs[i];
+      const deque<float> &attr_value = float_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
       float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1609,7 +1610,7 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
 
   for (size_t i=0; i<uint8_attrs.size(); i++)
     {
-      const vector<uint8_t> &attr_value = uint8_attrs[i];
+      const deque<uint8_t> &attr_value = uint8_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
       uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1626,7 +1627,7 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
                            
   for (size_t i=0; i<int8_attrs.size(); i++)
     {
-      const vector<int8_t> &attr_value = int8_attrs[i];
+      const deque<int8_t> &attr_value = int8_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
       int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1644,7 +1645,7 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
                            
   for (size_t i=0; i<uint16_attrs.size(); i++)
     {
-      const vector<uint16_t> &attr_value = uint16_attrs[i];
+      const deque<uint16_t> &attr_value = uint16_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
       uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1663,7 +1664,7 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
                            
   for (size_t i=0; i<int16_attrs.size(); i++)
     {
-      const vector<int16_t> &attr_value = int16_attrs[i];
+      const deque<int16_t> &attr_value = int16_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
       int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1681,7 +1682,7 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
 
   for (size_t i=0; i<uint32_attrs.size(); i++)
     {
-      const vector<uint32_t> &attr_value = uint32_attrs[i];
+      const deque<uint32_t> &attr_value = uint32_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
       uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1699,7 +1700,7 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
                            
   for (size_t i=0; i<int32_attrs.size(); i++)
     {
-      const vector<int32_t> &attr_value = int32_attrs[i];
+      const deque<int32_t> &attr_value = int32_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
       int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1730,13 +1731,13 @@ PyObject* py_build_cell_attr_tuple_info(const NamedAttrMap& attr_map,
       {
         CELL_IDX_T key = *attr_map.index_set.begin();
         
-        const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
-        const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
-        const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
-        const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
-        const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
-        const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
-        const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+        const vector < deque <float>> &float_attrs      = attr_map.find<float>(key);
+        const vector < deque <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+        const vector < deque <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+        const vector < deque <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+        const vector < deque <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+        const vector < deque <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+        const vector < deque <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
 
         size_t attr_pos = 0;
         for (size_t i=0; i<float_attrs.size(); i++)
@@ -1798,13 +1799,13 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
   npy_intp dims[1];
   npy_intp ind = 0;
   
-  const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
-  const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
-  const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
-  const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
-  const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
-  const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
-  const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+  const vector < deque <float>> &float_attrs      = attr_map.find<float>(key);
+  const vector < deque <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+  const vector < deque <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+  const vector < deque <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+  const vector < deque <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+  const vector < deque <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+  const vector < deque <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
 
   size_t n_elements = 0;
   for (size_t i=0; i<attr_names.size(); i++)
@@ -1818,7 +1819,7 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
   size_t attr_pos = 0;
   for (size_t i=0; i<float_attrs.size(); i++)
     {
-      const vector<float> &attr_value = float_attrs[i];
+      const deque<float> &attr_value = float_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
       float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1832,7 +1833,7 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
 
   for (size_t i=0; i<uint8_attrs.size(); i++)
     {
-      const vector<uint8_t> &attr_value = uint8_attrs[i];
+      const deque<uint8_t> &attr_value = uint8_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
       uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1846,7 +1847,7 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
                            
   for (size_t i=0; i<int8_attrs.size(); i++)
     {
-      const vector<int8_t> &attr_value = int8_attrs[i];
+      const deque<int8_t> &attr_value = int8_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
       int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1860,7 +1861,7 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
                            
   for (size_t i=0; i<uint16_attrs.size(); i++)
     {
-      const vector<uint16_t> &attr_value = uint16_attrs[i];
+      const deque<uint16_t> &attr_value = uint16_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
       uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1874,7 +1875,7 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
 
   for (size_t i=0; i<int16_attrs.size(); i++)
     {
-      const vector<int16_t> &attr_value = int16_attrs[i];
+      const deque<int16_t> &attr_value = int16_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
       int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1888,7 +1889,7 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
 
   for (size_t i=0; i<uint32_attrs.size(); i++)
     {
-      const vector<uint32_t> &attr_value = uint32_attrs[i];
+      const deque<uint32_t> &attr_value = uint32_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
       uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1902,7 +1903,7 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
                            
   for (size_t i=0; i<int32_attrs.size(); i++)
     {
-      const vector<int32_t> &attr_value = int32_attrs[i];
+      const deque<int32_t> &attr_value = int32_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
       int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -1930,13 +1931,13 @@ PyTypeObject* py_build_cell_attr_struct_type(const NamedAttrMap& attr_map,
       {
         CELL_IDX_T key = *attr_map.index_set.begin();
         
-        const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
-        const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
-        const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
-        const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
-        const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
-        const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
-        const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+        const vector < deque <float>> &float_attrs      = attr_map.find<float>(key);
+        const vector < deque <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+        const vector < deque <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+        const vector < deque <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+        const vector < deque <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+        const vector < deque <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+        const vector < deque <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
 
         for (size_t i=0; i<float_attrs.size(); i++)
           {
@@ -2013,18 +2014,18 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
   PyObject* py_attrval = PyStructSequence_New(struct_type);
   throw_assert_nomsg(py_attrval != NULL);
   
-  const vector < vector <float>> &float_attrs      = attr_map.find<float>(key);
-  const vector < vector <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
-  const vector < vector <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
-  const vector < vector <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
-  const vector < vector <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
-  const vector < vector <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
-  const vector < vector <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
+  const vector < deque <float>> &float_attrs      = attr_map.find<float>(key);
+  const vector < deque <uint8_t> > &uint8_attrs   = attr_map.find<uint8_t>(key);
+  const vector < deque <int8_t> > &int8_attrs     = attr_map.find<int8_t>(key);
+  const vector < deque <uint16_t> > &uint16_attrs = attr_map.find<uint16_t>(key);
+  const vector < deque <int16_t> > &int16_attrs   = attr_map.find<int16_t>(key);
+  const vector < deque <uint32_t> > &uint32_attrs = attr_map.find<uint32_t>(key);
+  const vector < deque <int32_t> > &int32_attrs   = attr_map.find<int32_t>(key);
 
   size_t attr_pos = 0;
   for (size_t i=0; i<float_attrs.size(); i++)
     {
-      const vector<float> &attr_value = float_attrs[i];
+      const deque<float> &attr_value = float_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
       float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -2038,7 +2039,7 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
 
   for (size_t i=0; i<uint8_attrs.size(); i++)
     {
-      const vector<uint8_t> &attr_value = uint8_attrs[i];
+      const deque<uint8_t> &attr_value = uint8_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
       uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -2052,7 +2053,7 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
                            
   for (size_t i=0; i<int8_attrs.size(); i++)
     {
-      const vector<int8_t> &attr_value = int8_attrs[i];
+      const deque<int8_t> &attr_value = int8_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
       int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -2066,7 +2067,7 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
                            
   for (size_t i=0; i<uint16_attrs.size(); i++)
     {
-      const vector<uint16_t> &attr_value = uint16_attrs[i];
+      const deque<uint16_t> &attr_value = uint16_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
       uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -2080,7 +2081,7 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
 
   for (size_t i=0; i<int16_attrs.size(); i++)
     {
-      const vector<int16_t> &attr_value = int16_attrs[i];
+      const deque<int16_t> &attr_value = int16_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
       int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -2094,7 +2095,7 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
 
   for (size_t i=0; i<uint32_attrs.size(); i++)
     {
-      const vector<uint32_t> &attr_value = uint32_attrs[i];
+      const deque<uint32_t> &attr_value = uint32_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
       uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -2108,7 +2109,7 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
                            
   for (size_t i=0; i<int32_attrs.size(); i++)
     {
-      const vector<int32_t> &attr_value = int32_attrs[i];
+      const deque<int32_t> &attr_value = int32_attrs[i];
       dims[0] = attr_value.size();
       PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
       int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
@@ -6574,13 +6575,13 @@ extern "C"
     
         int npy_type=0;
         
-        map <string, map <CELL_IDX_T, vector< uint32_t >>> all_attr_values_uint32;
-        map <string, map <CELL_IDX_T, vector< int32_t >>>  all_attr_values_int32;
-        map <string, map <CELL_IDX_T, vector< uint16_t >>> all_attr_values_uint16;
-        map <string, map <CELL_IDX_T, vector< int16_t >>>  all_attr_values_int16;
-        map <string, map <CELL_IDX_T, vector< uint8_t >>>  all_attr_values_uint8;
-        map <string, map <CELL_IDX_T, vector< int8_t >>>   all_attr_values_int8;
-        map <string, map <CELL_IDX_T, vector< float >>>    all_attr_values_float;
+        map <string, map <CELL_IDX_T, deque< uint32_t >>> all_attr_values_uint32;
+        map <string, map <CELL_IDX_T, deque< int32_t >>>  all_attr_values_int32;
+        map <string, map <CELL_IDX_T, deque< uint16_t >>> all_attr_values_uint16;
+        map <string, map <CELL_IDX_T, deque< int16_t >>>  all_attr_values_int16;
+        map <string, map <CELL_IDX_T, deque< uint8_t >>>  all_attr_values_uint8;
+        map <string, map <CELL_IDX_T, deque< int8_t >>>   all_attr_values_int8;
+        map <string, map <CELL_IDX_T, deque< float >>>    all_attr_values_float;
         
         build_cell_attr_value_maps(idx_values,
                                    all_attr_values_uint32,
@@ -6792,13 +6793,13 @@ extern "C"
         vector<string> attr_names;
         vector<int> attr_types;
         
-        map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-        map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
-        map<string, map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-        map<string, map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
-        map<string, map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-        map<string, map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
-        map<string, map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
+        map<string, map<CELL_IDX_T, deque<uint32_t> >> all_attr_values_uint32;
+        map<string, map<CELL_IDX_T, deque<int32_t> >> all_attr_values_int32;
+        map<string, map<CELL_IDX_T, deque<uint16_t> >> all_attr_values_uint16;
+        map<string, map<CELL_IDX_T, deque<int16_t> >> all_attr_values_int16;
+        map<string, map<CELL_IDX_T, deque<uint8_t> >>  all_attr_values_uint8;
+        map<string, map<CELL_IDX_T, deque<int8_t> >>  all_attr_values_int8;
+        map<string, map<CELL_IDX_T, deque<float> >>  all_attr_values_float;
 
         build_cell_attr_value_maps(idx_values,
                                    all_attr_values_uint32,
@@ -7021,13 +7022,13 @@ extern "C"
         }
         
 
-        map<string, map<CELL_IDX_T, vector<uint32_t> >> all_attr_values_uint32;
-        map<string, map<CELL_IDX_T, vector<int32_t> >> all_attr_values_int32;
-        map<string, map<CELL_IDX_T, vector<uint16_t> >> all_attr_values_uint16;
-        map<string, map<CELL_IDX_T, vector<int16_t> >> all_attr_values_int16;
-        map<string, map<CELL_IDX_T, vector<uint8_t> >>  all_attr_values_uint8;
-        map<string, map<CELL_IDX_T, vector<int8_t> >>  all_attr_values_int8;
-        map<string, map<CELL_IDX_T, vector<float> >>  all_attr_values_float;
+        map<string, map<CELL_IDX_T, deque<uint32_t> >> all_attr_values_uint32;
+        map<string, map<CELL_IDX_T, deque<int32_t> >> all_attr_values_int32;
+        map<string, map<CELL_IDX_T, deque<uint16_t> >> all_attr_values_uint16;
+        map<string, map<CELL_IDX_T, deque<int16_t> >> all_attr_values_int16;
+        map<string, map<CELL_IDX_T, deque<uint8_t> >>  all_attr_values_uint8;
+        map<string, map<CELL_IDX_T, deque<int8_t> >>  all_attr_values_int8;
+        map<string, map<CELL_IDX_T, deque<float> >>  all_attr_values_float;
         
         build_cell_attr_value_maps(idx_values,
                                    all_attr_values_uint32,
@@ -7073,16 +7074,16 @@ extern "C"
     
         forward_list<neurotree_t> tree_list;
         
-        map<CELL_IDX_T, vector<float> >& xcoord_values = xcoord_map_it->second;
-        map<CELL_IDX_T, vector<float> >& ycoord_values = ycoord_map_it->second;
-        map<CELL_IDX_T, vector<float> >& zcoord_values = zcoord_map_it->second;
-        map<CELL_IDX_T, vector<float> >& radius_values = radius_map_it->second;
-        map<CELL_IDX_T, vector<int32_t> >& parent_values = parent_map_it->second;
-        map<CELL_IDX_T, vector<uint16_t> >& src_values = src_map_it->second;
-        map<CELL_IDX_T, vector<uint16_t> >& dst_values = dst_map_it->second;
-        map<CELL_IDX_T, vector<uint16_t> >& sections_values = sections_map_it->second;
-        map<CELL_IDX_T, vector<int8_t> >& layer_values = layer_map_it->second;
-        map<CELL_IDX_T, vector<int8_t> >& swc_type_values = swc_type_map_it->second;
+        map<CELL_IDX_T, deque<float> >& xcoord_values = xcoord_map_it->second;
+        map<CELL_IDX_T, deque<float> >& ycoord_values = ycoord_map_it->second;
+        map<CELL_IDX_T, deque<float> >& zcoord_values = zcoord_map_it->second;
+        map<CELL_IDX_T, deque<float> >& radius_values = radius_map_it->second;
+        map<CELL_IDX_T, deque<int32_t> >& parent_values = parent_map_it->second;
+        map<CELL_IDX_T, deque<uint16_t> >& src_values = src_map_it->second;
+        map<CELL_IDX_T, deque<uint16_t> >& dst_values = dst_map_it->second;
+        map<CELL_IDX_T, deque<uint16_t> >& sections_values = sections_map_it->second;
+        map<CELL_IDX_T, deque<int8_t> >& layer_values = layer_map_it->second;
+        map<CELL_IDX_T, deque<int8_t> >& swc_type_values = swc_type_map_it->second;
         
         
         auto sections_it  = sections_values.begin();

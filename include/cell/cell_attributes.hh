@@ -271,7 +271,7 @@ namespace neuroh5
      const std::string&              pop_name,
      const CELL_IDX_T&               pop_start,
      const std::string&              attr_name,
-     const std::map<CELL_IDX_T, vector<T>>& value_map,
+     const std::map<CELL_IDX_T, deque<T>>& value_map,
      const size_t io_size,
      const data::optional_hid        data_type,
      const CellIndex                 index_type = IndexOwner,
@@ -337,7 +337,7 @@ namespace neuroh5
       uint32_t local_value_size=0;
       for (auto const& element : value_map)
         {
-          const vector<T> &v = element.second;
+          const deque<T> &v = element.second;
           local_value_size += v.size();
         }
       vector<uint32_t> sendbuf_size_values(size, local_value_size);
@@ -365,7 +365,7 @@ namespace neuroh5
       for (auto const& element : value_map)
         {
           const CELL_IDX_T gid = element.first;
-          const vector<T> &v = element.second;
+          const deque<T> &v = element.second;
           index_vector.push_back(gid);
           attr_ptr.push_back(value_offset);
           value_vector.insert(value_vector.end(),v.begin(),v.end());
@@ -662,7 +662,7 @@ namespace neuroh5
      const std::string&              pop_name,
      const CELL_IDX_T&               pop_start,
      const std::string&              attr_name,
-     const std::map<CELL_IDX_T, vector<T>>& value_map,
+     const std::map<CELL_IDX_T, deque<T>>& value_map,
      const size_t io_size,
      const data::optional_hid        data_type,
      const CellIndex                 index_type = IndexOwner,
@@ -728,7 +728,7 @@ namespace neuroh5
       uint32_t local_value_size=0;
       for (auto const& element : value_map)
         {
-          const vector<T> &v = element.second;
+          const deque<T> &v = element.second;
           local_value_size += v.size();
         }
       vector<uint32_t> sendbuf_size_values(size, local_value_size);
@@ -754,7 +754,7 @@ namespace neuroh5
       for (auto const& element : value_map)
         {
           const CELL_IDX_T gid = element.first;
-          const vector<T> &v = element.second;
+          const deque<T> &v = element.second;
           index_vector.push_back(gid);
           attr_ptr.push_back(value_offset);
           value_vector.insert(value_vector.end(),v.begin(),v.end());
