@@ -374,19 +374,19 @@ int main(int argc, char** argv)
   map<rank_t, map<CELL_IDX_T, neurotree_t> > tree_subset_rank_map;
 
 
-  map <string, vector<map< CELL_IDX_T, vector<float> > > >
+  map <string, vector<map< CELL_IDX_T, deque<float> > > >
     subset_float_value_map;
-  map <string, vector<map< CELL_IDX_T, vector<uint8_t> > > >
+  map <string, vector<map< CELL_IDX_T, deque<uint8_t> > > >
     subset_uint8_value_map;
-  map <string, vector<map< CELL_IDX_T, vector<int8_t> > > >
+  map <string, vector<map< CELL_IDX_T, deque<int8_t> > > >
     subset_int8_value_map;
-  map <string, vector<map< CELL_IDX_T, vector<uint16_t> > > >
+  map <string, vector<map< CELL_IDX_T, deque<uint16_t> > > >
     subset_uint16_value_map;
-  map <string, vector<map< CELL_IDX_T, vector<int16_t> > > >
+  map <string, vector<map< CELL_IDX_T, deque<int16_t> > > >
     subset_int16_value_map;
-  map <string, vector<map< CELL_IDX_T, vector<uint32_t> > > >
+  map <string, vector<map< CELL_IDX_T, deque<uint32_t> > > >
     subset_uint32_value_map;
-  map <string, vector<map< CELL_IDX_T, vector<int32_t> > > >
+  map <string, vector<map< CELL_IDX_T, deque<int32_t> > > >
     subset_int32_value_map;
 
   
@@ -449,48 +449,48 @@ int main(int argc, char** argv)
               const vector<deque<uint32_t>> uint32_values = attr_map.find<uint32_t>(idx);
               const vector<deque<int32_t>>  int32_values  = attr_map.find<int32_t>(idx);
 
-              vector<map< CELL_IDX_T, vector<float> > > 
+              vector<map< CELL_IDX_T, deque<float> > > 
                 subset_float_values(num_attrs[data::AttrMap::attr_index_float]);
-              vector<map< CELL_IDX_T, vector<uint8_t> > > 
+              vector<map< CELL_IDX_T, deque<uint8_t> > > 
                 subset_uint8_values(num_attrs[data::AttrMap::attr_index_uint8]);
-              vector<map< CELL_IDX_T, vector<int8_t> > > 
+              vector<map< CELL_IDX_T, deque<int8_t> > > 
                 subset_int8_values(num_attrs[data::AttrMap::attr_index_int8]);
-              vector<map< CELL_IDX_T, vector<uint16_t> > > 
+              vector<map< CELL_IDX_T, deque<uint16_t> > > 
                 subset_uint16_values(num_attrs[data::AttrMap::attr_index_uint16]);
-              vector<map< CELL_IDX_T, vector<int16_t> > > 
+              vector<map< CELL_IDX_T, deque<int16_t> > > 
                 subset_int16_values(num_attrs[data::AttrMap::attr_index_int16]);
-              vector<map< CELL_IDX_T, vector<uint32_t> > > 
+              vector<map< CELL_IDX_T, deque<uint32_t> > > 
                 subset_uint32_values(num_attrs[data::AttrMap::attr_index_uint32]);
-              vector<map< CELL_IDX_T, vector<int32_t> > > 
+              vector<map< CELL_IDX_T, deque<int32_t> > > 
                 subset_int32_values(num_attrs[data::AttrMap::attr_index_int32]);
               
               for (size_t i=0; i<float_values.size(); i++)
                 {
-                  subset_float_values[i].insert(make_pair(idx1, vector<float>(float_values[i].begin(), float_values[i].end())));
+                  subset_float_values[i].insert(make_pair(idx1, deque<float>(float_values[i].begin(), float_values[i].end())));
                 }
               for (size_t i=0; i<uint8_values.size(); i++)
                 {
-                  subset_uint8_values[i].insert(make_pair(idx1, vector<uint8_t>(uint8_values[i].begin(), uint8_values[i].end())));
+                  subset_uint8_values[i].insert(make_pair(idx1, deque<uint8_t>(uint8_values[i].begin(), uint8_values[i].end())));
                 }
               for (size_t i=0; i<int8_values.size(); i++)
                 {
-                  subset_int8_values[i].insert(make_pair(idx1, vector<int8_t>(int8_values[i].begin(), int8_values[i].end())));
+                  subset_int8_values[i].insert(make_pair(idx1, deque<int8_t>(int8_values[i].begin(), int8_values[i].end())));
                 }
               for (size_t i=0; i<uint16_values.size(); i++)
                 {
-                  subset_uint16_values[i].insert(make_pair(idx1, vector<uint16_t>(uint16_values[i].begin(), uint16_values[i].end())));
+                  subset_uint16_values[i].insert(make_pair(idx1, deque<uint16_t>(uint16_values[i].begin(), uint16_values[i].end())));
                 }
               for (size_t i=0; i<int16_values.size(); i++)
                 {
-                  subset_int16_values[i].insert(make_pair(idx1, vector<int16_t>(int16_values[i].begin(), int16_values[i].end())));
+                  subset_int16_values[i].insert(make_pair(idx1, deque<int16_t>(int16_values[i].begin(), int16_values[i].end())));
                 }
               for (size_t i=0; i<uint32_values.size(); i++)
                 {
-                  subset_uint32_values[i].insert(make_pair(idx1, vector<uint32_t>(uint32_values[i].begin(), uint32_values[i].end())));
+                  subset_uint32_values[i].insert(make_pair(idx1, deque<uint32_t>(uint32_values[i].begin(), uint32_values[i].end())));
                 }
               for (size_t i=0; i<int32_values.size(); i++)
                 {
-                  subset_int32_values[i].insert(make_pair(idx1, vector<int32_t>(int32_values[i].begin(), int32_values[i].end())));
+                  subset_int32_values[i].insert(make_pair(idx1, deque<int32_t>(int32_values[i].begin(), int32_values[i].end())));
                 }
 
               subset_float_value_map[attr_name_space]  = subset_float_values;
@@ -637,19 +637,19 @@ int main(int argc, char** argv)
 
       for (string& attr_name_space : attr_name_spaces)
         {
-          const vector<map< CELL_IDX_T, vector<float> > > &
+          const vector<map< CELL_IDX_T, deque<float> > > &
             subset_float_values = subset_float_value_map[attr_name_space];
-          const vector<map< CELL_IDX_T, vector<uint8_t> > > &
+          const vector<map< CELL_IDX_T, deque<uint8_t> > > &
             subset_uint8_values = subset_uint8_value_map[attr_name_space];
-          const vector<map< CELL_IDX_T, vector<int8_t> > > 
+          const vector<map< CELL_IDX_T, deque<int8_t> > > 
             subset_int8_values = subset_int8_value_map[attr_name_space];
-          const vector<map< CELL_IDX_T, vector<uint16_t> > > 
+          const vector<map< CELL_IDX_T, deque<uint16_t> > > 
             subset_uint16_values = subset_uint16_value_map[attr_name_space];
-          const vector<map< CELL_IDX_T, vector<int16_t> > > 
+          const vector<map< CELL_IDX_T, deque<int16_t> > > 
             subset_int16_values = subset_int16_value_map[attr_name_space];
-          const vector<map< CELL_IDX_T, vector<uint32_t> > > 
+          const vector<map< CELL_IDX_T, deque<uint32_t> > > 
             subset_uint32_values = subset_uint32_value_map[attr_name_space];
-          const vector<map< CELL_IDX_T, vector<int32_t> > > 
+          const vector<map< CELL_IDX_T, deque<int32_t> > > 
             subset_int32_values = subset_int32_value_map[attr_name_space];
 
           const vector<vector<string>>& attr_names = attr_names_map[attr_name_space];
