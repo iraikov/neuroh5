@@ -4,13 +4,14 @@
 ///
 ///  Validate tree structure.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 
 #include "debug.hh"
 
 #include <set>
+#include <deque>
 
 #include "neuroh5_types.hh"
 #include "throw_assert.hh"
@@ -27,16 +28,16 @@ namespace neuroh5
     void validate_tree(const neurotree_t& tree)
     {
       const CELL_IDX_T tree_id = get<0>(tree);
-      const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);
-      const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
-      const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
-      const std::vector<COORD_T> & xcoords=get<4>(tree);
-      const std::vector<COORD_T> & ycoords=get<5>(tree);
-      const std::vector<COORD_T> & zcoords=get<6>(tree);
-      const std::vector<REALVAL_T> & radiuses=get<7>(tree);
-      const std::vector<LAYER_IDX_T> & layers=get<8>(tree);
-      const vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
-      const vector<SWC_TYPE_T> & swc_types=get<10>(tree);
+      const std::deque<SECTION_IDX_T> & src_vector=get<1>(tree);
+      const std::deque<SECTION_IDX_T> & dst_vector=get<2>(tree);
+      const std::deque<SECTION_IDX_T> & sections=get<3>(tree);
+      const std::deque<COORD_T> & xcoords=get<4>(tree);
+      const std::deque<COORD_T> & ycoords=get<5>(tree);
+      const std::deque<COORD_T> & zcoords=get<6>(tree);
+      const std::deque<REALVAL_T> & radiuses=get<7>(tree);
+      const std::deque<LAYER_IDX_T> & layers=get<8>(tree);
+      const deque<PARENT_NODE_IDX_T> & parents=get<9>(tree);
+      const deque<SWC_TYPE_T> & swc_types=get<10>(tree);
 
       throw_assert_nomsg(src_vector.size() > 0);
       throw_assert_nomsg(dst_vector.size() > 0);

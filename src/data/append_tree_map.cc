@@ -5,7 +5,7 @@
 ///
 ///  Populates a mapping between ranks and tree values.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include <vector>
@@ -30,19 +30,19 @@ namespace neuroh5
     {
       for (CELL_IDX_T gid : attr_values.index_set)
         {
-          const vector<SECTION_IDX_T>& src_vector = attr_values.find_name<SECTION_IDX_T>(hdf5::SRCSEC, gid);
-          const vector<SECTION_IDX_T>& dst_vector = attr_values.find_name<SECTION_IDX_T>(hdf5::DSTSEC, gid);
+          const deque<SECTION_IDX_T>& src_vector = attr_values.find_name<SECTION_IDX_T>(hdf5::SRCSEC, gid);
+          const deque<SECTION_IDX_T>& dst_vector = attr_values.find_name<SECTION_IDX_T>(hdf5::DSTSEC, gid);
 
-          const vector<SECTION_IDX_T>& sections = attr_values.find_name<SECTION_IDX_T>(hdf5::SECTION, gid);
+          const deque<SECTION_IDX_T>& sections = attr_values.find_name<SECTION_IDX_T>(hdf5::SECTION, gid);
         
-          const vector<COORD_T>& xcoords =  attr_values.find_name<COORD_T>(hdf5::X_COORD, gid);
-          const vector<COORD_T>& ycoords =  attr_values.find_name<COORD_T>(hdf5::Y_COORD, gid);
-          const vector<COORD_T>& zcoords =  attr_values.find_name<COORD_T>(hdf5::Z_COORD, gid);
+          const deque<COORD_T>& xcoords =  attr_values.find_name<COORD_T>(hdf5::X_COORD, gid);
+          const deque<COORD_T>& ycoords =  attr_values.find_name<COORD_T>(hdf5::Y_COORD, gid);
+          const deque<COORD_T>& zcoords =  attr_values.find_name<COORD_T>(hdf5::Z_COORD, gid);
 
-          const vector<REALVAL_T>& radiuses    =  attr_values.find_name<REALVAL_T>(hdf5::RADIUS, gid);
-          const vector<LAYER_IDX_T>& layers    =  attr_values.find_name<LAYER_IDX_T>(hdf5::LAYER, gid);
-          const vector<PARENT_NODE_IDX_T>& parents = attr_values.find_name<PARENT_NODE_IDX_T>(hdf5::PARENT, gid);
-          const vector<SWC_TYPE_T> swc_types   = attr_values.find_name<SWC_TYPE_T>(hdf5::SWCTYPE, gid);
+          const deque<REALVAL_T>& radiuses    =  attr_values.find_name<REALVAL_T>(hdf5::RADIUS, gid);
+          const deque<LAYER_IDX_T>& layers    =  attr_values.find_name<LAYER_IDX_T>(hdf5::LAYER, gid);
+          const deque<PARENT_NODE_IDX_T>& parents = attr_values.find_name<PARENT_NODE_IDX_T>(hdf5::PARENT, gid);
+          const deque<SWC_TYPE_T> swc_types   = attr_values.find_name<SWC_TYPE_T>(hdf5::SWCTYPE, gid);
 
           neurotree_t tree = make_tuple(gid,src_vector,dst_vector,sections,
                                         xcoords,ycoords,zcoords,

@@ -10,6 +10,7 @@
 #include <mpi.h>
 #include <hdf5.h>
 
+#include <deque>
 #include <vector>
 #include <forward_list>
 
@@ -88,16 +89,16 @@ namespace neuroh5
                  hsize_t attr_size=0, sec_size=0, topo_size=0;
                  
                  const CELL_IDX_T &idx = get<0>(tree);
-                 const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);
-                 const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
-                 const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
-                 const std::vector<COORD_T> & xcoords=get<4>(tree);
-                 const std::vector<COORD_T> & ycoords=get<5>(tree);
-                 const std::vector<COORD_T> & zcoords=get<6>(tree);
-                 const std::vector<REALVAL_T> & radiuses=get<7>(tree);
-                 const std::vector<LAYER_IDX_T> & layers=get<8>(tree);
-                 const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
-                 const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
+                 const std::deque<SECTION_IDX_T> & src_vector=get<1>(tree);
+                 const std::deque<SECTION_IDX_T> & dst_vector=get<2>(tree);
+                 const std::deque<SECTION_IDX_T> & sections=get<3>(tree);
+                 const std::deque<COORD_T> & xcoords=get<4>(tree);
+                 const std::deque<COORD_T> & ycoords=get<5>(tree);
+                 const std::deque<COORD_T> & zcoords=get<6>(tree);
+                 const std::deque<REALVAL_T> & radiuses=get<7>(tree);
+                 const std::deque<LAYER_IDX_T> & layers=get<8>(tree);
+                 const std::deque<PARENT_NODE_IDX_T> & parents=get<9>(tree);
+                 const std::deque<SWC_TYPE_T> & swc_types=get<10>(tree);
                  
                  topo_size = src_vector.size();
                  throw_assert_nomsg(src_vector.size() == topo_size);
@@ -172,16 +173,16 @@ namespace neuroh5
 
                   hsize_t attr_size=0, topo_size=0;
                   
-                  const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);
-                  const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
-                  const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
-                  const std::vector<COORD_T> & xcoords=get<4>(tree);
-                  const std::vector<COORD_T> & ycoords=get<5>(tree);
-                  const std::vector<COORD_T> & zcoords=get<6>(tree);
-                  const std::vector<REALVAL_T> & radiuses=get<7>(tree);
-                  const std::vector<LAYER_IDX_T> & layers=get<8>(tree);
-                  const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
-                  const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
+                  const std::deque<SECTION_IDX_T> & src_vector=get<1>(tree);
+                  const std::deque<SECTION_IDX_T> & dst_vector=get<2>(tree);
+                  const std::deque<SECTION_IDX_T> & sections=get<3>(tree);
+                  const std::deque<COORD_T> & xcoords=get<4>(tree);
+                  const std::deque<COORD_T> & ycoords=get<5>(tree);
+                  const std::deque<COORD_T> & zcoords=get<6>(tree);
+                  const std::deque<REALVAL_T> & radiuses=get<7>(tree);
+                  const std::deque<LAYER_IDX_T> & layers=get<8>(tree);
+                  const std::deque<PARENT_NODE_IDX_T> & parents=get<9>(tree);
+                  const std::deque<SWC_TYPE_T> & swc_types=get<10>(tree);
                   
                   topo_size = src_vector.size();
                   throw_assert_nomsg(src_vector.size() == topo_size);

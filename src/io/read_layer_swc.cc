@@ -50,11 +50,11 @@ namespace neuroh5
     {
       int status = 0;
       Graph A, S;
-      std::vector<COORD_T> xcoords, ycoords, zcoords;  // coordinates of nodes
-      std::vector<REALVAL_T> radiuses;   // Radius
-      std::vector<LAYER_IDX_T> layers;   // Layer
-      std::vector<PARENT_NODE_IDX_T> parents;   // Parent point ids
-      std::vector<SWC_TYPE_T> swc_types;   // SWC types
+      std::deque<COORD_T> xcoords, ycoords, zcoords;  // coordinates of nodes
+      std::deque<REALVAL_T> radiuses;   // Radius
+      std::deque<LAYER_IDX_T> layers;   // Layer
+      std::deque<PARENT_NODE_IDX_T> parents;   // Parent point ids
+      std::deque<SWC_TYPE_T> swc_types;   // SWC types
       Graph::vertex_set roots;
 
       ifstream infile(file_name);
@@ -124,8 +124,8 @@ namespace neuroh5
       //cout << A;
 
       contraction_map_t contraction_map;
-      vector<SECTION_IDX_T> src_vector, dst_vector;
-      vector<SECTION_IDX_T> sec_vector;
+      deque<SECTION_IDX_T> src_vector, dst_vector;
+      deque<SECTION_IDX_T> sec_vector;
       S.insert_vertex(0);
 
       if (split_layers)
@@ -220,11 +220,11 @@ namespace neuroh5
     {
       int status = 0;
       Graph A, S;
-      std::vector<COORD_T> xcoords, ycoords, zcoords;  // coordinates of nodes
-      std::vector<REALVAL_T> radiuses;   // Radius
-      std::vector<LAYER_IDX_T> layers;   // Layer
-      std::vector<PARENT_NODE_IDX_T> parents;   // Parent point ids
-      std::vector<SWC_TYPE_T> swc_types;   // SWC types
+      std::deque<COORD_T> xcoords, ycoords, zcoords;  // coordinates of nodes
+      std::deque<REALVAL_T> radiuses;   // Radius
+      std::deque<LAYER_IDX_T> layers;   // Layer
+      std::deque<PARENT_NODE_IDX_T> parents;   // Parent point ids
+      std::deque<SWC_TYPE_T> swc_types;   // SWC types
       Graph::vertex_set roots;
 
       ifstream infile(file_name);
@@ -293,8 +293,8 @@ namespace neuroh5
       //cout << A;
     
       contraction_map_t contraction_map;
-      vector<SECTION_IDX_T> src_vector, dst_vector;
-      vector<SECTION_IDX_T> sec_vector;
+      deque<SECTION_IDX_T> src_vector, dst_vector;
+      deque<SECTION_IDX_T> sec_vector;
       S.insert_vertex(0);
 
       cell::contract_tree_dfs (A, swc_types, roots, S, contraction_map, 0, 0);

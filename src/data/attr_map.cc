@@ -4,12 +4,13 @@
 ///
 ///  Template specialization for AttrMap. 
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include <map>
 #include <set>
 #include <vector>
+#include <deque>
 
 #include "attr_map.hh"
 #include "throw_assert.hh"
@@ -25,145 +26,145 @@ namespace neuroh5
 
     
   template<>
-  const map< CELL_IDX_T, vector<float> >& AttrMap::attr_map<float> (size_t i) const
+  const map< CELL_IDX_T, deque<float> >& AttrMap::attr_map<float> (size_t i) const
   {
     return float_values[i];
   }
   template<>
-  const map< CELL_IDX_T, vector<uint8_t> >& AttrMap::attr_map<uint8_t> (size_t i) const
+  const map< CELL_IDX_T, deque<uint8_t> >& AttrMap::attr_map<uint8_t> (size_t i) const
   {
     return uint8_values[i];
   }
   template<>
-  const map< CELL_IDX_T, vector<int8_t> >& AttrMap::attr_map<int8_t> (size_t i) const
+  const map< CELL_IDX_T, deque<int8_t> >& AttrMap::attr_map<int8_t> (size_t i) const
   {
     return int8_values[i];
   }
   template<>
-  const map< CELL_IDX_T, vector<int16_t> >& AttrMap::attr_map<int16_t> (size_t i) const
+  const map< CELL_IDX_T, deque<int16_t> >& AttrMap::attr_map<int16_t> (size_t i) const
   {
     return int16_values[i];
   }
   template<>
-  const map< CELL_IDX_T, vector<uint16_t> >& AttrMap::attr_map<uint16_t> (size_t i) const
+  const map< CELL_IDX_T, deque<uint16_t> >& AttrMap::attr_map<uint16_t> (size_t i) const
   {
     return uint16_values[i];
   }
   template<>
-  const map< CELL_IDX_T, vector<uint32_t> >& AttrMap::attr_map<uint32_t> (size_t i) const
+  const map< CELL_IDX_T, deque<uint32_t> >& AttrMap::attr_map<uint32_t> (size_t i) const
   {
     return uint32_values[i];
   }
   template<>
-  const map< CELL_IDX_T, vector<int32_t> >& AttrMap::attr_map<int32_t> (size_t i) const
+  const map< CELL_IDX_T, deque<int32_t> >& AttrMap::attr_map<int32_t> (size_t i) const
   {
     return int32_values[i];
   }
     
   template<>
-  map< CELL_IDX_T, vector<float> >& AttrMap::attr_map<float> (size_t i)
+  map< CELL_IDX_T, deque<float> >& AttrMap::attr_map<float> (size_t i)
   {
     return float_values[i];
   }
   template<>
-  map< CELL_IDX_T, vector<uint8_t> >& AttrMap::attr_map<uint8_t> (size_t i)
+  map< CELL_IDX_T, deque<uint8_t> >& AttrMap::attr_map<uint8_t> (size_t i)
   {
     return uint8_values[i];
   }
   template<>
-  map< CELL_IDX_T, vector<int8_t> >& AttrMap::attr_map<int8_t> (size_t i)
+  map< CELL_IDX_T, deque<int8_t> >& AttrMap::attr_map<int8_t> (size_t i)
   {
     return int8_values[i];
   }
   template<>
-  map< CELL_IDX_T, vector<int16_t> >& AttrMap::attr_map<int16_t> (size_t i)
+  map< CELL_IDX_T, deque<int16_t> >& AttrMap::attr_map<int16_t> (size_t i)
   {
     return int16_values[i];
   }
   template<>
-  map< CELL_IDX_T, vector<uint16_t> >& AttrMap::attr_map<uint16_t> (size_t i)
+  map< CELL_IDX_T, deque<uint16_t> >& AttrMap::attr_map<uint16_t> (size_t i)
   {
     return uint16_values[i];
   }
   template<>
-  map< CELL_IDX_T, vector<uint32_t> >& AttrMap::attr_map<uint32_t> (size_t i)
+  map< CELL_IDX_T, deque<uint32_t> >& AttrMap::attr_map<uint32_t> (size_t i)
   {
     return uint32_values[i];
   }
   template<>
-  map< CELL_IDX_T, vector<int32_t> >& AttrMap::attr_map<int32_t> (size_t i)
+  map< CELL_IDX_T, deque<int32_t> >& AttrMap::attr_map<int32_t> (size_t i)
   {
     return int32_values[i];
   }
 
   template<>
-  const vector<map< CELL_IDX_T, vector<float> > >& AttrMap::attr_maps<float> () const
+  const vector<map< CELL_IDX_T, deque<float> > >& AttrMap::attr_maps<float> () const
   {
     return float_values;
   }
   template<>
-  const vector<map< CELL_IDX_T, vector<uint8_t> > >& AttrMap::attr_maps<uint8_t> () const
+  const vector<map< CELL_IDX_T, deque<uint8_t> > >& AttrMap::attr_maps<uint8_t> () const
   {
     return uint8_values;
   }
   template<>
-  const vector<map< CELL_IDX_T, vector<int8_t> > >& AttrMap::attr_maps<int8_t> () const
+  const vector<map< CELL_IDX_T, deque<int8_t> > >& AttrMap::attr_maps<int8_t> () const
   {
     return int8_values;
   }
   template<>
-  const vector<map< CELL_IDX_T, vector<uint16_t> > >& AttrMap::attr_maps<uint16_t> () const
+  const vector<map< CELL_IDX_T, deque<uint16_t> > >& AttrMap::attr_maps<uint16_t> () const
   {
     return uint16_values;
   }
   template<>
-  const vector<map< CELL_IDX_T, vector<int16_t> > >& AttrMap::attr_maps<int16_t> () const
+  const vector<map< CELL_IDX_T, deque<int16_t> > >& AttrMap::attr_maps<int16_t> () const
   {
     return int16_values;
   }
   template<>
-  const vector<map< CELL_IDX_T, vector<uint32_t> > >& AttrMap::attr_maps<uint32_t> () const
+  const vector<map< CELL_IDX_T, deque<uint32_t> > >& AttrMap::attr_maps<uint32_t> () const
   {
     return uint32_values;
   }
   template<>
-  const vector<map< CELL_IDX_T, vector<int32_t> > >& AttrMap::attr_maps<int32_t> () const
+  const vector<map< CELL_IDX_T, deque<int32_t> > >& AttrMap::attr_maps<int32_t> () const
   {
     return int32_values;
   }
 
   template<>
-  vector<map< CELL_IDX_T, vector<float> > >& AttrMap::attr_maps<float> ()
+  vector<map< CELL_IDX_T, deque<float> > >& AttrMap::attr_maps<float> ()
   {
     return float_values;
   }
   template<>
-  vector<map< CELL_IDX_T, vector<uint8_t> > >& AttrMap::attr_maps<uint8_t> ()
+  vector<map< CELL_IDX_T, deque<uint8_t> > >& AttrMap::attr_maps<uint8_t> ()
   {
     return uint8_values;
   }
   template<>
-  vector<map< CELL_IDX_T, vector<int8_t> > >& AttrMap::attr_maps<int8_t> ()
+  vector<map< CELL_IDX_T, deque<int8_t> > >& AttrMap::attr_maps<int8_t> ()
   {
     return int8_values;
   }
   template<>
-  vector<map< CELL_IDX_T, vector<uint16_t> > >& AttrMap::attr_maps<uint16_t> ()
+  vector<map< CELL_IDX_T, deque<uint16_t> > >& AttrMap::attr_maps<uint16_t> ()
   {
     return uint16_values;
   }
   template<>
-  vector<map< CELL_IDX_T, vector<int16_t> > >& AttrMap::attr_maps<int16_t> ()
+  vector<map< CELL_IDX_T, deque<int16_t> > >& AttrMap::attr_maps<int16_t> ()
   {
     return int16_values;
   }
   template<>
-  vector<map< CELL_IDX_T, vector<uint32_t> > >& AttrMap::attr_maps<uint32_t> ()
+  vector<map< CELL_IDX_T, deque<uint32_t> > >& AttrMap::attr_maps<uint32_t> ()
   {
     return uint32_values;
   }
   template<>
-  vector<map< CELL_IDX_T, vector<int32_t> > >& AttrMap::attr_maps<int32_t> ()
+  vector<map< CELL_IDX_T, deque<int32_t> > >& AttrMap::attr_maps<int32_t> ()
   {
     return int32_values;
   }

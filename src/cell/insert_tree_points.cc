@@ -30,27 +30,27 @@ namespace neuroh5
                             bool translate)
     {
       CELL_IDX_T tree_id = get<0>(dst_tree);
-      std::vector<SECTION_IDX_T> & src_vector=get<1>(dst_tree);
-      std::vector<SECTION_IDX_T> & dst_vector=get<2>(dst_tree);
-      std::vector<SECTION_IDX_T> & sections=get<3>(dst_tree);
-      std::vector<COORD_T> & xcoords=get<4>(dst_tree);
-      std::vector<COORD_T> & ycoords=get<5>(dst_tree);
-      std::vector<COORD_T> & zcoords=get<6>(dst_tree);
-      std::vector<REALVAL_T> & radiuses=get<7>(dst_tree);
-      std::vector<LAYER_IDX_T> & layers=get<8>(dst_tree);
-      std::vector<PARENT_NODE_IDX_T> & parents=get<9>(dst_tree);
-      std::vector<SWC_TYPE_T> & swc_types=get<10>(dst_tree);
+      std::deque<SECTION_IDX_T> & src_vector=get<1>(dst_tree);
+      std::deque<SECTION_IDX_T> & dst_vector=get<2>(dst_tree);
+      std::deque<SECTION_IDX_T> & sections=get<3>(dst_tree);
+      std::deque<COORD_T> & xcoords=get<4>(dst_tree);
+      std::deque<COORD_T> & ycoords=get<5>(dst_tree);
+      std::deque<COORD_T> & zcoords=get<6>(dst_tree);
+      std::deque<REALVAL_T> & radiuses=get<7>(dst_tree);
+      std::deque<LAYER_IDX_T> & layers=get<8>(dst_tree);
+      std::deque<PARENT_NODE_IDX_T> & parents=get<9>(dst_tree);
+      std::deque<SWC_TYPE_T> & swc_types=get<10>(dst_tree);
 
-      std::vector<SECTION_IDX_T> include_src_vector=get<1>(src_tree);
-      std::vector<SECTION_IDX_T> include_dst_vector=get<2>(src_tree);
-      std::vector<SECTION_IDX_T> include_sections=get<3>(src_tree);
-      std::vector<COORD_T> include_xcoords=get<4>(src_tree);
-      std::vector<COORD_T> include_ycoords=get<5>(src_tree);
-      std::vector<COORD_T> include_zcoords=get<6>(src_tree);
-      std::vector<REALVAL_T> include_radiuses=get<7>(src_tree);
-      std::vector<LAYER_IDX_T> include_layers=get<8>(src_tree);
-      std::vector<PARENT_NODE_IDX_T> include_parents=get<9>(src_tree);
-      std::vector<SWC_TYPE_T> include_swc_types=get<10>(src_tree);
+      std::deque<SECTION_IDX_T> include_src_vector=get<1>(src_tree);
+      std::deque<SECTION_IDX_T> include_dst_vector=get<2>(src_tree);
+      std::deque<SECTION_IDX_T> include_sections=get<3>(src_tree);
+      std::deque<COORD_T> include_xcoords=get<4>(src_tree);
+      std::deque<COORD_T> include_ycoords=get<5>(src_tree);
+      std::deque<COORD_T> include_zcoords=get<6>(src_tree);
+      std::deque<REALVAL_T> include_radiuses=get<7>(src_tree);
+      std::deque<LAYER_IDX_T> include_layers=get<8>(src_tree);
+      std::deque<PARENT_NODE_IDX_T> include_parents=get<9>(src_tree);
+      std::deque<SWC_TYPE_T> include_swc_types=get<10>(src_tree);
 
 
       size_t num_xpoints = xcoords.size();

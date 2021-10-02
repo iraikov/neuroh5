@@ -224,16 +224,16 @@ int main(int argc, char** argv)
 
   const neurotree_t input_tree = *std::next(input_tree_list.begin(), source_gid-pop_start);
       
-  const vector<SECTION_IDX_T> & src_vector=get<1>(input_tree);
-  const vector<SECTION_IDX_T> & dst_vector=get<2>(input_tree);
-  const vector<SECTION_IDX_T> & sections=get<3>(input_tree);
-  const vector<COORD_T> & xcoords=get<4>(input_tree);
-  const vector<COORD_T> & ycoords=get<5>(input_tree);
-  const vector<COORD_T> & zcoords=get<6>(input_tree);
-  const vector<REALVAL_T> & radiuses=get<7>(input_tree);
-  const vector<LAYER_IDX_T> & layers=get<8>(input_tree);
-  const vector<PARENT_NODE_IDX_T> & parents=get<9>(input_tree);
-  const vector<SWC_TYPE_T> & swc_types=get<10>(input_tree);
+  const deque<SECTION_IDX_T> & src_vector=get<1>(input_tree);
+  const deque<SECTION_IDX_T> & dst_vector=get<2>(input_tree);
+  const deque<SECTION_IDX_T> & sections=get<3>(input_tree);
+  const deque<COORD_T> & xcoords=get<4>(input_tree);
+  const deque<COORD_T> & ycoords=get<5>(input_tree);
+  const deque<COORD_T> & zcoords=get<6>(input_tree);
+  const deque<REALVAL_T> & radiuses=get<7>(input_tree);
+  const deque<LAYER_IDX_T> & layers=get<8>(input_tree);
+  const deque<PARENT_NODE_IDX_T> & parents=get<9>(input_tree);
+  const deque<SWC_TYPE_T> & swc_types=get<10>(input_tree);
   
 
   if (opt_fill)

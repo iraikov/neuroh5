@@ -18,6 +18,7 @@
 #include <iomanip>
 #include <getopt.h>
 #include <map>
+#include <deque>
 #include <mpi.h>
 
 #include "neuroh5_types.hh"
@@ -73,16 +74,16 @@ void output_tree(string outfilename,
   ofstream outfile;
   outfile.open(outfilename);
 
-  const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);
-  const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);
-  const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
-  const std::vector<COORD_T> & xcoords=get<4>(tree);
-  const std::vector<COORD_T> & ycoords=get<5>(tree);
-  const std::vector<COORD_T> & zcoords=get<6>(tree);
-  /*const std::vector<REALVAL_T> & radiuses=get<7>(tree);*/
-  const std::vector<LAYER_IDX_T> & layers=get<8>(tree);
-  const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);
-  const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);
+  const std::deque<SECTION_IDX_T> & src_vector=get<1>(tree);
+  const std::deque<SECTION_IDX_T> & dst_vector=get<2>(tree);
+  const std::deque<SECTION_IDX_T> & sections=get<3>(tree);
+  const std::deque<COORD_T> & xcoords=get<4>(tree);
+  const std::deque<COORD_T> & ycoords=get<5>(tree);
+  const std::deque<COORD_T> & zcoords=get<6>(tree);
+  /*const std::deque<REALVAL_T> & radiuses=get<7>(tree);*/
+  const std::deque<LAYER_IDX_T> & layers=get<8>(tree);
+  const std::deque<PARENT_NODE_IDX_T> & parents=get<9>(tree);
+  const std::deque<SWC_TYPE_T> & swc_types=get<10>(tree);
   
   outfile << "number of x points: " << xcoords.size() << endl;
   outfile << "number of y points: " << ycoords.size() << endl;
@@ -147,14 +148,14 @@ void summarize_tree(const string outfilename,
 {
   /*const std::vector<SECTION_IDX_T> & src_vector=get<1>(tree);*/
   /*const std::vector<SECTION_IDX_T> & dst_vector=get<2>(tree);*/
-  const std::vector<SECTION_IDX_T> & sections=get<3>(tree);
-  const std::vector<COORD_T> & xcoords=get<4>(tree);
-  const std::vector<COORD_T> & ycoords=get<5>(tree);
-  const std::vector<COORD_T> & zcoords=get<6>(tree);
-  /*const std::vector<REALVAL_T> & radiuses=get<7>(tree);*/
-  /*const std::vector<LAYER_IDX_T> & layers=get<8>(tree);*/
-  /*const std::vector<PARENT_NODE_IDX_T> & parents=get<9>(tree);*/
-  /*const std::vector<SWC_TYPE_T> & swc_types=get<10>(tree);*/
+  const std::deque<SECTION_IDX_T> & sections=get<3>(tree);
+  const std::deque<COORD_T> & xcoords=get<4>(tree);
+  const std::deque<COORD_T> & ycoords=get<5>(tree);
+  const std::deque<COORD_T> & zcoords=get<6>(tree);
+  /*const std::deque<REALVAL_T> & radiuses=get<7>(tree);*/
+  /*const std::deque<LAYER_IDX_T> & layers=get<8>(tree);*/
+  /*const std::deque<PARENT_NODE_IDX_T> & parents=get<9>(tree);*/
+  /*const std::deque<SWC_TYPE_T> & swc_types=get<10>(tree);*/
 
   ofstream fout;
   fout.open (outfilename, ios::app);
@@ -173,13 +174,13 @@ void summarize_tree(const string outfilename,
       vector<vector<string>> attr_names;
       attr_map.attr_names(attr_names);
 
-      const vector<vector<float>> &float_attrs     = attr_map.find<float>(gid);
-      const vector<vector<uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(gid);
-      const vector<vector<int8_t>> &int8_attrs     = attr_map.find<int8_t>(gid);
-      const vector<vector<uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(gid);
-      const vector<vector<int16_t>>  &int16_attrs  = attr_map.find<int16_t>(gid);
-      const vector<vector<uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(gid);
-      const vector<vector<int32_t>> &int32_attrs   = attr_map.find<int32_t>(gid);
+      const vector<deque<float>> &float_attrs     = attr_map.find<float>(gid);
+      const vector<deque<uint8_t>> &uint8_attrs   = attr_map.find<uint8_t>(gid);
+      const vector<deque<int8_t>> &int8_attrs     = attr_map.find<int8_t>(gid);
+      const vector<deque<uint16_t>> &uint16_attrs = attr_map.find<uint16_t>(gid);
+      const vector<deque<int16_t>>  &int16_attrs  = attr_map.find<int16_t>(gid);
+      const vector<deque<uint32_t>> &uint32_attrs = attr_map.find<uint32_t>(gid);
+      const vector<deque<int32_t>> &int32_attrs   = attr_map.find<int32_t>(gid);
       size_t attr_size = float_attrs.size() + 
         uint8_attrs.size() +
         int8_attrs.size() + 

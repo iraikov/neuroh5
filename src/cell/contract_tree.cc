@@ -13,6 +13,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <deque>
 #include "ngraph.hh"
 
 #include "neuroh5_types.hh"
@@ -26,7 +27,7 @@ namespace neuroh5
   {
   
     void contract_tree_bfs (const Graph &A,
-                            const vector<SWC_TYPE_T>& types, 
+                            const deque<SWC_TYPE_T>& types, 
                             Graph::vertex_set& roots,
                             Graph &S, contraction_map_t& contraction_map,
                             Graph::vertex sp, Graph::vertex spp)
@@ -34,7 +35,7 @@ namespace neuroh5
     
       for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
-          vector <Graph::vertex> section_members; 
+          deque <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
           LAYER_IDX_T p_type = types[v];
                                      
@@ -96,14 +97,14 @@ namespace neuroh5
     }
 
     void contract_tree_dfs (const Graph &A, 
-                            const vector<SWC_TYPE_T>& types, 
+                            const deque<SWC_TYPE_T>& types, 
                             Graph::vertex_set& roots,
                             Graph &S, contraction_map_t& contraction_map,
                             Graph::vertex sp, Graph::vertex spp)
     {
       for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
-          vector <Graph::vertex> section_members; 
+          deque <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
           SWC_TYPE_T p_type = types[v];
 
@@ -172,8 +173,8 @@ namespace neuroh5
     }
 
     void contract_tree_regions_bfs (const Graph &A,
-                                    const vector<LAYER_IDX_T>& regions,
-                                    const vector<SWC_TYPE_T>& types, 
+                                    const deque<LAYER_IDX_T>& regions,
+                                    const deque<SWC_TYPE_T>& types, 
                                     Graph::vertex_set& roots,
                                     Graph &S, contraction_map_t& contraction_map,
                                     Graph::vertex sp, Graph::vertex spp)
@@ -182,7 +183,7 @@ namespace neuroh5
       for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
         
-          vector <Graph::vertex> section_members; 
+          deque <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
           LAYER_IDX_T p_region = regions[v];
           SWC_TYPE_T p_type = types[v];
@@ -251,8 +252,8 @@ namespace neuroh5
     }
 
     void contract_tree_regions_dfs (const Graph &A,
-                                    const vector<LAYER_IDX_T>& regions,
-                                    const vector<SWC_TYPE_T>& types, 
+                                    const deque<LAYER_IDX_T>& regions,
+                                    const deque<SWC_TYPE_T>& types, 
                                     Graph::vertex_set& roots,
                                     Graph &S, contraction_map_t& contraction_map,
                                     Graph::vertex sp, Graph::vertex spp)
@@ -260,7 +261,7 @@ namespace neuroh5
     
       for ( Graph::vertex_set::const_iterator p = roots.begin(); p != roots.end(); ++p)
         {
-          vector <Graph::vertex> section_members; 
+          deque <Graph::vertex> section_members; 
           Graph::vertex s, v = Graph::node (p); 
           LAYER_IDX_T p_region = regions[v];
           SWC_TYPE_T p_type = types[v];

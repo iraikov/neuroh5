@@ -4,7 +4,7 @@
 ///
 ///  Functions for storing attributes in vectors of different types.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #ifndef ATTR_MAP_HH
@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <deque>
 #include <typeindex>
 
 #include "throw_assert.hh"
@@ -24,7 +25,7 @@ namespace neuroh5
   {
 
     template<typename T>
-    void append_values_map(std::map < CELL_IDX_T, std::vector <T> >& values_map,
+    void append_values_map(std::map < CELL_IDX_T, std::deque <T> >& values_map,
                            CELL_IDX_T vindex,
                            typename vector<T>::const_iterator first,
                            typename vector<T>::const_iterator last)
@@ -32,12 +33,12 @@ namespace neuroh5
       auto values_it = values_map.find(vindex);
       if (values_it == values_map.end())
         {
-          vector<T> v(first, last);
+          deque<T> v(first, last);
           values_map.insert(make_pair(vindex, v));
         }
       else
         {
-          vector<T>& v = values_it->second;
+          deque<T>& v = values_it->second;
           v.insert(std::end(v), first, last);
         }
     }
@@ -56,21 +57,21 @@ namespace neuroh5
       
       std::set<CELL_IDX_T> index_set;
 
-      std::vector <std::map < CELL_IDX_T, std::vector <float> > >    float_values;
-      std::vector <std::map < CELL_IDX_T, std::vector <uint8_t> > >  uint8_values;
-      std::vector <std::map < CELL_IDX_T, std::vector <int8_t> > >   int8_values;
-      std::vector <std::map < CELL_IDX_T, std::vector <uint16_t> > > uint16_values;
-      std::vector <std::map < CELL_IDX_T, std::vector <int16_t> > >  int16_values;
-      std::vector <std::map < CELL_IDX_T, std::vector <uint32_t> > > uint32_values;
-      std::vector <std::map < CELL_IDX_T, std::vector <int32_t> > >  int32_values;
+      std::vector <std::map < CELL_IDX_T, std::deque <float> > >    float_values;
+      std::vector <std::map < CELL_IDX_T, std::deque <uint8_t> > >  uint8_values;
+      std::vector <std::map < CELL_IDX_T, std::deque <int8_t> > >   int8_values;
+      std::vector <std::map < CELL_IDX_T, std::deque <uint16_t> > > uint16_values;
+      std::vector <std::map < CELL_IDX_T, std::deque <int16_t> > >  int16_values;
+      std::vector <std::map < CELL_IDX_T, std::deque <uint32_t> > > uint32_values;
+      std::vector <std::map < CELL_IDX_T, std::deque <int32_t> > >  int32_values;
 
-      typedef std::map < CELL_IDX_T, std::vector <float> > float_values_map;
-      typedef std::map < CELL_IDX_T, std::vector <uint8_t> > uint8_values_map;
-      typedef std::map < CELL_IDX_T, std::vector <uint16_t> > uint16_values_map;
-      typedef std::map < CELL_IDX_T, std::vector <uint32_t> > uint32_values_map;
-      typedef std::map < CELL_IDX_T, std::vector <int8_t> > int8_values_map;
-      typedef std::map < CELL_IDX_T, std::vector <int16_t> > int16_values_map;
-      typedef std::map < CELL_IDX_T, std::vector <int32_t> > int32_values_map;
+      typedef std::map < CELL_IDX_T, std::deque <float> > float_values_map;
+      typedef std::map < CELL_IDX_T, std::deque <uint8_t> > uint8_values_map;
+      typedef std::map < CELL_IDX_T, std::deque <uint16_t> > uint16_values_map;
+      typedef std::map < CELL_IDX_T, std::deque <uint32_t> > uint32_values_map;
+      typedef std::map < CELL_IDX_T, std::deque <int8_t> > int8_values_map;
+      typedef std::map < CELL_IDX_T, std::deque <int16_t> > int16_values_map;
+      typedef std::map < CELL_IDX_T, std::deque <int32_t> > int32_values_map;
 
       typedef float_values_map::iterator float_values_iter;
       typedef uint8_values_map::iterator uint8_values_iter;
@@ -103,21 +104,21 @@ namespace neuroh5
       }
       
       template<class T>
-      const std::map<CELL_IDX_T, std::vector<T> >& attr_map (size_t i) const; 
+      const std::map<CELL_IDX_T, std::deque<T> >& attr_map (size_t i) const; 
       template<class T>
-      std::map<CELL_IDX_T, std::vector<T> >& attr_map (size_t i);
+      std::map<CELL_IDX_T, std::deque<T> >& attr_map (size_t i);
       
       template<class T>
-      const vector< std::map<CELL_IDX_T, std::vector<T> > >& attr_maps () const; 
+      const vector< std::map<CELL_IDX_T, std::deque<T> > >& attr_maps () const; 
       template<class T>
-      vector< std::map<CELL_IDX_T, std::vector<T> > >& attr_maps (); 
+      vector< std::map<CELL_IDX_T, std::deque<T> > >& attr_maps (); 
 
       void num_attrs (vector<size_t> &v) const;
 
       template<class T>
       size_t num_attr () const
       {
-        const std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        const std::vector <std::map<CELL_IDX_T, std::deque<T> > >& value_map = attr_maps<T>();
         return value_map.size();
       }
 
@@ -126,7 +127,7 @@ namespace neuroh5
                      const std::vector<ATTR_PTR_T> &ptr,
                      const std::vector<T> &value)
       {
-        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        std::vector <std::map<CELL_IDX_T, std::deque<T> > >& value_map = attr_maps<T>();
         size_t attr_index = value_map.size();
         value_map.resize(max(value_map.size(), attr_index+1));
         for (size_t p=0; p<cell_index.size(); p++)
@@ -156,7 +157,7 @@ namespace neuroh5
                      const std::vector<ATTR_PTR_T> &ptr,
                      const std::vector<T> &value)
       {
-        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        std::vector <std::map<CELL_IDX_T, std::deque<T> > >& value_map = attr_maps<T>();
         value_map.resize(max(value_map.size(), attr_index+1));
         for (size_t p=0; p<cell_index.size(); p++)
           {
@@ -182,9 +183,9 @@ namespace neuroh5
       template<class T>
       size_t insert (const size_t attr_index,
                      const CELL_IDX_T &cell_index,
-                     const std::vector<T> &value)
+                     const std::deque<T> &value)
       {
-        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& attr_values = attr_maps<T>();
+        std::vector <std::map<CELL_IDX_T, std::deque<T> > >& attr_values = attr_maps<T>();
         attr_values.resize(max(attr_values.size(), attr_index+1));
         attr_values[attr_index].insert(make_pair(cell_index, value));
         index_set.insert(cell_index);
@@ -194,10 +195,10 @@ namespace neuroh5
       
 
       template<class T>
-      const vector<vector<T>> find (CELL_IDX_T index) const
+      const vector<deque<T>> find (CELL_IDX_T index) const
       {
-        const std::vector <std::map<CELL_IDX_T, std::vector<T> > >& attr_values = attr_maps<T>();
-        vector< vector<T> > result;
+        const std::vector <std::map<CELL_IDX_T, std::deque<T> > >& attr_values = attr_maps<T>();
+        vector< deque<T> > result;
         for (size_t i=0; i<attr_values.size(); i++)
           {
             auto it = attr_values[i].find(index);
@@ -210,8 +211,8 @@ namespace neuroh5
       }
 
       template<class T>
-      void insert_map1 (vector <map <CELL_IDX_T, std::vector<T> > >& a,
-                        const vector <map <CELL_IDX_T, std::vector<T> > >& b)
+      void insert_map1 (vector <map <CELL_IDX_T, std::deque<T> > >& a,
+                        const vector <map <CELL_IDX_T, std::deque<T> > >& b)
       {
         throw_assert(a.size() == b.size(), 
                      "AttrMap::insert_map1: maps are of different sizes: size a = " <<
@@ -337,7 +338,7 @@ namespace neuroh5
       size_t insert_name (std::string name)
       {
         std::map <std::string, size_t>& name_map = this->attr_name_map[std::type_index(typeid(T))];
-        std::vector <std::map<CELL_IDX_T, std::vector<T> > >& value_map = attr_maps<T>();
+        std::vector <std::map<CELL_IDX_T, std::deque<T> > >& value_map = attr_maps<T>();
         size_t index = 0;
         if (name_map.count(name) == 0)
           {
@@ -366,9 +367,9 @@ namespace neuroh5
       }
 
       template<class T>
-      const vector<T> find_name (const std::string& name, CELL_IDX_T& index)
+      const deque<T> find_name (const std::string& name, CELL_IDX_T& index)
       {
-        vector<T> result(0);
+        deque<T> result(0);
         auto type_it = attr_name_map.find(std::type_index(typeid(T)));
         if (type_it != this->attr_name_map.cend())
           {
@@ -378,7 +379,7 @@ namespace neuroh5
             throw_assert(attr_it != name_map.end(),
                          "NamedAttrMap::find_name: attribute " << name << " not found");
             size_t attr_index = attr_it->second;
-            std::map<CELL_IDX_T, std::vector<T> >& value_map = attr_map<T>(attr_index);
+            std::map<CELL_IDX_T, std::deque<T> >& value_map = attr_map<T>(attr_index);
             auto it = value_map.find(index);
             if (it != value_map.end())
               {

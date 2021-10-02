@@ -441,13 +441,13 @@ int main(int argc, char** argv)
 
               attr_names_map.insert(make_pair(attr_name_space, attr_names));
               
-              const vector<vector<float>>    float_values  = attr_map.find<float>(idx);
-              const vector<vector<uint8_t>>  uint8_values  = attr_map.find<uint8_t>(idx);
-              const vector<vector<int8_t>>   int8_values   = attr_map.find<int8_t>(idx);
-              const vector<vector<uint16_t>> uint16_values = attr_map.find<uint16_t>(idx);
-              const vector<vector<int16_t>>  int16_values = attr_map.find<int16_t>(idx);
-              const vector<vector<uint32_t>> uint32_values = attr_map.find<uint32_t>(idx);
-              const vector<vector<int32_t>>  int32_values  = attr_map.find<int32_t>(idx);
+              const vector<deque<float>>    float_values  = attr_map.find<float>(idx);
+              const vector<deque<uint8_t>>  uint8_values  = attr_map.find<uint8_t>(idx);
+              const vector<deque<int8_t>>   int8_values   = attr_map.find<int8_t>(idx);
+              const vector<deque<uint16_t>> uint16_values = attr_map.find<uint16_t>(idx);
+              const vector<deque<int16_t>>  int16_values = attr_map.find<int16_t>(idx);
+              const vector<deque<uint32_t>> uint32_values = attr_map.find<uint32_t>(idx);
+              const vector<deque<int32_t>>  int32_values  = attr_map.find<int32_t>(idx);
 
               vector<map< CELL_IDX_T, vector<float> > > 
                 subset_float_values(num_attrs[data::AttrMap::attr_index_float]);
@@ -466,31 +466,31 @@ int main(int argc, char** argv)
               
               for (size_t i=0; i<float_values.size(); i++)
                 {
-                  subset_float_values[i].insert(make_pair(idx1, float_values[i]));
+                  subset_float_values[i].insert(make_pair(idx1, vector<float>(float_values[i].begin(), float_values[i].end())));
                 }
               for (size_t i=0; i<uint8_values.size(); i++)
                 {
-                  subset_uint8_values[i].insert(make_pair(idx1, uint8_values[i]));
+                  subset_uint8_values[i].insert(make_pair(idx1, vector<uint8_t>(uint8_values[i].begin(), uint8_values[i].end())));
                 }
               for (size_t i=0; i<int8_values.size(); i++)
                 {
-                  subset_int8_values[i].insert(make_pair(idx1, int8_values[i]));
+                  subset_int8_values[i].insert(make_pair(idx1, vector<int8_t>(int8_values[i].begin(), int8_values[i].end())));
                 }
               for (size_t i=0; i<uint16_values.size(); i++)
                 {
-                  subset_uint16_values[i].insert(make_pair(idx1, uint16_values[i]));
+                  subset_uint16_values[i].insert(make_pair(idx1, vector<uint16_t>(uint16_values[i].begin(), uint16_values[i].end())));
                 }
               for (size_t i=0; i<int16_values.size(); i++)
                 {
-                  subset_int16_values[i].insert(make_pair(idx1, int16_values[i]));
+                  subset_int16_values[i].insert(make_pair(idx1, vector<int16_t>(int16_values[i].begin(), int16_values[i].end())));
                 }
               for (size_t i=0; i<uint32_values.size(); i++)
                 {
-                  subset_uint32_values[i].insert(make_pair(idx1, uint32_values[i]));
+                  subset_uint32_values[i].insert(make_pair(idx1, vector<uint32_t>(uint32_values[i].begin(), uint32_values[i].end())));
                 }
               for (size_t i=0; i<int32_values.size(); i++)
                 {
-                  subset_int32_values[i].insert(make_pair(idx1, int32_values[i]));
+                  subset_int32_values[i].insert(make_pair(idx1, vector<int32_t>(int32_values[i].begin(), int32_values[i].end())));
                 }
 
               subset_float_value_map[attr_name_space]  = subset_float_values;

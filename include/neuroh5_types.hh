@@ -21,6 +21,7 @@
 #include <hdf5.h>
 
 // type support
+#include "cereal/types/deque.hpp"
 #include "cereal/types/vector.hpp"
 #include "cereal/types/tuple.hpp"
 #include "cereal/types/set.hpp"
@@ -164,19 +165,19 @@ namespace neuroh5
 
   
   typedef std::tuple< CELL_IDX_T,   // Tree id
-                      std::vector<SECTION_IDX_T>,   // Section id sources
-                      std::vector<SECTION_IDX_T>,   // Section id destinations
-                      std::vector<SECTION_IDX_T>,   // Mapping of node ids to section ids
-                      std::vector<COORD_T>,     // X coordinates of nodes
-                      std::vector<COORD_T>,     // Y coordinates of nodes
-                      std::vector<COORD_T>,     // Z coordinates of nodes
-                      std::vector<REALVAL_T>,   // Radius
-                      std::vector<LAYER_IDX_T>,  // Layer
-                      std::vector<PARENT_NODE_IDX_T>,  // Parent
-                      std::vector<SWC_TYPE_T>  // SWC type
+                      std::deque<SECTION_IDX_T>,   // Section id sources
+                      std::deque<SECTION_IDX_T>,   // Section id destinations
+                      std::deque<SECTION_IDX_T>,   // Mapping of node ids to section ids
+                      std::deque<COORD_T>,     // X coordinates of nodes
+                      std::deque<COORD_T>,     // Y coordinates of nodes
+                      std::deque<COORD_T>,     // Z coordinates of nodes
+                      std::deque<REALVAL_T>,   // Radius
+                      std::deque<LAYER_IDX_T>,  // Layer
+                      std::deque<PARENT_NODE_IDX_T>,  // Parent
+                      std::deque<SWC_TYPE_T>  // SWC type
                       > neurotree_t;
 
-  typedef std::map<Graph::vertex, std::vector<Graph::vertex> > contraction_map_t;
+  typedef std::map<Graph::vertex, std::deque<Graph::vertex> > contraction_map_t;
 
   // population combination type
   typedef struct
