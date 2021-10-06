@@ -4,15 +4,41 @@ An HDF5-based library for storage of large-scale graphs and parallel operations 
 
 ## Introduction
 
-The neurograph library implements an HDF5-based format for storing
-connectivity information of large neural networks, perform parallel
-graph partitioning and analysis.
+The neuroh5 library implements an HDF5-based format for storing
+neuronal morphology information, synaptic and connectivity information
+of large neural networks, and perform parallel graph partitioning and
+analysis.
 
-neurograph assumes that synaptic connectivity between neurons in
+neuroh5 assumes that synaptic connectivity between neurons in
 neuronal network models is represented as directed graphs stored as
 adjacency lists, where the vertices represent the neurons in the
 network and are identified by unsigned integers called unique global
 identifiers (gid). 
+
+## Installation
+
+Building and installing NeuroH5 
+
+NeuroH5 requires parallel HDF5, MPI, cmake. The Python module requires Python 3 and numpy.
+
+To build the NeuroH5 C++ library and applications:
+
+```
+git clone https://github.com/iraikov/neuroh5.git
+cd neuroh5
+cmake .
+make 
+```
+
+
+To build the python module:
+
+```
+git clone https://github.com/iraikov/neuroh5.git
+cd neuroh5
+CMAKE_BUILD_PARALLEL_LEVEL=8 pip install .
+```
+
 
 ## Basic concepts and terminology
 
