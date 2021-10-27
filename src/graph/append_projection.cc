@@ -558,9 +558,9 @@ namespace neuroh5
       size_t sum_num_edges = 0;
       throw_assert_nomsg(MPI_Allreduce(&num_edges, &sum_num_edges, 1,
                         MPI_SIZE_T, MPI_SUM, comm) == MPI_SUCCESS);
-#ifdef NEUROH5_DEBUG
+
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-#endif
+
       if (sum_num_edges == 0)
         {
           throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
@@ -625,9 +625,7 @@ namespace neuroh5
                            &recvbuf_num_edge[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
-#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-#endif
 
       // determine last rank that has data
       size_t last_rank = size-1;

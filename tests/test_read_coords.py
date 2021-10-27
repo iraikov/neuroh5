@@ -30,7 +30,7 @@ def main(coords_path, coords_namespace):
     print (population_ranges)
     
     soma_coords = {}
-    populations = ['BC']
+    populations = ['GC']
     for population in population_ranges.keys():
 
         print('Population %s' % population)

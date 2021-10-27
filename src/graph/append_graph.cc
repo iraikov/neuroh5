@@ -275,9 +275,9 @@ namespace neuroh5
       //    and creates sendcounts and sdispls arrays
       
       throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
-#ifdef NEUROH5_DEBUG
+
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-#endif
+
       // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
       
