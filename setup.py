@@ -111,7 +111,7 @@ setup(
     name='NeuroH5',
     package_dir = {'': 'python'},
     packages = ["neuroh5"],
-    version='0.1.1',
+    version='0.1.2',
     maintainer = "Ivan Raikov",
     maintainer_email = "ivan.g.raikov@gmail.com",
     description = "NeuroH5 library",
