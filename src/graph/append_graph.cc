@@ -71,6 +71,8 @@ namespace neuroh5
       size = ssize;
       rank = srank;
 
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
       if (ssize < io_size_arg)
         {
           io_size = size > 0 ? size : 1;
