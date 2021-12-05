@@ -327,7 +327,7 @@ namespace neuroh5
 
       // Determine number of values for each rank
       vector<uint32_t> sendbuf_num_values(size, value_map.size());
-      vector<uint32_t> recvbuf_num_values(size);
+      vector<uint32_t> recvbuf_num_values(size, 0);
       throw_assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
                                  &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
                    == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
@@ -341,7 +341,7 @@ namespace neuroh5
           local_value_size += v.size();
         }
       vector<uint32_t> sendbuf_size_values(size, local_value_size);
-      vector<uint32_t> recvbuf_size_values(size);
+      vector<uint32_t> recvbuf_size_values(size, 0);
       throw_assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
                                  &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
                    == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
@@ -398,7 +398,7 @@ namespace neuroh5
           value_recvbuf_size += value_recvcounts[p];
         }
       //assert(recvbuf_size > 0);
-      vector<T> value_recvbuf(value_recvbuf_size);
+      vector<T> value_recvbuf(value_recvbuf_size, 0);
 
       T dummy;
       MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
@@ -432,7 +432,7 @@ namespace neuroh5
           ptr_recvbuf_size += ptr_recvcounts[p];
         }
       //assert(recvbuf_size > 0);
-      vector<ATTR_PTR_T> attr_ptr_recvbuf(ptr_recvbuf_size);
+      vector<ATTR_PTR_T> attr_ptr_recvbuf(ptr_recvbuf_size,0);
     
       // Each ALL_COMM rank participates in the MPI_Alltoallv
       throw_assert(MPI_Alltoallv(&attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
@@ -486,7 +486,7 @@ namespace neuroh5
           idx_recvbuf_size += idx_recvcounts[p];
         }
 
-      vector<CELL_IDX_T> gid_recvbuf(idx_recvbuf_size);
+      vector<CELL_IDX_T> gid_recvbuf(idx_recvbuf_size, 0);
     
       throw_assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
                                  &gid_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_CELL_IDX_T,

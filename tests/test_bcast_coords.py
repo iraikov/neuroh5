@@ -36,7 +36,8 @@ def main(coords_path, coords_namespace):
 
 
         attr_iter = bcast_cell_attributes(coords_path, population, namespace=coords_namespace, 
-                                          root=0, comm=comm)
+                                          root=0, mask=set(['U Coordinate', 'V Coordinate', 'L Coordinate']),
+                                          comm=comm)
         
         for cell_gid, coords_dict in attr_iter:
 

@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a cell id.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -1286,6 +1286,7 @@ namespace neuroh5
       throw_assert_nomsg(status == 0);
       throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
@@ -1298,7 +1299,10 @@ namespace neuroh5
         {
           num_attrs[i] = num_attrs_bcast[i];
         }
-    
+
+      
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+
       // Broadcast the names of each attributes of each type to all ranks
       {
         vector<char> sendbuf;
@@ -1352,12 +1356,16 @@ namespace neuroh5
 
       size_t sendrecvbuf_size = sendrecvbuf.size();
       throw_assert_nomsg(MPI_Bcast(&sendrecvbuf_size, 1, MPI_SIZE_T, root, comm) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       sendrecvbuf.resize(sendrecvbuf_size);
       throw_assert_nomsg(MPI_Bcast(&sendrecvbuf[0], sendrecvbuf_size, MPI_CHAR, root, comm) == MPI_SUCCESS);
+
+
       if (rank != (unsigned int)root)
         {
           data::deserialize_data(sendrecvbuf, attr_map);
         }
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
     }
 
       

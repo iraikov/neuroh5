@@ -2130,18 +2130,85 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
  * seq_index: index of the next id in the sequence to yield
  *
  */
-typedef struct {
-  Py_ssize_t seq_index, count;
+struct NeuroH5CellAttrIterState {
                            
-  string attr_namespace;
-  vector< vector <string> > attr_names;
   NamedAttrMap attr_map;
   set<CELL_IDX_T>::const_iterator it_idx;
+  string attr_namespace;
+  vector< vector <string> > attr_names;
   return_type return_tp;
+  Py_ssize_t seq_index, count;
+#if HAS_STRUCT_SEQUENCE
   PyTypeObject* struct_type;
   vector<PyStructSequence_Field> struct_descr_fields;
-                           
-} NeuroH5CellAttrIterState;
+  
+  explicit NeuroH5CellAttrIterState(NamedAttrMap&& attr_map,
+                                    const string& attr_namespace,
+                                    const vector< vector <string> >& attr_names,
+                                    const return_type& return_tp,
+                                    PyTypeObject* struct_type,
+                                    vector<PyStructSequence_Field>& struct_descr_fields
+                                    ) : attr_map(std::forward<NamedAttrMap>(attr_map)),
+                                        attr_namespace(attr_namespace),
+                                        attr_names(attr_names),
+                                        return_tp(return_tp),
+                                        struct_type(struct_type),
+                                        struct_descr_fields(struct_descr_fields)
+  {
+    this->it_idx = this->attr_map.index_set.cbegin();
+    this->count = this->attr_map.index_set.size();
+  }
+#else
+  
+  explicit NeuroH5CellAttrIterState(NamedAttrMap&& attr_map,
+                                    const string& attr_namespace,
+                                    const vector< vector <string> >& attr_names,
+                                    const return_type& return_tp
+                                    ) : attr_map(std::forward<NamedAttrMap>(attr_map)),
+                                        attr_namespace(attr_namespace),
+                                        attr_names(attr_names),
+                                        return_tp(return_tp),
+                                        seq_index(0)
+  {
+    this->it_idx = this->attr_map.index_set.cbegin();
+    this->count = this->attr_map.index_set.size();
+  }
+#endif
+} ;
+
+#if HAS_STRUCT_SEQUENCE
+NeuroH5CellAttrIterState* neuroh5_cell_attr_iter_state(NamedAttrMap&& attr_map,
+                                  const string& attr_namespace,
+                                  const vector< vector <string> >& attr_names,
+                                  const return_type& return_tp,
+                                  PyTypeObject* struct_type,
+                                  vector<PyStructSequence_Field>& struct_descr_fields
+                                  )
+{
+  return new NeuroH5CellAttrIterState(std::forward<NamedAttrMap>(attr_map),
+                                      attr_namespace,
+                                      attr_names,
+                                      return_tp,
+                                      struct_type,
+                                      struct_descr_fields
+                                      );
+                                       
+}
+#else
+
+NeuroH5CellAttrIterState* neuroh5_cell_attr_iter_state(NamedAttrMap&& attr_map,
+                                  const string& attr_namespace,
+                                  const vector< vector <string> >& attr_names,
+                                  const return_type& return_tp,
+                                  )
+{
+  return new NeuroH5CellAttrIterState(std::forward<NamedAttrMap>(attr_map),
+                                      attr_namespace,
+                                      attr_names,
+                                      return_tp);
+                                       
+}
+#endif
 
 typedef struct {
   PyObject_HEAD
@@ -2248,9 +2315,8 @@ static PyTypeObject PyNeuroH5CellAttrIter_Type = {
 static PyObject *
 NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
                             const vector< vector <string> >& attr_names,
-                            const NamedAttrMap& attr_map,
+                            NamedAttrMap&& attr_map,
                             const return_type return_tp)
-
 {
 
   PyNeuroH5CellAttrIterState *p = PyObject_New(PyNeuroH5CellAttrIterState, &PyNeuroH5CellAttrIter_Type);
@@ -2262,20 +2328,28 @@ NeuroH5CellAttrIter_FromMap(const string& attr_namespace,
       return NULL;
     }
 
-  p->state = new NeuroH5CellAttrIterState();
-  p->state->seq_index     = 0;
-  p->state->count         = attr_map.index_set.size();
-  p->state->attr_map      = std::move(attr_map);
-  p->state->attr_namespace = attr_namespace;
-  p->state->attr_names    = attr_names;
-  p->state->it_idx        = p->state->attr_map.index_set.cbegin();
 #if HAS_STRUCT_SEQUENCE
-  if (return_tp == return_struct)
-    {
-      p->state->struct_type   = py_build_cell_attr_struct_type(attr_map, attr_names, p->state->struct_descr_fields);
-    }
+  {
+      PyTypeObject* struct_type = NULL;
+      vector<PyStructSequence_Field> struct_descr_fields;
+    
+      if (return_tp == return_struct)
+        {
+          struct_type   = py_build_cell_attr_struct_type(attr_map, attr_names, struct_descr_fields);
+        }
+      p->state = neuroh5_cell_attr_iter_state(std::forward<NamedAttrMap>(attr_map),
+                                              attr_namespace,
+                                              attr_names,
+                                              return_tp,
+                                              struct_type,
+                                              struct_descr_fields);
+  }
+#else
+  p->state = neuroh5_cell_attr_iter_state(std::forward<NamedAttrMap>(attr_map),
+                                            attr_namespace,
+                                            attr_names,
+                                            return_tp);
 #endif
-  p->state->return_tp = return_tp;
   
   return (PyObject *)p;
 }
@@ -5649,15 +5723,15 @@ extern "C"
         vector<vector<string>> attr_names;
         attr_map.attr_names(attr_names);
 
-        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_name_space,
-                                                                  attr_names,
-                                                                  attr_map,
-                                                                  return_tp);
 
         if (return_tp == return_tuple)
           {
             PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_map, attr_names);
             PyObject *py_result_tuple = PyTuple_New(2);
+            PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_name_space,
+                                                                      attr_names,
+                                                                      std::move(attr_map),
+                                                                      return_tp);
             PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
             PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
             PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_result_tuple);
@@ -5665,6 +5739,10 @@ extern "C"
           }
         else
           {
+            PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_name_space,
+                                                                      attr_names,
+                                                                      std::move(attr_map),
+                                                                      return_tp);
             PyDict_SetItemString(py_namespace_dict, attr_name_space.c_str(), py_cell_attr_iter);
             Py_DECREF(py_cell_attr_iter);
           }
@@ -5840,21 +5918,24 @@ extern "C"
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_read_cell_attributes: unable to free MPI communicator");
 
-    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
-                                                              attr_names,
-                                                              attr_values,
-                                                              return_tp);
-
     if (return_tp == return_tuple)
       {
         PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
         PyObject *py_result_tuple = PyTuple_New(2);
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
         PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
         PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
         return py_result_tuple;
       }
     else
       {
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
         return py_cell_attr_iter;
       }
     
@@ -6040,21 +6121,25 @@ extern "C"
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_read_cell_attribute_selection: unable to free MPI communicator");
 
-    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
-                                                              attr_names,
-                                                              attr_values,
-                                                              return_tp);
 
     if (return_tp == return_tuple)
       {
         PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
         PyObject *py_result_tuple = PyTuple_New(2);
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
         PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
         PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
         return py_result_tuple;
       }
     else
       {
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
         return py_cell_attr_iter;
       }
   }
@@ -6255,21 +6340,24 @@ extern "C"
     throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS,
                  "py_scatter_read_cell_attribute_selection: unable to free MPI communicator");
 
-    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
-                                                              attr_names,
-                                                              attr_values,
-                                                              return_tp);
-
     if (return_tp == return_tuple)
       {
         PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
         PyObject *py_result_tuple = PyTuple_New(2);
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
         PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
         PyTuple_SetItem(py_result_tuple, 1, py_tuple_index_info);
         return py_result_tuple;
       }
     else
       {
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
         return py_cell_attr_iter;
       }
   }
@@ -6419,13 +6507,13 @@ extern "C"
     vector<vector<string>> attr_names;
     attr_values.attr_names(attr_names);
 
-    PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
-                                                              attr_names,
-                                                              attr_values,
-                                                              return_tp);
-        
     if (return_tp == return_tuple)
       {
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
+        
         PyObject *py_tuple_index_info = py_build_cell_attr_tuple_info(attr_values, attr_names);
         PyObject *py_result_tuple = PyTuple_New(2);
         PyTuple_SetItem(py_result_tuple, 0, py_cell_attr_iter);
@@ -6434,6 +6522,10 @@ extern "C"
       }
     else
       {
+        PyObject *py_cell_attr_iter = NeuroH5CellAttrIter_FromMap(attr_namespace,
+                                                                  attr_names,
+                                                                  std::move(attr_values),
+                                                                  return_tp);
         return py_cell_attr_iter;
       }
 
