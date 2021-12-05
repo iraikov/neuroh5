@@ -71,6 +71,8 @@ namespace neuroh5
       size = ssize;
       rank = srank;
 
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
       if (ssize < io_size_arg)
         {
           io_size = size > 0 ? size : 1;
@@ -115,9 +117,7 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
                                          &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
                            == MPI_SUCCESS);
-#ifdef NEUROH5_DEBUG
         throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-#endif
         for (size_t p=0; p<size; p++)
           {
             total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
@@ -136,9 +136,7 @@ namespace neuroh5
         throw_assert_nomsg(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
                                           &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
                                           all_comm) == MPI_SUCCESS);
-#ifdef NEUROH5_DEBUG
         throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-#endif
 
         vector<size_t> p = sort_permutation(node_index, compare_nodes);
         apply_permutation_in_place(node_index, p);
@@ -347,10 +345,11 @@ namespace neuroh5
                              num_unpacked_edges, prj_edge_map,
                              edge_attr_index);
 
+          throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
           throw_assert_nomsg(H5Fclose(file) >= 0);
           throw_assert_nomsg(H5Pclose(fapl) >= 0);
-          throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
         }
+      throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
       return 0;

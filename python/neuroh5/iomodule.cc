@@ -8078,7 +8078,7 @@ extern "C"
               // If the end of the current cache block has been reached,
               // read the next block
               py_ntrg->state->attr_map.clear();
-              
+
               int status = cell::scatter_read_cell_attributes (py_ntrg->state->comm,
                                                                py_ntrg->state->file_name,
                                                                py_ntrg->state->io_size,
@@ -8090,9 +8090,10 @@ extern "C"
                                                                py_ntrg->state->attr_map,
                                                                py_ntrg->state->cache_index,
                                                                py_ntrg->state->cache_size);
-              
+             
               throw_assert (status >= 0,
                             "NeuroH5CellAttrGen: error in call to cell::scatter_read_cell_attributes");
+              throw_assert(MPI_Barrier(py_ntrg->state->comm) == MPI_SUCCESS, "NeuroH5CellAttrGen: MPI_Barrier error");
 
               py_ntrg->state->attr_map.attr_names(py_ntrg->state->attr_names);
               py_ntrg->state->it_idx = py_ntrg->state->attr_map.index_set.cbegin();

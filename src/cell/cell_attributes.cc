@@ -994,9 +994,7 @@ namespace neuroh5
         }
       throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
-#ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-#endif
     
       vector<size_t> num_attrs_bcast(num_attrs.size());
       for (size_t i=0; i<num_attrs.size(); i++)
