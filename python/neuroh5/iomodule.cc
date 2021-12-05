@@ -8242,6 +8242,7 @@ extern "C"
     vector < map <string, vector < vector<string> > > > edge_attr_name_vector;
     vector <edge_map_t> prj_vector;
 
+    status = MPI_Barrier(py_ngg->state->comm);
     
     status = graph::scatter_read_projection(py_ngg->state->comm,
                                             py_ngg->state->io_size,
@@ -8277,6 +8278,8 @@ extern "C"
     py_ngg->state->edge_map_iter = py_ngg->state->edge_map.cbegin();
     
     py_ngg->state->block_index += py_ngg->state->total_read_blocks;
+    status = MPI_Barrier(py_ngg->state->comm);
+    throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
 
     size_t max_local_num_nodes=0;
     status = MPI_Allreduce(&(py_ngg->state->local_num_nodes), &max_local_num_nodes, 1,

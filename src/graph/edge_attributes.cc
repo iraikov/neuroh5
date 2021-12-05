@@ -363,6 +363,8 @@ namespace neuroh5
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       throw_assert_nomsg(fapl >= 0);
       throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+      
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
       throw_assert_nomsg(file >= 0);
