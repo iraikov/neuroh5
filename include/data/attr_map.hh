@@ -30,16 +30,19 @@ namespace neuroh5
                            typename vector<T>::const_iterator first,
                            typename vector<T>::const_iterator last)
     {
-      auto values_it = values_map.find(vindex);
-      if (values_it == values_map.end())
+      if (last > first)
         {
-          deque<T> v(first, last);
-          values_map.insert(make_pair(vindex, v));
-        }
-      else
-        {
-          deque<T>& v = values_it->second;
-          v.insert(std::end(v), first, last);
+          auto values_it = values_map.find(vindex);
+          if (values_it == values_map.end())
+            {
+              deque<T> v(first, last);
+              values_map.insert(make_pair(vindex, v));
+            }
+          else
+            {
+              deque<T>& v = values_it->second;
+              v.insert(std::end(v), first, last);
+            }
         }
     }
 
