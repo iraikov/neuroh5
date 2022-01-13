@@ -418,8 +418,6 @@ void ldbal_cell_attr_gen (MPI_Comm comm,
               if ((unsigned int)size <= r) r=0;
             }
         }
-      throw_assert(node_rank_map.size() == count,
-                   "ldbal_cell_attr_gen: node_rank_map is not the same size as index");
     }
 
   {
@@ -2199,8 +2197,7 @@ NeuroH5CellAttrIterState* neuroh5_cell_attr_iter_state(NamedAttrMap&& attr_map,
 NeuroH5CellAttrIterState* neuroh5_cell_attr_iter_state(NamedAttrMap&& attr_map,
                                   const string& attr_namespace,
                                   const vector< vector <string> >& attr_names,
-                                  const return_type& return_tp,
-                                  )
+                                  const return_type& return_tp)
 {
   return new NeuroH5CellAttrIterState(std::forward<NamedAttrMap>(attr_map),
                                       attr_namespace,
@@ -8079,6 +8076,7 @@ extern "C"
               // read the next block
               py_ntrg->state->attr_map.clear();
 
+              throw_assert(MPI_Barrier(py_ntrg->state->comm) == MPI_SUCCESS, "NeuroH5CellAttrGen: MPI_Barrier error");
               int status = cell::scatter_read_cell_attributes (py_ntrg->state->comm,
                                                                py_ntrg->state->file_name,
                                                                py_ntrg->state->io_size,

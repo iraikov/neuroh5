@@ -258,7 +258,7 @@ namespace neuroh5
       return status;
     }
 
-    
+   
     template <typename T>
     void append_cell_attribute
     (
@@ -299,8 +299,7 @@ namespace neuroh5
 
       // Determine the total size of index
       hsize_t local_index_size=index.size();
-      std::vector<uint64_t> index_size_vector;
-      index_size_vector.resize(size);
+      std::vector<uint64_t> index_size_vector(size, 0);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS,
                    "append_cell_attribute: error in MPI_Allgather");
@@ -327,8 +326,7 @@ namespace neuroh5
           local_ptr_size=local_ptr_size+1;
         }
     
-      std::vector<uint64_t> ptr_size_vector;
-      ptr_size_vector.resize(size);
+      std::vector<uint64_t> ptr_size_vector(size, 0);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS, "append_cell_attribute: error in MPI_Allgather");
 #ifdef NEUROH5_DEBUG
@@ -337,8 +335,7 @@ namespace neuroh5
 #endif
     
       hsize_t local_value_size = value.size();
-      std::vector<uint64_t> value_size_vector;
-      value_size_vector.resize(size);
+      std::vector<uint64_t> value_size_vector(size, 0);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS, "append_cell_attribute: error in MPI_Allgather");
 #ifdef NEUROH5_DEBUG
