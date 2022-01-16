@@ -120,7 +120,7 @@ namespace neuroh5
             {
               value_start = ptr[start];
               value_block = ptr[end]-value_start;
-              value_ptr.resize(block+1);
+              value_ptr.resize(block+1, 0);
               for (size_t i=start, j=0; i<end+1; i++, j++)
                 {
                   value_ptr[j] = ptr[i] - value_start;
@@ -131,7 +131,7 @@ namespace neuroh5
               value_start = 0;
               value_block = block > 0 ? dataset_num_elements (loc, value_path) : 0;
             }
-          value_index.resize(block);
+          value_index.resize(block, 0);
           for (size_t i=start, j=0; i<end; i++, j++)
             {
               value_index[j] = index[i];
@@ -146,7 +146,7 @@ namespace neuroh5
           throw_assert(H5Dclose(dset)   >= 0, "error  in H5Dclose");
           throw_assert(H5Tclose(ftype)  >= 0, "error  in H5Tclose");
           
-          value.resize(value_block);
+          value.resize(value_block, 0);
           status = read<T> (loc, value_path, value_start, value_block,
                             ntype, value, rapl);
           
@@ -248,7 +248,7 @@ namespace neuroh5
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
           status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
               
-          values.resize(selection_ptr_pos);
+          values.resize(selection_ptr_pos, 0);
 
           status = read_selection<T> (loc, value_path, ntype, ranges, values, rapl);
           throw_assert(H5Pclose(rapl)   >= 0, "error in H5Pclose");
@@ -385,7 +385,7 @@ namespace neuroh5
         }
 
       // add local value offset to attr_ptr
-      local_attr_ptr.resize(attr_ptr.size());
+      local_attr_ptr.resize(attr_ptr.size(), 0);
       for (size_t i=0; i<local_attr_ptr.size(); i++)
         {
           local_attr_ptr[i] = attr_ptr[i] + local_value_start;
@@ -506,7 +506,7 @@ namespace neuroh5
       // Determine the total number of index
       hsize_t local_index_size=index.size();
       std::vector<uint64_t> index_size_vector;
-      index_size_vector.resize(size);
+      index_size_vector.resize(size, 0);
       status = MPI_Allgather(&local_index_size, 1, MPI_UINT64_T, &index_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS, "write_cell_attribute: error in MPI_Allgather");
 #ifdef NEUROH5_DEBUG
@@ -522,7 +522,7 @@ namespace neuroh5
         }
     
       std::vector<uint64_t> ptr_size_vector;
-      ptr_size_vector.resize(size);
+      ptr_size_vector.resize(size, 0);
       status = MPI_Allgather(&local_ptr_size, 1, MPI_UINT64_T, &ptr_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS, "write_cell_attribute; error in MPI_Allgather");
 #ifdef NEUROH5_DEBUG
@@ -532,7 +532,7 @@ namespace neuroh5
     
       hsize_t local_value_size = value.size();
       std::vector<uint64_t> value_size_vector;
-      value_size_vector.resize(size);
+      value_size_vector.resize(size, 0);
       status = MPI_Allgather(&local_value_size, 1, MPI_UINT64_T, &value_size_vector[0], 1, MPI_UINT64_T, comm);
       throw_assert(status == MPI_SUCCESS, "write_cell_attribute: error in MPI_Allgather");
 #ifdef NEUROH5_DEBUG
@@ -558,7 +558,7 @@ namespace neuroh5
         }
 
       // add local value offset to attr_ptr
-      local_attr_ptr.resize(attr_ptr.size());
+      local_attr_ptr.resize(attr_ptr.size(), 0);
       for (size_t i=0; i<local_attr_ptr.size(); i++)
         {
           local_attr_ptr[i] = attr_ptr[i] + local_value_start;
