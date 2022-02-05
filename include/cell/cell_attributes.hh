@@ -176,7 +176,6 @@ namespace neuroh5
       int status;
       throw_assert(index.size() == attr_ptr.size()-1,
                    "append_cell_attribute: mismatch between sizes of cell index and attribute pointer");
-      std::vector<ATTR_PTR_T>  local_attr_ptr;
     
       int size, rank;
       throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
@@ -366,10 +365,13 @@ namespace neuroh5
         {
           const CELL_IDX_T gid = element.first;
           const deque<T> &v = element.second;
-          index_vector.push_back(gid);
-          attr_ptr.push_back(value_offset);
-          value_vector.insert(value_vector.end(),v.begin(),v.end());
-          value_offset = value_offset + v.size();
+	  if (v.size() > 0)
+	    {
+	      index_vector.push_back(gid);
+	      attr_ptr.push_back(value_offset);
+	      value_vector.insert(value_vector.end(),v.begin(),v.end());
+	      value_offset = value_offset + v.size();
+	    }
         }
       //attr_ptr.push_back(value_offset);
 
@@ -452,7 +454,10 @@ namespace neuroh5
           ATTR_PTR_T attr_ptr_recvbuf_base = attr_ptr_recvbuf[0];
           for (size_t i=0; i<attr_ptr_recvbuf.size(); i++)
             {
-              attr_ptr_recvbuf[i] -= attr_ptr_recvbuf_base;
+	      if (attr_ptr_recvbuf[i] > attr_ptr_recvbuf_base)
+		{
+		  attr_ptr_recvbuf[i] -= attr_ptr_recvbuf_base;
+		}
             }
         }
     
