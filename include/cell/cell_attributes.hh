@@ -242,6 +242,8 @@ namespace neuroh5
 
       for (const CELL_IDX_T& gid: index)
         {
+	  throw_assert(gid >= pop_start,
+		       "append_cell_attribute: invalid gid");
           rindex.push_back(gid - pop_start);
         }
       
@@ -365,13 +367,10 @@ namespace neuroh5
         {
           const CELL_IDX_T gid = element.first;
           const deque<T> &v = element.second;
-	  if (v.size() > 0)
-	    {
-	      index_vector.push_back(gid);
-	      attr_ptr.push_back(value_offset);
-	      value_vector.insert(value_vector.end(),v.begin(),v.end());
-	      value_offset = value_offset + v.size();
-	    }
+	  index_vector.push_back(gid);
+	  attr_ptr.push_back(value_offset);
+	  value_vector.insert(value_vector.end(),v.begin(),v.end());
+	  value_offset = value_offset + v.size();
         }
       //attr_ptr.push_back(value_offset);
 
