@@ -67,6 +67,8 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
 
+      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
       bool is_io_rank = false;
@@ -196,7 +198,8 @@ namespace neuroh5
                 data::serialize_data(edge_attr_names, sendbuf);
                 sendbuf_size = sendbuf.size();
               }
-            
+
+            throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
             throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
             sendbuf.resize(sendbuf_size);
             throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);

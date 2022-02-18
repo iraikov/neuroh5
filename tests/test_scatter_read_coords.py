@@ -28,10 +28,9 @@ def main(coords_path, coords_namespace, io_size):
     print ('Allocated %i ranks' % size)
 
     population_ranges = read_population_ranges(coords_path)[0]
-    print (population_ranges)
     
     soma_coords = {}
-    for population in population_ranges.keys():
+    for population in ['GC']:
 
         attr_dict = scatter_read_cell_attributes(coords_path, population, namespaces=[coords_namespace], io_size=io_size)
         attr_iter = attr_dict[coords_namespace]

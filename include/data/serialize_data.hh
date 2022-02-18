@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for serializing/deserializing data objects.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
 #ifndef SERIALIZE_DATA_HH
@@ -26,6 +26,7 @@
 
 
 // type support
+#include "cereal/types/deque.hpp"
 #include "cereal/types/vector.hpp"
 #include "cereal/types/tuple.hpp"
 #include "cereal/types/map.hpp"
