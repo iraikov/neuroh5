@@ -30,7 +30,7 @@ namespace neuroh5
                            typename vector<T>::const_iterator first,
                            typename vector<T>::const_iterator last)
     {
-      if (last > first)
+      if (last >= first)
         {
           auto values_it = values_map.find(vindex);
           if (values_it == values_map.end())
