@@ -84,6 +84,7 @@ int main(int argc, char** argv)
   int status;
   std::string pop_name;
   std::string input_filename, output_filename;
+  size_t write_size=0;
   CELL_IDX_T source_gid;
   std::vector<CELL_IDX_T> target_gid_list;
   forward_list<neurotree_t> input_tree_list, output_tree_list;
@@ -102,18 +103,21 @@ int main(int argc, char** argv)
 
   int optflag_fill         = 0;
   int optflag_output       = 0;
+  int optflag_write_size   = 0;
   bool opt_attributes      = false;
   bool opt_fill            = false;
   bool opt_output_filename = false;
+  bool opt_write_size      = false;
   // parse arguments
   static struct option long_options[] = {
     {"fill",    no_argument, &optflag_fill,  1 },
     {"output",  required_argument, &optflag_output,  1 },
+    {"write-size",  required_argument, &optflag_write_size,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
   int option_index = 0;
-  while ((c = getopt_long (argc, argv, "hao:", long_options, &option_index)) != -1)
+  while ((c = getopt_long (argc, argv, "haow:", long_options, &option_index)) != -1)
     {
       stringstream ss;
       switch (c)
@@ -128,6 +132,13 @@ int main(int argc, char** argv)
             output_filename = string(optarg);
             optflag_output = 0;
           }
+          if (optflag_write_size == 1) {
+            opt_write_size = true;
+            optflag_write_size = 0;
+            stringstream ss; 
+            ss << string(string(optarg));
+            ss >> write_size;
+          }
           break;
         case 'a':
           opt_attributes = true;
@@ -135,6 +146,14 @@ int main(int argc, char** argv)
         case 'o':
           opt_output_filename = true;
           output_filename = string(optarg);
+          break;
+        case 'w':
+          opt_write_size = true;
+          {
+            stringstream ss; 
+            ss << string(string(optarg));
+            ss >> write_size;
+          }
           break;
         case 'h':
           print_usage_full(argv);
@@ -267,22 +286,6 @@ int main(int argc, char** argv)
   mpi::rank_ranges(target_gid_list.size(), size, ranges);
 
   hsize_t start=ranges[rank].first, end=ranges[rank].first+ranges[rank].second;
-
-  for (size_t i=start, ii=0; i<end; i++, ii++)
-    {
-      CELL_IDX_T gid = target_gid_list[i];
-      CELL_IDX_T id = gid;
-      printf("Task %d: Output local id %u (global id %u)\n", rank, id, gid);
-
-      neurotree_t tree = make_tuple(id,
-                                    src_vector, dst_vector, sections,
-                                    xcoords, ycoords, zcoords,
-                                    radiuses, layers, parents,
-                                    swc_types);
-      output_tree_list.push_front(tree);
-
-    }
-
   
   if (access( output_filename.c_str(), F_OK ) != 0)
     {
@@ -315,8 +318,34 @@ int main(int argc, char** argv)
     }
   MPI_Barrier(all_comm);
 
-  throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list) == 0,
-               "error in append_trees");
+
+  if (write_size == 0)
+    {
+      write_size = end-start;
+    }
+  
+  for (size_t i=start, ii=0; i<end; i++, ii++)
+    {
+      CELL_IDX_T gid = target_gid_list[i];
+      CELL_IDX_T id = gid;
+      printf("Task %d: Output local id %u (global id %u)\n", rank, id, gid);
+
+      neurotree_t tree = make_tuple(id,
+                                    src_vector, dst_vector, sections,
+                                    xcoords, ycoords, zcoords,
+                                    radiuses, layers, parents,
+                                    swc_types);
+      output_tree_list.push_front(tree);
+
+      if ((ii > 0) && (ii % write_size == 0))
+        {
+          throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list) == 0,
+                       "error in append_trees");
+          output_tree_list.clear();
+        }
+
+    }
+
 
   MPI_Barrier(all_comm);
   MPI_Comm_free(&all_comm);
