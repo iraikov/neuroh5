@@ -346,6 +346,11 @@ int main(int argc, char** argv)
 
     }
 
+  if (!output_tree_list.empty())
+    {
+      throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list) == 0,
+                   "error in append_trees");
+    }
 
   MPI_Barrier(all_comm);
   MPI_Comm_free(&all_comm);
