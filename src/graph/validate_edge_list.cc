@@ -5,7 +5,7 @@
 ///  Functions for validating edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2022 Project NeuroH5.
 //==============================================================================
 
 #include "validate_edge_list.hh"
@@ -72,7 +72,17 @@ namespace neuroh5
                         }
                       else
                         {
-                          pp.second = riter->second.second-1;
+                          if (riter != pop_search_ranges.begin())
+                            {
+                              --riter;
+                              pp.second = riter->second.second;
+                            }
+                          else
+                            {
+                              DEBUG("unable to find population for dst = ",
+                                    dst,"\n");
+                              return false;
+                            }
                         }
                       size_t low = dst_ptr[i], high = dst_ptr[i+1];
                       throw_assert_nomsg((low <= src_idx.size()) && (high <= src_idx.size()));
@@ -95,13 +105,22 @@ namespace neuroh5
                                     }
                                   else
                                     {
-                                      DEBUG("unable to find population for src = ",src,"\n");
+                                      DEBUG("unable to find population for src = ", src,"\n");
                                       return false;
                                     }
                                 }
                               else
                                 {
-                                  pp.first = citer->second.second-1;
+                                  if (citer != pop_search_ranges.begin())
+                                    {
+                                      --citer;
+                                      pp.first = citer->second.second;
+                                    }
+                                  else
+                                    {
+                                      DEBUG("unable to find population for src = ", src,"\n");
+                                      return false;
+                                    }
                                 }
                               // check if the population combo is valid
                               result = (pop_pairs.find(pp) != pop_pairs.end());
