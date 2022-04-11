@@ -57,9 +57,17 @@ namespace neuroh5
                 }
               else
                 {
-                  DEBUG("unable to find population for dst = ",
-                        dst,"\n");
-                  return false;
+                  if (riter != pop_search_ranges.begin())
+                    {
+                      --riter;
+                      pp.second = riter->second.second;
+                    }
+                  else
+                    {
+                      DEBUG("unable to find population for dst = ",
+                            dst,"\n");
+                      return false;
+                    }
                 }
             }
           else
@@ -93,7 +101,16 @@ namespace neuroh5
                     }
                   else
                     {
-                      pp.first = citer->second.second-1;
+                      if (citer != pop_search_ranges.begin())
+                        {
+                          --citer;
+                          pp.first = citer->second.second;
+                        }
+                      else
+                        {
+                          DEBUG("unable to find population for src = ", src,"\n");
+                          return false;
+                        }
                     }
                   // check if the population combo is valid
                   result = (pop_pairs.find(pp) != pop_pairs.end());
