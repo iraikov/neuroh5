@@ -57,7 +57,7 @@ namespace neuroh5
                 }
               else
                 {
-                  if (riter != pop_search_ranges.begin())
+                  if (riter != pop_ranges.begin())
                     {
                       --riter;
                       pp.second = riter->second.second;
@@ -101,7 +101,7 @@ namespace neuroh5
                     }
                   else
                     {
-                      if (citer != pop_search_ranges.begin())
+                      if (citer != pop_ranges.begin())
                         {
                           --citer;
                           pp.first = citer->second.second;
