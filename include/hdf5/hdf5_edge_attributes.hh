@@ -99,7 +99,7 @@ namespace neuroh5
                             current_value_size);
 
       size_t my_count = value.size();
-      std::vector<size_t> all_counts(size);
+      std::vector<size_t> all_counts(size, 0);
       throw_assert(MPI_Allgather(&my_count, 1, MPI_SIZE_T, &all_counts[0], 1,
                                  MPI_SIZE_T, comm) == MPI_SUCCESS,
                    "append_edge_attribute: error in MPI_Allgather");

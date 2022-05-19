@@ -608,19 +608,19 @@ namespace neuroh5
       // exchange allocation data
 
       vector<size_t> sendbuf_num_blocks(size, num_blocks);
-      vector<size_t> recvbuf_num_blocks(size);
+      vector<size_t> recvbuf_num_blocks(size, 0);
       throw_assert_nomsg(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_SIZE_T,
                            &recvbuf_num_blocks[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
       vector<size_t> sendbuf_num_dest(size, num_dest);
-      vector<size_t> recvbuf_num_dest(size);
+      vector<size_t> recvbuf_num_dest(size, 0);
       throw_assert_nomsg(MPI_Allgather(&sendbuf_num_dest[0], 1, MPI_SIZE_T,
                            &recvbuf_num_dest[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);
 
       vector<size_t> sendbuf_num_edge(size, num_edges);
-      vector<size_t> recvbuf_num_edge(size);
+      vector<size_t> recvbuf_num_edge(size, 0);
       throw_assert_nomsg(MPI_Allgather(&sendbuf_num_edge[0], 1, MPI_SIZE_T,
                            &recvbuf_num_edge[0], 1, MPI_SIZE_T, comm)
              == MPI_SUCCESS);

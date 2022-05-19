@@ -351,18 +351,15 @@ namespace neuroh5
                    "append_cell_attribute_map: error in MPI_Barrier");
 
     
-      // Create gid, attr_ptr, value arrays
-      vector<ATTR_PTR_T>  relative_attr_ptr;
-      ATTR_PTR_T value_offset = 0;
+      vector<ATTR_PTR_T>  attr_size;
 
       for (auto const& element : value_map)
         {
           const CELL_IDX_T gid = element.first;
           const deque<T> &v = element.second;
 	  index_vector.push_back(gid);
-	  relative_attr_ptr.push_back(value_offset);
+	  attr_size.push_back(v.size());
 	  value_vector.insert(value_vector.end(),v.begin(),v.end());
-	  value_offset = value_offset + v.size();
         }
 
       vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
@@ -400,8 +397,8 @@ namespace neuroh5
              "append_cell_attribute_map: error in MPI_Alltoallv");
       value_vector.clear();
     
-      vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
-      ptr_sendcounts[io_dests[rank]] = relative_attr_ptr.size();
+      vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
+      attr_size_sendcounts[io_dests[rank]] = attr_size.size();
 
       // Compute number of values to receive for all I/O rank
       if (is_io_rank)
@@ -410,48 +407,49 @@ namespace neuroh5
             {
               if (io_dests[s] == rank)
                 {
-                  ptr_recvcounts[s] += recvbuf_num_values[s];
+                  attr_size_recvcounts[s] += recvbuf_num_values[s];
                 }
             }
         }
     
       // Each ALL_COMM rank accumulates the vector sizes and allocates
       // a receive buffer, recvcounts, and rdispls
-      size_t ptr_recvbuf_size = ptr_recvcounts[0];
+      size_t attr_size_recvbuf_size = attr_size_recvcounts[0];
       for (int p = 1; p < ssize; ++p)
         {
-          ptr_rdispls[p] = ptr_rdispls[p-1] + ptr_recvcounts[p-1];
-          ptr_recvbuf_size += ptr_recvcounts[p];
+          attr_size_rdispls[p] = attr_size_rdispls[p-1] + attr_size_recvcounts[p-1];
+          attr_size_recvbuf_size += attr_size_recvcounts[p];
         }
       //assert(recvbuf_size > 0);
-      vector<ATTR_PTR_T> attr_ptr_recvbuf(ptr_recvbuf_size,0);
+      vector<ATTR_PTR_T> attr_size_recvbuf(attr_size_recvbuf_size,0);
     
       // Each ALL_COMM rank participates in the MPI_Alltoallv
-      throw_assert(MPI_Alltoallv(&relative_attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
-                                 &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
+      throw_assert(MPI_Alltoallv(&attr_size[0], &attr_size_sendcounts[0], &attr_size_sdispls[0], MPI_ATTR_PTR_T,
+                                 &attr_size_recvbuf[0], &attr_size_recvcounts[0], &attr_size_rdispls[0], MPI_ATTR_PTR_T,
                                  comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Alltoallv");
 
-      if ((is_io_rank) && (attr_ptr_recvbuf.size() > 0))
+      vector<ATTR_PTR_T> attr_ptr;
+      if ((is_io_rank) && (attr_size_recvbuf.size() > 0))
         {
-          ATTR_PTR_T attr_ptr_recvbuf_base = 0;
-          for (size_t s=0; s<size; s++)
+          ATTR_PTR_T attr_ptr_offset = 0;
+          for (size_t s=0; s<ssize; s++)
             {
-	      int count = ptr_recvcounts[s];
-	      for (size_t i=ptr_rdispls[s]; i<ptr_rdispls[s]+count; i++)
+	      int count = attr_size_recvcounts[s];
+	      for (size_t i=attr_size_rdispls[s]; i<attr_size_rdispls[s]+count; i++)
 		{
-		  attr_ptr_recvbuf[i] += attr_ptr_recvbuf_base;
+                  ATTR_PTR_T this_attr_size = attr_size_recvbuf[i];
+		  attr_ptr.push_back(attr_ptr_offset);
+                  attr_ptr_offset += this_attr_size;
 		}
-              attr_ptr_recvbuf_base += value_recvcounts[s];
 	    }
-          attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
+          attr_ptr.push_back(attr_ptr_offset);
         }
     
-      relative_attr_ptr.clear();
-      ptr_sendcounts.clear();
-      ptr_sdispls.clear();
-      ptr_recvcounts.clear();
-      ptr_rdispls.clear();
+      attr_size_sendcounts.clear();
+      attr_size_sdispls.clear();
+      attr_size_recvcounts.clear();
+      attr_size_rdispls.clear();
 
       vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
       idx_sendcounts[io_dests[rank]] = index_vector.size();
@@ -514,7 +512,7 @@ namespace neuroh5
         {
           append_cell_attribute<T>(io_comm, file_name,
                                    attr_namespace, pop_name, pop_start, attr_name,
-                                   gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
+                                   gid_recvbuf, attr_ptr, value_recvbuf,
                                    data_type, index_type, ptr_type, 
                                    chunk_size, value_chunk_size, cache_size);
         }
@@ -729,18 +727,15 @@ namespace neuroh5
                    == MPI_SUCCESS, "write_cell_attribute_map: error in MPI_Allgather");
       sendbuf_size_values.clear();
     
-      // Create gid, attr_ptr, value arrays
-      vector<ATTR_PTR_T>  relative_attr_ptr;
-      ATTR_PTR_T value_offset = 0;
-
+      vector<ATTR_PTR_T>  attr_size;
+      
       for (auto const& element : value_map)
         {
           const CELL_IDX_T gid = element.first;
           const deque<T> &v = element.second;
           index_vector.push_back(gid);
-          relative_attr_ptr.push_back(value_offset);
           value_vector.insert(value_vector.end(),v.begin(),v.end());
-          value_offset = value_offset + v.size();
+	  attr_size.push_back(v.size());
         }
 
       vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
@@ -778,8 +773,8 @@ namespace neuroh5
              "write_cell_attribute_map: error in MPI_Alltoallv");
       value_vector.clear();
     
-      vector<int> ptr_sendcounts(size, 0), ptr_sdispls(size, 0), ptr_recvcounts(size, 0), ptr_rdispls(size, 0);
-      ptr_sendcounts[io_dests[rank]] = relative_attr_ptr.size();
+      vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
+      attr_size_sendcounts[io_dests[rank]] = attr_size.size();
 
       // Compute number of values to receive for all I/O rank
       if (is_io_rank)
@@ -788,47 +783,50 @@ namespace neuroh5
             {
               if (io_dests[s] == rank)
                 {
-                  ptr_recvcounts[s] += recvbuf_num_values[s];
+                  attr_size_recvcounts[s] += recvbuf_num_values[s];
                 }
             }
         }
     
       // Each ALL_COMM rank accumulates the vector sizes and allocates
       // a receive buffer, recvcounts, and rdispls
-      size_t ptr_recvbuf_size = ptr_recvcounts[0];
+      size_t attr_size_recvbuf_size = attr_size_recvcounts[0];
       for (int p = 1; p < ssize; ++p)
         {
-          ptr_rdispls[p] = ptr_rdispls[p-1] + ptr_recvcounts[p-1];
-          ptr_recvbuf_size += ptr_recvcounts[p];
+          attr_size_rdispls[p] = attr_size_rdispls[p-1] + attr_size_recvcounts[p-1];
+          attr_size_recvbuf_size += attr_size_recvcounts[p];
         }
       //assert(recvbuf_size > 0);
-      vector<ATTR_PTR_T> attr_ptr_recvbuf(ptr_recvbuf_size);
+      vector<ATTR_PTR_T> attr_size_recvbuf(attr_size_recvbuf_size);
     
       // Each ALL_COMM rank participates in the MPI_Alltoallv
-      throw_assert(MPI_Alltoallv(&relative_attr_ptr[0], &ptr_sendcounts[0], &ptr_sdispls[0], MPI_ATTR_PTR_T,
-                                 &attr_ptr_recvbuf[0], &ptr_recvcounts[0], &ptr_rdispls[0], MPI_ATTR_PTR_T,
+      throw_assert(MPI_Alltoallv(&attr_size[0], &attr_size_sendcounts[0], &attr_size_sdispls[0], MPI_ATTR_PTR_T,
+                                 &attr_size_recvbuf[0], &attr_size_recvcounts[0], &attr_size_rdispls[0], MPI_ATTR_PTR_T,
                                  comm) == MPI_SUCCESS,
                    "write_cell_attribute_map: error in MPI_Alltoallv");
-      if ((is_io_rank) && (attr_ptr_recvbuf.size() > 0))
+
+
+      vector<ATTR_PTR_T> attr_ptr;
+      if ((is_io_rank) && (attr_size_recvbuf.size() > 0))
         {
-          ATTR_PTR_T attr_ptr_recvbuf_base = 0;
+          ATTR_PTR_T attr_ptr_offset = 0;
           for (size_t s=0; s<size; s++)
             {
-	      int count = ptr_recvcounts[s];
-	      for (size_t i=ptr_rdispls[s]; i<ptr_rdispls[s]+count; i++)
+	      int count = attr_size_recvcounts[s];
+	      for (size_t i=attr_size_rdispls[s]; i<attr_size_rdispls[s]+count; i++)
 		{
-		  attr_ptr_recvbuf[i] += attr_ptr_recvbuf_base;
+                  ATTR_PTR_T this_attr_size = attr_size_recvbuf[i];
+		  attr_ptr.push_back(attr_ptr_offset);
+                  attr_ptr_offset += this_attr_size;
 		}
-              attr_ptr_recvbuf_base += value_recvcounts[s];
 	    }
-          attr_ptr_recvbuf.push_back(attr_ptr_recvbuf[0]+value_recvbuf.size());
+          attr_ptr.push_back(attr_ptr_offset);
         }
     
-      relative_attr_ptr.clear();
-      ptr_sendcounts.clear();
-      ptr_sdispls.clear();
-      ptr_recvcounts.clear();
-      ptr_rdispls.clear();
+      attr_size_sendcounts.clear();
+      attr_size_sdispls.clear();
+      attr_size_recvcounts.clear();
+      attr_size_rdispls.clear();
 
       vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
       idx_sendcounts[io_dests[rank]] = index_vector.size();
@@ -888,7 +886,7 @@ namespace neuroh5
         {
           write_cell_attribute<T>(io_comm, file_name,
                                   attr_namespace, pop_name, pop_start, attr_name,
-                                  gid_recvbuf, attr_ptr_recvbuf, value_recvbuf,
+                                  gid_recvbuf, attr_ptr, value_recvbuf,
                                   data_type, index_type, ptr_type, 
                                   chunk_size, value_chunk_size, cache_size);
         }
