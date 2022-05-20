@@ -376,6 +376,7 @@ namespace neuroh5
       index_start=index_size; value_start=value_size;
 
       hsize_t local_value_start=value_start, local_index_start=index_start, local_ptr_start=ptr_start;
+
       // calculate the starting positions of this rank
       for (size_t i=0; i<rank; i++)
         {
@@ -394,10 +395,14 @@ namespace neuroh5
         }
 
       // add local value offset to attr_ptr
-      local_attr_ptr.resize(attr_ptr.size(), 0);
-      for (size_t i=0; i<local_attr_ptr.size(); i++)
+      local_attr_ptr.resize(local_ptr_size, 0);
+      for (size_t i=0; i<local_ptr_size; i++)
         {
           local_attr_ptr[i] = attr_ptr[i] + local_value_start;
+	  throw_assert(local_attr_ptr[i] <= global_value_size,
+		       "append_cell_attribute: path " << path << 
+		       ": attribute pointer value " << local_attr_ptr[i] <<
+		       " exceeds global value size " << global_value_size);
         }
 
       // write to datasets
