@@ -308,22 +308,31 @@ namespace neuroh5
                    "append_cell_attribute: error in MPI_Barrier");
 #endif
 
+      // Determine last rank that has data
+      size_t last_rank = size-1;
+
+      for (size_t r=last_rank; r >= 0; r--)
+	{
+	  if (index_size_vector[r] > 0)
+	    {
+	      last_rank = r;
+	      break;
+	    }
+	}
+      
       // Determine the total number of ptrs, add 1 to ptr of last rank
-      hsize_t local_ptr_size;
+      hsize_t local_ptr_size=0;
 
       if (attr_ptr.size() > 0)
         {
-          local_ptr_size = attr_ptr.size()-1;
-        }
-      else
-        {
-          local_ptr_size = 0;
-        }
-        
-      
-      if (rank == size-1)
-        {
-          local_ptr_size=local_ptr_size+1;
+          if (rank == last_rank)
+            {
+              local_ptr_size = attr_ptr.size();
+            }
+          else
+            {
+              local_ptr_size = attr_ptr.size()-1;
+            }
         }
     
       std::vector<uint64_t> ptr_size_vector(size, 0);
@@ -514,11 +523,31 @@ namespace neuroh5
                    "write_cell_attribute: error in MPI_Barrier");
 #endif
 
+      // Determine last rank that has data
+      size_t last_rank = size-1;
+
+      for (size_t r=last_rank; r >= 0; r--)
+	{
+	  if (index_size_vector[r] > 0)
+	    {
+	      last_rank = r;
+	      break;
+	    }
+	}
+      
       // Determine the total number of ptrs, add 1 to ptr of last rank
-      hsize_t local_ptr_size=attr_ptr.size()-1;
-      if (rank == size-1)
+      hsize_t local_ptr_size=0;
+
+      if (attr_ptr.size() > 0)
         {
-          local_ptr_size=local_ptr_size+1;
+          if (rank == last_rank)
+            {
+              local_ptr_size = attr_ptr.size();
+            }
+          else
+            {
+              local_ptr_size = attr_ptr.size()-1;
+            }
         }
     
       std::vector<uint64_t> ptr_size_vector;
