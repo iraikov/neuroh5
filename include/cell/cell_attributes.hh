@@ -12,6 +12,7 @@
 
 #include "mpe_seq.hh"
 #include "neuroh5_types.hh"
+#include "alltoallv_template.hh"
 #include "infer_datatype.hh"
 #include "infer_mpi_datatype.hh"
 #include "path_names.hh"
@@ -282,8 +283,6 @@ namespace neuroh5
      const size_t cache_size = 1*1024*1024
      )
     {
-      vector<CELL_IDX_T>  index_vector;
-      vector<T>  value_vector;
     
       int ssize, srank; size_t size, rank; size_t io_size_value=0;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
@@ -327,166 +326,97 @@ namespace neuroh5
         }
 
       // Determine number of values for each rank
-      vector<uint32_t> sendbuf_num_values(size, value_map.size());
       vector<uint32_t> recvbuf_num_values(size, 0);
-      throw_assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
-                                 &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
-                   == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
-      sendbuf_num_values.clear();
+      {
+        vector<uint32_t> sendbuf_num_values(size, value_map.size());
+        throw_assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
+                                   &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
+                     == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
+      }
 
       // Determine local value size and offset
       uint32_t local_value_size=0;
-      for (auto const& element : value_map)
-        {
-          const deque<T> &v = element.second;
-          local_value_size += v.size();
-        }
-      vector<uint32_t> sendbuf_size_values(size, local_value_size);
-      vector<uint32_t> recvbuf_size_values(size, 0);
-      throw_assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
-                                 &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
-                   == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
-      sendbuf_size_values.clear();
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Barrier");
-
-    
-      vector<ATTR_PTR_T>  attr_size;
-
+      vector<ATTR_PTR_T> local_attr_size_vector;
+      vector<CELL_IDX_T> local_index_vector;
       for (auto const& element : value_map)
         {
           const CELL_IDX_T gid = element.first;
           const deque<T> &v = element.second;
-	  index_vector.push_back(gid);
-	  attr_size.push_back(v.size());
-	  value_vector.insert(value_vector.end(),v.begin(),v.end());
+          local_value_size += v.size();
+	  local_index_vector.push_back(gid);
+	  local_attr_size_vector.push_back(v.size());
         }
-
-      vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
-      value_sendcounts[io_dests[rank]] = local_value_size;
-
-    
-      // Compute size of values to receive for all I/O rank
-      if (is_io_rank)
-        {
-          for (size_t s=0; s<size; s++)
-            {
-              if (io_dests[s] == rank)
-                {
-                  value_recvcounts[s] += recvbuf_size_values[s];
-                }
-            }
-        }
-
-      // Each ALL_COMM rank accumulates the vector sizes and allocates
-      // a receive buffer, recvcounts, and rdispls
-      size_t value_recvbuf_size = value_recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          value_rdispls[p] = value_rdispls[p-1] + value_recvcounts[p-1];
-          value_recvbuf_size += value_recvcounts[p];
-        }
-      //assert(recvbuf_size > 0);
-      vector<T> value_recvbuf(value_recvbuf_size, 0);
-
-      T dummy;
-      MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
-      throw_assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
-                                 &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
-                                 comm) == MPI_SUCCESS,
-             "append_cell_attribute_map: error in MPI_Alltoallv");
-      value_vector.clear();
-    
-      vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
-      attr_size_sendcounts[io_dests[rank]] = attr_size.size();
-
-      // Compute number of values to receive for all I/O rank
-      if (is_io_rank)
-        {
-          for (size_t s=0; s<size; s++)
-            {
-              if (io_dests[s] == rank)
-                {
-                  attr_size_recvcounts[s] += recvbuf_num_values[s];
-                }
-            }
-        }
-    
-      // Each ALL_COMM rank accumulates the vector sizes and allocates
-      // a receive buffer, recvcounts, and rdispls
-      size_t attr_size_recvbuf_size = attr_size_recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          attr_size_rdispls[p] = attr_size_rdispls[p-1] + attr_size_recvcounts[p-1];
-          attr_size_recvbuf_size += attr_size_recvcounts[p];
-        }
-      //assert(recvbuf_size > 0);
-      vector<ATTR_PTR_T> attr_size_recvbuf(attr_size_recvbuf_size,0);
-    
-      // Each ALL_COMM rank participates in the MPI_Alltoallv
-      throw_assert(MPI_Alltoallv(&attr_size[0], &attr_size_sendcounts[0], &attr_size_sdispls[0], MPI_ATTR_PTR_T,
-                                 &attr_size_recvbuf[0], &attr_size_recvcounts[0], &attr_size_rdispls[0], MPI_ATTR_PTR_T,
-                                 comm) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Alltoallv");
+      
+      vector<CELL_IDX_T> gid_recvbuf;
+      {
+        vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
+        idx_sendcounts[io_dests[rank]] = local_index_vector.size();
+        
+        throw_assert(mpi::alltoallv_vector<CELL_IDX_T>(comm, MPI_CELL_IDX_T,
+                                                       idx_sendcounts, idx_sdispls, local_index_vector,
+                                                       idx_recvcounts, idx_rdispls, gid_recvbuf) >= 0,
+                     "append_cell_attribute_map: error in MPI_Alltoallv");
+      }
 
       vector<ATTR_PTR_T> attr_ptr;
-      if ((is_io_rank) && (attr_size_recvbuf.size() > 0))
-        {
-          ATTR_PTR_T attr_ptr_offset = 0;
-          for (size_t s=0; s<ssize; s++)
-            {
-	      int count = attr_size_recvcounts[s];
-	      for (size_t i=attr_size_rdispls[s]; i<attr_size_rdispls[s]+count; i++)
-		{
-                  ATTR_PTR_T this_attr_size = attr_size_recvbuf[i];
-		  attr_ptr.push_back(attr_ptr_offset);
-                  attr_ptr_offset += this_attr_size;
-		}
-	    }
-          attr_ptr.push_back(attr_ptr_offset);
-        }
-    
-      attr_size_sendcounts.clear();
-      attr_size_sdispls.clear();
-      attr_size_recvcounts.clear();
-      attr_size_rdispls.clear();
+      {
+        vector<ATTR_PTR_T> attr_size_recvbuf;
+        vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
+        attr_size_sendcounts[io_dests[rank]] = local_attr_size_vector.size();
 
-      vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
-      idx_sendcounts[io_dests[rank]] = index_vector.size();
+        throw_assert(mpi::alltoallv_vector<ATTR_PTR_T>(comm, MPI_ATTR_PTR_T,
+                                                       attr_size_sendcounts, attr_size_sdispls, local_attr_size_vector,
+                                                       attr_size_recvcounts, attr_size_rdispls, attr_size_recvbuf) >= 0,
+                     "append_cell_attribute_map: error in MPI_Alltoallv");
+        
+        if ((is_io_rank) && (attr_size_recvbuf.size() > 0))
+          {
+            ATTR_PTR_T attr_ptr_offset = 0;
+            for (size_t s=0; s<ssize; s++)
+              {
+                int count = attr_size_recvcounts[s];
+                for (size_t i=attr_size_rdispls[s]; i<attr_size_rdispls[s]+count; i++)
+                  {
+                    ATTR_PTR_T this_attr_size = attr_size_recvbuf[i];
+                    attr_ptr.push_back(attr_ptr_offset);
+                    attr_ptr_offset += this_attr_size;
+                  }
+              }
+            attr_ptr.push_back(attr_ptr_offset);
+          }
+      }
 
-      // Compute number of values to receive for all I/O rank
-      if (is_io_rank)
-        {
-          for (size_t s=0; s<size; s++)
-            {
-              if (io_dests[s] == rank)
-                {
-                  idx_recvcounts[s] += recvbuf_num_values[s];
-                }
-            }
-        }
-    
-      // Each ALL_COMM rank accumulates the vector sizes and allocates
-      // a receive buffer, recvcounts, and rdispls
-      size_t idx_recvbuf_size = idx_recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          idx_rdispls[p] = idx_rdispls[p-1] + idx_recvcounts[p-1];
-          idx_recvbuf_size += idx_recvcounts[p];
-        }
+      
+      vector<T> value_recvbuf;
+      {
+        vector<uint32_t> recvbuf_size_values(size, 0);
+        vector<uint32_t> sendbuf_size_values(size, local_value_size);
+        throw_assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
+                                   &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
+                     == MPI_SUCCESS, "append_cell_attribute_map: error in MPI_Allgather");
+        throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                       "append_cell_attribute_map: error in MPI_Barrier");
+        
+        vector<T>  local_value_vector;
+        for (auto const& element : value_map)
+          {
+            const CELL_IDX_T gid = element.first;
+            const deque<T> &v = element.second;
+            local_value_vector.insert(local_value_vector.end(),v.begin(),v.end());
+          }
+        
+        vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
+        value_sendcounts[io_dests[rank]] = local_value_size;
+        
 
-      vector<CELL_IDX_T> gid_recvbuf(idx_recvbuf_size, 0);
-    
-      throw_assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
-                                 &gid_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_CELL_IDX_T,
-                                 comm) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Alltoallv");
-      index_vector.clear();
-      idx_sendcounts.clear();
-      idx_sdispls.clear();
-      idx_recvcounts.clear();
-      idx_rdispls.clear();
-
+        T dummy;
+        MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
+        throw_assert(mpi::alltoallv_vector<T>(comm, mpi_type,
+                                              value_sendcounts, value_sdispls, local_value_vector,
+                                              value_recvcounts, value_rdispls, value_recvbuf) >= 0,
+                     "append_cell_attribute_map: error in MPI_Alltoallv");
+      }
+      
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Barrier");
     
@@ -633,7 +563,6 @@ namespace neuroh5
                                      rindex, attr_ptr, value,
                                      index_type, ptr_type);
 
-
       
       status = H5Fclose(file);
       throw_assert(status == 0, "error in H5Fclose");
@@ -705,166 +634,100 @@ namespace neuroh5
             }
         }
 
+
       // Determine number of values for each rank
-      vector<uint32_t> sendbuf_num_values(size, value_map.size());
-      vector<uint32_t> recvbuf_num_values(size);
-      throw_assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
-                                 &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
-                   == MPI_SUCCESS, "write_cell_attribute_map: error in MPI_Allgather");
-      sendbuf_num_values.clear();
+      vector<uint32_t> recvbuf_num_values(size, 0);
+      {
+        vector<uint32_t> sendbuf_num_values(size, value_map.size());
+        throw_assert(MPI_Allgather(&sendbuf_num_values[0], 1, MPI_UINT32_T,
+                                   &recvbuf_num_values[0], 1, MPI_UINT32_T, comm)
+                     == MPI_SUCCESS, "write_cell_attribute_map: error in MPI_Allgather");
+      }
 
       // Determine local value size and offset
       uint32_t local_value_size=0;
-      for (auto const& element : value_map)
-        {
-          const deque<T> &v = element.second;
-          local_value_size += v.size();
-        }
-      vector<uint32_t> sendbuf_size_values(size, local_value_size);
-      vector<uint32_t> recvbuf_size_values(size);
-      throw_assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
-                                 &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
-                   == MPI_SUCCESS, "write_cell_attribute_map: error in MPI_Allgather");
-      sendbuf_size_values.clear();
-    
-      vector<ATTR_PTR_T>  attr_size;
-      
+      vector<ATTR_PTR_T> local_attr_size_vector;
+      vector<CELL_IDX_T> local_index_vector;
       for (auto const& element : value_map)
         {
           const CELL_IDX_T gid = element.first;
           const deque<T> &v = element.second;
-          index_vector.push_back(gid);
-          value_vector.insert(value_vector.end(),v.begin(),v.end());
-	  attr_size.push_back(v.size());
+          local_value_size += v.size();
+	  local_index_vector.push_back(gid);
+	  local_attr_size_vector.push_back(v.size());
         }
-
-      vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
-      value_sendcounts[io_dests[rank]] = local_value_size;
-
-    
-      // Compute size of values to receive for all I/O rank
-      if (is_io_rank)
-        {
-          for (size_t s=0; s<size; s++)
-            {
-              if (io_dests[s] == rank)
-                {
-                  value_recvcounts[s] += recvbuf_size_values[s];
-                }
-            }
-        }
-
-      // Each ALL_COMM rank accumulates the vector sizes and allocates
-      // a receive buffer, recvcounts, and rdispls
-      size_t value_recvbuf_size = value_recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          value_rdispls[p] = value_rdispls[p-1] + value_recvcounts[p-1];
-          value_recvbuf_size += value_recvcounts[p];
-        }
-      //assert(recvbuf_size > 0);
-      vector<T> value_recvbuf(value_recvbuf_size);
-
-      T dummy;
-      MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
-      throw_assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
-                                 &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
-                                 comm) == MPI_SUCCESS,
-             "write_cell_attribute_map: error in MPI_Alltoallv");
-      value_vector.clear();
-    
-      vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
-      attr_size_sendcounts[io_dests[rank]] = attr_size.size();
-
-      // Compute number of values to receive for all I/O rank
-      if (is_io_rank)
-        {
-          for (size_t s=0; s<size; s++)
-            {
-              if (io_dests[s] == rank)
-                {
-                  attr_size_recvcounts[s] += recvbuf_num_values[s];
-                }
-            }
-        }
-    
-      // Each ALL_COMM rank accumulates the vector sizes and allocates
-      // a receive buffer, recvcounts, and rdispls
-      size_t attr_size_recvbuf_size = attr_size_recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          attr_size_rdispls[p] = attr_size_rdispls[p-1] + attr_size_recvcounts[p-1];
-          attr_size_recvbuf_size += attr_size_recvcounts[p];
-        }
-      //assert(recvbuf_size > 0);
-      vector<ATTR_PTR_T> attr_size_recvbuf(attr_size_recvbuf_size);
-    
-      // Each ALL_COMM rank participates in the MPI_Alltoallv
-      throw_assert(MPI_Alltoallv(&attr_size[0], &attr_size_sendcounts[0], &attr_size_sdispls[0], MPI_ATTR_PTR_T,
-                                 &attr_size_recvbuf[0], &attr_size_recvcounts[0], &attr_size_rdispls[0], MPI_ATTR_PTR_T,
-                                 comm) == MPI_SUCCESS,
-                   "write_cell_attribute_map: error in MPI_Alltoallv");
-
+      
+      vector<CELL_IDX_T> gid_recvbuf;
+      {
+        vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
+        idx_sendcounts[io_dests[rank]] = local_index_vector.size();
+        
+        throw_assert(mpi::alltoallv_vector<CELL_IDX_T>(comm, MPI_CELL_IDX_T,
+                                                       idx_sendcounts, idx_sdispls, local_index_vector,
+                                                       idx_recvcounts, idx_rdispls, gid_recvbuf) >= 0,
+                     "write_cell_attribute_map: error in MPI_Alltoallv");
+      }
 
       vector<ATTR_PTR_T> attr_ptr;
-      if ((is_io_rank) && (attr_size_recvbuf.size() > 0))
-        {
-          ATTR_PTR_T attr_ptr_offset = 0;
-          for (size_t s=0; s<size; s++)
-            {
-	      int count = attr_size_recvcounts[s];
-	      for (size_t i=attr_size_rdispls[s]; i<attr_size_rdispls[s]+count; i++)
-		{
-                  ATTR_PTR_T this_attr_size = attr_size_recvbuf[i];
-		  attr_ptr.push_back(attr_ptr_offset);
-                  attr_ptr_offset += this_attr_size;
-		}
-	    }
-          attr_ptr.push_back(attr_ptr_offset);
-        }
-    
-      attr_size_sendcounts.clear();
-      attr_size_sdispls.clear();
-      attr_size_recvcounts.clear();
-      attr_size_rdispls.clear();
+      {
+        vector<ATTR_PTR_T> attr_size_recvbuf;
+        vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
+        attr_size_sendcounts[io_dests[rank]] = local_attr_size_vector.size();
 
-      vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
-      idx_sendcounts[io_dests[rank]] = index_vector.size();
+        throw_assert(mpi::alltoallv_vector<ATTR_PTR_T>(comm, MPI_ATTR_PTR_T,
+                                                       attr_size_sendcounts, attr_size_sdispls, local_attr_size_vector,
+                                                       attr_size_recvcounts, attr_size_rdispls, attr_size_recvbuf) >= 0,
+                     "write_cell_attribute_map: error in MPI_Alltoallv");
+        
+        if ((is_io_rank) && (attr_size_recvbuf.size() > 0))
+          {
+            ATTR_PTR_T attr_ptr_offset = 0;
+            for (size_t s=0; s<ssize; s++)
+              {
+                int count = attr_size_recvcounts[s];
+                for (size_t i=attr_size_rdispls[s]; i<attr_size_rdispls[s]+count; i++)
+                  {
+                    ATTR_PTR_T this_attr_size = attr_size_recvbuf[i];
+                    attr_ptr.push_back(attr_ptr_offset);
+                    attr_ptr_offset += this_attr_size;
+                  }
+              }
+            attr_ptr.push_back(attr_ptr_offset);
+          }
+      }
 
-      // Compute number of values to receive for all I/O rank
-      if (is_io_rank)
-        {
-          for (size_t s=0; s<size; s++)
-            {
-              if (io_dests[s] == rank)
-                {
-                  idx_recvcounts[s] += recvbuf_num_values[s];
-                }
-            }
-        }
-    
-      // Each ALL_COMM rank accumulates the vector sizes and allocates
-      // a receive buffer, recvcounts, and rdispls
-      size_t idx_recvbuf_size = idx_recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          idx_rdispls[p] = idx_rdispls[p-1] + idx_recvcounts[p-1];
-          idx_recvbuf_size += idx_recvcounts[p];
-        }
+      vector<T> value_recvbuf;
+      {
+        vector<uint32_t> recvbuf_size_values(size, 0);
+        vector<uint32_t> sendbuf_size_values(size, local_value_size);
+        throw_assert(MPI_Allgather(&sendbuf_size_values[0], 1, MPI_UINT32_T,
+                                   &recvbuf_size_values[0], 1, MPI_UINT32_T, comm)
+                     == MPI_SUCCESS, "write_cell_attribute_map: error in MPI_Allgather");
+        throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                       "write_cell_attribute_map: error in MPI_Barrier");
+        
+        vector<T> local_value_vector;
+        for (auto const& element : value_map)
+          {
+            const CELL_IDX_T gid = element.first;
+            const deque<T> &v = element.second;
+            local_value_vector.insert(local_value_vector.end(),v.begin(),v.end());
+          }
+        
+        vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
+        value_sendcounts[io_dests[rank]] = local_value_size;
+        
 
-      vector<CELL_IDX_T> gid_recvbuf(idx_recvbuf_size);
-    
-      throw_assert(MPI_Alltoallv(&index_vector[0], &idx_sendcounts[0], &idx_sdispls[0], MPI_CELL_IDX_T,
-                                 &gid_recvbuf[0], &idx_recvcounts[0], &idx_rdispls[0], MPI_CELL_IDX_T,
-                                 comm) == MPI_SUCCESS,
-                   "write_cell_attribute_map: error in MPI_Alltoallv");
-      index_vector.clear();
-      idx_sendcounts.clear();
-      idx_sdispls.clear();
-      idx_recvcounts.clear();
-      idx_rdispls.clear();
-
-    
+        T dummy;
+        MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
+        throw_assert(mpi::alltoallv_vector<T>(comm, mpi_type,
+                                              value_sendcounts, value_sdispls, local_value_vector,
+                                              value_recvcounts, value_rdispls, value_recvbuf) >= 0,
+                     "write_cell_attribute_map: error in MPI_Alltoallv");
+      }
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "write_cell_attribute_map: error in MPI_Barrier");
+      
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
       // MPI group color value used for I/O ranks
