@@ -4,8 +4,11 @@
 ///
 ///  Function for sending data via MPI Alltoallv.
 ///
-///  Copyright (C) 2017-2019 Project NeuroH5.
+///  Copyright (C) 2017-2022 Project NeuroH5.
 //==============================================================================
+
+#ifndef ALLTOALLV_TEMPLATE_HH
+#define ALLTOALLV_TEMPLATE_HH
 
 #include <mpi.h>
 
@@ -48,7 +51,7 @@ namespace neuroh5
 
       
     /***************************************************************************
-     * Send MPI packed data with Alltoallv 
+     * Send MPI data with Alltoallv 
      **************************************************************************/
       recvcounts.resize(size,0);
       rdispls.resize(size,0);
@@ -105,3 +108,5 @@ namespace neuroh5
     }
   }
 }
+
+#endif
