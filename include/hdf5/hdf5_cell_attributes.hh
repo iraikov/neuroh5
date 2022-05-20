@@ -596,6 +596,11 @@ namespace neuroh5
       for (size_t i=0; i<local_attr_ptr.size(); i++)
         {
           local_attr_ptr[i] = attr_ptr[i] + local_value_start;
+	  throw_assert(local_attr_ptr[i] <= global_value_size,
+		       "write_cell_attribute: path " << path << 
+		       ": attribute pointer value " << local_attr_ptr[i] <<
+		       " exceeds global value size " << global_value_size);
+
         }
 
       T dummy;
