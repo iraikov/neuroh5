@@ -122,7 +122,6 @@ setup(
     description="NeuroH5 library",
     url="http://github.com/iraikov/neuroh5",
     include_package_data=True,
-    install_requires=["click", "h5py", "numpy", "mpi4py"],
     entry_points="""
         [console_scripts]
         initrange=neuroh5.initrange:cli

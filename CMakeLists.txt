@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
+include(CMakePrintHelpers)
 
 project(NeuroH5)
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
@@ -14,7 +15,7 @@ endif()
   
 include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
 
-set(NEUROH5_VERSION 0.0.5)
+set(NEUROH5_VERSION 0.1.4)
 
 # Set the build type.  Options are:
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
@@ -86,17 +87,20 @@ set(NEUROH5_IO_PYTHON_C_MODULE_NAME "io" CACHE STRING "Name of the C extension m
 set(CMAKE_FIND_FRAMEWORK LAST)
 # find python
 if (BUILD_PYTHON_BINDINGS)
-find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
+  find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
+  cmake_print_variables(Python_EXECUTABLE)
+
 if (NOT PYTHON_EXECUTABLE)
   set(BUILD_PYTHON_BINDINGS OFF)
 else()
   
   # check if can use the NumPy C API
-  exec_program(${PYTHON_EXECUTABLE}
-    ARGS "-c \"import numpy as np; print(np.get_include())\""
+  execute_process(
+    COMMAND "${Python_EXECUTABLE}" -c "import numpy as np; print(np.get_include(), end='')"
+    RESULT_VARIABLE NUMPY_NOT_FOUND
     OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-    RETURN_VALUE NUMPY_NOT_FOUND
-    )
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
   if(NUMPY_NOT_FOUND)
     message(SEND_ERROR "NumPy headers not found")
   else()
@@ -104,11 +108,11 @@ else()
   endif()
 
   # check if can use the mpi4py C API
-  exec_program(${PYTHON_EXECUTABLE}
-    ARGS "-c \"import mpi4py; print(mpi4py.get_include())\""
+  execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}" -c "import mpi4py; print(mpi4py.get_include(), end='')"
     OUTPUT_VARIABLE MPI4PY_INCLUDE_DIR
-    RETURN_VALUE MPI4PY_NOT_FOUND
-    )
+    RESULT_VARIABLE MPI4PY_NOT_FOUND
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
   if(MPI4PY_NOT_FOUND)
     message(SEND_ERROR "mpi4py headers not found")
   else()
