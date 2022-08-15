@@ -87,6 +87,8 @@ set(NEUROH5_IO_PYTHON_C_MODULE_NAME "io" CACHE STRING "Name of the C extension m
 set(CMAKE_FIND_FRAMEWORK LAST)
 # find python
 if (BUILD_PYTHON_BINDINGS)
+  # set default python search strategy to location
+  cmake_policy(SET CMP0094 NEW)
   find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
   cmake_print_variables(Python_EXECUTABLE)
 
