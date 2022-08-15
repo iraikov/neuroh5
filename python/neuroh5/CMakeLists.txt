@@ -1,3 +1,5 @@
+# set default python search strategy to location
+cmake_policy(SET CMP0094 NEW)
 
 set(NEUROH5_IO_SRCS
     "iomodule.cc"
