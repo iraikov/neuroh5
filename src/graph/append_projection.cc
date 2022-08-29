@@ -50,13 +50,15 @@ namespace neuroh5
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
       hid_t wapl = H5P_DEFAULT;
+#ifdef HDF5_IS_PARALLEL
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
 	  throw_assert_nomsg(wapl >= 0);
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
-
+#endif
+      
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
@@ -165,13 +167,15 @@ namespace neuroh5
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
       hid_t wapl = H5P_DEFAULT;
+#ifdef HDF5_IS_PARALLEL
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
 	  throw_assert_nomsg(wapl >= 0);
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
-
+#endif
+      
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
@@ -276,13 +280,15 @@ namespace neuroh5
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
       hid_t wapl = H5P_DEFAULT;
+#ifdef HDF5_IS_PARALLEL
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
 	  throw_assert_nomsg(wapl >= 0);
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
-
+#endif
+      
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
@@ -395,13 +401,15 @@ namespace neuroh5
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
       hid_t wapl = H5P_DEFAULT;
+#ifdef HDF5_IS_PARALLEL
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
 	  throw_assert_nomsg(wapl >= 0);
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
-
+#endif
+      
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
@@ -482,6 +490,7 @@ namespace neuroh5
     
     void append_projection
     (
+     MPI_Comm                  comm,
      hid_t                     file,
      const string&             src_pop_name,
      const string&             dst_pop_name,
@@ -500,13 +509,6 @@ namespace neuroh5
       // do a sanity check on the input
       throw_assert_nomsg(src_start < src_end);
       throw_assert_nomsg(dst_start < dst_end);
-
-      // get the I/O communicator
-      MPI_Comm comm;
-      MPI_Info info;
-
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert_nomsg(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
       
       int ssize, srank;
       throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
@@ -563,15 +565,8 @@ namespace neuroh5
 
       if (sum_num_edges == 0)
         {
-          throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
-          if (info != MPI_INFO_NULL)
-            {
-              throw_assert_nomsg(MPI_Info_free(&info) == MPI_SUCCESS);
-            }
           return;
         }
-      
-
 
       hsize_t dst_blk_ptr_size = 0;
       hdf5::size_edge_attributes(file,
@@ -793,29 +788,23 @@ namespace neuroh5
 	}
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
-      append_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
+      append_edge_attribute_map<float>(comm, file, src_pop_name, dst_pop_name,
                                        edge_attr_map, edge_attr_index);
-      append_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,
+      append_edge_attribute_map<uint8_t>(comm, file, src_pop_name, dst_pop_name,
                                          edge_attr_map, edge_attr_index);
-      append_edge_attribute_map<uint16_t>(file, src_pop_name, dst_pop_name,
+      append_edge_attribute_map<uint16_t>(comm, file, src_pop_name, dst_pop_name,
                                           edge_attr_map, edge_attr_index);
-      append_edge_attribute_map<uint32_t>(file, src_pop_name, dst_pop_name,
+      append_edge_attribute_map<uint32_t>(comm, file, src_pop_name, dst_pop_name,
                                           edge_attr_map, edge_attr_index);
-      append_edge_attribute_map<int8_t>(file, src_pop_name, dst_pop_name,
+      append_edge_attribute_map<int8_t>(comm, file, src_pop_name, dst_pop_name,
                                         edge_attr_map, edge_attr_index);
-      append_edge_attribute_map<int16_t>(file, src_pop_name, dst_pop_name,
+      append_edge_attribute_map<int16_t>(comm, file, src_pop_name, dst_pop_name,
                                          edge_attr_map, edge_attr_index);
-      append_edge_attribute_map<int32_t>(file, src_pop_name, dst_pop_name,
+      append_edge_attribute_map<int32_t>(comm, file, src_pop_name, dst_pop_name,
                                          edge_attr_map, edge_attr_index);
         
       // clean-up
-      throw_assert_nomsg(H5Pclose(fapl) >= 0);
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-      throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
-      if (info != MPI_INFO_NULL)
-        {
-          throw_assert_nomsg(MPI_Info_free(&info) == MPI_SUCCESS);
-        }
     }
   }
 }

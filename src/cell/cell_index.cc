@@ -227,7 +227,11 @@ namespace neuroh5
       /* Create property list for collective dataset write. */
       hid_t wapl;
       wapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
       ierr = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+      throw_assert(ierr >= 0,
+                   "append_cell_index: error in H5Pset_dxpl_mpio");
+#endif
 
       string path = hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX);
       

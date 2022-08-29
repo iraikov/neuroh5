@@ -90,7 +90,11 @@ namespace neuroh5
             {
               /* Create property list for collective dataset operations. */
               hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
               status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+              throw_assert(status >= 0,
+                           "read_node_attribute: error in H5Pset_dxpl_mpio");
+#endif
             
               string index_path = path + "/" + NODE_INDEX;
               // read index
@@ -146,6 +150,7 @@ namespace neuroh5
     template <typename T>
     void append_node_attribute
     (
+     MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
      const std::vector<NODE_IDX_T>&  index,
@@ -159,12 +164,6 @@ namespace neuroh5
 
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0, "H5Iget_file_id");
-
-      // get the I/O communicator
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "H5Pget_fapl_mpio");
     
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
@@ -257,10 +256,14 @@ namespace neuroh5
       // write to datasets
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
       if (size > 1)
         {
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(status >= 0,
+                       "append_node_attribute: error in H5Pset_dxpl_mpio");
         }
+#endif
 
       
       // TODO:
@@ -289,20 +292,10 @@ namespace neuroh5
       throw_assert(H5Tclose(mtype) >= 0, "error in H5Tclose");
       status = H5Pclose(wapl);
       throw_assert(status == 0, "error in H5Pclose");
-      status = H5Pclose(fapl);
-      throw_assert(status == 0, "error in H5Pclose");
 #ifdef NEUROH5_DEBUG
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_node_attribute: error in MPI_Barrier");
 #endif
-      status = MPI_Comm_free(&comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Comm_free");
-      if (info != MPI_INFO_NULL)
-        {
-          status = MPI_Info_free(&info);
-          throw_assert(status == MPI_SUCCESS, "error in MPI_Info_free");
-        
-        }
     }
 
 
@@ -310,6 +303,7 @@ namespace neuroh5
     template <typename T>
     void write_node_attribute
     (
+     MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
      const std::vector<NODE_IDX_T>&  index,
@@ -324,12 +318,6 @@ namespace neuroh5
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0, "H5Iget_file_id");
 
-      // get the I/O communicator
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "H5Pget_fapl_mpio");
-    
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
       throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
@@ -401,10 +389,14 @@ namespace neuroh5
 
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
       if (size > 1)
         {
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(status >= 0,
+                       "write_node_attribute: error in H5Pset_dxpl_mpio");
         }
+#endif
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
@@ -437,15 +429,6 @@ namespace neuroh5
 
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "write_node_attribute: error in MPI_Barrier");
-      status = MPI_Comm_free(&comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Comm_free");
-      if (info != MPI_INFO_NULL)
-        {
-          status = MPI_Info_free(&info);
-          throw_assert(status == MPI_SUCCESS, "error in MPI_Info_free");
-        
-        }
-
     }
 
   }

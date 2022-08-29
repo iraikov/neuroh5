@@ -795,7 +795,9 @@ namespace neuroh5
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+#ifdef HDF5_IS_PARALLEL
       throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+#endif
       // TODO: configurable elink cache
       // throw_assert_nomsg(H5Pset_elink_file_cache_size(fapl, 10) >= 0);
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
@@ -1146,7 +1148,9 @@ namespace neuroh5
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+#ifdef HDF5_IS_PARALLEL
       throw_assert_nomsg(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
+#endif
     
       hid_t file;
       if (rank == (unsigned int)root)
@@ -1415,8 +1419,10 @@ namespace neuroh5
 
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+#ifdef HDF5_IS_PARALLEL
       throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
                    "read_cell_attribute_selection: error setting MPI driver for file access");
+#endif
       
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
       throw_assert(file >= 0,

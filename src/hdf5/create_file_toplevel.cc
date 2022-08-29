@@ -32,8 +32,10 @@ namespace neuroh5
       
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       throw_assert(fapl >= 0, "create_file_toplevel: unable to create file access property list");
+#ifdef HDF5_IS_PARALLEL
       status = H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL);
-      throw_assert(status >= 0, "create_file_toplevel: unable set mpio");
+      throw_assert(status >= 0, "create_file_toplevel: unable to set mpio");
+#endif
       
       /* Create a new file. If file exists its contents will be overwritten. */
       file = H5Fcreate (file_name.c_str(), H5F_ACC_EXCL, H5P_DEFAULT, fapl);

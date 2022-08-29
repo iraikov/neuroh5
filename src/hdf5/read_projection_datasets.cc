@@ -63,8 +63,10 @@ namespace neuroh5
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       throw_assert_nomsg(fapl >= 0);
+#ifdef HDF5_IS_PARALLEL
       throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
-
+#endif
+      
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
       throw_assert_nomsg(file >= 0);
 
@@ -100,11 +102,15 @@ namespace neuroh5
         {
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
           if (collective)
             {
               ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+              throw_assert(ierr >= 0,
+                           "read_projection_datasets: error in H5Pset_dxpl_mpio");
             }
-
+#endif
+          
           // determine which blocks of block_ptr are read by which rank
           mpi::rank_ranges(read_blocks, size, bins);
 
@@ -291,7 +297,9 @@ namespace neuroh5
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       throw_assert_nomsg(fapl >= 0);
+#ifdef HDF5_IS_PARALLEL
       throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
+#endif
 
       hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, fapl);
       throw_assert_nomsg(file >= 0);
@@ -309,10 +317,14 @@ namespace neuroh5
         {
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
           if (collective)
             {
               ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+              throw_assert(ierr >= 0,
+                           "read_projection_node_datasets: error in H5Pset_dxpl_mpio");
             }
+#endif
 
           // determine which blocks of block_ptr are read by which rank
           mpi::rank_ranges(read_blocks, size, bins);

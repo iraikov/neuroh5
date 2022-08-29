@@ -111,7 +111,13 @@ namespace neuroh5
     
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+          
+#ifdef HDF5_IS_PARALLEL
           status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(status >= 0,
+                       "read_cell_attribute: error in H5Pset_dxpl_mpio");
+#endif
+
           
           string value_path = path + "/" + ATTR_VAL;
 
@@ -246,7 +252,11 @@ namespace neuroh5
 
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
           status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(status >= 0,
+                       "read_cell_attribute_selection: error in H5Pset_dxpl_mpio");
+#endif
               
           values.resize(selection_ptr_pos, 0);
 
@@ -262,6 +272,7 @@ namespace neuroh5
     template <typename T>
     void append_cell_attribute
     (
+     MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
      const std::vector<CELL_IDX_T>&  index,
@@ -280,14 +291,6 @@ namespace neuroh5
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0,
                    "append_cell_attribute: invalid file handle");
-
-      // get the I/O communicator
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0,
-                   "append_cell_attribute: unable to obtain MPI I/O communicator");
-      throw_assert(comm != MPI_COMM_NULL, "invalid MPI communicator in file access property list");
 
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
@@ -408,7 +411,11 @@ namespace neuroh5
       // write to datasets
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-      status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+#ifdef HDF5_IS_PARALLEL
+          status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(status >= 0,
+                       "append_cell_attribute: error in H5Pset_dxpl_mpio");
+#endif
 
       switch (index_type)
         {
@@ -464,21 +471,9 @@ namespace neuroh5
       throw_assert(H5Tclose(mtype) >= 0, "error in H5Tclose");
       status = H5Pclose(wapl);
       throw_assert(status == 0, "error in H5Pclose");
-      status = H5Pclose(fapl);
-      throw_assert(status == 0, "error in H5Pclose");
 
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_cell_attribute: error in MPI_Barrier");
-      status = MPI_Comm_free(&comm);
-      throw_assert(status == MPI_SUCCESS,
-                   "append_cell_attribute: error in MPI_Comm_free");
-      if (info != MPI_INFO_NULL)
-        {
-          status = MPI_Info_free(&info);
-          throw_assert(status == MPI_SUCCESS,
-                       "append_cell_attribute: error in MPI_Info_free");
-        
-        }
     }
 
 
@@ -486,6 +481,7 @@ namespace neuroh5
     template <typename T>
     void write_cell_attribute
     (
+     MPI_Comm                        comm,
      const hid_t&                    loc,
      const std::string&              path,
      const std::vector<CELL_IDX_T>&  index,
@@ -502,13 +498,6 @@ namespace neuroh5
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0, "error in H5Iget_file_id");
 
-      // get the I/O communicator
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "error in H5Fget_access_plist");
-      throw_assert(comm != MPI_COMM_NULL, "invalid MPI communicator in file access property list");
-      
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
       throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
@@ -611,7 +600,11 @@ namespace neuroh5
 
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-      status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+#ifdef HDF5_IS_PARALLEL
+          status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(status >= 0,
+                       "write_cell_attribute: error in H5Pset_dxpl_mpio");
+#endif
     
       if (global_value_size > 0)
         {
@@ -659,19 +652,8 @@ namespace neuroh5
       status = H5Pclose(wapl);
       throw_assert(status == 0, "error in H5Pclose");
 
-      status = H5Pclose(fapl);
-      throw_assert(status == 0, "error in H5Pclose");
-
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "write_cell_attribute: error in MPI_Barrier");
-      status = MPI_Comm_free(&comm);
-      throw_assert(status == MPI_SUCCESS, "error in MPI_Comm_free");
-      if (info != MPI_INFO_NULL)
-        {
-          status = MPI_Info_free(&info);
-          throw_assert(status == MPI_SUCCESS, "error in MPI_Info_free");
-        
-        }
     }
 
   }

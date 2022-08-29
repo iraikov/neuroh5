@@ -14,6 +14,7 @@ namespace neuroh5
   {
     void write_projection
     (
+     MPI_Comm                  comm,
      hid_t                     file,
      const std::string&        src_pop_name,
      const std::string&        dst_pop_name,

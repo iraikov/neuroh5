@@ -49,12 +49,14 @@ namespace neuroh5
         {
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
           if (collective)
             {
               status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
               throw_assert(status >= 0,
                            "read_cell_index_ptr: error in H5Pset_dxpl_mpio");
             }
+#endif
           
           string index_path = path + "/" + CELL_INDEX;
 
@@ -94,12 +96,14 @@ namespace neuroh5
         {
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
           if (collective)
             {
               status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
               throw_assert(status >= 0,
                            "read_cell_index_ptr: error in H5Pset_dxpl_mpio");
             }
+#endif
           
           string index_path = path + "/" + CELL_INDEX;
           string ptr_path = path + "/" + ATTR_PTR;

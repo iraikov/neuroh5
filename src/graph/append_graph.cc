@@ -328,8 +328,10 @@ namespace neuroh5
         {
           hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
           throw_assert_nomsg(fapl >= 0);
+#ifdef HDF5_IS_PARALLEL
           throw_assert_nomsg(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0);
-
+#endif
+          
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           throw_assert_nomsg(file >= 0);
 
@@ -340,7 +342,7 @@ namespace neuroh5
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           throw_assert_nomsg(file >= 0);
 
-          append_projection (file, src_pop_name, dst_pop_name,
+          append_projection (io_comm, file, src_pop_name, dst_pop_name,
                              src_start, src_end, dst_start, dst_end,
                              num_unpacked_edges, prj_edge_map,
                              edge_attr_index);

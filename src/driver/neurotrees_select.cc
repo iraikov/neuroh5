@@ -576,7 +576,9 @@ int main(int argc, char** argv)
       // TODO; create separate functions for opening HDF5 file for reading and writing
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       throw_assert_nomsg(fapl >= 0);
+#ifdef HDF5_IS_PARALLEL
       throw_assert_nomsg(H5Pset_fapl_mpio(fapl, all_comm, MPI_INFO_NULL) >= 0);
+#endif
       hid_t output_file = H5Fopen(output_file_name.c_str(), H5F_ACC_RDWR, fapl);
       throw_assert(output_file >= 0,
                    "neurotrees_select: error in opening output HDF5 file"); 

@@ -22,6 +22,7 @@ namespace neuroh5
     
     void write_projection
     (
+     MPI_Comm                  comm,
      hid_t                     file,
      const string&             src_pop_name,
      const string&             dst_pop_name,
@@ -41,12 +42,6 @@ namespace neuroh5
       throw_assert_nomsg(src_start < src_end);
       throw_assert_nomsg(dst_start < dst_end);
       
-      // get the I/O communicator
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert_nomsg(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0);
-
       int ssize, srank;
       throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
@@ -54,8 +49,6 @@ namespace neuroh5
       size = (size_t)ssize;
       rank = (size_t)srank;
         
-      throw_assert_nomsg(H5Pclose(fapl) >= 0);
-
       size_t num_dest = prj_edge_map.size();
       size_t num_blocks = num_dest > 0 ? 1 : 0;
         
@@ -139,12 +132,14 @@ namespace neuroh5
       hsize_t chunk = cdim;
 
       hid_t wapl = H5P_DEFAULT;
+#ifdef HDF5_IS_PARALLEL
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
 	  throw_assert_nomsg(wapl >= 0);
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
+#endif
 
       size_t total_num_blocks=0;
       for (size_t p=0; p<size; p++)
@@ -439,19 +434,19 @@ namespace neuroh5
 
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
-      write_edge_attribute_map<float>(file, src_pop_name, dst_pop_name,
+      write_edge_attribute_map<float>(comm, file, src_pop_name, dst_pop_name,
                                       edge_attr_map, edge_attr_index);
-      write_edge_attribute_map<uint8_t>(file, src_pop_name, dst_pop_name,
+      write_edge_attribute_map<uint8_t>(comm, file, src_pop_name, dst_pop_name,
                                         edge_attr_map, edge_attr_index);
-      write_edge_attribute_map<uint16_t>(file, src_pop_name, dst_pop_name,
+      write_edge_attribute_map<uint16_t>(comm, file, src_pop_name, dst_pop_name,
                                          edge_attr_map, edge_attr_index);
-      write_edge_attribute_map<uint32_t>(file, src_pop_name, dst_pop_name,
+      write_edge_attribute_map<uint32_t>(comm, file, src_pop_name, dst_pop_name,
                                          edge_attr_map, edge_attr_index);
-      write_edge_attribute_map<int8_t>(file, src_pop_name, dst_pop_name,
+      write_edge_attribute_map<int8_t>(comm, file, src_pop_name, dst_pop_name,
                                        edge_attr_map, edge_attr_index);
-      write_edge_attribute_map<int16_t>(file, src_pop_name, dst_pop_name,
+      write_edge_attribute_map<int16_t>(comm, file, src_pop_name, dst_pop_name,
                                         edge_attr_map, edge_attr_index);
-      write_edge_attribute_map<int32_t>(file, src_pop_name, dst_pop_name,
+      write_edge_attribute_map<int32_t>(comm, file, src_pop_name, dst_pop_name,
                                         edge_attr_map, edge_attr_index);
       
       // clean-up
@@ -460,7 +455,6 @@ namespace neuroh5
       throw_assert_nomsg(H5Pclose(wapl) >= 0);
 
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-      throw_assert_nomsg(MPI_Comm_free(&comm) == MPI_SUCCESS);
     }
   }
 }

@@ -371,11 +371,15 @@ namespace neuroh5
 
       /* Create property list for collective dataset operations. */
       hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
       if (collective)
         {
           ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(ierr >= 0,
+                       "read_edge_attributes: error in H5Pset_dxpl_mpio");
         }
-
+#endif
+      
       string dset_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, name_space, attr_name);
       ierr = hdf5::exists_dataset (file, dset_path.c_str());
       if (ierr > 0)
@@ -574,10 +578,14 @@ namespace neuroh5
 
       /* Create property list for collective dataset operations. */
       hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
       if (collective)
         {
           ierr = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
+          throw_assert(ierr >= 0,
+                       "read_edge_attribute_selection: error in H5Pset_dxpl_mpio");
         }
+#endif
 
       for ( const std::pair<hsize_t,hsize_t> &range : ranges )
         {

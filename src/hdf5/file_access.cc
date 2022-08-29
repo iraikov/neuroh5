@@ -22,11 +22,12 @@ namespace neuroh5
     {
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       throw_assert_nomsg(fapl >= 0);
-
+#ifdef HDF5_IS_PARALLEL
       if (collective)
         {
           throw_assert_nomsg(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0);
         }
+#endif
       
       hid_t file;
 

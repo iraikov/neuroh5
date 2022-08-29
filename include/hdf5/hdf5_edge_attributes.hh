@@ -55,6 +55,7 @@ namespace neuroh5
     template <typename T>
     void append_edge_attribute
     (
+     MPI_Comm       comm,
      const hid_t&   loc,
      const string&  src_pop_name,
      const string&  dst_pop_name,
@@ -67,13 +68,6 @@ namespace neuroh5
 
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0, "error in H5Iget_file_id");
-
-      // get the I/O communicator
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0,
-                   "error in H5Pget_fapl_mpio");
     
       int ssize, srank; size_t size, rank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
@@ -124,10 +118,14 @@ namespace neuroh5
         {
           /* Create property list for collective dataset write. */
           hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
+#ifdef HDF5_IS_PARALLEL
           if (size > 1)
             {
               status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
             }
+          throw_assert(status >= 0,
+                       "append_edge_attribute: error in H5Pset_dxpl_mpio");
+#endif
           
           string path = edge_attribute_path(src_pop_name, dst_pop_name,
                                             attr_namespace, attr_name);
@@ -143,16 +141,7 @@ namespace neuroh5
 
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_edge_attribute: error in MPI_Barrier");
-      throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
-      if (info != MPI_INFO_NULL)
-        {
-          status = MPI_Info_free(&info);
-          throw_assert(status == MPI_SUCCESS, "error in MPI_Info_free");
-          
-        }
 
-      status = H5Pclose (fapl);
-      throw_assert(status >= 0, "error in H5Pclose");
       status = H5Fclose (file);
       throw_assert(status >= 0, "error in H5Fclose");
 

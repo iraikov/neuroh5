@@ -171,6 +171,7 @@ namespace neuroh5
     template <typename T>
     herr_t write_edge_attribute
     (
+     MPI_Comm                 comm,
      hid_t                    loc,
      const std::string&       path,
      const std::vector<T>&    value,
@@ -181,12 +182,8 @@ namespace neuroh5
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0, "error in H5Iget_file_id");
 
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "error in H5Pget_fapl_mpio");
-
       hid_t wapl = H5P_DEFAULT;
+#ifdef HDF5_IS_PARALLEL
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
@@ -194,6 +191,7 @@ namespace neuroh5
 	  throw_assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0, 
                        "error in H5Pset_dxpl_mpio");
 	}
+#endif
 
       int ssize, srank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
@@ -257,20 +255,14 @@ namespace neuroh5
       throw_assert(H5Pclose(wapl) >= 0, "error in H5Pclose");
 
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
-      throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
-      if (info != MPI_INFO_NULL)
-        {
-          throw_assert(MPI_Info_free(&info) == MPI_SUCCESS, "error in MPI_Info_free");
-        }
-
       throw_assert(H5Fclose (file) >= 0, "error in H5Fclose");
-      throw_assert(H5Pclose (fapl) >= 0, "error in H5Pclose");
 
       return 0;
     }
 
     template <class T>
-    void write_edge_attribute_map (hid_t file,
+    void write_edge_attribute_map (MPI_Comm comm,
+                                   hid_t file,
                                    const string &src_pop_name,
                                    const string &dst_pop_name,
                                    const map <string, data::NamedAttrVal>& edge_attr_map,
@@ -293,7 +285,7 @@ namespace neuroh5
                 {
                   size_t i = attr_index.attr_index<T>(attr_name);
                   string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
-                  graph::write_edge_attribute<T>(file, path, edge_attr_values.attr_vec<T>(i));
+                  graph::write_edge_attribute<T>(comm, file, path, edge_attr_values.attr_vec<T>(i));
                 }
             }
           else
@@ -306,6 +298,7 @@ namespace neuroh5
     template <typename T>
     herr_t append_edge_attribute
     (
+     MPI_Comm                 comm,
      hid_t                    loc,
      const string&            src_pop_name,
      const string&            dst_pop_name,
@@ -319,11 +312,6 @@ namespace neuroh5
       // get a file handle and retrieve the MPI info
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0, "error in H5Iget_file_id");
-
-      MPI_Comm comm;
-      MPI_Info info;
-      hid_t fapl = H5Fget_access_plist(file);
-      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &info) >= 0, "error in H5Pget_fapl_mpio");
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);
@@ -345,25 +333,20 @@ namespace neuroh5
 	  throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
         }
 
-      hdf5::append_edge_attribute<T>(file, src_pop_name, dst_pop_name,
+      hdf5::append_edge_attribute<T>(comm, file, src_pop_name, dst_pop_name,
                                      attr_namespace, attr_name,
                                      value);
 
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
-      throw_assert(MPI_Comm_free(&comm) == MPI_SUCCESS, "error in MPI_Comm_free");
-      if (info != MPI_INFO_NULL)
-        {
-          throw_assert(MPI_Info_free(&info) == MPI_SUCCESS, "error in MPI_Info_free");
-        }
       
       throw_assert(H5Fclose (file) >= 0, "error in H5Fclose");
-      throw_assert(H5Pclose (fapl) >= 0, "error in H5Pclose");
 
       return 0;
     }
 
     template <class T>
-    void append_edge_attribute_map (hid_t file,
+    void append_edge_attribute_map (MPI_Comm                 comm,
+                                    hid_t file,
                                     const string &src_pop_name,
                                     const string &dst_pop_name,
                                     const map <string, data::NamedAttrVal>& edge_attr_map,
@@ -384,7 +367,9 @@ namespace neuroh5
               for (const std::string& attr_name: attr_names)
                 {
                   size_t i = attr_index.attr_index<T>(attr_name);
-                  graph::append_edge_attribute<T>(file, src_pop_name, dst_pop_name, attr_namespace, attr_name, edge_attr_values.attr_vec<T>(i));
+                  graph::append_edge_attribute<T>(comm, file, src_pop_name, dst_pop_name,
+                                                  attr_namespace, attr_name,
+                                                  edge_attr_values.attr_vec<T>(i));
                 }
             }
           else
