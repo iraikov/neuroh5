@@ -65,7 +65,7 @@ jobs:
       run: |
         sudo apt update -y && sudo apt upgrade 
         sudo apt install build-essential cmake mpich libhdf5-mpich-dev 
-        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install --upgrade pip setuptools wheel cibuildwheel
         python -m pip install --upgrade numpy mpi4py h5py
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
