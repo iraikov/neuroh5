@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, 3.10]
+        python-version: [3.7, 3.8, 3.9]
         
     steps:
       - name: Checkout
@@ -41,7 +41,7 @@ jobs:
           export CXX=mpicxx
           python -m cibuildwheel --output-dir dist/
         env:
-          CIBW_BUILD: cp37-* cp38-* cp39-* cp310-*
+          CIBW_BUILD: cp37-* cp38-* cp39-*
 
       - uses: actions/upload-artifact@v2
         with:
@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, 3.10]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - name: Checkout
@@ -74,7 +74,7 @@ jobs:
       run: |
         python -m cibuildwheel --output-dir dist/
       env:
-        CIBW_BUILD: cp37-* cp38-* cp39-* cp310-*
+        CIBW_BUILD: cp37-* cp38-* cp39-*
 
     - uses: actions/upload-artifact@v2
       with:
