@@ -129,6 +129,8 @@ class cmake_build_ext(build_ext.build_ext):
                 cwd=self.build_temp,
             )
 
+with open("README.md", 'r') as f:
+    long_description = f.read()            
 
 setup(
     name="NeuroH5",
@@ -137,7 +139,9 @@ setup(
     version="0.1.6",
     maintainer="Ivan Raikov",
     maintainer_email="ivan.g.raikov@gmail.com",
-    description="NeuroH5 library",
+    description="A parallel HDF5-based library for storage and processing of large-scale graphs and neural cell model attributes.",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     url="http://github.com/iraikov/neuroh5",
     include_package_data=True,
     entry_points="""

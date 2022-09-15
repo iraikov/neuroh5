@@ -1,6 +1,6 @@
 # neuroh5
 
-An HDF5-based library for storage of large-scale graphs and parallel operations on them.
+A parallel HDF5-based library for storage and processing of large-scale graphs and neural cell model attributes.
 
 ## Introduction
 
