@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import os, sys, subprocess, platform, sysconfig
+import os, sys, math, subprocess, platform, sysconfig
+import multiprocessing
 from setuptools import setup
 from setuptools.extension import Extension
 from distutils.command import build_ext
@@ -10,6 +11,20 @@ for f in sys.argv:
         cmake_cmd_args.append(f)
 
 
+def num_available_cpu_cores(ram_per_build_process_in_gb=1):
+    try:
+        mem_bytes = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')  
+        mem_gib = mem_bytes/(1024.**3)
+        num_cores = multiprocessing.cpu_count() 
+        # make sure we have enough ram for each build process.
+        mem_cores = int(math.floor(mem_gib/float(ram_per_build_process_in_gb)+0.5));
+        # We are limited either by RAM or CPU cores.  So pick the limiting amount
+        # and return that.
+        return max(min(num_cores, mem_cores), 1)
+    except ValueError:
+        return 2 # just assume 2 if we can't get the os to tell us the right answer.
+
+    
 class CMakeExtension(Extension):
     def __init__(self, name, target="all", cmake_lists_dir=".", **kwa):
         Extension.__init__(self, name, sources=[], **kwa)
@@ -106,8 +121,11 @@ class cmake_build_ext(build_ext.build_ext):
             )
 
             # Build
+            cmake_build_args = ["--build", ".", "--config", cfg, "--target", ext.target]
+            cmake_build_args += ["--", f"-j{num_available_cpu_cores()}"]
+            
             subprocess.check_call(
-                ["cmake", "--build", ".", "--config", cfg, "--target", ext.target],
+                ["cmake"] + cmake_build_args,
                 cwd=self.build_temp,
             )
 
@@ -116,7 +134,7 @@ setup(
     name="NeuroH5",
     package_dir={"": "python"},
     packages=["neuroh5"],
-    version="0.1.5",
+    version="0.1.6",
     maintainer="Ivan Raikov",
     maintainer_email="ivan.g.raikov@gmail.com",
     description="NeuroH5 library",
