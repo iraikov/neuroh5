@@ -1,7 +1,11 @@
 # This workflow will install Python dependencies, and build binary wheels for a variety of Python versions
 
-name: Binary wheels
+name: "Binary wheels"
 
+on:
+  release:
+    types: [published]
+    
 jobs:
   build-macos:
     runs-on: macOS-latest
