@@ -23,24 +23,22 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          export FC=gfortran
-          export F77=gfortran
-          brew install cmake hdf5-mpi
           echo "/usr/local/opt/hdf5-parallel/bin" >> $GITHUB_PATH
-          python -m pip install --upgrade pip setuptools wheel cibuildwheel
-          python -m pip install --upgrade numpy mpi4py h5py
-          pip install flake8 pytest
+          python -m pip install --upgrade pip setuptools wheel
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.10.0
         env:
-          PATH: :$PATH
           LDFLAGS: -L/usr/local/opt/hdf5-parallel/lib
           CPPFLAGS: -I/usr/local/opt/hdf5-parallel/include
+          FC: gfortran
+          F77: gfortran
           CC: mpicc
           CXX: mpicxx
           CIBW_BUILD: cp37-* cp38-* cp39-*
+          CIBW_BEFORE_BUILD: >
+            brew install cmake pipx hdf5-mpi
         with:
           package-dir: .
           output-dir: dist
@@ -66,15 +64,14 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update -y && sudo apt upgrade 
-        sudo apt install build-essential cmake mpich libhdf5-mpich-dev 
-        python -m pip install --upgrade pip setuptools wheel cibuildwheel
-        python -m pip install --upgrade numpy mpi4py h5py
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        python -m pip install --upgrade pip setuptools wheel
 
     - name: Build wheels
       uses: pypa/cibuildwheel@v2.10.0
       env:
+        CIBW_BEFORE_BUILD: >
+          apt update -y && apt upgrade
+          apt install build-essential cmake mpich libhdf5-mpich-dev
         CIBW_BUILD: cp37-* cp38-* cp39-*
       with:
         package-dir: .
