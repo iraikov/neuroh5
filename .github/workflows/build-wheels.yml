@@ -81,5 +81,5 @@ jobs:
         output-dir: dist
 
     - uses: actions/upload-artifact@v3
-        with:
-          path: ./dist/*.whl
+      with:
+        path: ./dist/*.whl
