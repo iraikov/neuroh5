@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neuroh5"
-dynamic = ["version", "description", "entry-points", "maintainers"]
+dynamic = ["version", "description", "entry-points", "maintainers", "readme"]
 dependencies = [
   "click",
   "h5py >= 3.0",
