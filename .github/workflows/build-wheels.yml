@@ -63,7 +63,7 @@ jobs:
       env:
         CIBW_BEFORE_BUILD: >
           apt update -y && apt upgrade &&
-          apt install -y build-essential cmake mpich libhdf5-mpich-dev libpython3.7-dev libpython3.8-dev libpython3.9-dev
+          apt install -y build-essential cmake mpich libhdf5-mpich-dev
           
         CIBW_BUILD: cp37-* cp38-* cp39-*
         CIBW_ARCHS_LINUX: "auto64"
