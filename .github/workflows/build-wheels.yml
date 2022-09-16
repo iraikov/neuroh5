@@ -26,24 +26,26 @@ jobs:
           export FC=gfortran
           export F77=gfortran
           brew install cmake hdf5-mpi
+          echo "/usr/local/opt/hdf5-parallel/bin" >> $GITHUB_PATH
           python -m pip install --upgrade pip setuptools wheel cibuildwheel
           python -m pip install --upgrade numpy mpi4py h5py
           pip install flake8 pytest
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-
-      - name: Build wheel
-        run: |
-          export PATH="/usr/local/opt/hdf5-parallel/bin:$PATH"
-          export LDFLAGS="-L/usr/local/opt/hdf5-parallel/lib"
-          export CPPFLAGS="-I/usr/local/opt/hdf5-parallel/include"
-          export CC=mpicc
-          export CXX=mpicxx
-          python -m cibuildwheel --output-dir dist/
+          
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.10.0
         env:
+          PATH: :$PATH
+          LDFLAGS: -L/usr/local/opt/hdf5-parallel/lib
+          CPPFLAGS: -I/usr/local/opt/hdf5-parallel/include
+          CC: mpicc
+          CXX: mpicxx
           CIBW_BUILD: cp37-* cp38-* cp39-*
+        with:
+          package-dir: .
+          output-dir: dist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./dist/*.whl
           
@@ -70,12 +72,14 @@ jobs:
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Build wheel
-      run: |
-        python -m cibuildwheel --output-dir dist/
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.10.0
       env:
         CIBW_BUILD: cp37-* cp38-* cp39-*
-
-    - uses: actions/upload-artifact@v2
       with:
-        path: ./dist/*.whl
+        package-dir: .
+        output-dir: dist
+
+    - uses: actions/upload-artifact@v3
+        with:
+          path: ./dist/*.whl
