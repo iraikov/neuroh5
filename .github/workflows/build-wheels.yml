@@ -65,6 +65,7 @@ jobs:
           apt update -y && apt upgrade &&
           apt install build-essential cmake mpich libhdf5-mpich-dev
         CIBW_BUILD: cp37-* cp38-* cp39-*
+        CIBW_ARCHS_LINUX: "auto64"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_24
         CIBW_MANYLINUX_I686_IMAGE: manylinux_2_24
       with:
