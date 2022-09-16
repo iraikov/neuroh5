@@ -9,18 +9,13 @@ on:
 jobs:
   build-macos:
     runs-on: macOS-latest
-    
-    strategy:
-      matrix:
-        python-version: [3.7, 3.8, 3.9]
-        
     steps:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
       - name: Install dependencies
         run: |
           echo "/usr/local/opt/hdf5-parallel/bin" >> $GITHUB_PATH
@@ -50,9 +45,6 @@ jobs:
   build-linux:
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - name: Checkout
@@ -60,7 +52,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.8
     - name: Install dependencies
       run: |
         sudo apt update -y && sudo apt upgrade 
@@ -73,6 +65,8 @@ jobs:
           apt update -y && apt upgrade
           apt install build-essential cmake mpich libhdf5-mpich-dev
         CIBW_BUILD: cp37-* cp38-* cp39-*
+        CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_24
+        CIBW_MANYLINUX_I686_IMAGE: manylinux_2_24
       with:
         package-dir: .
         output-dir: dist
