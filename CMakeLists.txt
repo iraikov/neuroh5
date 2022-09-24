@@ -93,8 +93,9 @@ if (BUILD_PYTHON_BINDINGS)
   find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
   cmake_print_variables(Python_EXECUTABLE)
 
-if (NOT PYTHON_EXECUTABLE)
+if (NOT Python_EXECUTABLE)
   set(BUILD_PYTHON_BINDINGS OFF)
+  message(SEND_ERROR "no Python found; skip building python binding")
 else()
   
   # check if can use the NumPy C API
@@ -112,7 +113,7 @@ else()
 
   # check if can use the mpi4py C API
   execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}" -c "import mpi4py; print(mpi4py.get_include(), end='')"
+    COMMAND "${Python_EXECUTABLE}" -c "import mpi4py; print(mpi4py.get_include(), end='')"
     OUTPUT_VARIABLE MPI4PY_INCLUDE_DIR
     RESULT_VARIABLE MPI4PY_NOT_FOUND
     OUTPUT_STRIP_TRAILING_WHITESPACE)
