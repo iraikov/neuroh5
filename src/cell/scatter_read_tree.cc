@@ -84,7 +84,9 @@ namespace neuroh5
       data::range_sample(size, io_size, io_rank_set);
       bool is_io_rank = false;
       if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+        {
+          is_io_rank = true;
+        }
 
       // Am I an I/O rank?
       if (is_io_rank)
@@ -111,7 +113,6 @@ namespace neuroh5
       if (is_io_rank)
         {
           map <rank_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
-
           {
             data::NamedAttrMap attr_values;
             set <string> attr_mask;
@@ -122,7 +123,6 @@ namespace neuroh5
 
             data::append_rank_tree_map(attr_values, node_rank_map, rank_tree_map);
           }
-
           data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
         }
 

@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for serializing/deserializing graphs edges.
 ///
-///  Copyright (C) 2016-2019 Project NeuroH5.
+///  Copyright (C) 2016-2022 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -63,9 +63,9 @@ namespace neuroh5
         }
 
       size_t sendpos = 0;
+      std::stringstream ss(ios::in | ios::out | ios::binary); 
       for (const int& key_rank : rank_sequence)
         {
-          std::stringstream ss(ios::in | ios::out | ios::binary); 
           sdispls[key_rank] = sendpos;
           
           auto it1 = prj_rank_edge_map.find(key_rank);
@@ -79,8 +79,8 @@ namespace neuroh5
                 oarchive(edge_map); // Write the data to the archive
                 
               } // archive goes out of scope, ensuring all contents are flushed
-              const string& sstr = ss.str();
-              copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
+              ss.seekg(0, ios::end);
+              sendpos = ss.tellg();
               
               for (auto it = edge_map.cbegin(); it != edge_map.cend(); ++it)
                 {
@@ -88,12 +88,14 @@ namespace neuroh5
                   
                   num_packed_edges += adj_vector.size();
                 }
-              
-              sendpos = sendbuf.size();
             }
           sendcounts[key_rank] = sendpos - sdispls[key_rank];
 
         }
+
+      ss.seekg(0, ios::beg);
+      const string& sstr = ss.str();
+      copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
       
     }
 

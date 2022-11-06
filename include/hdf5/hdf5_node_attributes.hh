@@ -90,11 +90,10 @@ namespace neuroh5
             {
               /* Create property list for collective dataset operations. */
               hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
-#ifdef HDF5_IS_PARALLEL
+
               status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
               throw_assert(status >= 0,
                            "read_node_attribute: error in H5Pset_dxpl_mpio");
-#endif
             
               string index_path = path + "/" + NODE_INDEX;
               // read index
@@ -256,15 +255,12 @@ namespace neuroh5
       // write to datasets
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-#ifdef HDF5_IS_PARALLEL
       if (size > 1)
         {
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
           throw_assert(status >= 0,
                        "append_node_attribute: error in H5Pset_dxpl_mpio");
         }
-#endif
-
       
       // TODO:
       // if option index_mode is:
@@ -389,14 +385,12 @@ namespace neuroh5
 
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-#ifdef HDF5_IS_PARALLEL
       if (size > 1)
         {
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
           throw_assert(status >= 0,
                        "write_node_attribute: error in H5Pset_dxpl_mpio");
         }
-#endif
 
       T dummy;
       hid_t ftype = infer_datatype(dummy);

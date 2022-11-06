@@ -183,7 +183,6 @@ namespace neuroh5
       throw_assert(file >= 0, "error in H5Iget_file_id");
 
       hid_t wapl = H5P_DEFAULT;
-#ifdef HDF5_IS_PARALLEL
       if (collective)
 	{
 	  wapl = H5Pcreate(H5P_DATASET_XFER);
@@ -191,7 +190,6 @@ namespace neuroh5
 	  throw_assert(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0, 
                        "error in H5Pset_dxpl_mpio");
 	}
-#endif
 
       int ssize, srank;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");

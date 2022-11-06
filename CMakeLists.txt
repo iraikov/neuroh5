@@ -15,7 +15,7 @@ endif()
   
 include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
 
-set(NEUROH5_VERSION 0.1.7)
+set(NEUROH5_VERSION 0.1.8)
 
 # Set the build type.  Options are:
 #  RelWithDebInfo : w/ debug symbols, w/ optimization

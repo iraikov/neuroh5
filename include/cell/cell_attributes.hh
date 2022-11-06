@@ -185,10 +185,10 @@ namespace neuroh5
                    "append_cell_attribute: unable to obtain MPI communicator rank");
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-#ifdef HDF5_IS_PARALLEL
+
       throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
                    "append_cell_attribute: HDF5 mpio error");
-#endif
+
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 
       size_t nslots;  /* Number of slots in the 
@@ -511,10 +511,9 @@ namespace neuroh5
       
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-#ifdef HDF5_IS_PARALLEL
+
       throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0,
 		   "write_cell_attribute: unable to set fapl mpio property");
-#endif
 
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 

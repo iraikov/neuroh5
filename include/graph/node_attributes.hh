@@ -84,9 +84,7 @@ namespace neuroh5
       throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS, "error in MPI_Comm_rank");
 
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-#ifdef HDF5_IS_PARALLEL
       throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0, "error in H5Pset_fapl_mpio");
-#endif
       
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 
@@ -389,9 +387,7 @@ namespace neuroh5
     
       // get a file handle and retrieve the MPI info
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-#ifdef HDF5_IS_PARALLEL
       throw_assert(H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL) >= 0, "error in H5Pset_fapl_mpio");
-#endif
       
       /* Cache parameters: */
       int nelemts;    /* Dummy parameter in API, no longer used */ 

@@ -112,12 +112,9 @@ namespace neuroh5
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
           
-#ifdef HDF5_IS_PARALLEL
           status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
           throw_assert(status >= 0,
                        "read_cell_attribute: error in H5Pset_dxpl_mpio");
-#endif
-
           
           string value_path = path + "/" + ATTR_VAL;
 
@@ -252,11 +249,10 @@ namespace neuroh5
 
           /* Create property list for collective dataset operations. */
           hid_t rapl = H5Pcreate (H5P_DATASET_XFER);
-#ifdef HDF5_IS_PARALLEL
+
           status = H5Pset_dxpl_mpio (rapl, H5FD_MPIO_COLLECTIVE);
           throw_assert(status >= 0,
                        "read_cell_attribute_selection: error in H5Pset_dxpl_mpio");
-#endif
               
           values.resize(selection_ptr_pos, 0);
 
@@ -411,11 +407,10 @@ namespace neuroh5
       // write to datasets
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-#ifdef HDF5_IS_PARALLEL
-          status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
-          throw_assert(status >= 0,
-                       "append_cell_attribute: error in H5Pset_dxpl_mpio");
-#endif
+
+      status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+      throw_assert(status >= 0,
+		   "append_cell_attribute: error in H5Pset_dxpl_mpio");
 
       switch (index_type)
         {
@@ -600,11 +595,10 @@ namespace neuroh5
 
       /* Create property list for collective dataset write. */
       hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-#ifdef HDF5_IS_PARALLEL
-          status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
-          throw_assert(status >= 0,
-                       "write_cell_attribute: error in H5Pset_dxpl_mpio");
-#endif
+
+      status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
+      throw_assert(status >= 0,
+		   "write_cell_attribute: error in H5Pset_dxpl_mpio");
     
       if (global_value_size > 0)
         {

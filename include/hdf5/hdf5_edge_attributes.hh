@@ -118,11 +118,10 @@ namespace neuroh5
         {
           /* Create property list for collective dataset write. */
           hid_t wapl = H5Pcreate (H5P_DATASET_XFER);
-#ifdef HDF5_IS_PARALLEL
+
           status = H5Pset_dxpl_mpio (wapl, H5FD_MPIO_COLLECTIVE);
           throw_assert(status >= 0,
                        "append_edge_attribute: error in H5Pset_dxpl_mpio");
-#endif
           
           string path = edge_attribute_path(src_pop_name, dst_pop_name,
                                             attr_namespace, attr_name);

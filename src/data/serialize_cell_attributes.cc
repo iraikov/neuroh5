@@ -62,9 +62,9 @@ namespace neuroh5
         }
 
       size_t sendpos = 0;
+      std::stringstream ss(ios::in | ios::out | ios::binary); 
       for (const int& key_rank : rank_sequence)
         {
-          std::stringstream ss(ios::in | ios::out | ios::binary); 
           sdispls[key_rank] = sendpos;
           
           auto it1 = rank_attr_map.find(key_rank);
@@ -77,14 +77,16 @@ namespace neuroh5
                 oarchive(attr_map); // Write the data to the archive
                 
               } // archive goes out of scope, ensuring all contents are flushed
-              const string& sstr = ss.str();
-              copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
-              
-              sendpos = sendbuf.size();
+              ss.seekg(0, ios::end);
+              sendpos = ss.tellg();
             }
           sendcounts[key_rank] = sendpos - sdispls[key_rank];
 
         }
+      ss.seekg(0, ios::beg);
+      const string& sstr = ss.str();
+      sendbuf.reserve(sendbuf.size() + sstr.size());
+      copy(sstr.begin(), sstr.end(), back_inserter(sendbuf));
       
     }
     
