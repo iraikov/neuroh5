@@ -5,8 +5,8 @@ import numpy as np
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
-(g,_) = read_trees("data/DGC_forest_append_test_20180116.h5", "GC")
-datasize=3000
+#(g,_) = read_trees("data/DGC_forest_append_test_20180116.h5", "GC")
+#datasize=3000
 a = np.arange(rank*10,(rank+1)*10).astype('uint32')
 b = np.arange(rank*20,(rank+1)*20).astype('float32')
 

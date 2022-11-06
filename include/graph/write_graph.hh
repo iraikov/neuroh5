@@ -5,7 +5,7 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2017 Project NeuroH5.
+///  Copyright (C) 2016-2022 Project NeuroH5.
 //==============================================================================
 
 #ifndef WRITE_GRAPH_HH
@@ -30,7 +30,8 @@ namespace neuroh5
      const std::string&    src_pop_name,
      const std::string&    dst_pop_name,
      const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
-     const edge_map_t&  input_edge_map
+     const edge_map_t&  input_edge_map,
+     const hsize_t      chunk_size = 4096
      );
 
   }

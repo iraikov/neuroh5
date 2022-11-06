@@ -458,7 +458,27 @@ namespace neuroh5
     }
 
 
-  
+    template <typename T>
+    void append_cell_attribute_map
+    (
+     MPI_Comm                        comm,
+     const std::string&              file_name,
+     const std::string&              attr_namespace,
+     const std::string&              pop_name,
+     const CELL_IDX_T&               pop_start,
+     const std::string&              attr_name,
+     const std::map<CELL_IDX_T, deque<T>>& value_map,
+     const size_t io_size,
+     const data::optional_hid        data_type,
+     const size_t chunk_size = 4000,
+     const size_t value_chunk_size = 4000,
+     const size_t cache_size = 1*1024*1024
+     )
+    {
+      append_cell_attribute_map<T>(comm, file_name, attr_namespace, pop_name, pop_start, attr_name, value_map,
+                                   io_size, data_type, IndexOwner, CellPtr(PtrOwner),
+                                   chunk_size, value_chunk_size, cache_size);
+    }
 
     template <typename T>
     void write_cell_attribute
@@ -767,6 +787,27 @@ namespace neuroh5
     }
 
 
+    template <typename T>
+    void write_cell_attribute_map
+    (
+     MPI_Comm                        comm,
+     const std::string&              file_name,
+     const std::string&              attr_namespace,
+     const std::string&              pop_name,
+     const CELL_IDX_T&               pop_start,
+     const std::string&              attr_name,
+     const std::map<CELL_IDX_T, deque<T>>& value_map,
+     const size_t io_size,
+     const data::optional_hid        data_type,
+     const size_t chunk_size = 4000,
+     const size_t value_chunk_size = 4000,
+     const size_t cache_size = 1*1024*1024
+     )
+    {
+      write_cell_attribute_map<T>(comm, file_name, attr_namespace, pop_name, pop_start, attr_name,
+                                  value_map, io_size, data_type, IndexOwner, CellPtr(PtrOwner),
+                                  chunk_size, value_chunk_size, cache_size);
+    }
   }
   
 }

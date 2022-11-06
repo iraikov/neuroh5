@@ -47,7 +47,8 @@ namespace neuroh5
      const string&    src_pop_name,
      const string&    dst_pop_name,
      const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
-     const edge_map_t&  input_edge_map
+     const edge_map_t&  input_edge_map,
+     const hsize_t    chunk_size
      )
     {
       size_t io_size;
@@ -345,7 +346,7 @@ namespace neuroh5
           append_projection (io_comm, file, src_pop_name, dst_pop_name,
                              src_start, src_end, dst_start, dst_end,
                              num_unpacked_edges, prj_edge_map,
-                             edge_attr_index);
+                             edge_attr_index, chunk_size);
 
           throw_assert_nomsg(MPI_Barrier(io_comm) == MPI_SUCCESS);
           throw_assert_nomsg(H5Fclose(file) >= 0);

@@ -136,7 +136,7 @@ setup(
     name="NeuroH5",
     package_dir={"": "python"},
     packages=["neuroh5"],
-    version="0.1.6",
+    version="0.1.7",
     maintainer="Ivan Raikov",
     maintainer_email="ivan.g.raikov@gmail.com",
     description="A parallel HDF5-based library for storage and processing of large-scale graphs and neural cell model attributes.",

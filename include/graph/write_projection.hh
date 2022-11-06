@@ -25,7 +25,7 @@ namespace neuroh5
      const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
      const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
-     hsize_t            cdim = 4096,
+     hsize_t            chunk_size = 4096,
      hsize_t            block_size = 1000000,
      const bool collective = true
      );

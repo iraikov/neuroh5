@@ -33,7 +33,7 @@ namespace neuroh5
      const size_t&             num_edges,
      const edge_map_t&         prj_edge_map,
      const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
-     hsize_t                   cdim,
+     hsize_t                   chunk_size,
      hsize_t                   block_size,
      const bool collective
      )
@@ -129,7 +129,7 @@ namespace neuroh5
       /* Dataset creation property list to enable chunking */
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(dcpl >= 0);
-      hsize_t chunk = cdim;
+      hsize_t chunk = chunk_size;
 
       hid_t wapl = H5P_DEFAULT;
 #ifdef HDF5_IS_PARALLEL

@@ -4,7 +4,7 @@
 ///
 ///  Python module for reading and writing neuronal connectivity and morphological information.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2022 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -3578,6 +3578,8 @@ extern "C"
     MPI_Comm *comm_ptr = NULL;
     char *file_name_arg, *src_pop_name_arg, *dst_pop_name_arg;
     unsigned long io_size = 0;
+    const unsigned long default_chunk_size = 4000;
+    unsigned long chunk_size = default_chunk_size;
     
     static const char *kwlist[] = {
                                    "file_name",
@@ -3586,11 +3588,12 @@ extern "C"
                                    "edges",
                                    "comm",
                                    "io_size",
+                                   "chunk_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sssO|Ok", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sssO|Okk", (char **)kwlist,
                                      &file_name_arg, &src_pop_name_arg, &dst_pop_name_arg,
-                                     &edge_values, &py_comm, &io_size))
+                                     &edge_values, &py_comm, &io_size, &chunk_size))
       return NULL;
     MPI_Comm comm;
 
@@ -3657,7 +3660,7 @@ extern "C"
         build_edge_map(edge_values, edge_attr_index, edge_map);
         
         status = graph::write_graph(data_comm, io_size, file_name, src_pop_name, dst_pop_name,
-                                    edge_attr_index, edge_map);
+                                    edge_attr_index, edge_map, chunk_size);
         throw_assert(status >= 0,
                      "py_write_graph: unable to write graph");
       }
@@ -3688,17 +3691,20 @@ extern "C"
     MPI_Comm *comm_ptr = NULL;
     char *file_name_arg;
     unsigned long io_size = 0;
-    
+    const unsigned long default_chunk_size = 4000;
+    unsigned long chunk_size = default_chunk_size;
+        
     static const char *kwlist[] = {
                                    "file_name",
                                    "edge_dict",
                                    "comm",
                                    "io_size",
+                                   "chunk_size",
                                    NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|Ok", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO|Okk", (char **)kwlist,
                                      &file_name_arg, &py_edge_dict,
-                                     &py_comm, &io_size))
+                                     &py_comm, &io_size, &chunk_size))
       return NULL;
 
     MPI_Comm comm;
@@ -3770,7 +3776,7 @@ extern "C"
                 const edge_map_t & edge_map = edge_map_item.second.second; 
 
                 status = graph::append_graph(data_comm, io_size, file_name, src_pop_name, dst_pop_name,
-                                             edge_attr_index, edge_map);
+                                             edge_attr_index, edge_map, chunk_size);
                 throw_assert(status >= 0,
                              "py_append_graph: unable to append projection");
                 
@@ -6687,43 +6693,50 @@ extern "C"
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                   attr_name, it->second, io_size, dflt_data_type);
+                                                   attr_name, it->second, io_size, dflt_data_type,
+                                                   chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_uint32.cbegin(); it != all_attr_values_uint32.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type);
+                                                      attr_name, it->second, io_size, dflt_data_type,
+                                                      chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_uint16.cbegin(); it != all_attr_values_uint16.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type);
+                                                      attr_name, it->second, io_size, dflt_data_type,
+                                                      chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_uint8.cbegin(); it != all_attr_values_uint8.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, io_size, dflt_data_type);
+                                                     attr_name, it->second, io_size, dflt_data_type,
+                                                     chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_int32.cbegin(); it != all_attr_values_int32.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, io_size, dflt_data_type);
+                                                     attr_name, it->second, io_size, dflt_data_type,
+                                                     chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_int16.cbegin(); it != all_attr_values_int16.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, io_size, dflt_data_type);
+                                                     attr_name, it->second, io_size, dflt_data_type,
+                                                     chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_int8.cbegin(); it != all_attr_values_int8.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::write_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                    attr_name, it->second, io_size, dflt_data_type);
+                                                    attr_name, it->second, io_size, dflt_data_type,
+                                                    chunk_size, value_chunk_size, cache_size);
           }
 
         
@@ -6920,43 +6933,50 @@ extern "C"
           {
             const string& attr_name = it->first;
             cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                    attr_name, it->second, io_size, dflt_data_type);
+                                                    attr_name, it->second, io_size, dflt_data_type,
+                                                    chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_uint32.cbegin(); it != all_attr_values_uint32.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                       attr_name, it->second, io_size, dflt_data_type);
+                                                       attr_name, it->second, io_size, dflt_data_type,
+                                                       chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_uint16.cbegin(); it != all_attr_values_uint16.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type);
+                                                       attr_name, it->second, io_size, dflt_data_type,
+                                                       chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_uint8.cbegin(); it != all_attr_values_uint8.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type);
+                                                      attr_name, it->second, io_size, dflt_data_type,
+                                                      chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_int32.cbegin(); it != all_attr_values_int32.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type);
+                                                      attr_name, it->second, io_size, dflt_data_type,
+                                                      chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_int16.cbegin(); it != all_attr_values_int16.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type);
+                                                      attr_name, it->second, io_size, dflt_data_type,
+                                                      chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = all_attr_values_int8.cbegin(); it != all_attr_values_int8.cend(); ++it)
           {
             const string& attr_name = it->first;
             cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, io_size, dflt_data_type);
+                                                     attr_name, it->second, io_size, dflt_data_type,
+                                                     chunk_size, value_chunk_size, cache_size);
           }
 
 
@@ -7209,7 +7229,8 @@ extern "C"
               ++layer_it, ++swc_type_it;
           }
     
-        throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_list) >= 0,
+        throw_assert(cell::append_trees<void> (data_comm, file_name, pop_name, pop_start, tree_list,
+                                               chunk_size, value_chunk_size) >= 0,
                      "py_append_cell_trees: unable to append trees");
       }
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
