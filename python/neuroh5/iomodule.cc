@@ -7963,6 +7963,9 @@ extern "C"
               int status;
               py_ntrg->state->tree_map.clear();
               py_ntrg->state->attr_maps.clear();
+
+              throw_assert(MPI_Barrier(py_ntrg->state->comm) == MPI_SUCCESS, "NeuroH5TreeGen: MPI_Barrier error");
+
               status = cell::scatter_read_trees (py_ntrg->state->comm,
                                                  py_ntrg->state->file_name,
                                                  py_ntrg->state->io_size,
@@ -7976,10 +7979,8 @@ extern "C"
                                                  py_ntrg->state->cache_size);
               throw_assert (status >= 0,
                             "NeuroH5TreeGen: error in call to cell::scatter_read_trees");
-              status = MPI_Barrier(py_ntrg->state->comm);
-              throw_assert(status == MPI_SUCCESS,
-                           "NeuroH5CellAttrGen: MPI barrier error");
 
+              throw_assert(MPI_Barrier(py_ntrg->state->comm) == MPI_SUCCESS, "NeuroH5TreeGen: MPI_Barrier error");
 
               if (py_ntrg->state->cache_index < py_ntrg->state->count)
                 {

@@ -43,7 +43,6 @@ endmacro(neuroh5_add_pyunit)
 
 # workaround a FindHDF5 bug
 macro(find_hdf5)
-    cmake_policy(SET CMP0074 NEW) # enables use of HDF5_ROOT variable
     set(HDF5_PREFER_PARALLEL TRUE)
     find_package(HDF5)
     set( HDF5_IS_PARALLEL FALSE )

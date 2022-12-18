@@ -46,6 +46,7 @@ class cmake_build_ext(build_ext.build_ext):
             options["debug_build"] = True
         if os.environ.get("HDF5_ROOT", False):
             options["HDF5_ROOT"] = os.environ.get("HDF5_ROOT")
+            options["HDF5_DIR"] = os.environ.get("HDF5_ROOT")
         if os.environ.get("JEMALLOC_ROOT", False):
             options["JEMALLOC_ROOT"] = os.environ.get("JEMALLOC_ROOT")
 
@@ -123,7 +124,7 @@ class cmake_build_ext(build_ext.build_ext):
             # Build
             cmake_build_args = ["--build", ".", "--config", cfg, "--target", ext.target]
             cmake_build_args += ["--", f"-j{num_available_cpu_cores()}"]
-            
+
             subprocess.check_call(
                 ["cmake"] + cmake_build_args,
                 cwd=self.build_temp,
