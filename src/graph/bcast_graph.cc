@@ -226,29 +226,39 @@ namespace neuroh5
       // For each projection, I/O ranks read the edges and scatter
       for (size_t i = 0; i < prj_size; i++)
         {
-          NODE_IDX_T src_start, dst_start;
+          NODE_IDX_T src_start=0, dst_start=0;
           pop_t dst_pop_idx=0, src_pop_idx=0;
           bool src_pop_set = false, dst_pop_set = false;
           string src_pop_name = prj_names[i].first;
           string dst_pop_name = prj_names[i].second;
-      
-          for (auto &x : pop_labels)
-            {
-              if (src_pop_name == get<1>(x))
-                {
-                  src_pop_idx = get<0>(x);
-                  src_pop_set = true;
-                }
-              if (dst_pop_name == get<1>(x))
-                {
-                  dst_pop_idx = get<0>(x);
-                  dst_pop_set = true;
-                }
-            }
-          throw_assert_nomsg(dst_pop_set && src_pop_set);
 
-          dst_start = pop_ranges[dst_pop_idx].start;
-          src_start = pop_ranges[src_pop_idx].start;
+          if (rank == 0)
+            {
+              for (auto &x : pop_labels)
+                {
+                  
+                  if (src_pop_name == get<1>(x))
+                    {
+                      src_pop_idx = get<0>(x);
+                      src_pop_set = true;
+                    }
+                  if (dst_pop_name == get<1>(x))
+                    {
+                      dst_pop_idx = get<0>(x);
+                      dst_pop_set = true;
+                    }
+                }
+              throw_assert(dst_pop_set,
+                           "bcast_graph: unable to determine index of population " << dst_pop_name);
+              throw_assert(src_pop_set,
+                           "bcast_graph: unable to determine index of population " << src_pop_name);
+
+              dst_start = pop_ranges[dst_pop_idx].start;
+              src_start = pop_ranges[src_pop_idx].start;
+            }
+
+          throw_assert_nomsg(MPI_Bcast(&src_start, 1, MPI_NODE_IDX_T, 0, all_comm) == MPI_SUCCESS);
+          throw_assert_nomsg(MPI_Bcast(&dst_start, 1, MPI_NODE_IDX_T, 0, all_comm) == MPI_SUCCESS);
 
           bcast_projection(all_comm, io_comm, edge_map_type, file_name,
                            src_pop_name, dst_pop_name,
