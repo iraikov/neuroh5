@@ -71,6 +71,8 @@ class cmake_build_ext(build_ext.build_ext):
                 "-DPYTHON_EXECUTABLE={}".format(sys.executable),
                 # Add other project-specific CMake arguments if needed
                 # ...
+                "-DCMAKE_C_COMPILER={}".format("mpicc"),
+                "-DCMAKE_CXX_COMPILER={}".format("mpicxx"),
             ]
 
             # We can handle some platform-specific settings at our discretion
