@@ -241,7 +241,12 @@ int main(int argc, char** argv)
            { cell::validate_tree(tree); } 
            );
 
-  const neurotree_t input_tree = *std::next(input_tree_list.begin(), source_gid-pop_start);
+  
+  auto result = std::find_if(input_tree_list.begin(), input_tree_list.end(),
+                             [&](const neurotree_t& e) {return std::get<0>(e) == source_gid;});
+  throw_assert (result != input_tree_list.end(), "unable to find source gid " << source_gid);
+
+  const neurotree_t input_tree = *result;
       
   const deque<SECTION_IDX_T> & src_vector=get<1>(input_tree);
   const deque<SECTION_IDX_T> & dst_vector=get<2>(input_tree);
