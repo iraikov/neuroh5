@@ -15,7 +15,7 @@ endif()
   
 include(${PROJECT_SOURCE_DIR}/cmake/neuroh5_utils.cmake)
 
-set(NEUROH5_VERSION 0.1.8)
+set(NEUROH5_VERSION 0.1.9)
 
 cmake_policy(SET CMP0074 NEW) # enables use of HDF5_ROOT variable
 

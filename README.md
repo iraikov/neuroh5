@@ -36,7 +36,10 @@ To build the python module:
 ```
 git clone https://github.com/iraikov/neuroh5.git
 cd neuroh5
-CMAKE_BUILD_PARALLEL_LEVEL=8 pip install .
+CMAKE_BUILD_PARALLEL_LEVEL=8 \
+  CMAKE_MPI_C_COMPILER=$(which mpicc) \
+  CMAKE_MPI_CXX_COMPILER=$(which mpicxx) \
+  pip install .
 ```
 
 
