@@ -145,13 +145,14 @@ setup(
     long_description_content_type='text/markdown',
     url="http://github.com/iraikov/neuroh5",
     include_package_data=True,
-    entry_points="""
-        [console_scripts]
-        initrange=neuroh5.initrange:cli
-        initprj=neuroh5.initprj:cli
-        importdbs=neuroh5.importdbs:cli
-        importcoords=neuroh5.importcoords:cli
-    """,
+    entry_points={
+        "console_scripts": [
+            'initrange=neuroh5.initrange:cli',
+            'initprj=neuroh5.initprj:cli',
+            'importdbs=neuroh5.importdbs:cli',
+            'importcoords=neuroh5.importcoords:cli',
+        ]
+    },
     cmdclass={"build_ext": cmake_build_ext},
     ext_modules=[CMakeExtension("neuroh5.io", target="python_neuroh5_io")],
 )
