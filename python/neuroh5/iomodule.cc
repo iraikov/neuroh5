@@ -8120,8 +8120,12 @@ extern "C"
               py_ntrg->state->cache_index += size * py_ntrg->state->cache_size;
               if ((py_ntrg->state->return_tp == return_tuple) && (py_ntrg->state->tuple_index_info == NULL))
                 {
-                  py_ntrg->state->tuple_index_info = py_build_cell_attr_tuple_info(py_ntrg->state->attr_map,
-                                                                                   py_ntrg->state->attr_names);
+                  if (py_ntrg->state->attr_map.index_set.size() > 0)
+                    {
+                      py_ntrg->state->tuple_index_info = py_build_cell_attr_tuple_info(py_ntrg->state->attr_map,
+                                                                                       py_ntrg->state->attr_names);
+                      Py_INCREF(py_ntrg->state->tuple_index_info);
+                    }
                 }
               
 #if HAS_STRUCT_SEQUENCE
@@ -8180,6 +8184,12 @@ extern "C"
                   {
                     PyObject *py_cell_attr_elem = py_build_cell_attr_values_tuple(key, py_ntrg->state->attr_map,
                                                                                   py_ntrg->state->attr_names);
+                    if (py_ntrg->state->tuple_index_info == NULL)
+                      {
+                        py_ntrg->state->tuple_index_info = py_build_cell_attr_tuple_info(py_ntrg->state->attr_map,
+                                                                                         py_ntrg->state->attr_names);
+                        Py_INCREF(py_ntrg->state->tuple_index_info);
+                      }
 
                     elem = PyTuple_New(2);
                     PyTuple_SetItem(elem, 0, py_cell_attr_elem);
