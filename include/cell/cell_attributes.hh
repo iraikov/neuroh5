@@ -153,7 +153,103 @@ namespace neuroh5
      size_t numitems = 0
      );
 
+    
+    void append_cell_attribute_maps (
+                                     MPI_Comm                        comm,
+                                     const std::string&              file_name,
+                                     const std::string&              attr_namespace,
+                                     const std::string&              pop_name,
+                                     const CELL_IDX_T&               pop_start,
+                                     const map<string, map<CELL_IDX_T, deque<uint32_t> >>& attr_values_uint32,
+                                     const map<string, map<CELL_IDX_T, deque<int32_t> >> attr_values_int32,
+                                     const map<string, map<CELL_IDX_T, deque<uint16_t> >>& attr_values_uint16,
+                                     const map<string, map<CELL_IDX_T, deque<int16_t> >>& attr_values_int16,
+                                     const map<string, map<CELL_IDX_T, deque<uint8_t> >>&  attr_values_uint8,
+                                     const map<string, map<CELL_IDX_T, deque<int8_t> >>&  attr_values_int8,
+                                     const map<string, map<CELL_IDX_T, deque<float> >>&  attr_values_float,
+                                     const size_t io_size,
+                                     const data::optional_hid        data_type,
+                                     const CellIndex                 index_type = IndexOwner,
+                                     const CellPtr                   ptr_type = CellPtr(PtrOwner),
+                                     const size_t chunk_size = 4000,
+                                     const size_t value_chunk_size = 4000,
+                                     const size_t cache_size = 1*1024*1024
+                                     );
+
   
+    template <typename T>
+    void append_cell_attribute
+    (
+     MPI_Comm                              comm,
+     const hid_t&                          loc,
+     const std::string&                    attr_namespace,
+     const std::string&                    pop_name,
+     const CELL_IDX_T&                     pop_start,
+     const std::string&                    attr_name,
+     const std::vector<CELL_IDX_T>&        index,
+     const std::vector<ATTR_PTR_T>         attr_ptr,
+     const std::vector<T>&                 values,
+     const data::optional_hid              data_type,
+     const CellIndex                       index_type,
+     const CellPtr                         ptr_type,
+     const size_t chunk_size = 4000,
+     const size_t value_chunk_size = 4000,
+     const size_t cache_size = 1*1024*1024
+     )
+    {
+      int status;
+      throw_assert(index.size() == attr_ptr.size()-1,
+                   "append_cell_attribute: mismatch between sizes of cell index and attribute pointer");
+    
+      int size, rank;
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator rank");
+
+      string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
+      string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
+
+      T dummy;
+      hid_t ftype;
+      if (data_type.has_value())
+        ftype = data_type.value();
+      else
+        ftype = infer_datatype(dummy);
+
+      hid_t file = H5Iget_file_id(loc);
+      throw_assert(file >= 0,
+                   "append_cell_attribute: invalid file handle");
+
+      if (!(hdf5::exists_dataset (file, attr_path) > 0))
+        {
+          create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
+                                         ftype, index_type, ptr_type,
+                                         chunk_size, value_chunk_size
+                                         );
+        }
+
+      vector<CELL_IDX_T> rindex;
+
+      for (const CELL_IDX_T& gid: index)
+        {
+	  throw_assert(gid >= pop_start,
+		       "append_cell_attribute: invalid gid");
+          rindex.push_back(gid - pop_start);
+        }
+      
+      hdf5::append_cell_attribute<T>(comm, file, attr_path, rindex, attr_ptr, values,
+                                     data_type, index_type, ptr_type);
+    
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
+
+      status = H5Fclose(file);
+      throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file");
+
+    }
+
+    
     template <typename T>
     void append_cell_attribute
     (
@@ -241,20 +337,11 @@ namespace neuroh5
       throw_assert(file >= 0,
                    "append_cell_attribute: HDF5 file open error");
 
-      vector<CELL_IDX_T> rindex;
-
-      for (const CELL_IDX_T& gid: index)
-        {
-	  throw_assert(gid >= pop_start,
-		       "append_cell_attribute: invalid gid");
-          rindex.push_back(gid - pop_start);
-        }
-      
-      hdf5::append_cell_attribute<T>(comm, file, attr_path, rindex, attr_ptr, values,
-                                     data_type, index_type, ptr_type);
-    
-      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-                   "append_cell_attribute: error in MPI_Barrier");
+      append_cell_attribute<T> (comm, file, attr_namespace, pop_name, pop_start,
+                                attr_name, index, attr_ptr, values,
+                                data_type, index_type, ptr_type,
+                                chunk_size, value_chunk_size, cache_size);
+         
       status = H5Fclose(file);
       throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file");
       status = H5Pclose(fapl);
@@ -270,14 +357,14 @@ namespace neuroh5
     void append_cell_attribute_map
     (
      MPI_Comm                        comm,
-     const std::string&              file_name,
+     const hid_t&                    loc,
      const std::string&              attr_namespace,
      const std::string&              pop_name,
      const CELL_IDX_T&               pop_start,
      const std::string&              attr_name,
      const std::map<CELL_IDX_T, deque<T>>& value_map,
-     const size_t io_size,
      const data::optional_hid        data_type,
+     const set<size_t>&              io_rank_set,
      const CellIndex                 index_type = IndexOwner,
      const CellPtr                   ptr_type = CellPtr(PtrOwner),
      const size_t chunk_size = 4000,
@@ -285,8 +372,9 @@ namespace neuroh5
      const size_t cache_size = 1*1024*1024
      )
     {
-    
-      int ssize, srank; size_t size, rank; size_t io_size_value=0;
+
+      herr_t status;
+      int ssize, srank; size_t size, rank; int io_size_value=0; size_t io_size=0;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
       throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
       throw_assert(ssize > 0, "invalid MPI comm size");
@@ -294,24 +382,34 @@ namespace neuroh5
       rank = srank;
       size = ssize;
       
-      if (size < io_size)
-	{
-	  io_size_value = size;
-	}
-      else
-	{
-	  io_size_value = io_size;
-	}
+      hid_t file = H5Iget_file_id(loc);
+      throw_assert(file >= 0,
+                   "append_cell_attribute_map: invalid file handle");
 
-      set<size_t> io_rank_set;
-      data::range_sample(size, io_size_value, io_rank_set);
+      hid_t fapl;
+      throw_assert((fapl = H5Fget_access_plist(file)) >= 0,
+                   "append_cell_attribute_map: error in H5Fget_access_plist");
+      
+      MPI_Comm io_comm;
+      MPI_Info io_comm_info;
+      
+      throw_assert(H5Pget_fapl_mpio(fapl, &io_comm, &io_comm_info) >= 0,
+                   "append_cell_attribute_map: error in H5Pget_fapl_mpio");
+                   
+      throw_assert(MPI_Comm_size(io_comm, &io_size_value) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(io_size_value >= 0, "invalid io_size");
+      io_size = io_size_value;
+      throw_assert(io_size <= size, "invalid io_size");
+
+      throw_assert(H5Pclose(fapl) == 0,
+                   "append_cell_attribute_map: error in H5Pclose");
+
       bool is_io_rank = false;
       if (io_rank_set.find(rank) != io_rank_set.end())
         is_io_rank = true;
-
       
       vector< pair<hsize_t,hsize_t> > ranges;
-      mpi::rank_ranges(size, io_size_value, ranges);
+      mpi::rank_ranges(size, io_size, ranges);
 
       // Determine I/O ranks to which to send the values
       vector <size_t> io_dests(size); 
@@ -422,39 +520,28 @@ namespace neuroh5
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Barrier");
     
-      // MPI Communicator for I/O ranks
-      MPI_Comm io_comm;
-      // MPI group color value used for I/O ranks
-      int io_color = 1, color;
-    
-      // Am I an I/O rank?
       if (is_io_rank)
         {
-          color = io_color;
-        }
-      else
-        {
-          color = 0;
-        }
-      throw_assert(MPI_Comm_split(comm,color,rank,&io_comm) == MPI_SUCCESS,
-		   "append_cell_attribute_map: error in MPI_Comm_split");
-      MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
-
-      if (is_io_rank)
-        {
-          append_cell_attribute<T>(io_comm, file_name,
+          append_cell_attribute<T>(io_comm, file,
                                    attr_namespace, pop_name, pop_start, attr_name,
                                    gid_recvbuf, attr_ptr, value_recvbuf,
                                    data_type, index_type, ptr_type, 
                                    chunk_size, value_chunk_size, cache_size);
         }
-      
+
+                   
       throw_assert(MPI_Barrier(io_comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Barrier");
       throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Comm_free");
+      throw_assert(MPI_Info_free(&io_comm_info) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Info_free");
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Barrier");
+                   
+      status = H5Fclose(file);
+      throw_assert(status == 0, "append_cell_attribute_map: unable to close HDF5 file");
+                   
     }
 
 

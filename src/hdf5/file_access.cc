@@ -17,11 +17,28 @@ namespace neuroh5
      MPI_Comm comm,
      const std::string& file_name,
      const bool collective = false,
-     const bool rdwr = false
+     const bool rdwr = false,
+     const size_t cache_size = 1*1024*1024
      )
     {
       hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
       throw_assert_nomsg(fapl >= 0);
+
+      /* Cache parameters: */
+      int nelemts;    /* Dummy parameter in API, no longer used */ 
+      size_t nslots;  /* Number of slots in the 
+                         hash table */ 
+      size_t nbytes; /* Size of chunk cache in bytes */ 
+      double w0;      /* Chunk preemption policy */ 
+      /* Retrieve default cache parameters */ 
+      throw_assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0,
+                   "error in H5Pget_cache");
+      /* Set cache size and instruct the cache to discard the fully read chunk */ 
+      nbytes = cache_size; w0 = 1.;
+      throw_assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0,
+                   "error in H5Pset_cache");
+
+      
 #ifdef HDF5_IS_PARALLEL
       if (collective)
         {
@@ -41,6 +58,9 @@ namespace neuroh5
         }
       
       throw_assert_nomsg(file >= 0);
+
+      throw_assert(H5Pclose(fapl) == 0,
+                   "open_file: unable to close HDF5 file properties list");
       
       return file;
     }
