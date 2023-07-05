@@ -4,7 +4,7 @@
 ///
 ///  Functions for reading and writing cell indices from an HDF5 file.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2023 Project NeuroH5.
 //==============================================================================
 
 
@@ -16,6 +16,7 @@
 #include "neuroh5_types.hh"
 #include "dataset_num_elements.hh"
 #include "exists_dataset.hh"
+#include "cell_index.hh"
 #include "file_access.hh"
 #include "create_group.hh"
 #include "path_names.hh"
@@ -38,7 +39,7 @@ namespace neuroh5
      const string&        file_name,
      const string&        pop_name,
      const string&        attr_name_space,
-     const size_t         chunk_size = 1000
+     const size_t         chunk_size
      )
     {
       herr_t ierr = 0;
@@ -107,6 +108,86 @@ namespace neuroh5
           ierr = H5Fclose (file);
           throw_assert_nomsg(ierr == 0);
         }
+
+      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+      
+      return ierr;
+    }
+
+  
+    herr_t create_cell_index
+    (
+     MPI_Comm             comm,
+     hid_t                loc,
+     const string&        pop_name,
+     const string&        attr_name_space,
+     const size_t         chunk_size
+     )
+    {
+      herr_t ierr = 0;
+      int srank, ssize; size_t rank, size;
+    
+      throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(srank >= 0);
+      throw_assert_nomsg(ssize > 0);
+      
+      rank = (size_t)srank;
+      size = (size_t)ssize;
+      
+      string attr_prefix = hdf5::cell_attribute_prefix(attr_name_space, pop_name);
+      string attr_path   = hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX);
+
+      bool has_group=false, has_index=false;
+
+      hid_t file = H5Iget_file_id(loc);
+      throw_assert(file >= 0,
+                   "create_cell_index: invalid file handle");
+      
+      has_group = hdf5::exists_dataset (file, attr_prefix) > 0;
+      if (!has_group)
+        {
+          ierr = hdf5::create_group (file, attr_prefix);
+          throw_assert_nomsg(ierr == 0);
+        }
+      else
+        {
+          has_index = hdf5::exists_dataset (file, attr_path) > 0;
+        }
+      
+      if (!has_index)
+        {
+          
+          hsize_t maxdims[1] = {H5S_UNLIMITED};
+          hsize_t cdims[1]   = {chunk_size}; /* chunking dimensions */		
+          hsize_t initial_size = 0;
+          
+          hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
+          ierr = H5Pset_chunk(plist, 1, cdims);
+          throw_assert_nomsg(ierr == 0);
+          
+          ierr = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
+          throw_assert_nomsg(ierr == 0);
+          
+#ifdef H5_HAS_PARALLEL_DEFLATE
+          ierr = H5Pset_deflate(plist, 9);
+          throw_assert_nomsg(ierr == 0);
+#endif
+          
+          hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+          throw_assert_nomsg(lcpl >= 0);
+          throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+          
+          hid_t mspace = H5Screate_simple(1, &initial_size, maxdims);
+          throw_assert_nomsg(mspace >= 0);
+          hid_t dset = H5Dcreate2(file, attr_path.c_str(), CELL_IDX_H5_FILE_T,
+                                  mspace, lcpl, plist, H5P_DEFAULT);
+          throw_assert_nomsg(H5Dclose(dset) >= 0);
+          throw_assert_nomsg(H5Sclose(mspace) >= 0);
+        }
+      
+      ierr = H5Fclose (file);
+      throw_assert_nomsg(ierr == 0);
 
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
       
@@ -190,6 +271,42 @@ namespace neuroh5
       
       rank = (size_t)srank;
       size = (size_t)ssize;
+
+      hid_t file = hdf5::open_file(comm, file_name, true, true);
+      throw_assert_nomsg(file >= 0);
+
+      ierr = append_cell_index(comm, file, pop_name, pop_start, attr_name_space, cell_index);
+      throw_assert_nomsg(ierr == 0);
+      hdf5::close_file(file);
+
+      return 0;
+    }
+
+    
+    herr_t append_cell_index
+    (
+     MPI_Comm             comm,
+     hid_t                loc,
+     const string&        pop_name,
+     const CELL_IDX_T&    pop_start,
+     const string&        attr_name_space,
+     const vector<CELL_IDX_T>&  cell_index
+     )
+    {
+      herr_t ierr = 0;
+      int srank, ssize; size_t rank, size;
+      
+      hid_t file = H5Iget_file_id(loc);
+      throw_assert(file >= 0,
+                   "append_cell_index: invalid file handle");
+
+      throw_assert_nomsg(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS);
+      throw_assert_nomsg(srank >= 0);
+      throw_assert_nomsg(ssize > 0);
+      
+      rank = (size_t)srank;
+      size = (size_t)ssize;
       
       hsize_t local_index_size = cell_index.size();
       vector<CELL_IDX_T>  rel_cell_index;
@@ -217,12 +334,10 @@ namespace neuroh5
           global_index_size = global_index_size + index_size_vector[i];
         }
 
-      ierr = create_cell_index(comm, file_name, pop_name, attr_name_space);
+      ierr = create_cell_index(comm, file, pop_name, attr_name_space);
 #ifdef NEUROH5_DEBUG
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 #endif      
-      hid_t file = hdf5::open_file(comm, file_name, true, true);
-      throw_assert_nomsg(file >= 0);
 
       /* Create property list for collective dataset write. */
       hid_t wapl;
@@ -247,7 +362,6 @@ namespace neuroh5
 
       return ierr;
     }
-
         
     herr_t link_cell_index
     (

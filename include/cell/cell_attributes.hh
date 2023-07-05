@@ -180,7 +180,6 @@ namespace neuroh5
     template <typename T>
     void append_cell_attribute
     (
-     MPI_Comm                              comm,
      const hid_t&                          loc,
      const std::string&                    attr_namespace,
      const std::string&                    pop_name,
@@ -201,11 +200,6 @@ namespace neuroh5
       throw_assert(index.size() == attr_ptr.size()-1,
                    "append_cell_attribute: mismatch between sizes of cell index and attribute pointer");
     
-      int size, rank;
-      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
-                   "append_cell_attribute: unable to obtain MPI communicator size");
-      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
-                   "append_cell_attribute: unable to obtain MPI communicator rank");
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
@@ -221,6 +215,26 @@ namespace neuroh5
       throw_assert(file >= 0,
                    "append_cell_attribute: invalid file handle");
 
+      hid_t fapl;
+      throw_assert((fapl = H5Fget_access_plist(file)) >= 0,
+                   "append_cell_attribute_map: error in H5Fget_access_plist");
+
+      MPI_Comm comm;
+      MPI_Info comm_info;
+      
+      throw_assert(H5Pget_fapl_mpio(fapl, &comm, &comm_info) >= 0,
+                   "append_cell_attribute: error in H5Pget_fapl_mpio");
+                   
+      int size, rank;
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator rank");
+      
+      throw_assert(H5Pclose(fapl) == 0,
+                   "append_cell_attribute: error in H5Pclose");
+
+      
       if (!(hdf5::exists_dataset (file, attr_path) > 0))
         {
           create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
@@ -337,7 +351,7 @@ namespace neuroh5
       throw_assert(file >= 0,
                    "append_cell_attribute: HDF5 file open error");
 
-      append_cell_attribute<T> (comm, file, attr_namespace, pop_name, pop_start,
+      append_cell_attribute<T> (file, attr_namespace, pop_name, pop_start,
                                 attr_name, index, attr_ptr, values,
                                 data_type, index_type, ptr_type,
                                 chunk_size, value_chunk_size, cache_size);
@@ -374,39 +388,44 @@ namespace neuroh5
     {
 
       herr_t status;
-      int ssize, srank; size_t size, rank; int io_size_value=0; size_t io_size=0;
+      int ssize=0, srank=0; size_t size=0, rank=0; size_t io_size=io_rank_set.size();
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
       throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
       throw_assert(ssize > 0, "invalid MPI comm size");
       throw_assert(srank >= 0, "invalid MPI rank");
       rank = srank;
       size = ssize;
-      
-      hid_t file = H5Iget_file_id(loc);
-      throw_assert(file >= 0,
-                   "append_cell_attribute_map: invalid file handle");
-
-      hid_t fapl;
-      throw_assert((fapl = H5Fget_access_plist(file)) >= 0,
-                   "append_cell_attribute_map: error in H5Fget_access_plist");
-      
-      MPI_Comm io_comm;
-      MPI_Info io_comm_info;
-      
-      throw_assert(H5Pget_fapl_mpio(fapl, &io_comm, &io_comm_info) >= 0,
-                   "append_cell_attribute_map: error in H5Pget_fapl_mpio");
-                   
-      throw_assert(MPI_Comm_size(io_comm, &io_size_value) == MPI_SUCCESS, "error in MPI_Comm_size");
-      throw_assert(io_size_value >= 0, "invalid io_size");
-      io_size = io_size_value;
       throw_assert(io_size <= size, "invalid io_size");
-
-      throw_assert(H5Pclose(fapl) == 0,
-                   "append_cell_attribute_map: error in H5Pclose");
 
       bool is_io_rank = false;
       if (io_rank_set.find(rank) != io_rank_set.end())
         is_io_rank = true;
+
+      hid_t fapl;
+      hid_t file;
+      MPI_Comm io_comm;
+      MPI_Info io_comm_info;
+      
+      if (is_io_rank)
+        {
+          int io_size_value=0;
+          
+          file = H5Iget_file_id(loc);
+          throw_assert(file >= 0,
+                       "append_cell_attribute_map: invalid file handle");
+
+          throw_assert((fapl = H5Fget_access_plist(file)) >= 0,
+                       "append_cell_attribute_map: error in H5Fget_access_plist");
+      
+          throw_assert(H5Pget_fapl_mpio(fapl, &io_comm, &io_comm_info) >= 0,
+                       "append_cell_attribute_map: error in H5Pget_fapl_mpio");
+          
+          throw_assert(MPI_Comm_size(io_comm, &io_size_value) == MPI_SUCCESS, "error in MPI_Comm_size");
+          throw_assert(io_size_value == io_size, "io_size mismatch");
+          
+          throw_assert(H5Pclose(fapl) == 0,
+                       "append_cell_attribute_map: error in H5Pclose");
+        }
       
       vector< pair<hsize_t,hsize_t> > ranges;
       mpi::rank_ranges(size, io_size, ranges);
@@ -522,28 +541,148 @@ namespace neuroh5
     
       if (is_io_rank)
         {
-          append_cell_attribute<T>(io_comm, file,
+          append_cell_attribute<T>(file,
                                    attr_namespace, pop_name, pop_start, attr_name,
                                    gid_recvbuf, attr_ptr, value_recvbuf,
                                    data_type, index_type, ptr_type, 
                                    chunk_size, value_chunk_size, cache_size);
         }
 
-                   
-      throw_assert(MPI_Barrier(io_comm) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Barrier");
-      throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Comm_free");
-      throw_assert(MPI_Info_free(&io_comm_info) == MPI_SUCCESS,
-                   "append_cell_attribute_map: error in MPI_Info_free");
+      if (is_io_rank)
+        {
+          throw_assert(MPI_Barrier(io_comm) == MPI_SUCCESS,
+                       "append_cell_attribute_map: error in MPI_Barrier");
+          throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
+                       "append_cell_attribute_map: error in MPI_Comm_free");
+          
+          if (io_comm_info != MPI_INFO_NULL)
+            {
+              throw_assert(MPI_Info_free(&io_comm_info) == MPI_SUCCESS,
+                           "append_cell_attribute_map: error in MPI_Info_free");
+            }
+          status = H5Fclose(file);
+          throw_assert(status == 0, "append_cell_attribute_map: unable to close HDF5 file");
+        }
+      
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
                    "append_cell_attribute_map: error in MPI_Barrier");
                    
-      status = H5Fclose(file);
-      throw_assert(status == 0, "append_cell_attribute_map: unable to close HDF5 file");
-                   
     }
 
+
+    template <typename T>
+    void append_cell_attribute_map
+    (
+     MPI_Comm                        comm,
+     const std::string&              file_name,
+     const std::string&              attr_namespace,
+     const std::string&              pop_name,
+     const CELL_IDX_T&               pop_start,
+     const std::string&              attr_name,
+     const std::map<CELL_IDX_T, deque<T>>& value_map,
+     const size_t io_size,
+     const data::optional_hid        data_type,
+     const CellIndex                 index_type = IndexOwner,
+     const CellPtr                   ptr_type = CellPtr(PtrOwner),
+     const size_t chunk_size = 4000,
+     const size_t value_chunk_size = 4000,
+     const size_t cache_size = 1*1024*1024
+     )
+    {
+      herr_t status;
+      int size, rank;
+      throw_assert(MPI_Comm_size(comm, &size) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator size");
+      throw_assert(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS,
+                   "append_cell_attribute: unable to obtain MPI communicator rank");
+      
+      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size, io_rank_set);
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+      throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
+
+      int io_color = 1, color;
+      MPI_Comm io_comm;
+      
+      // Am I an I/O rank?
+      if (is_io_rank)
+        {
+          color = io_color;
+        }
+      else
+        {
+          color = 0;
+        }
+      MPI_Comm_split(comm,color,rank,&io_comm);
+      MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+
+      throw_assert(H5Pset_fapl_mpio(fapl, io_comm, MPI_INFO_NULL) >= 0,
+                   "append_cell_attribute_map: HDF5 mpio error");
+
+      /* Cache parameters: */
+      int nelemts;    /* Dummy parameter in API, no longer used */ 
+      size_t nslots;  /* Number of slots in the 
+                         hash table */ 
+      size_t nbytes; /* Size of chunk cache in bytes */ 
+      double w0;      /* Chunk preemption policy */ 
+      /* Retrieve default cache parameters */ 
+      throw_assert(H5Pget_cache(fapl, &nelemts, &nslots, &nbytes, &w0) >=0,
+                   "error in H5Pget_cache");
+      /* Set cache size and instruct the cache to discard the fully read chunk */ 
+      nbytes = cache_size; w0 = 1.;
+      throw_assert(H5Pset_cache(fapl, nelemts, nslots, nbytes, w0)>= 0,
+                   "error in H5Pset_cache");
+
+      string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
+
+      if (rank == 0)
+        {
+          hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+          throw_assert(file >= 0,
+                       "append_cell_attribute: HDF5 file open error");
+
+          T dummy;
+          hid_t ftype;
+          if (data_type.has_value())
+            {
+              ftype = data_type.value();
+            }
+          else
+            ftype = infer_datatype(dummy);
+          throw_assert(ftype >= 0,
+                       "append_cell_attribute: unable to infer HDF5 data type");
+          
+          
+          if (!(hdf5::exists_dataset (file, attr_path) > 0))
+            {
+              create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
+                                             ftype, index_type, ptr_type,
+                                             chunk_size, value_chunk_size
+                                             );
+            }
+          status = H5Fclose(file);
+          throw_assert(status == 0, "append_cell_attribute: unable to close HDF5 file");
+        }
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Barrier");
+
+      hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
+      throw_assert(file >= 0,
+                   "append_cell_attribute: HDF5 file open error");
+
+      append_cell_attribute_map<T>(comm, file, attr_namespace, pop_name, pop_start, attr_name, value_map,
+                                   io_size, data_type, IndexOwner, CellPtr(PtrOwner),
+                                   chunk_size, value_chunk_size, cache_size);
+
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
+      throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
+                   "append_cell_attribute_map: error in MPI_Comm_free");
+
+    }
 
     template <typename T>
     void append_cell_attribute_map

@@ -4,25 +4,30 @@
 ///
 ///  Append tree structures to NeuroH5 file.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2023 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
 #include <hdf5.h>
+#include <unistd.h>
 
 #include <deque>
 #include <vector>
 #include <forward_list>
 
 #include "neuroh5_types.hh"
+#include "append_tree.hh"
 #include "file_access.hh"
 #include "rank_range.hh"
+#include "range_sample.hh"
 #include "dataset_num_elements.hh"
 #include "exists_dataset.hh"
 #include "enum_type.hh"
 #include "path_names.hh"
+#include "serialize_tree.hh"
 #include "cell_index.hh"
 #include "cell_attributes.hh"
+#include "create_file_toplevel.hh"
 #include "compact_optional.hh"
 #include "optional_value.hh"
 #include "throw_assert.hh"
@@ -269,6 +274,288 @@ namespace neuroh5
       return 0;
     }
     
+        
+    /*****************************************************************************
+     * Save tree data structures to HDF5
+     *****************************************************************************/
+    int append_trees
+    (
+     MPI_Comm                       comm,
+     MPI_Comm                       io_comm,
+     hid_t                          loc,
+     const std::string&             pop_name,
+     const CELL_IDX_T&              pop_start,
+     std::forward_list<neurotree_t> &tree_list,
+     const set<size_t>              &io_rank_set,
+     CellPtr                        ptr_type,
+     const size_t                   chunk_size,
+     const size_t                   value_chunk_size
+     )
+    {
+      herr_t status=0; 
+      size_t io_size=0;
+
+      size_t rank, size;
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      
+      size_t io_comm_size;
+      throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_comm_size) == MPI_SUCCESS);
+      
+      
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+      throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
+      io_size = io_rank_set.size();
+      throw_assert(io_comm_size == io_size, "mismatch between io_size and io_comm size");
+
+      vector< pair<hsize_t,hsize_t> > ranges;
+      mpi::rank_ranges(size, io_size, ranges);
+      
+      // Determine I/O ranks to which to send the values
+      vector <size_t> io_dests(size); 
+      for (size_t r=0; r<size; r++)
+        {
+          for (size_t i=ranges.size()-1; i>=0; i--)
+            {
+              if (ranges[i].first <= r)
+                {
+                  io_dests[r] = *std::next(io_rank_set.begin(), i);
+                  break;
+                }
+            }
+        }
+      
+      std::forward_list<neurotree_t> local_tree_list;
+      {
+        std::vector<char> sendbuf; 
+        std::vector<int> sendcounts, sdispls;
+        vector<int> recvcounts, rdispls;
+        vector<char> recvbuf;
+        
+        rank_t dst_rank = io_dests[rank];
+        map <rank_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
+        for_each(tree_list.cbegin(),
+                 tree_list.cend(),
+                 [&] (const neurotree_t& tree)
+                 {
+                   set <rank_t> dst_rank_set;
+                   
+                   const CELL_IDX_T &idx = get<0>(tree);
+                   CELL_IDX_T gid = idx;
+                   
+                   map<CELL_IDX_T, neurotree_t> &tree_map = rank_tree_map[dst_rank];
+                   tree_map.insert(make_pair(gid, tree));
+                 });
+          
+        data::serialize_rank_tree_map (size, rank, rank_tree_map, sendcounts, sendbuf, sdispls);
+        
+        throw_assert_nomsg(mpi::alltoallv_vector<char>(comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                       recvcounts, rdispls, recvbuf) >= 0);
+        sendbuf.clear();
+        sendbuf.shrink_to_fit();
+        
+        data::deserialize_rank_tree_list (size, recvbuf, recvcounts, rdispls,
+                                          local_tree_list);
+      }
+      
+      
+      std::vector<SEC_PTR_T> sec_ptr;
+      std::vector<TOPO_PTR_T> topo_ptr;
+      std::vector<ATTR_PTR_T> attr_ptr;
+    
+      std::vector<CELL_IDX_T> all_index_vector;
+      std::vector<SECTION_IDX_T> all_src_vector, all_dst_vector;
+      std::vector<COORD_T> all_xcoords, all_ycoords, all_zcoords;  // coordinates of nodes
+      std::vector<REALVAL_T> all_radiuses;    // Radius
+      std::vector<LAYER_IDX_T> all_layers;        // Layer
+      std::vector<SECTION_IDX_T> all_sections;    // Section
+      std::vector<PARENT_NODE_IDX_T> all_parents; // Parent
+      std::vector<SWC_TYPE_T> all_swc_types; // SWC Types
+
+      if (ptr_type.type == PtrNone)
+        {
+          status = build_singleton_tree_datasets(comm,
+                                                 local_tree_list,
+                                                 all_src_vector, all_dst_vector,
+                                                 all_xcoords, all_ycoords, all_zcoords, 
+                                                 all_radiuses, all_layers, all_sections,
+                                                 all_parents, all_swc_types);
+        }
+      else
+        {
+          status = build_tree_datasets(comm,
+                                       local_tree_list,
+                                       sec_ptr, topo_ptr, attr_ptr,
+                                       all_index_vector, all_src_vector, all_dst_vector,
+                                       all_xcoords, all_ycoords, all_zcoords, 
+                                       all_radiuses, all_layers, all_sections,
+                                       all_parents, all_swc_types);
+          throw_assert_nomsg(status >= 0);
+        }
+
+      local_tree_list.clear();
+      
+
+      const data::optional_hid dflt_data_type;
+      const data::optional_hid coord_data_type(COORD_H5_NATIVE_T);
+      const data::optional_hid layer_data_type(LAYER_IDX_H5_NATIVE_T);
+      const data::optional_hid parent_node_data_type(PARENT_NODE_IDX_H5_NATIVE_T);
+      const data::optional_hid section_data_type(SECTION_IDX_H5_NATIVE_T);
+      const data::optional_hid swc_data_type(SWC_TYPE_H5_NATIVE_T);
+
+      string attr_ptr_owner_path = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::X_COORD) + "/" + hdf5::ATTR_PTR;
+      string sec_ptr_owner_path  = hdf5::cell_attribute_path(hdf5::TREES, pop_name, hdf5::SRCSEC) + "/" + hdf5::SEC_PTR;
+
+      
+      hid_t file;
+
+      if (is_io_rank)
+        {
+
+          hid_t file = H5Iget_file_id(loc);
+          throw_assert(file >= 0,
+                       "append_trees: invalid file handle");
+          
+          append_cell_index (io_comm, file, pop_name, pop_start,
+                             hdf5::TREES, all_index_vector);
+          
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::X_COORD,
+                                 all_index_vector, attr_ptr, all_xcoords,
+                                 coord_data_type, IndexShared,
+                                 CellPtr (PtrOwner, hdf5::ATTR_PTR),
+                                 chunk_size, value_chunk_size);
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::Y_COORD,
+                                 all_index_vector, attr_ptr, all_ycoords,
+                                 coord_data_type, IndexShared,
+                                 CellPtr (PtrShared, attr_ptr_owner_path),
+                                 chunk_size, value_chunk_size);
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::Z_COORD,
+                                 all_index_vector, attr_ptr, all_zcoords,
+                                 coord_data_type, IndexShared,
+                                 CellPtr (PtrShared, attr_ptr_owner_path),
+                                 chunk_size, value_chunk_size);
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::RADIUS,
+                                 all_index_vector, attr_ptr, all_radiuses,
+                                 dflt_data_type, IndexShared,
+                                 CellPtr (PtrShared, attr_ptr_owner_path),
+                                 chunk_size, value_chunk_size);
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::LAYER,
+                                 all_index_vector, attr_ptr, all_layers,
+                                 layer_data_type, IndexShared,
+                                 CellPtr (PtrShared, attr_ptr_owner_path),
+                                 chunk_size, value_chunk_size);
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::PARENT,
+                                 all_index_vector, attr_ptr, all_parents,
+                                 parent_node_data_type, IndexShared,
+                                 CellPtr (PtrShared, attr_ptr_owner_path),
+                                 chunk_size, value_chunk_size);
+          
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::SWCTYPE,
+                                 all_index_vector, attr_ptr, all_swc_types,
+                                 swc_data_type, IndexShared,
+                                 CellPtr (PtrShared, attr_ptr_owner_path),
+                                 chunk_size, value_chunk_size);
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::SRCSEC,
+                                 all_index_vector, topo_ptr, all_src_vector,
+                                 section_data_type, IndexShared,
+                                 CellPtr (PtrOwner, hdf5::SEC_PTR),
+                                 chunk_size, value_chunk_size);
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::DSTSEC,
+                                 all_index_vector, topo_ptr, all_dst_vector,
+                                 section_data_type, IndexShared,
+                                 CellPtr (PtrShared, sec_ptr_owner_path),
+                                 chunk_size, value_chunk_size);
+          
+          append_cell_attribute (file, hdf5::TREES, pop_name, pop_start, hdf5::SECTION,
+                                 all_index_vector, sec_ptr, all_sections,
+                                 section_data_type, IndexShared,
+                                 CellPtr (PtrOwner, hdf5::SEC_PTR),
+                                 chunk_size, value_chunk_size);
+
+
+          status = H5Fclose(file);
+          throw_assert(status == 0, "append_trees: unable to close HDF5 file");
+
+        }
+
+
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
+      
+      return 0;
+    }
+
+    int append_trees
+    (
+     MPI_Comm                       comm,
+     const std::string&             file_name,
+     const std::string&             pop_name,
+     const CELL_IDX_T&              pop_start,
+     std::forward_list<neurotree_t> &tree_list,
+     size_t                         io_size,
+     const size_t                   chunk_size,
+     const size_t                   value_chunk_size
+     )
+    {
+      herr_t status;
+
+      size_t rank, size;
+      throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
+      throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
+      
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size, io_rank_set);
+
+      bool is_io_rank = false;
+      if (io_rank_set.find(rank) != io_rank_set.end())
+        is_io_rank = true;
+      
+      // MPI Communicator for I/O ranks
+      MPI_Comm io_comm;
+      // MPI group color value used for I/O ranks
+      int io_color = 1, color;
+      
+      // Am I an I/O rank?
+      if (is_io_rank)
+        {
+          color = io_color;
+        }
+      else
+        {
+          color = 0;
+        }
+      MPI_Comm_split(comm,color,rank,&io_comm);
+      MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+
+      if (access( file_name.c_str(), F_OK ) != 0)
+        {
+          vector <string> groups;
+          groups.push_back (hdf5::POPULATIONS);
+          status = hdf5::create_file_toplevel (io_comm, file_name, groups);
+        }
+        else
+          {
+            status = 0;
+          }
+      throw_assert(status == 0,
+                   "append_trees: unable to create toplevel groups in file");
+      
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
+
+      hid_t file = hdf5::open_file(io_comm, file_name, true, true);
+      
+      status = append_trees(comm, io_comm, file, pop_name, pop_start, tree_list,
+                            io_rank_set,  CellPtr(PtrOwner), chunk_size, value_chunk_size);
+      throw_assert_nomsg(status >= 0);
+
+      hdf5::close_file(file);
+      
+      throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
+                   "append_trees: error in MPI_Comm_free");
+      
+      return 0;
+    }
 
     
   }

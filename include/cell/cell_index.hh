@@ -25,6 +25,15 @@ namespace neuroh5
      const string&        attr_name_space,
      const size_t         chunk_size = 1000
      );
+
+    herr_t create_cell_index
+    (
+     MPI_Comm             comm,
+     hid_t                loc,
+     const string&        pop_name,
+     const string&        attr_name_space,
+     const size_t         chunk_size = 1000
+     );
     
     herr_t read_cell_index
     (
@@ -39,6 +48,16 @@ namespace neuroh5
     (
      MPI_Comm             comm,
      const string&        file_name,
+     const string&        pop_name,
+     const CELL_IDX_T&    pop_start,
+     const string&        attr_name_space,
+     const vector<CELL_IDX_T>&  cell_index
+     );
+    
+    herr_t append_cell_index
+    (
+     MPI_Comm             comm,
+     hid_t                loc,
      const string&        pop_name,
      const CELL_IDX_T&    pop_start,
      const string&        attr_name_space,

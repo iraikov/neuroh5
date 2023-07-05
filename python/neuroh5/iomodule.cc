@@ -6903,6 +6903,8 @@ extern "C"
         map<string, map<CELL_IDX_T, deque<int8_t> >>  all_attr_values_int8;
         map<string, map<CELL_IDX_T, deque<float> >>  all_attr_values_float;
 
+        const data::optional_hid dflt_data_type;
+
         build_cell_attr_value_maps(idx_values,
                                    all_attr_values_uint32,
                                    all_attr_values_uint16,
@@ -6912,17 +6914,18 @@ extern "C"
                                    all_attr_values_int8,
                                    all_attr_values_float);
 
-        append_cell_attribute_maps (data_comm, file_name,
-                                    attr_namespace, pop_name, pop_start,
-                                    all_attr_values_uint32,
-                                    all_attr_values_uint16,
-                                    all_attr_values_uint8,
-                                    all_attr_values_int32,
-                                    all_attr_values_int16,
-                                    all_attr_values_int8,
-                                    all_attr_values_float,
-                                    io_size, dflt_data_type,
-                                    chunk_size, value_chunk_size, cache_size);
+        cell::append_cell_attribute_maps (data_comm, file_name,
+                                          attr_namespace, pop_name, pop_start,
+                                          all_attr_values_uint32,
+                                          all_attr_values_int32,
+                                          all_attr_values_uint16,
+                                          all_attr_values_int16,
+                                          all_attr_values_uint8,
+                                          all_attr_values_int8,
+                                          all_attr_values_float,
+                                          io_size, dflt_data_type,
+                                          IndexOwner, CellPtr(PtrOwner),
+                                          chunk_size, value_chunk_size, cache_size);
       }
     
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
@@ -7172,8 +7175,8 @@ extern "C"
               ++layer_it, ++swc_type_it;
           }
     
-        throw_assert(cell::append_trees<void> (data_comm, file_name, pop_name, pop_start, tree_list,
-                                               chunk_size, value_chunk_size) >= 0,
+        throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_list,
+                                         io_size, chunk_size, value_chunk_size) >= 0,
                      "py_append_cell_trees: unable to append trees");
       }
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,

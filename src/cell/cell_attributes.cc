@@ -1863,44 +1863,48 @@ namespace neuroh5
           {
             status = 0;
           }
-        throw_assert(status == 0,
-                     "append_cell_attribute_maps: unable to create toplevel groups in file");
+      throw_assert(status == 0,
+                   "append_cell_attribute_maps: unable to create toplevel groups in file");
+      
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
+      
+      hid_t file;
 
-        throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
-        
-        hid_t file = hdf5::open_file(comm, file_name, true, true, cache_size);
-        
-        for(auto it = attr_values_float.cbegin(); it != attr_values_float.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<float> (comm, file, attr_namespace, pop_name, pop_start,
+      if (is_io_rank) {
+        file = hdf5::open_file(io_comm, file_name, true, true, cache_size);
+      }
+      
+      for(auto it = attr_values_float.cbegin(); it != attr_values_float.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<float> (comm, file, attr_namespace, pop_name, pop_start,
+                                                  attr_name, it->second, data_type, io_rank_set,
+                                                  index_type, ptr_type,
+                                                  chunk_size, value_chunk_size, cache_size);
+        }
+      for(auto it = attr_values_uint32.cbegin(); it != attr_values_uint32.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<uint32_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, data_type, io_rank_set,
+                                                     index_type, ptr_type,
+                                                     chunk_size, value_chunk_size, cache_size);
+        }
+      for(auto it = attr_values_uint16.cbegin(); it != attr_values_uint16.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<uint16_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, data_type, io_rank_set,
+                                                     index_type, ptr_type,
+                                                     chunk_size, value_chunk_size, cache_size);
+        }
+      for(auto it = attr_values_uint8.cbegin(); it != attr_values_uint8.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<uint8_t> (comm, file, attr_namespace, pop_name, pop_start,
                                                     attr_name, it->second, data_type, io_rank_set,
                                                     index_type, ptr_type,
                                                     chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = attr_values_uint32.cbegin(); it != attr_values_uint32.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<uint32_t> (comm, file, attr_namespace, pop_name, pop_start,
-                                                       attr_name, it->second, data_type, io_rank_set,
-                                                       index_type, ptr_type,
-                                                       chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = attr_values_uint16.cbegin(); it != attr_values_uint16.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<uint16_t> (comm, file, attr_namespace, pop_name, pop_start,
-                                                       attr_name, it->second, data_type, io_rank_set,
-                                                       index_type, ptr_type,
-                                                       chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = attr_values_uint8.cbegin(); it != attr_values_uint8.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<uint8_t> (comm, file, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, data_type, io_rank_set,
-                                                      index_type, ptr_type,
-                                                      chunk_size, value_chunk_size, cache_size);
           }
         for(auto it = attr_values_int32.cbegin(); it != attr_values_int32.cend(); ++it)
           {
@@ -1927,7 +1931,10 @@ namespace neuroh5
                                                      chunk_size, value_chunk_size, cache_size);
           }
 
-        hdf5::close_file(file);
+        if (is_io_rank)
+          {
+            hdf5::close_file(file);
+          }
 
         throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
         throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
