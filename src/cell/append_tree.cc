@@ -295,27 +295,29 @@ namespace neuroh5
       herr_t status=0; 
       size_t io_size=0;
 
-      size_t rank, size;
+      size_t rank=0, size=0;
       throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
       
-      size_t io_comm_size;
-      throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_comm_size) == MPI_SUCCESS);
-      
-      
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
       throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
       io_size = io_rank_set.size();
-      throw_assert(io_comm_size == io_size, "mismatch between io_size and io_comm size");
+
+      size_t io_comm_size=0;
+      if (is_io_rank)
+        {
+          throw_assert_nomsg(MPI_Comm_size(io_comm, (int*)&io_comm_size) == MPI_SUCCESS);
+          throw_assert(io_comm_size == io_size, "mismatch between io_size and io_comm size");
+        };
 
       vector< pair<hsize_t,hsize_t> > ranges;
       mpi::rank_ranges(size, io_size, ranges);
       
       // Determine I/O ranks to which to send the values
-      vector <size_t> io_dests(size); 
-      for (size_t r=0; r<size; r++)
+      vector <rank_t> io_dests; 
+      io_dests.resize(size);
+
+      for (rank_t r=0; r<size; r++)
         {
           for (size_t i=ranges.size()-1; i>=0; i--)
             {
@@ -326,13 +328,13 @@ namespace neuroh5
                 }
             }
         }
-      
+
       std::forward_list<neurotree_t> local_tree_list;
       {
         std::vector<char> sendbuf; 
         std::vector<int> sendcounts, sdispls;
-        vector<int> recvcounts, rdispls;
-        vector<char> recvbuf;
+        std::vector<int> recvcounts, rdispls;
+        std::vector<char> recvbuf;
         
         rank_t dst_rank = io_dests[rank];
         map <rank_t, map<CELL_IDX_T, neurotree_t> > rank_tree_map;
@@ -359,8 +361,7 @@ namespace neuroh5
         data::deserialize_rank_tree_list (size, recvbuf, recvcounts, rdispls,
                                           local_tree_list);
       }
-      
-      
+
       std::vector<SEC_PTR_T> sec_ptr;
       std::vector<TOPO_PTR_T> topo_ptr;
       std::vector<ATTR_PTR_T> attr_ptr;
@@ -374,28 +375,31 @@ namespace neuroh5
       std::vector<PARENT_NODE_IDX_T> all_parents; // Parent
       std::vector<SWC_TYPE_T> all_swc_types; // SWC Types
 
-      if (ptr_type.type == PtrNone)
+      if (is_io_rank)
         {
-          status = build_singleton_tree_datasets(comm,
-                                                 local_tree_list,
-                                                 all_src_vector, all_dst_vector,
-                                                 all_xcoords, all_ycoords, all_zcoords, 
-                                                 all_radiuses, all_layers, all_sections,
-                                                 all_parents, all_swc_types);
+          if (ptr_type.type == PtrNone)
+            {
+              status = build_singleton_tree_datasets(io_comm,
+                                                     local_tree_list,
+                                                     all_src_vector, all_dst_vector,
+                                                     all_xcoords, all_ycoords, all_zcoords, 
+                                                     all_radiuses, all_layers, all_sections,
+                                                     all_parents, all_swc_types);
+            }
+          else
+            {
+              status = build_tree_datasets(io_comm,
+                                           local_tree_list,
+                                           sec_ptr, topo_ptr, attr_ptr,
+                                           all_index_vector, all_src_vector, all_dst_vector,
+                                           all_xcoords, all_ycoords, all_zcoords, 
+                                           all_radiuses, all_layers, all_sections,
+                                           all_parents, all_swc_types);
+              throw_assert_nomsg(status >= 0);
+            }
+          
+          local_tree_list.clear();
         }
-      else
-        {
-          status = build_tree_datasets(comm,
-                                       local_tree_list,
-                                       sec_ptr, topo_ptr, attr_ptr,
-                                       all_index_vector, all_src_vector, all_dst_vector,
-                                       all_xcoords, all_ycoords, all_zcoords, 
-                                       all_radiuses, all_layers, all_sections,
-                                       all_parents, all_swc_types);
-          throw_assert_nomsg(status >= 0);
-        }
-
-      local_tree_list.clear();
       
 
       const data::optional_hid dflt_data_type;
@@ -500,17 +504,16 @@ namespace neuroh5
     {
       herr_t status;
 
-      size_t rank, size;
+      size_t rank=0, size=0;
       throw_assert_nomsg(MPI_Comm_size(comm, (int*)&size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(comm, (int*)&rank) == MPI_SUCCESS);
       
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
+      throw_assert(io_rank_set.size() == io_size, "invalid I/O rank set");
 
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
-      
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
+
       // MPI Communicator for I/O ranks
       MPI_Comm io_comm;
       // MPI group color value used for I/O ranks
@@ -523,8 +526,9 @@ namespace neuroh5
         }
       else
         {
-          color = 0;
+          color = MPI_UNDEFINED;
         }
+
       MPI_Comm_split(comm,color,rank,&io_comm);
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
@@ -543,16 +547,23 @@ namespace neuroh5
       
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
 
-      hid_t file = hdf5::open_file(io_comm, file_name, true, true);
+      hid_t file;
+      if (is_io_rank)
+        {
+          file = hdf5::open_file(io_comm, file_name, true, true);
+        }
       
       status = append_trees(comm, io_comm, file, pop_name, pop_start, tree_list,
                             io_rank_set,  CellPtr(PtrOwner), chunk_size, value_chunk_size);
       throw_assert_nomsg(status >= 0);
 
-      hdf5::close_file(file);
+      if (is_io_rank)
+        {
+          hdf5::close_file(file);
       
-      throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
-                   "append_trees: error in MPI_Comm_free");
+          throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
+                       "append_trees: error in MPI_Comm_free");
+        }
       
       return 0;
     }

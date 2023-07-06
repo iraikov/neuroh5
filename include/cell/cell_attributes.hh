@@ -397,9 +397,7 @@ namespace neuroh5
       size = ssize;
       throw_assert(io_size <= size, "invalid io_size");
 
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
 
       hid_t fapl;
       hid_t file;
@@ -600,9 +598,7 @@ namespace neuroh5
 
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
       throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
 
       int io_color = 1, color;
@@ -861,9 +857,7 @@ namespace neuroh5
 
       set<size_t> io_rank_set;
       data::range_sample(size, io_size_value, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
       throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
       
       vector< pair<hsize_t,hsize_t> > ranges;

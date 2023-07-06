@@ -968,9 +968,7 @@ namespace neuroh5
 
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
 
       if (is_io_rank)
         {
@@ -1637,9 +1635,7 @@ namespace neuroh5
       
       set<size_t> io_rank_set;
       data::range_sample(size, io_data_size, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
       
       // I/O rank with lowest data rank 
       size_t io_root_data_rank = *(io_rank_set.begin());
@@ -1830,9 +1826,7 @@ namespace neuroh5
 
       set<size_t> io_rank_set;
       data::range_sample(size, io_size_value, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
       throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
 
       

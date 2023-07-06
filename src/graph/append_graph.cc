@@ -147,9 +147,7 @@ namespace neuroh5
       
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
 
       // A vector that maps nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
