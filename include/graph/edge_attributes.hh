@@ -348,7 +348,8 @@ namespace neuroh5
                                     const string &src_pop_name,
                                     const string &dst_pop_name,
                                     const map <string, data::NamedAttrVal>& edge_attr_map,
-                                    const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index)
+                                    const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
+				    const size_t chunk_size = 4000)
 
     {
       for (auto const& iter : edge_attr_map)
@@ -367,7 +368,8 @@ namespace neuroh5
                   size_t i = attr_index.attr_index<T>(attr_name);
                   graph::append_edge_attribute<T>(comm, file, src_pop_name, dst_pop_name,
                                                   attr_namespace, attr_name,
-                                                  edge_attr_values.attr_vec<T>(i));
+                                                  edge_attr_values.attr_vec<T>(i),
+						  chunk_size);
                 }
             }
           else

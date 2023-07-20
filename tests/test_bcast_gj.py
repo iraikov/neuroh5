@@ -1,16 +1,15 @@
 from mpi4py import MPI
-from neuroh5.io import scatter_read_graph, bcast_graph
+from neuroh5.io import bcast_graph
 import numpy as np
 
 comm = MPI.COMM_WORLD
-print "rank = ", comm.Get_rank()
-print "size = ", comm.Get_size()
 
+gapjunctions_file_path="/scratch1/03320/iraikov/striped2/dentate/Full_Scale_Control/DG_gapjunctions_20230114.h5"
 
-(g, a) = bcast_graph("/oasis/scratch/comet/iraikov/temp_project/dentate/Full_Scale_Control/dentate_Full_Scale_Control_gapjunctions.h5", 
-                  attributes=True)
+(graph, a) = bcast_graph(gapjunctions_file_path,
+                         namespaces=['Coupling strength', 'Location'],
+                         comm=comm)
 
-if comm.Get_rank() == 0:
-    print a
-    print g.keys()
+if comm.rank == 0:
+    print(graph['AAC'])
 

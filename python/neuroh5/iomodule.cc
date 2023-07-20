@@ -6903,6 +6903,8 @@ extern "C"
         map<string, map<CELL_IDX_T, deque<int8_t> >>  all_attr_values_int8;
         map<string, map<CELL_IDX_T, deque<float> >>  all_attr_values_float;
 
+        const data::optional_hid dflt_data_type;
+
         build_cell_attr_value_maps(idx_values,
                                    all_attr_values_uint32,
                                    all_attr_values_uint16,
@@ -6912,74 +6914,18 @@ extern "C"
                                    all_attr_values_int8,
                                    all_attr_values_float);
 
-        if (access( file_name.c_str(), F_OK ) != 0)
-          {
-            vector <string> groups;
-            groups.push_back (hdf5::POPULATIONS);
-            status = hdf5::create_file_toplevel (data_comm, file_name, groups);
-          }
-        else
-          {
-            status = 0;
-          }
-        throw_assert(status == 0,
-                     "py_append_cell_attributes: unable to create toplevel groups in file");
-
-        MPI_Barrier(data_comm);
-
-        const data::optional_hid dflt_data_type;
-        
-        for(auto it = all_attr_values_float.cbegin(); it != all_attr_values_float.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<float> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                    attr_name, it->second, io_size, dflt_data_type,
-                                                    chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = all_attr_values_uint32.cbegin(); it != all_attr_values_uint32.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<uint32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                       attr_name, it->second, io_size, dflt_data_type,
-                                                       chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = all_attr_values_uint16.cbegin(); it != all_attr_values_uint16.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<uint16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                       attr_name, it->second, io_size, dflt_data_type,
-                                                       chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = all_attr_values_uint8.cbegin(); it != all_attr_values_uint8.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<uint8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type,
-                                                      chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = all_attr_values_int32.cbegin(); it != all_attr_values_int32.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<int32_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type,
-                                                      chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = all_attr_values_int16.cbegin(); it != all_attr_values_int16.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<int16_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                      attr_name, it->second, io_size, dflt_data_type,
-                                                      chunk_size, value_chunk_size, cache_size);
-          }
-        for(auto it = all_attr_values_int8.cbegin(); it != all_attr_values_int8.cend(); ++it)
-          {
-            const string& attr_name = it->first;
-            cell::append_cell_attribute_map<int8_t> (data_comm, file_name, attr_namespace, pop_name, pop_start,
-                                                     attr_name, it->second, io_size, dflt_data_type,
-                                                     chunk_size, value_chunk_size, cache_size);
-          }
-
-
+        cell::append_cell_attribute_maps (data_comm, file_name,
+                                          attr_namespace, pop_name, pop_start,
+                                          all_attr_values_uint32,
+                                          all_attr_values_int32,
+                                          all_attr_values_uint16,
+                                          all_attr_values_int16,
+                                          all_attr_values_uint8,
+                                          all_attr_values_int8,
+                                          all_attr_values_float,
+                                          io_size, dflt_data_type,
+                                          IndexOwner, CellPtr(PtrOwner),
+                                          chunk_size, value_chunk_size, cache_size);
       }
     
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,
@@ -7229,8 +7175,8 @@ extern "C"
               ++layer_it, ++swc_type_it;
           }
     
-        throw_assert(cell::append_trees<void> (data_comm, file_name, pop_name, pop_start, tree_list,
-                                               chunk_size, value_chunk_size) >= 0,
+        throw_assert(cell::append_trees (data_comm, file_name, pop_name, pop_start, tree_list,
+                                         io_size, chunk_size, value_chunk_size) >= 0,
                      "py_append_cell_trees: unable to append trees");
       }
     throw_assert(MPI_Barrier(data_comm) == MPI_SUCCESS,

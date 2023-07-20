@@ -4,14 +4,17 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a cell id.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2023 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
 #include "path_names.hh"
 #include "read_template.hh"
 #include "write_template.hh"
+#include "file_access.hh"
+#include "cell_attributes.hh"
 #include "hdf5_cell_attributes.hh"
+#include "create_file_toplevel.hh"
 #include "exists_dataset.hh"
 #include "dataset_num_elements.hh"
 #include "create_group.hh"
@@ -31,6 +34,7 @@
 #include <mpi.h>
 
 #include <cstdint>
+#include <unistd.h>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -919,8 +923,7 @@ namespace neuroh5
       throw_assert_nomsg(status == 0);
       status = H5Pclose(fapl);
       throw_assert_nomsg(status == 0);
-
-
+      
     }
 
 
@@ -938,8 +941,8 @@ namespace neuroh5
      data::NamedAttrMap           &attr_map,
      // if positive, these arguments specify offset and number of entries to read
      // from the entries available to the current rank
-     size_t offset   = 0,
-     size_t numitems = 0
+     size_t offset,
+     size_t numitems
      )
     {
       int srank, ssize; size_t rank, size;
@@ -965,9 +968,7 @@ namespace neuroh5
 
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
 
       if (is_io_rank)
         {
@@ -1108,8 +1109,8 @@ namespace neuroh5
      const string& pop_name,
      const CELL_IDX_T& pop_start,
      data::NamedAttrMap& attr_map,
-     size_t offset = 0,
-     size_t numitems = 0
+     size_t offset,
+     size_t numitems
      )
     {
       herr_t status; 
@@ -1634,9 +1635,7 @@ namespace neuroh5
       
       set<size_t> io_rank_set;
       data::range_sample(size, io_data_size, io_rank_set);
-      bool is_io_rank = false;
-      if (io_rank_set.find(rank) != io_rank_set.end())
-        is_io_rank = true;
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
       
       // I/O rank with lowest data rank 
       size_t io_root_data_rank = *(io_rank_set.begin());
@@ -1784,6 +1783,159 @@ namespace neuroh5
         }
       recvbuf.clear();
     }
+
+    void append_cell_attribute_maps (
+                                     MPI_Comm                        comm,
+                                     const std::string&              file_name,
+                                     const std::string&              attr_namespace,
+                                     const std::string&              pop_name,
+                                     const CELL_IDX_T&               pop_start,
+                                     const map<string, map<CELL_IDX_T, deque<uint32_t> >>& attr_values_uint32,
+                                     const map<string, map<CELL_IDX_T, deque<int32_t> >> attr_values_int32,
+                                     const map<string, map<CELL_IDX_T, deque<uint16_t> >>& attr_values_uint16,
+                                     const map<string, map<CELL_IDX_T, deque<int16_t> >>& attr_values_int16,
+                                     const map<string, map<CELL_IDX_T, deque<uint8_t> >>&  attr_values_uint8,
+                                     const map<string, map<CELL_IDX_T, deque<int8_t> >>&  attr_values_int8,
+                                     const map<string, map<CELL_IDX_T, deque<float> >>&  attr_values_float,
+                                     const size_t io_size,
+                                     const data::optional_hid        data_type,
+                                     const CellIndex                 index_type,
+                                     const CellPtr                   ptr_type,
+                                     const size_t chunk_size,
+                                     const size_t value_chunk_size,
+                                     const size_t cache_size
+                                     )
+    {
+      herr_t status;
+      int ssize, srank; size_t size, rank; size_t io_size_value=0;
+      throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS, "error in MPI_Comm_size");
+      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      throw_assert(ssize > 0, "invalid MPI comm size");
+      throw_assert(srank >= 0, "invalid MPI comm rank");
+      rank = srank;
+      size = ssize;
+      
+      if (size < io_size)
+        {
+          io_size_value = size;
+        }
+      else
+        {
+          io_size_value = io_size;
+        }
+
+      set<size_t> io_rank_set;
+      data::range_sample(size, io_size_value, io_rank_set);
+      bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
+      throw_assert(io_rank_set.size() > 0, "invalid I/O rank set");
+
+      
+      // MPI Communicator for I/O ranks
+      MPI_Comm io_comm;
+      // MPI group color value used for I/O ranks
+      int io_color = 1, color;
+      
+      // Am I an I/O rank?
+      if (is_io_rank)
+        {
+          color = io_color;
+        }
+      else
+        {
+          color = 0;
+        }
+      MPI_Comm_split(comm,color,rank,&io_comm);
+      MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
+
+      if (access( file_name.c_str(), F_OK ) != 0)
+          {
+            vector <string> groups;
+            groups.push_back (hdf5::POPULATIONS);
+            status = hdf5::create_file_toplevel (io_comm, file_name, groups);
+          }
+        else
+          {
+            status = 0;
+          }
+      throw_assert(status == 0,
+                   "append_cell_attribute_maps: unable to create toplevel groups in file");
+      
+      throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
+      
+      hid_t file;
+
+      if (is_io_rank) {
+        file = hdf5::open_file(io_comm, file_name, true, true, cache_size);
+      }
+      
+      for(auto it = attr_values_float.cbegin(); it != attr_values_float.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<float> (comm, file, attr_namespace, pop_name, pop_start,
+                                                  attr_name, it->second, data_type, io_rank_set,
+                                                  index_type, ptr_type,
+                                                  chunk_size, value_chunk_size, cache_size);
+        }
+      for(auto it = attr_values_uint32.cbegin(); it != attr_values_uint32.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<uint32_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, data_type, io_rank_set,
+                                                     index_type, ptr_type,
+                                                     chunk_size, value_chunk_size, cache_size);
+        }
+      for(auto it = attr_values_uint16.cbegin(); it != attr_values_uint16.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<uint16_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, data_type, io_rank_set,
+                                                     index_type, ptr_type,
+                                                     chunk_size, value_chunk_size, cache_size);
+        }
+      for(auto it = attr_values_uint8.cbegin(); it != attr_values_uint8.cend(); ++it)
+        {
+          const string& attr_name = it->first;
+          cell::append_cell_attribute_map<uint8_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                    attr_name, it->second, data_type, io_rank_set,
+                                                    index_type, ptr_type,
+                                                    chunk_size, value_chunk_size, cache_size);
+          }
+        for(auto it = attr_values_int32.cbegin(); it != attr_values_int32.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<int32_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, data_type, io_rank_set,
+                                                      index_type, ptr_type,
+                                                      chunk_size, value_chunk_size, cache_size);
+          }
+        for(auto it = attr_values_int16.cbegin(); it != attr_values_int16.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<int16_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                      attr_name, it->second, data_type, io_rank_set,
+                                                      index_type, ptr_type,
+                                                      chunk_size, value_chunk_size, cache_size);
+          }
+        for(auto it = attr_values_int8.cbegin(); it != attr_values_int8.cend(); ++it)
+          {
+            const string& attr_name = it->first;
+            cell::append_cell_attribute_map<int8_t> (comm, file, attr_namespace, pop_name, pop_start,
+                                                     attr_name, it->second, data_type, io_rank_set,
+                                                     index_type, ptr_type,
+                                                     chunk_size, value_chunk_size, cache_size);
+          }
+
+        if (is_io_rank)
+          {
+            hdf5::close_file(file);
+          }
+
+        throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
+        throw_assert(MPI_Comm_free(&io_comm) == MPI_SUCCESS,
+                     "append_cell_attribute_maps: error in MPI_Comm_free");
+
+    }
+    
     
   }
   

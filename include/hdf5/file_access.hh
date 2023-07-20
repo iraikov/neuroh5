@@ -18,7 +18,8 @@ namespace neuroh5
      MPI_Comm comm,
      const std::string& file_name,
      const bool collective = false,
-     const bool rdwr = false
+     const bool rdwr = false,
+     const size_t cache_size = 1*1024*1024
      );
 
     herr_t close_file

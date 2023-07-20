@@ -789,19 +789,19 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
 
       append_edge_attribute_map<float>(comm, file, src_pop_name, dst_pop_name,
-                                       edge_attr_map, edge_attr_index);
+                                       edge_attr_map, edge_attr_index, chunk_size);
       append_edge_attribute_map<uint8_t>(comm, file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_index);
+                                         edge_attr_map, edge_attr_index, chunk_size);
       append_edge_attribute_map<uint16_t>(comm, file, src_pop_name, dst_pop_name,
-                                          edge_attr_map, edge_attr_index);
+                                          edge_attr_map, edge_attr_index, chunk_size);
       append_edge_attribute_map<uint32_t>(comm, file, src_pop_name, dst_pop_name,
-                                          edge_attr_map, edge_attr_index);
+                                          edge_attr_map, edge_attr_index, chunk_size);
       append_edge_attribute_map<int8_t>(comm, file, src_pop_name, dst_pop_name,
-                                        edge_attr_map, edge_attr_index);
+                                        edge_attr_map, edge_attr_index, chunk_size);
       append_edge_attribute_map<int16_t>(comm, file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_index);
+                                         edge_attr_map, edge_attr_index, chunk_size);
       append_edge_attribute_map<int32_t>(comm, file, src_pop_name, dst_pop_name,
-                                         edge_attr_map, edge_attr_index);
+                                         edge_attr_map, edge_attr_index, chunk_size);
         
       // clean-up
       throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
