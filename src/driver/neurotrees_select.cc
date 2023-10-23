@@ -632,7 +632,7 @@ int main(int argc, char** argv)
       
       size_t output_pop_start = output_pop_ranges[output_pop_idx].start;
 
-      status = cell::append_trees<void>(all_comm, output_file_name, pop_name, output_pop_start, tree_subset);
+      status = cell::append_trees(all_comm, output_file_name, pop_name, output_pop_start, tree_subset, size);
       
       throw_assert(status == 0,
                    "neurotrees_select: error in appending trees to output file"); 

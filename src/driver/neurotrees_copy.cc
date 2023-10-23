@@ -344,7 +344,7 @@ int main(int argc, char** argv)
 
       if ((ii > 0) && (ii % write_size == 0))
         {
-          throw_assert(cell::append_trees<void>(all_comm, output_filename, pop_name, pop_start, output_tree_list) == 0,
+          throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list, size) == 0,
                        "error in append_trees");
           output_tree_list.clear();
         }
@@ -353,7 +353,7 @@ int main(int argc, char** argv)
 
   if (!output_tree_list.empty())
     {
-      throw_assert(cell::append_trees<void>(all_comm, output_filename, pop_name, pop_start, output_tree_list) == 0,
+      throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list, size) == 0,
                    "error in append_trees");
     }
 

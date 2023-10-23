@@ -343,7 +343,7 @@ int main(int argc, char** argv)
 
   MPI_Barrier(all_comm);
 
-  status = cell::append_trees<void>(all_comm, output_file_name, pop_name, 0, tree_list);
+  status = cell::append_trees(all_comm, output_file_name, pop_name, 0, tree_list, size);
   throw_assert(status == 0,
                "neurotrees_import: error in appending trees to HDF5 file");
              

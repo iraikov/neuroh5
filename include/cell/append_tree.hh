@@ -84,8 +84,8 @@ namespace neuroh5
      const CELL_IDX_T& pop_start,
      std::forward_list<neurotree_t> &tree_list,
      size_t io_size,
-     const size_t chunk_size,
-     const size_t value_chunk_size
+     const size_t chunk_size = 4000,
+     const size_t value_chunk_size = 4000
      );
 
   }
