@@ -26,6 +26,7 @@
 #include <vector>
 #include <forward_list>
 
+#include "throw_assert.hh"
 #include "neuroh5_types.hh"
 #include "cell_populations.hh"
 #include "rank_range.hh"
@@ -36,7 +37,8 @@
 #include "create_file_toplevel.hh"
 #include "exists_tree_h5types.hh"
 #include "copy_tree_h5types.hh"
-#include "throw_assert.hh"
+#include "serialize_tree.hh"
+#include "alltoallv_template.hh"
 
 
 using namespace std;
@@ -232,8 +234,16 @@ int main(int argc, char** argv)
                                  pop_name, pop_start,
                                  input_tree_list) >= 0,
                "error in read_trees");
-  throw_assert(std::distance(input_tree_list.begin(), input_tree_list.end()) > 0,
-               "empty list of input trees");
+  size_t local_tree_list_len = std::distance(input_tree_list.begin(), input_tree_list.end());
+  size_t tree_list_len = 0;
+  throw_assert(MPI_Reduce(&local_tree_list_len, &tree_list_len, 1, MPI_SIZE_T, MPI_SUM, 0, all_comm) == MPI_SUCCESS,
+               "error in MPI_Reduce");
+
+  if (rank == 0)
+    {
+      throw_assert(tree_list_len > 0,
+                   "empty list of input trees");
+    }
   
   for_each(input_tree_list.cbegin(),
            input_tree_list.cend(),
@@ -242,11 +252,52 @@ int main(int argc, char** argv)
            );
 
   
-  auto result = std::find_if(input_tree_list.begin(), input_tree_list.end(),
-                             [&](const neurotree_t& e) {return std::get<0>(e) == source_gid;});
-  throw_assert (result != input_tree_list.end(), "unable to find source gid " << source_gid);
+  auto local_find_it = std::find_if(input_tree_list.begin(), input_tree_list.end(),
+                                    [&](const neurotree_t& e) {return std::get<0>(e) == source_gid;});
+  int find_result = local_find_it != input_tree_list.end();
+  vector<int> find_results;
+  find_results.resize(size, 0);
+  throw_assert(MPI_Allgather(&find_result, 1, MPI_INT, &find_results[0], 1, MPI_INT, all_comm) == MPI_SUCCESS,
+               "error in MPI_Allgather");
+  auto find_it = std::find(find_results.begin(), find_results.end(), 1);
+  throw_assert (find_it != find_results.end(),
+                "unable to find source gid " << source_gid);
+  rank_t found_rank_index = find_it - find_results.begin(); 
 
-  const neurotree_t input_tree = *result;
+  map<rank_t, map<CELL_IDX_T, neurotree_t> > tree_rank_map;
+  if (rank == found_rank_index)
+    {
+      const neurotree_t input_tree = *local_find_it;
+      for (rank_t tree_rank = 0; tree_rank < size; tree_rank++)
+        {
+          tree_rank_map[tree_rank].insert(make_pair(source_gid, input_tree));
+        }
+    }
+
+
+  std::forward_list<neurotree_t> source_tree_list;
+  {
+    // Create packed representation of the tree subset arranged per rank
+    vector<char> sendbuf; 
+    vector<int> sendcounts, sdispls;
+    data::serialize_rank_tree_map (size, rank, tree_rank_map,
+                                   sendcounts, sendbuf, sdispls);
+    tree_rank_map.clear();
+    
+    // Send packed representation of the tree subset to the respective ranks
+    vector<char> recvbuf; 
+    vector<int> recvcounts, rdispls;
+    throw_assert(mpi::alltoallv_vector(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                       recvcounts, rdispls, recvbuf) >= 0,
+                 "neurotrees_copy: error while sending tree subset to assigned ranks"); 
+    
+    sendbuf.clear();
+  
+    // Unpack tree subset on the owning ranks
+    data::deserialize_rank_tree_list (size, recvbuf, recvcounts, rdispls, source_tree_list);
+    recvbuf.clear();
+  }
+  neurotree_t input_tree = *source_tree_list.begin();
       
   const deque<SECTION_IDX_T> & src_vector=get<1>(input_tree);
   const deque<SECTION_IDX_T> & dst_vector=get<2>(input_tree);
