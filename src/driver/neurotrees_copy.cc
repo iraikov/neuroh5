@@ -4,7 +4,7 @@
 ///
 ///  Driver program for copying tree structures.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 
@@ -72,6 +72,8 @@ void print_usage_full(char** argv)
     "-h               Print this help" << endl <<
     "--fill           Copy the given source id to all cell ids in the population" << endl <<
     "--output FILE    Specify output file " << endl <<
+    "--chunk-size SIZE    Specify HDF5 chunk size for index and pointer datasets " << endl <<
+    "--value-chunk-size SIZE    Specify HDF5 chunk size for value datasets " << endl <<
     endl;
 }
 
@@ -90,6 +92,7 @@ int main(int argc, char** argv)
   CELL_IDX_T source_gid;
   std::vector<CELL_IDX_T> target_gid_list;
   forward_list<neurotree_t> input_tree_list, output_tree_list;
+  size_t chunk_size=10000, value_chunk_size=100000;
   MPI_Comm all_comm;
   
   throw_assert(MPI_Init(&argc, &argv) >= 0,
@@ -106,15 +109,22 @@ int main(int argc, char** argv)
   int optflag_fill         = 0;
   int optflag_output       = 0;
   int optflag_write_size   = 0;
+  int optflag_chunk_size   = 0;
+  int optflag_value_chunk_size   = 0;
+
   bool opt_attributes      = false;
   bool opt_fill            = false;
   bool opt_output_filename = false;
   bool opt_write_size      = false;
+  bool opt_chunk_size      = false;
+  bool opt_value_chunk_size      = false;
   // parse arguments
   static struct option long_options[] = {
     {"fill",    no_argument, &optflag_fill,  1 },
     {"output",  required_argument, &optflag_output,  1 },
     {"write-size",  required_argument, &optflag_write_size,  1 },
+    {"chunk-size",  required_argument, &optflag_chunk_size,  1 },
+    {"value-chunk-size",  required_argument, &optflag_value_chunk_size,  1 },
     {0,         0,                 0,  0 }
   };
   char c;
@@ -140,6 +150,20 @@ int main(int argc, char** argv)
             stringstream ss; 
             ss << string(string(optarg));
             ss >> write_size;
+          }
+          if (optflag_chunk_size == 1) {
+            opt_chunk_size = true;
+            optflag_chunk_size = 0;
+            stringstream ss; 
+            ss << string(string(optarg));
+            ss >> chunk_size;
+          }
+          if (optflag_value_chunk_size == 1) {
+            opt_value_chunk_size = true;
+            optflag_value_chunk_size = 0;
+            stringstream ss; 
+            ss << string(string(optarg));
+            ss >> value_chunk_size;
           }
           break;
         case 'a':
@@ -395,7 +419,7 @@ int main(int argc, char** argv)
 
       if ((ii > 0) && (ii % write_size == 0))
         {
-          throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list, size) == 0,
+          throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list, size, chunk_size, value_chunk_size) == 0,
                        "error in append_trees");
           output_tree_list.clear();
         }
@@ -404,7 +428,7 @@ int main(int argc, char** argv)
 
   if (!output_tree_list.empty())
     {
-      throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list, size) == 0,
+      throw_assert(cell::append_trees(all_comm, output_filename, pop_name, pop_start, output_tree_list, size, chunk_size, value_chunk_size) == 0,
                    "error in append_trees");
     }
 
