@@ -57,22 +57,26 @@ namespace neuroh5
                 }
               else
                 {
-                  if (riter != pop_ranges.begin())
-                    {
-                      --riter;
-                      pp.second = riter->second.second;
-                    }
-                  else
+                  DEBUG("unable to find population for dst = ",
+                        dst,"\n");
+                  return false;
+                }
+            }
+          else
+            {
+              if (riter != pop_ranges.begin())
+                {
+                  --riter;
+                  pp.second = riter->second.second;
+                }
+              else
+                {
                     {
                       DEBUG("unable to find population for dst = ",
                             dst,"\n");
                       return false;
                     }
                 }
-            }
-          else
-            {
-              pp.second = riter->second.second-1;
             }
           size_t low = selection_dst_ptr[i], high = selection_dst_ptr[i+1];
           assert((low <= src_idx.size()) && (high <= src_idx.size()));
