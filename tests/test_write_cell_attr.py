@@ -47,38 +47,40 @@ def h5_concat_dataset(dset, data):
     dset[dsize:] = data
     return dset
 
-with h5py.File(output_path, "a") as h5:
+if rank == 0:
+    with h5py.File(output_path, "a") as h5:
 
-    n_pop = 1
-    defs = []
-    pop_def = (pop_name,0,1000000,0)
-    defs.append(pop_def)
-        
-    # create an HDF5 enumerated type for the population label
-    mapping = { name: idx for name, start, count, idx in defs }
-    dt = h5py.special_dtype(enum=(np.uint16, mapping))
-    h5[path_population_labels] = dt
-        
-    dt = np.dtype([("Start", np.uint64), ("Count", np.uint32),
-                   ("Population", h5[path_population_labels].dtype)])
-    h5[path_population_range] = dt
-    
-    # create an HDF5 compound type for population ranges
-    dt = h5[path_population_range].dtype
-    
-    g = h5_get_group (h5, grp_h5types)
-    
-    dset = h5_get_dataset(g, grp_populations, maxshape=(n_pop,), dtype=dt)
-    dset.resize((n_pop,))
-    a = np.zeros(n_pop, dtype=dt)
-    idx = 0
-    for name, start, count, idx in defs:
-        a[idx]["Start"] = start
-        a[idx]["Count"] = count
-        a[idx]["Population"] = idx
-        idx += 1
-        
-    dset[:] = a
-    
+        n_pop = 1
+        defs = []
+        pop_def = (pop_name,0,1000000,0)
+        defs.append(pop_def)
+
+        # create an HDF5 enumerated type for the population label
+        mapping = { name: idx for name, start, count, idx in defs }
+        dt = h5py.special_dtype(enum=(np.uint16, mapping))
+        h5[path_population_labels] = dt
+
+        dt = np.dtype([("Start", np.uint64), ("Count", np.uint32),
+                       ("Population", h5[path_population_labels].dtype)])
+        h5[path_population_range] = dt
+
+        # create an HDF5 compound type for population ranges
+        dt = h5[path_population_range].dtype
+
+        g = h5_get_group (h5, grp_h5types)
+
+        dset = h5_get_dataset(g, grp_populations, maxshape=(n_pop,), dtype=dt)
+        dset.resize((n_pop,))
+        a = np.zeros(n_pop, dtype=dt)
+        idx = 0
+        for name, start, count, idx in defs:
+            a[idx]["Start"] = start
+            a[idx]["Count"] = count
+            a[idx]["Population"] = idx
+            idx += 1
+
+        dset[:] = a
+comm.barrier()
+
 write_cell_attributes(output_path, pop_name, attr_dict, namespace='Test Attributes')
 print(list(read_cell_attributes(output_path, pop_name, 'Test Attributes')))
