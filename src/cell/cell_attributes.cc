@@ -1847,7 +1847,8 @@ namespace neuroh5
       MPI_Comm_split(comm,color,rank,&io_comm);
       MPI_Comm_set_errhandler(io_comm, MPI_ERRORS_RETURN);
 
-      if (access( file_name.c_str(), F_OK ) != 0)
+      if (is_io_rank) {
+        if (access( file_name.c_str(), F_OK ) != 0)
           {
             vector <string> groups;
             groups.push_back (hdf5::POPULATIONS);
@@ -1857,8 +1858,9 @@ namespace neuroh5
           {
             status = 0;
           }
-      throw_assert(status == 0,
-                   "append_cell_attribute_maps: unable to create toplevel groups in file");
+        throw_assert(status == 0,
+                     "append_cell_attribute_maps: unable to create toplevel groups in file");
+      }
       
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
       
