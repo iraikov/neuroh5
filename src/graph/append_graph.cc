@@ -5,7 +5,7 @@
 ///  Top-level functions for appending edge information to graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 
@@ -144,6 +144,12 @@ namespace neuroh5
       }
 
       throw_assert_nomsg(node_index.size() == total_num_nodes);
+
+      if (total_num_nodes == 0)
+        {
+          throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+          return 0;
+        }
       
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);

@@ -5,7 +5,7 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 
@@ -71,6 +71,8 @@ namespace neuroh5
       size_t dst_start, dst_end;
       size_t src_start, src_end;
 
+      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
+
       int size, rank;
       throw_assert_nomsg(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
@@ -106,6 +108,53 @@ namespace neuroh5
       dst_end   = dst_start + pop_ranges[dst_pop_idx].count;
       src_start = pop_ranges[src_pop_idx].start;
       src_end   = src_start + pop_ranges[src_pop_idx].count;
+
+      total_num_nodes = 0;
+      vector< NODE_IDX_T > node_index;
+
+      { // Determine the destination node indices present in the input
+        // edge map across all ranks
+        size_t num_nodes = input_edge_map.size();
+        vector<size_t> sendbuf_num_nodes(size, num_nodes);
+        vector<size_t> recvbuf_num_nodes(size);
+        vector<int> recvcounts(size, 0);
+        vector<int> displs(size+1, 0);
+        throw_assert_nomsg(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
+                                         &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
+                           == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+        for (size_t p=0; p<size; p++)
+          {
+            total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
+            displs[p+1] = displs[p] + recvbuf_num_nodes[p];
+            recvcounts[p] = recvbuf_num_nodes[p];
+          }
+        
+        vector< NODE_IDX_T > local_node_index;
+        for (auto iter: input_edge_map)
+          {
+            NODE_IDX_T dst          = iter.first;
+            local_node_index.push_back(dst);
+          }
+        
+        node_index.resize(total_num_nodes,0);
+        throw_assert_nomsg(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
+                                          &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
+                                          all_comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
+        vector<size_t> p = sort_permutation(node_index, compare_nodes);
+        apply_permutation_in_place(node_index, p);
+      }
+
+      throw_assert_nomsg(node_index.size() == total_num_nodes);
+
+      if (total_num_nodes == 0)
+        {
+          throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+          return 0;
+        }
+
       
       // Create an I/O communicator
       MPI_Comm  io_comm;
@@ -126,7 +175,6 @@ namespace neuroh5
       compute_node_rank_map(io_size, total_num_nodes, node_rank_map);
 
       // construct a map where each set of edges are arranged by destination I/O rank
-      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       rank_edge_map_t rank_edge_map;
       for (auto iter : input_edge_map)
         {
