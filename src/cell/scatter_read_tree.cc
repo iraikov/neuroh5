@@ -4,7 +4,7 @@
 ///
 ///  Read and scatter tree structures.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 #include <mpi.h>
@@ -59,7 +59,7 @@ namespace neuroh5
      )
     {
       std::vector<char> sendbuf; 
-      std::vector<int> sendcounts, sdispls;
+      std::vector<size_t> sendcounts, sdispls;
     
       MPI_Comm all_comm;
       // MPI Communicator for I/O ranks
@@ -131,7 +131,7 @@ namespace neuroh5
       throw_assert_nomsg(MPI_Comm_free(&io_comm) == MPI_SUCCESS);
 
       {
-        vector<int> recvcounts, rdispls;
+        vector<size_t> recvcounts, rdispls;
         vector<char> recvbuf;
 
         throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,

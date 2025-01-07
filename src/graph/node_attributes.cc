@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a graph node.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -469,7 +469,7 @@ namespace neuroh5
       throw_assert_nomsg(io_size > 0);
     
       vector<char> sendbuf; 
-      vector<int> sendcounts, sdispls, recvcounts, rdispls;
+      vector<size_t> sendcounts, sdispls, recvcounts, rdispls;
 
       sendcounts.resize(size,0);
       sdispls.resize(size,0);
@@ -559,24 +559,10 @@ namespace neuroh5
           attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
         }
     
-      // 6. Each ALL_COMM rank sends an attribute set size to
-      //    every other ALL_COMM rank (non IO_COMM ranks pass zero)
-    
-      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                          &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
     
       // 7. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
-      size_t recvbuf_size;
       vector<char> recvbuf;
-
-      recvbuf_size = recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
-      if (recvbuf_size > 0) recvbuf.resize(recvbuf_size);
     
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
       throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,

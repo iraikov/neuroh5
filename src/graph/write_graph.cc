@@ -11,6 +11,7 @@
 
 
 #include "neuroh5_types.hh"
+#include "alltoallv_template.hh"
 #include "attr_map.hh"
 #include "cell_populations.hh"
 #include "write_graph.hh"
@@ -267,9 +268,9 @@ namespace neuroh5
         }
 
 
-      // send buffer and structures for MPI Alltoall operation
-      vector<char> sendbuf;
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      // send buffer and structures for MPI Alltoallv operation
+      vector<char> sendbuf, recvbuf;
+      vector<size_t> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
       // Create serialized object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
@@ -277,43 +278,26 @@ namespace neuroh5
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
-      
-      // 1. Each ALL_COMM rank sends an edge vector size to
-      //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
-      //    and creates sendcounts and sdispls arrays
-      
-      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
-      
-      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
-      //    a receive buffer, recvcounts, and rdispls
-      
-      size_t recvbuf_size = recvcounts[0];
-      for (int p = 1; p < size; p++)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
 
-      vector<char> recvbuf;
-      recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
-      
-      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
-                           all_comm) == MPI_SUCCESS);
-      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                     recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
+      sendbuf.shrink_to_fit();
       sendcounts.clear();
       sdispls.clear();
 
       size_t num_unpacked_edges = 0, num_unpacked_nodes = 0;
       edge_map_t prj_edge_map;
-      if (recvbuf_size > 0)
+      if (recvbuf.size() > 0)
         {
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes,
                                            num_unpacked_edges);
         }
+
+      recvbuf.clear();
+      recvcounts.clear();
+      rdispls.clear();
 
       if ((rank_t)rank < io_size)
         {

@@ -964,7 +964,7 @@ namespace neuroh5
       throw_assert_nomsg(io_size > 0);
     
       vector<char> sendbuf; 
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      vector<size_t> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
@@ -1059,31 +1059,13 @@ namespace neuroh5
           attr_map.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
         }
     
-      // 6. Each ALL_COMM rank sends an attribute set size to
-      //    every other ALL_COMM rank (non IO_COMM ranks pass zero)
-    
-      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                          &recvcounts[0], 1, MPI_INT, all_comm) >= 0);
-    
       // 7. Each ALL_COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
-      size_t recvbuf_size;
       vector<char> recvbuf;
-
-      recvbuf_size = recvcounts[0];
-      for (int p = 1; p < ssize; ++p)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
-      if (recvbuf_size > 0)
-        recvbuf.resize(recvbuf_size);
 
       // 8. Each ALL_COMM rank participates in the MPI_Alltoallv
       throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                      recvcounts, rdispls, recvbuf) >= 0);
-
-    
       sendbuf.clear();
       sendbuf.shrink_to_fit();
 
@@ -1616,7 +1598,7 @@ namespace neuroh5
         
       }
           
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      vector<size_t> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
       vector<char> sendbuf; 
 
       vector< size_t > num_attrs;
@@ -1752,25 +1734,11 @@ namespace neuroh5
           attr_values.insert_name<int32_t>(attr_names[data::AttrMap::attr_index_int32][i]);
         }
       
-      // 6. Each rank sends an attribute set size to
-      //    every other rank (non IO_COMM ranks pass zero)
-      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT,
-                                      &recvcounts[0], 1, MPI_INT, comm) == MPI_SUCCESS);
       
       // 7. Each COMM rank accumulates the vector sizes and allocates
       //    a receive buffer, recvcounts, and rdispls
-      size_t recvbuf_size;
       vector<char> recvbuf;
-      
-      recvbuf_size = recvcounts[0];
-      for (rank_t p = 1; p < size; ++p)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
-      if (recvbuf_size > 0)
-        recvbuf.resize(recvbuf_size);
-      
+
       // 8. Each COMM rank participates in the MPI_Alltoallv
       throw_assert_nomsg(mpi::alltoallv_vector<char>(comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                      recvcounts, rdispls, recvbuf) == MPI_SUCCESS);

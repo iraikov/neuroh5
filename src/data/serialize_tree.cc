@@ -39,32 +39,32 @@ namespace neuroh5
     void serialize_rank_tree_map (const size_t num_ranks,
                                   const size_t start_rank,
                                   const map <rank_t, map<CELL_IDX_T, neurotree_t> >& rank_tree_map,
-                                  vector<int>& sendcounts,
+                                  vector<size_t>& sendcounts,
                                   vector<char> &sendbuf,
-                                  vector<int> &sdispls)
+                                  vector<size_t> &sdispls)
     {
-      vector<int> rank_sequence;
+      vector<rank_t> rank_sequence;
 
       sdispls.resize(num_ranks);
       sendcounts.resize(num_ranks);
 
-      int end_rank = num_ranks;
+      rank_t end_rank = num_ranks;
       throw_assert(start_rank < end_rank, "serialize_rank_tree_map: invalid start rank");
       
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
       // (as opposed to starting at rank 0)
-      for (int key_rank = start_rank; key_rank < end_rank; key_rank++)
+      for (rank_t key_rank = start_rank; key_rank < end_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }
-      for (int key_rank = 0; key_rank < (int)start_rank; key_rank++)
+      for (rank_t key_rank = 0; key_rank < start_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }
 
       size_t sendpos = 0;
       std::stringstream ss(ios::in | ios::out | ios::binary); 
-      for (const int& key_rank : rank_sequence)
+      for (const rank_t& key_rank : rank_sequence)
         {
           sdispls[key_rank] = sendpos;
           
@@ -97,20 +97,20 @@ namespace neuroh5
 
     void deserialize_rank_tree_map (const size_t num_ranks,
                                     const vector<char> &recvbuf,
-                                    const vector<int>& recvcounts,
-                                    const vector<int>& rdispls,
+                                    const vector<size_t>& recvcounts,
+                                    const vector<size_t>& rdispls,
                                     map<CELL_IDX_T, neurotree_t> &all_tree_map
                                     )
     {
-      const int recvbuf_size = recvbuf.size();
+      const size_t recvbuf_size = recvbuf.size();
 
       for (size_t ridx = 0; ridx < num_ranks; ridx++)
         {
           if (recvcounts[ridx] > 0)
             {
-              int recvsize  = recvcounts[ridx];
-              int recvpos   = rdispls[ridx];
-              int startpos  = recvpos;
+              size_t recvsize  = recvcounts[ridx];
+              size_t recvpos   = rdispls[ridx];
+              size_t startpos  = recvpos;
               map<CELL_IDX_T, neurotree_t> tree_map;
 
               throw_assert(recvpos < recvbuf_size,
@@ -133,20 +133,20 @@ namespace neuroh5
 
     void deserialize_rank_tree_list (const size_t num_ranks,
                                      const vector<char> &recvbuf,
-                                     const vector<int>& recvcounts,
-                                     const vector<int>& rdispls,
+                                     const vector<size_t>& recvcounts,
+                                     const vector<size_t>& rdispls,
                                      forward_list<neurotree_t> &all_tree_list
                                      )
     {
-      const int recvbuf_size = recvbuf.size();
+      const size_t recvbuf_size = recvbuf.size();
 
       for (size_t ridx = 0; ridx < num_ranks; ridx++)
         {
           if (recvcounts[ridx] > 0)
             {
-              int recvsize  = recvcounts[ridx];
-              int recvpos   = rdispls[ridx];
-              int startpos  = recvpos;
+              size_t recvsize  = recvcounts[ridx];
+              size_t recvpos   = rdispls[ridx];
+              size_t startpos  = recvpos;
               map<CELL_IDX_T, neurotree_t> tree_map;
               throw_assert(recvpos < recvbuf_size,
                            "deserialize_rank_tree_vector: invalid buffer displacement");

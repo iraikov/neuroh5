@@ -5,7 +5,7 @@
 ///  Top-level functions for reading edges in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -100,14 +100,14 @@ namespace neuroh5
       
       {
         vector<char> recvbuf;
-        vector<int> recvcounts, rdispls;
+        vector<size_t> recvcounts, rdispls;
 
         {
           vector<char> sendbuf; 
-          vector<int> sendcounts(size,0), sdispls(size,0);
+          vector<size_t> sendcounts(size,0), sdispls(size,0);
 
           mpi::MPI_DEBUG(all_comm, "scatter_read_projection: ", src_pop_name, " -> ", dst_pop_name, "\n");
-
+          
           if (is_io_rank)
             {
               int io_rank;
@@ -158,10 +158,13 @@ namespace neuroh5
                                                             edge_map_type) >= 0);
               
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: read ", num_edges,
-                        " edges from projection ", src_pop_name, " -> ", dst_pop_name);
+                             " edges from projection ", src_pop_name, " -> ", dst_pop_name);
           
               // ensure that all edges in the projection have been read and appended to edge_list
-              throw_assert_nomsg(num_edges == src_idx.size());
+              throw_assert(num_edges == src_idx.size(),
+                           "edge count mismatch: num_edges = " << num_edges <<
+                           " src_idx.size = " << src_idx.size());
+                           
           
               size_t num_packed_edges = 0;
           
@@ -182,12 +185,16 @@ namespace neuroh5
                                                          recvcounts, rdispls, recvbuf) >= 0);
         }
 
+        mpi::MPI_DEBUG(all_comm, "scatter_read_projection: recvbuf size is ", recvbuf.size());
+
         if (recvbuf.size() > 0)
           {
             data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                              prj_edge_map, local_num_nodes, local_num_edges);
           }
 
+        mpi::MPI_DEBUG(all_comm, "scatter_read_projection: prj_edge_map size is ", prj_edge_map.size());
+        
         if (!attr_namespaces.empty())
           {
             vector<char> sendbuf; uint32_t sendbuf_size=0;

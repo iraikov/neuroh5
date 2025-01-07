@@ -5,7 +5,7 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 #include <iostream>
@@ -73,8 +73,8 @@ namespace neuroh5
       // determine number of blocks in projection
       hsize_t num_blocks = hdf5::dataset_num_elements
          (file, hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR));
-      if (num_blocks > 0)
-        num_blocks--;
+      //if (num_blocks > 0)
+      //  num_blocks--;
       
       // determine number of edges in projection
       total_num_edges = hdf5::dataset_num_elements
@@ -123,12 +123,12 @@ namespace neuroh5
           
           hsize_t block;
           if (stop > start)
-            block = stop - start + 1;
+            block = stop - start;
           else
             block = 0;
           if (block > 0)
             {
-              local_read_blocks = block-1;
+              local_read_blocks = block;
             }
           else
             {
@@ -161,6 +161,14 @@ namespace neuroh5
           // rebase the block_ptr array to local offsets
           // REBASE is going to be the start offset for the hyperslab
           
+          mpi::MPI_DEBUG(comm, "read_projection_dataset: ", 
+                         src_pop_name, " -> ", dst_pop_name, ": ",
+                         "start = ", start, " ",
+                         "block = ", block, " ",
+                         "dst_blk_ptr.size = ", dst_blk_ptr.size(), " ",
+                         "dst_blk_ptr.front = ", dst_blk_ptr.front(), " ",
+                         "dst_blk_ptr.back = ", dst_blk_ptr.back(), " ",
+                         "\n");
       
           if (block > 0)
             {
@@ -207,17 +215,72 @@ namespace neuroh5
             {
               dst_ptr_start = (hsize_t)block_rebase;
               dst_ptr_block = (hsize_t)(dst_blk_ptr.back() - dst_blk_ptr.front());
-              if  (stop < num_blocks)
-                {
-                  dst_ptr_block ++;
-                }
+              //if  (stop < num_blocks)
+              //  {
+              //    dst_ptr_block ++;
+              //  }
             }
-          
+
+          // Determine upper bound for dst ptr 
+          {
+            int status;
+            MPI_Request request;
+            vector <DST_BLK_PTR_T> dst_ptr_ranges(size, 0);
+            
+            status = MPI_Iallgather(&block_rebase, 1, MPI_ATTR_PTR_T,
+                                    &dst_ptr_ranges[0], 1, MPI_ATTR_PTR_T, comm,
+                                    &request);
+            throw_assert(status == MPI_SUCCESS,
+                         "read_projection_datasets: error in MPI_Iallgather: status: " << status);
+            status = MPI_Wait(&request, MPI_STATUS_IGNORE);
+            throw_assert(status == MPI_SUCCESS,
+                         "read_projection_datasets: error in MPI_Wait: status: " << status);
+            if ((rank < (size-1)) && ((dst_ptr_start + dst_ptr_block) < (dst_ptr_ranges[rank+1])))
+              {
+                dst_ptr_block = dst_ptr_ranges[rank+1] - dst_ptr_start;
+              }
+
+            if (rank < (size-1))
+              {
+                mpi::MPI_DEBUG(comm, "read_projection_dataset: ", 
+                               src_pop_name, " -> ", dst_pop_name, ": ",
+                               "dst_ptr_start = ", dst_ptr_start, " ",
+                               "dst_ptr_block = ", dst_ptr_block, " ",
+                               "dst_ptr_ranges[", rank+1, "] = ", dst_ptr_ranges[rank+1], " ",
+                               "start = ", start, " ",
+                               "block = ", block, " ",
+                               "dst_blk_ptr.size = ", dst_blk_ptr.size(), " ",
+                               "dst_blk_ptr.front = ", dst_blk_ptr.front(), " ",
+                               "dst_blk_ptr.back = ", dst_blk_ptr.back(), " ",
+                               "\n");
+              }
+            else
+              {
+                mpi::MPI_DEBUG(comm, "read_projection_dataset: ", 
+                               src_pop_name, " -> ", dst_pop_name, ": ",
+                               "dst_ptr_start = ", dst_ptr_start, " ",
+                               "dst_ptr_block = ", dst_ptr_block, " ",
+                               "start = ", start, " ",
+                               "block = ", block, " ",
+                               "dst_blk_ptr.size = ", dst_blk_ptr.size(), " ",
+                               "dst_blk_ptr.front = ", dst_blk_ptr.front(), " ",
+                               "dst_blk_ptr.back = ", dst_blk_ptr.back(), 
+                               "\n");
+              }
+          }
+
 
           if (dst_ptr_block > 0)
             {
               dst_ptr.resize(dst_ptr_block, 0);
             }
+          
+          mpi::MPI_DEBUG(comm, "read_projection_dataset: ", 
+                         src_pop_name, " -> ", dst_pop_name, ": ",
+                         "dst_ptr_start = ", dst_ptr_start, " ",
+                         "dst_ptr_block = ", dst_ptr_block, " ",
+                         "dst_ptr.size = ", dst_ptr.size(), " ",
+                         "\n");
           
           ierr = hdf5::read<DST_PTR_T>
             (
@@ -230,10 +293,17 @@ namespace neuroh5
              rapl
              );
           throw_assert_nomsg(ierr >= 0);
-          
+
+          mpi::MPI_DEBUG(comm, "read_projection_dataset: ", 
+                         src_pop_name, " -> ", dst_pop_name, ": ",
+                         "dst_ptr_start = ", dst_ptr_start, " ",
+                         "dst_ptr_block = ", dst_ptr_block, " ",
+                         "dst_ptr.size = ", dst_ptr.size(), " ",
+                         "dst_ptr.front = ", (dst_ptr.size() > 0) ? dst_ptr.front() : 0, " ",
+                         "dst_ptr.back = ", (dst_ptr.size() > 0) ? dst_ptr.back() : 0, " ",
+                         "\n");
+
           DST_PTR_T dst_rebase = 0;
-          
-          hsize_t src_idx_block=0, src_idx_start=0;
           if (dst_ptr_block > 0)
             {
               dst_rebase = dst_ptr[0];
@@ -242,18 +312,55 @@ namespace neuroh5
                 {
                   dst_ptr[i] -= dst_rebase;
                 }
-              
-              // read source indices
+            }
+          
+          hsize_t src_idx_block=0, src_idx_start=0;
+          
+          if (dst_ptr.size() > 0)
+            {
+              // determine source indices
               src_idx_start = dst_rebase;
               src_idx_block = (hsize_t)(dst_ptr.back() - dst_ptr.front());
-
-              // allocate buffer and memory dataspace
-              if (src_idx_block > 0)
-                {
-                  src_idx.resize(src_idx_block, 0);
-                }
             }
 
+          // Determine upper bound for src idx 
+          {
+            int status;
+            MPI_Request request;
+            vector <DST_PTR_T> src_idx_ranges(size, 0);
+            
+            status = MPI_Iallgather(&dst_rebase, 1, MPI_ATTR_PTR_T,
+                                    &src_idx_ranges[0], 1, MPI_ATTR_PTR_T, comm,
+                                    &request);
+            throw_assert(status == MPI_SUCCESS,
+                         "read_projection_datasets: error in MPI_Iallgather: status: " << status);
+            status = MPI_Wait(&request, MPI_STATUS_IGNORE);
+            throw_assert(status == MPI_SUCCESS,
+                         "read_projection_datasets: error in MPI_Wait: status: " << status);
+            if ((rank < (size-1)) && ((src_idx_start + src_idx_block) < (src_idx_ranges[rank+1])))
+              {
+                src_idx_block = src_idx_ranges[rank+1] - src_idx_start;
+              }
+
+
+          }
+
+          // allocate buffer and memory dataspace
+          if (src_idx_block > 0)
+            {
+              src_idx.resize(src_idx_block, 0);
+            }
+
+          mpi::MPI_DEBUG(comm, "read_projection_dataset: ", 
+                         src_pop_name, " -> ", dst_pop_name, ": ",
+                         "dst_blk_ptr.size = ", dst_blk_ptr.size(), " ",
+                         "dst_blk_ptr.front = ", dst_blk_ptr.front(), " ",
+                         "dst_blk_ptr.back = ", dst_blk_ptr.back(), " ",
+                         "src_idx_start = ", src_idx_start, " ",
+                         "src_idx_block = ", src_idx_block, " ",
+                         "src_idx.size = ", src_idx.size(), 
+                         "\n");
+            
           ierr = hdf5::read<NODE_IDX_T>
             (
              file,
@@ -265,7 +372,6 @@ namespace neuroh5
              rapl
              );
           throw_assert_nomsg(ierr >= 0);
-
           throw_assert_nomsg(H5Pclose(rapl) >= 0);
         }
       throw_assert_nomsg(H5Fclose(file) >= 0);

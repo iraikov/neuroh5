@@ -4,7 +4,7 @@
 ///
 ///  Functions for serializing edge data.
 ///
-///  Copyright (C) 2017 Project Neuroh5.
+///  Copyright (C) 2017-2024 Project Neuroh5.
 //==============================================================================
 
 #ifndef SERIALIZE_EDGE_HH
@@ -31,14 +31,14 @@ namespace neuroh5
                                   const size_t start_rank,
                                   const rank_edge_map_t& prj_rank_edge_map, 
                                   size_t &num_packed_edges,
-                                  vector<int>& sendcounts,
+                                  vector<size_t>& sendcounts,
                                   vector<char> &sendbuf,
-                                  vector<int> &sdispls);
+                                  vector<size_t> &sdispls);
 
     void deserialize_rank_edge_map (const size_t num_ranks,
                                     const vector<char> &recvbuf,
-                                    const vector<int>& recvcounts,
-                                    const vector<int>& rdispls,
+                                    const vector<size_t>& recvcounts,
+                                    const vector<size_t>& rdispls,
                                     edge_map_t& prj_edge_map,
                                     size_t& num_unpacked_nodes,
                                     size_t& num_unpacked_edges
