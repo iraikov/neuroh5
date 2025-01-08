@@ -111,15 +111,20 @@ namespace neuroh5
 
       { // Determine the destination node indices present in the input
         // edge map across all ranks
+        MPI_Request request;
         size_t num_nodes = input_edge_map.size();
         vector<size_t> sendbuf_num_nodes(size, num_nodes);
         vector<size_t> recvbuf_num_nodes(size);
         vector<int> recvcounts(size, 0);
         vector<int> displs(size+1, 0);
-        throw_assert_nomsg(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
-                                         &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
-                           == MPI_SUCCESS);
-        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+        throw_assert(MPI_Iallgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
+                                    &recvbuf_num_nodes[0], 1, MPI_SIZE_T,
+                                    all_comm,
+                                    &request) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Iallgather");
+        throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Wait");
+
         for (size_t p=0; p<size; p++)
           {
             total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
@@ -135,11 +140,14 @@ namespace neuroh5
           }
         
         node_index.resize(total_num_nodes,0);
-        throw_assert_nomsg(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
-                                          &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
-                                          all_comm) == MPI_SUCCESS);
-        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-
+        throw_assert(MPI_Iallgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
+                                     &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
+                                     all_comm,
+                                     &request) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Iallgatherv");
+        throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Wait");
+                     
         vector<size_t> p = sort_permutation(node_index, compare_nodes);
         apply_permutation_in_place(node_index, p);
       }
