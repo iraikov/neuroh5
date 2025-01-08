@@ -10,6 +10,7 @@
 
 
 #include "neuroh5_types.hh"
+#include "alltoallv_template.hh"
 #include "attr_map.hh"
 #include "cell_populations.hh"
 #include "append_graph.hh"
@@ -110,15 +111,20 @@ namespace neuroh5
 
       { // Determine the destination node indices present in the input
         // edge map across all ranks
+        MPI_Request request;
         size_t num_nodes = input_edge_map.size();
         vector<size_t> sendbuf_num_nodes(size, num_nodes);
         vector<size_t> recvbuf_num_nodes(size);
         vector<int> recvcounts(size, 0);
         vector<int> displs(size+1, 0);
-        throw_assert_nomsg(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
-                                         &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
-                           == MPI_SUCCESS);
-        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+        throw_assert(MPI_Iallgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
+                                    &recvbuf_num_nodes[0], 1, MPI_SIZE_T,
+                                    all_comm,
+                                    &request) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Iallgather");
+        throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Wait");
+
         for (size_t p=0; p<size; p++)
           {
             total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
@@ -134,11 +140,14 @@ namespace neuroh5
           }
         
         node_index.resize(total_num_nodes,0);
-        throw_assert_nomsg(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
-                                          &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
-                                          all_comm) == MPI_SUCCESS);
-        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-
+        throw_assert(MPI_Iallgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
+                                     &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
+                                     all_comm,
+                                     &request) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Iallgatherv");
+        throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                     "append_graph: error in MPI_Wait");
+                     
         vector<size_t> p = sort_permutation(node_index, compare_nodes);
         apply_permutation_in_place(node_index, p);
       }
@@ -262,8 +271,8 @@ namespace neuroh5
 
 
       // send buffer and structures for MPI Alltoall operation
-      vector<char> sendbuf;
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      vector<char> sendbuf, recvbuf;
+      vector<size_t> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
       // Create serialized object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
@@ -272,40 +281,17 @@ namespace neuroh5
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
-      
-      // 1. Each ALL_COMM rank sends an edge vector size to
-      //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
-      //    and creates sendcounts and sdispls arrays
-      
-      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
 
-      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-
-      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
-      //    a receive buffer, recvcounts, and rdispls
-      
-      size_t recvbuf_size = recvcounts[0];
-      for (int p = 1; p < size; p++)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
-
-      vector<char> recvbuf;
-      recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
-      
-      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
-                                       &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
-                                       all_comm) == MPI_SUCCESS);
-      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                     recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
+      sendbuf.shrink_to_fit();
       sendcounts.clear();
       sdispls.clear();
 
       size_t num_unpacked_edges = 0, num_unpacked_nodes = 0;
       edge_map_t prj_edge_map;
-      if (recvbuf_size > 0)
+      if (recvbuf.size() > 0)
         {
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes, num_unpacked_edges);

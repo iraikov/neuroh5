@@ -4,7 +4,7 @@
 ///
 ///  Top-level functions for serializing/deserializing graphs edges.
 ///
-///  Copyright (C) 2016-2022 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -39,11 +39,11 @@ namespace neuroh5
                                   const size_t start_rank,
                                   const rank_edge_map_t& prj_rank_edge_map, 
                                   size_t &num_packed_edges,
-                                  vector<int>& sendcounts,
+                                  vector<size_t>& sendcounts,
                                   vector<char> &sendbuf,
-                                  vector<int> &sdispls)
+                                  vector<size_t> &sdispls)
     {
-      vector<int> rank_sequence;
+      vector<rank_t> rank_sequence;
 
       sendcounts.resize(num_ranks);
       sdispls.resize(num_ranks);
@@ -53,18 +53,18 @@ namespace neuroh5
       
       // Recommended all-to-all communication pattern: start at the current rank, then wrap around;
       // (as opposed to starting at rank 0)
-      for (int key_rank = start_rank; key_rank < end_rank; key_rank++)
+      for (rank_t key_rank = start_rank; key_rank < end_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }
-      for (int key_rank = 0; key_rank < (int)start_rank; key_rank++)
+      for (rank_t key_rank = 0; key_rank < start_rank; key_rank++)
         {
           rank_sequence.push_back(key_rank);
         }
 
       size_t sendpos = 0;
       std::stringstream ss(ios::in | ios::out | ios::binary); 
-      for (const int& key_rank : rank_sequence)
+      for (const rank_t& key_rank : rank_sequence)
         {
           sdispls[key_rank] = sendpos;
           
@@ -125,22 +125,22 @@ namespace neuroh5
 
     void deserialize_rank_edge_map (const size_t num_ranks,
                                     const vector<char> &recvbuf,
-                                    const vector<int>& recvcounts,
-                                    const vector<int>& rdispls,
+                                    const vector<size_t>& recvcounts,
+                                    const vector<size_t>& rdispls,
                                     edge_map_t& prj_edge_map,
                                     size_t& num_unpacked_nodes,
                                     size_t& num_unpacked_edges
                                     )
     {
-      const int recvbuf_size = recvbuf.size();
+      const size_t recvbuf_size = recvbuf.size();
 
       for (size_t ridx = 0; ridx < num_ranks; ridx++)
         {
           if (recvcounts[ridx] > 0)
             {
-              int recvsize  = recvcounts[ridx];
-              int recvpos   = rdispls[ridx];
-              int startpos  = recvpos;
+              size_t recvsize  = recvcounts[ridx];
+              size_t recvpos   = rdispls[ridx];
+              size_t startpos  = recvpos;
               edge_map_t edge_map;
 
               throw_assert(recvpos < recvbuf_size,

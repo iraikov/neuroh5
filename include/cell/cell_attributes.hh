@@ -466,7 +466,7 @@ namespace neuroh5
       
       vector<CELL_IDX_T> gid_recvbuf;
       {
-        vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
+        vector<size_t> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
         idx_sendcounts[io_dests[rank]] = local_index_vector.size();
         
         throw_assert(mpi::alltoallv_vector<CELL_IDX_T>(comm, MPI_CELL_IDX_T,
@@ -478,7 +478,7 @@ namespace neuroh5
       vector<ATTR_PTR_T> attr_ptr;
       {
         vector<ATTR_PTR_T> attr_size_recvbuf;
-        vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
+        vector<size_t> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
         attr_size_sendcounts[io_dests[rank]] = local_attr_size_vector.size();
 
         throw_assert(mpi::alltoallv_vector<ATTR_PTR_T>(comm, MPI_ATTR_PTR_T,
@@ -522,7 +522,7 @@ namespace neuroh5
             local_value_vector.insert(local_value_vector.end(),v.begin(),v.end());
           }
         
-        vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
+        vector<size_t> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
         value_sendcounts[io_dests[rank]] = local_value_size;
         
 
@@ -902,7 +902,7 @@ namespace neuroh5
       
       vector<CELL_IDX_T> gid_recvbuf;
       {
-        vector<int> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
+        vector<size_t> idx_sendcounts(size, 0), idx_sdispls(size, 0), idx_recvcounts(size, 0), idx_rdispls(size, 0);
         idx_sendcounts[io_dests[rank]] = local_index_vector.size();
         
         throw_assert(mpi::alltoallv_vector<CELL_IDX_T>(comm, MPI_CELL_IDX_T,
@@ -914,7 +914,7 @@ namespace neuroh5
       vector<ATTR_PTR_T> attr_ptr;
       {
         vector<ATTR_PTR_T> attr_size_recvbuf;
-        vector<int> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
+        vector<size_t> attr_size_sendcounts(size, 0), attr_size_sdispls(size, 0), attr_size_recvcounts(size, 0), attr_size_rdispls(size, 0);
         attr_size_sendcounts[io_dests[rank]] = local_attr_size_vector.size();
 
         throw_assert(mpi::alltoallv_vector<ATTR_PTR_T>(comm, MPI_ATTR_PTR_T,
@@ -925,7 +925,7 @@ namespace neuroh5
         if ((is_io_rank) && (attr_size_recvbuf.size() > 0))
           {
             ATTR_PTR_T attr_ptr_offset = 0;
-            for (size_t s=0; s<ssize; s++)
+            for (size_t s=0; s<size; s++)
               {
                 int count = attr_size_recvcounts[s];
                 for (size_t i=attr_size_rdispls[s]; i<attr_size_rdispls[s]+count; i++)
@@ -957,7 +957,7 @@ namespace neuroh5
             local_value_vector.insert(local_value_vector.end(),v.begin(),v.end());
           }
         
-        vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
+        vector<size_t> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
         value_sendcounts[io_dests[rank]] = local_value_size;
         
 

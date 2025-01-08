@@ -506,6 +506,8 @@ namespace neuroh5
      const bool collective
      )
     {
+      MPI_Request request;
+      
       // do a sanity check on the input
       throw_assert_nomsg(src_start < src_end);
       throw_assert_nomsg(dst_start < dst_end);
@@ -558,11 +560,13 @@ namespace neuroh5
       throw_assert_nomsg(num_edges == src_idx.size());
 
       size_t sum_num_edges = 0;
-      throw_assert_nomsg(MPI_Allreduce(&num_edges, &sum_num_edges, 1,
-                        MPI_SIZE_T, MPI_SUM, comm) == MPI_SUCCESS);
-
-      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
-
+      throw_assert(MPI_Iallreduce(&num_edges, &sum_num_edges, 1,
+                                  MPI_SIZE_T, MPI_SUM,
+                                  comm, &request) == MPI_SUCCESS,
+                   "append_projection: error in MPI_Iallreduce");
+      throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                   "append_projection: error in MPI_Wait");
+      
       if (sum_num_edges == 0)
         {
           return;
@@ -604,23 +608,33 @@ namespace neuroh5
 
       vector<size_t> sendbuf_num_blocks(size, num_blocks);
       vector<size_t> recvbuf_num_blocks(size, 0);
-      throw_assert_nomsg(MPI_Allgather(&sendbuf_num_blocks[0], 1, MPI_SIZE_T,
-                           &recvbuf_num_blocks[0], 1, MPI_SIZE_T, comm)
-             == MPI_SUCCESS);
+      throw_assert(MPI_Iallgather(&sendbuf_num_blocks[0], 1, MPI_SIZE_T,
+                                  &recvbuf_num_blocks[0], 1, MPI_SIZE_T,
+                                  comm, &request)
+                   == MPI_SUCCESS,
+                   "append_projection: error in MPI_Iallgather");
+      throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                   "append_projection: error in MPI_Wait");
 
       vector<size_t> sendbuf_num_dest(size, num_dest);
       vector<size_t> recvbuf_num_dest(size, 0);
-      throw_assert_nomsg(MPI_Allgather(&sendbuf_num_dest[0], 1, MPI_SIZE_T,
-                           &recvbuf_num_dest[0], 1, MPI_SIZE_T, comm)
-             == MPI_SUCCESS);
+      throw_assert(MPI_Iallgather(&sendbuf_num_dest[0], 1, MPI_SIZE_T,
+                                  &recvbuf_num_dest[0], 1, MPI_SIZE_T,
+                                  comm, &request)
+                   == MPI_SUCCESS,
+                   "append_projection: error in MPI_Iallgather");
+      throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                   "append_projection: error in MPI_Wait");
 
       vector<size_t> sendbuf_num_edge(size, num_edges);
       vector<size_t> recvbuf_num_edge(size, 0);
-      throw_assert_nomsg(MPI_Allgather(&sendbuf_num_edge[0], 1, MPI_SIZE_T,
-                           &recvbuf_num_edge[0], 1, MPI_SIZE_T, comm)
-             == MPI_SUCCESS);
-
-      throw_assert_nomsg(MPI_Barrier(comm) == MPI_SUCCESS);
+      throw_assert(MPI_Iallgather(&sendbuf_num_edge[0], 1, MPI_SIZE_T,
+                                  &recvbuf_num_edge[0], 1, MPI_SIZE_T,
+                                  comm, &request)
+                   == MPI_SUCCESS,
+                   "append_projection: error in MPI_Iallgather");
+      throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                   "append_projection: error in MPI_Wait");
 
       // determine last rank that has data
       size_t last_rank = size-1;

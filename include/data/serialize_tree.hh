@@ -26,21 +26,21 @@ namespace neuroh5
     void serialize_rank_tree_map (const size_t num_ranks,
                                   const size_t start_rank,
                                   const std::map <rank_t, std::map<CELL_IDX_T, neurotree_t> >& rank_tree_map,
-                                  std::vector<int>& sendcounts,
+                                  std::vector<size_t>& sendcounts,
                                   std::vector<char> &sendbuf,
-                                  std::vector<int> &sdispls);
+                                  std::vector<size_t> &sdispls);
 
     void deserialize_rank_tree_map (const size_t num_ranks,
                                     const std::vector<char> &recvbuf,
-                                    const std::vector<int>& recvcounts,
-                                    const std::vector<int>& rdispls,
+                                    const std::vector<size_t>& recvcounts,
+                                    const std::vector<size_t>& rdispls,
                                     std::map<CELL_IDX_T, neurotree_t> &all_tree_map
                                     );
 
     void deserialize_rank_tree_list (const size_t num_ranks,
                                      const vector<char> &recvbuf,
-                                     const vector<int>& recvcounts,
-                                     const vector<int>& rdispls,
+                                     const vector<size_t>& recvcounts,
+                                     const vector<size_t>& rdispls,
                                      forward_list<neurotree_t> &all_tree_list);
   }
 }
