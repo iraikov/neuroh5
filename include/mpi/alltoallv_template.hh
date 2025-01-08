@@ -4,7 +4,7 @@
 ///
 ///  Function for sending data via MPI Alltoallv.
 ///
-///  Copyright (C) 2017-2022 Project NeuroH5.
+///  Copyright (C) 2017-2024 Project NeuroH5.
 //==============================================================================
 
 #ifndef ALLTOALLV_TEMPLATE_HH
@@ -19,6 +19,7 @@
 #include "throw_assert.hh"
 #include "neuroh5_types.hh"
 #include "attr_map.hh"
+#include "chunk_info.hh"
 
 using namespace std;
 
@@ -28,25 +29,21 @@ namespace neuroh5
 
   namespace mpi
   {
-
+    
     template<class T>
     int alltoallv_vector (MPI_Comm comm,
                           const MPI_Datatype datatype,
-                          const vector<int>& sendcounts,
-                          const vector<int>& sdispls,
+                          const vector<size_t>& sendcounts,
+                          const vector<size_t>& sdispls,
                           const vector<T>& sendbuf,
-                          vector<int>& recvcounts,
-                          vector<int>& rdispls,
+                          vector<size_t>& recvcounts,
+                          vector<size_t>& rdispls,
                           vector<T>& recvbuf)
     {
-      int srank, ssize; size_t rank, size;
+      int ssize; size_t size;
       throw_assert(MPI_Comm_size(comm, &ssize) == MPI_SUCCESS,
                    "alltoallv: unable to obtain size of MPI communicator");
-      throw_assert(MPI_Comm_rank(comm, &srank) == MPI_SUCCESS,
-                   "alltoallv: unable to obtain rank of MPI communicator");
-      throw_assert_nomsg(srank >= 0);
       throw_assert_nomsg(ssize > 0);
-      rank = srank;
       size = ssize;
 
       
@@ -62,17 +59,15 @@ namespace neuroh5
       {
         int status;
         MPI_Request request;
-        status = MPI_Ialltoall(&sendcounts[0], 1, MPI_INT,
-                               &recvcounts[0], 1, MPI_INT, comm, &request);
+        status = MPI_Ialltoall(&sendcounts[0], 1, MPI_SIZE_T,
+                               &recvcounts[0], 1, MPI_SIZE_T,
+                               comm, &request);
         throw_assert(status == MPI_SUCCESS,
-                     "alltoallv: error in MPI_Alltoallv: status: " << status);
-
+                     "alltoallv: error in MPI_Ialltoall: status: " << status);
         status = MPI_Wait(&request, MPI_STATUS_IGNORE);
         throw_assert(status == MPI_SUCCESS,
                      "alltoallv: error in MPI_Wait: status: " << status);
         
-        //throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-        //             "alltoallv: error in MPI_Barrier");
       }
         
       // 2. Each rank accumulates the vector sizes and allocates
@@ -88,37 +83,65 @@ namespace neuroh5
       //assert(recvbuf_size > 0);
       recvbuf.resize(recvbuf_size, 0);
 
-      size_t global_recvbuf_size=0;
       {
         int status;
         MPI_Request request;
-        status = MPI_Iallreduce(&recvbuf_size, &global_recvbuf_size, 1, MPI_SIZE_T, MPI_SUM,
-                                comm, &request);
-        throw_assert (status == MPI_SUCCESS, "error in MPI_Iallreduce: status = " << status);
-        status = MPI_Wait(&request, MPI_STATUS_IGNORE);
-        throw_assert(status == MPI_SUCCESS,
-                     "alltoallv: error in MPI_Wait: status: " << status);
-        //throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-        //             "alltoallv: error in MPI_Barrier");
+
+        // 3. Perform the actual data exchange in chunks
+        size_t chunk_start = 0;
+        while (true)
+          {
+            size_t global_send_size=0;
+            size_t global_recv_size=0;
+            
+            auto chunk = data::calculate_chunk_sizes<T>(
+                sendcounts, sdispls, recvcounts, rdispls,
+                chunk_start, data::CHUNK_SIZE);
+
+            status = MPI_Iallreduce(&chunk.total_recv_size,
+                                    &global_recv_size,
+                                    1, MPI_SIZE_T, MPI_SUM,
+                                    comm, &request);
+            
+            throw_assert (status == MPI_SUCCESS, "error in MPI_Iallreduce: status = " << status);
+            status = MPI_Wait(&request, MPI_STATUS_IGNORE);
+            throw_assert(status == MPI_SUCCESS,
+                         "alltoallv: error in MPI_Wait: status: " << status);
+
+            status = MPI_Iallreduce(&chunk.total_send_size,
+                                    &global_send_size,
+                                    1, MPI_SIZE_T, MPI_SUM,
+                                    comm, &request);
+            
+            throw_assert (status == MPI_SUCCESS, "error in MPI_Iallreduce: status = " << status);
+            status = MPI_Wait(&request, MPI_STATUS_IGNORE);
+            throw_assert(status == MPI_SUCCESS,
+                         "alltoallv: error in MPI_Wait: status: " << status);
+
+            if (global_send_size == 0 &&
+                global_recv_size == 0)
+              break;
+            
+            status = MPI_Ialltoallv(&sendbuf[0],
+                                    &chunk.sendcounts[0],
+                                    &chunk.sdispls[0],
+                                    datatype,
+                                    &recvbuf[0],
+                                    &chunk.recvcounts[0],
+                                    &chunk.rdispls[0],
+                                    datatype,
+                                    comm, &request);
+            throw_assert (status == MPI_SUCCESS, "error in MPI_Alltoallv: status = " << status);
+            status = MPI_Wait(&request, MPI_STATUS_IGNORE);
+            throw_assert(status == MPI_SUCCESS,
+                           "alltoallv: error in MPI_Wait: status: " << status);
+
+            chunk_start += data::CHUNK_SIZE;
+
+          }
       }
-      if (global_recvbuf_size > 0)
-        {
-          int status;
-          MPI_Request request;
 
-          // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-          status = MPI_Ialltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], datatype,
-                                 &recvbuf[0], &recvcounts[0], &rdispls[0], datatype,
-                                  comm, &request);
-          throw_assert (status == MPI_SUCCESS, "error in MPI_Alltoallv: status = " << status);
-          status = MPI_Wait(&request, MPI_STATUS_IGNORE);
-          throw_assert(status == MPI_SUCCESS,
-                       "alltoallv: error in MPI_Wait: status: " << status);
-          //throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
-          //             "alltoallv: error in MPI_Barrier");
-        }
-
-      return 0;
+      return MPI_SUCCESS;
     }
   }
 }

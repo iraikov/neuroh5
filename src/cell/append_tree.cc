@@ -332,8 +332,8 @@ namespace neuroh5
       std::forward_list<neurotree_t> local_tree_list;
       {
         std::vector<char> sendbuf; 
-        std::vector<int> sendcounts, sdispls;
-        std::vector<int> recvcounts, rdispls;
+        std::vector<size_t> sendcounts, sdispls;
+        std::vector<size_t> recvcounts, rdispls;
         std::vector<char> recvbuf;
         
         rank_t dst_rank = io_dests[rank];

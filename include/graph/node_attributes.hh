@@ -213,6 +213,9 @@ namespace neuroh5
           value_offset = value_offset + v.size();
         }
       //attr_ptr.push_back(value_offset);
+      
+      T dummy;
+      MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
 
       vector<int> value_sendcounts(size, 0), value_sdispls(size, 0), value_recvcounts(size, 0), value_rdispls(size, 0);
       value_sendcounts[io_dests[rank]] = local_value_size;
@@ -241,8 +244,6 @@ namespace neuroh5
       //assert(recvbuf_size > 0);
       vector<T> value_recvbuf(value_recvbuf_size);
 
-      T dummy;
-      MPI_Datatype mpi_type = infer_mpi_datatype(dummy);
       throw_assert(MPI_Alltoallv(&value_vector[0], &value_sendcounts[0], &value_sdispls[0], mpi_type,
                                  &value_recvbuf[0], &value_recvcounts[0], &value_rdispls[0], mpi_type,
                                  comm) == MPI_SUCCESS, "error in MPI_Alltoallv");

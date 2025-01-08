@@ -4,13 +4,14 @@
 ///
 ///  Populates a mapping between ranks and edge values.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 #include <vector>
 #include <map>
 #include <set>
 
+#include "debug.hh"
 #include "neuroh5_types.hh"
 #include "attr_val.hh"
 #include "rank_range.hh"
@@ -45,23 +46,32 @@ namespace neuroh5
      )
     {
       int ierr = 0; size_t dst_ptr_size;
+      NODE_IDX_T dst_base = 0;
       
       if (dst_blk_ptr.size() > 0)
         {
           dst_ptr_size = dst_ptr.size();
           size_t num_dst = 0;
-          for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+          for (size_t b = 0; b < dst_blk_ptr.size(); ++b)
             {
-              size_t low_dst_ptr = dst_blk_ptr[b],
+              size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = 0;
+              if (b < dst_blk_ptr.size()-1)
                 high_dst_ptr = dst_blk_ptr[b+1];
-
-              NODE_IDX_T dst_base = dst_idx[b];
+              else
+                high_dst_ptr = dst_ptr_size;
+              
+              if (b < dst_idx.size())
+                dst_base = dst_idx[b];
               for (size_t i = low_dst_ptr, ii = 0; i < high_dst_ptr; ++i, ++ii)
                 {
-                  if (i < dst_ptr_size-1)
                     {
                       NODE_IDX_T dst = dst_base + ii + dst_start;
-                      size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                      size_t low = dst_ptr[i], high = 0;
+                      if (i < dst_ptr_size-1)
+                        high = dst_ptr[i+1];
+                      else
+                        high = src_idx.size();
+
                       if (high > low)
                         {
                           switch (edge_map_type)

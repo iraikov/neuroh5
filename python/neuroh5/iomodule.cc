@@ -2769,6 +2769,7 @@ static void NeuroH5EdgeIter_dealloc(PyNeuroH5EdgeIterState *py_state)
 PyObject* NeuroH5EdgeIter_iternext(PyObject *self)
 {
   PyNeuroH5EdgeIterState *py_state = (PyNeuroH5EdgeIterState *)self;
+
   if (py_state->state->it_edge != py_state->state->edge_map.cend())
     {
       const NODE_IDX_T key      = py_state->state->it_edge->first;
@@ -2841,6 +2842,7 @@ NeuroH5EdgeIter_FromMap(const edge_map_t& prj_edge_map,
       return NULL;
     }
 
+  
   p->state = new NeuroH5EdgeIterState();
 
   p->state->seq_index     = 0;
@@ -2848,7 +2850,7 @@ NeuroH5EdgeIter_FromMap(const edge_map_t& prj_edge_map,
   p->state->edge_map      = std::move(prj_edge_map);
   p->state->edge_attr_name_spaces = edge_attr_name_spaces;
   p->state->it_edge       = p->state->edge_map.cbegin();
-  
+
   return (PyObject *)p;
 }
 
@@ -2933,7 +2935,7 @@ extern "C"
     
     for (size_t i = 0; i < prj_vector.size(); i++)
       {
-        edge_map_t prj_edge_map = prj_vector[i];
+        edge_map_t prj_edge_map = std::move(prj_vector[i]);
 
         PyObject *py_edge_iter = NeuroH5EdgeIter_FromMap(prj_edge_map, edge_attr_name_spaces);
 

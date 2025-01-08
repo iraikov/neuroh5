@@ -5,7 +5,7 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 
@@ -93,11 +93,11 @@ namespace neuroh5
 
       {
         vector<char> recvbuf;
-        vector<int> recvcounts, rdispls;
+        vector<size_t> recvcounts, rdispls;
 
         {
           vector<char> sendbuf; 
-          vector<int> sendcounts(size,0), sdispls(size,0);
+          vector<size_t> sendcounts(size,0), sdispls(size,0);
           
           if (is_io_rank)
             {

@@ -5,12 +5,13 @@
 ///  Top-level functions for writing graphs in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 
 
 #include "neuroh5_types.hh"
+#include "alltoallv_template.hh"
 #include "attr_map.hh"
 #include "cell_populations.hh"
 #include "write_graph.hh"
@@ -71,6 +72,8 @@ namespace neuroh5
       size_t dst_start, dst_end;
       size_t src_start, src_end;
 
+      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
+
       int size, rank;
       throw_assert_nomsg(MPI_Comm_size(all_comm, &size) == MPI_SUCCESS);
       throw_assert_nomsg(MPI_Comm_rank(all_comm, &rank) == MPI_SUCCESS);
@@ -106,6 +109,53 @@ namespace neuroh5
       dst_end   = dst_start + pop_ranges[dst_pop_idx].count;
       src_start = pop_ranges[src_pop_idx].start;
       src_end   = src_start + pop_ranges[src_pop_idx].count;
+
+      total_num_nodes = 0;
+      vector< NODE_IDX_T > node_index;
+
+      { // Determine the destination node indices present in the input
+        // edge map across all ranks
+        size_t num_nodes = input_edge_map.size();
+        vector<size_t> sendbuf_num_nodes(size, num_nodes);
+        vector<size_t> recvbuf_num_nodes(size);
+        vector<int> recvcounts(size, 0);
+        vector<int> displs(size+1, 0);
+        throw_assert_nomsg(MPI_Allgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
+                                         &recvbuf_num_nodes[0], 1, MPI_SIZE_T, all_comm)
+                           == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+        for (size_t p=0; p<size; p++)
+          {
+            total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
+            displs[p+1] = displs[p] + recvbuf_num_nodes[p];
+            recvcounts[p] = recvbuf_num_nodes[p];
+          }
+        
+        vector< NODE_IDX_T > local_node_index;
+        for (auto iter: input_edge_map)
+          {
+            NODE_IDX_T dst          = iter.first;
+            local_node_index.push_back(dst);
+          }
+        
+        node_index.resize(total_num_nodes,0);
+        throw_assert_nomsg(MPI_Allgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
+                                          &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
+                                          all_comm) == MPI_SUCCESS);
+        throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+
+        vector<size_t> p = sort_permutation(node_index, compare_nodes);
+        apply_permutation_in_place(node_index, p);
+      }
+
+      throw_assert_nomsg(node_index.size() == total_num_nodes);
+
+      if (total_num_nodes == 0)
+        {
+          throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+          return 0;
+        }
+
       
       // Create an I/O communicator
       MPI_Comm  io_comm;
@@ -126,7 +176,6 @@ namespace neuroh5
       compute_node_rank_map(io_size, total_num_nodes, node_rank_map);
 
       // construct a map where each set of edges are arranged by destination I/O rank
-      auto compare_nodes = [](const NODE_IDX_T& a, const NODE_IDX_T& b) { return (a < b); };
       rank_edge_map_t rank_edge_map;
       for (auto iter : input_edge_map)
         {
@@ -219,9 +268,9 @@ namespace neuroh5
         }
 
 
-      // send buffer and structures for MPI Alltoall operation
-      vector<char> sendbuf;
-      vector<int> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
+      // send buffer and structures for MPI Alltoallv operation
+      vector<char> sendbuf, recvbuf;
+      vector<size_t> sendcounts(size,0), sdispls(size,0), recvcounts(size,0), rdispls(size,0);
 
       // Create serialized object with the edges of vertices for the respective I/O rank
       size_t num_packed_edges = 0; 
@@ -229,43 +278,26 @@ namespace neuroh5
       data::serialize_rank_edge_map (size, rank, rank_edge_map, num_packed_edges,
                                      sendcounts, sendbuf, sdispls);
       rank_edge_map.clear();
-      
-      // 1. Each ALL_COMM rank sends an edge vector size to
-      //    every other ALL_COMM rank (non IO_COMM ranks receive zero),
-      //    and creates sendcounts and sdispls arrays
-      
-      throw_assert_nomsg(MPI_Alltoall(&sendcounts[0], 1, MPI_INT, &recvcounts[0], 1, MPI_INT, all_comm) == MPI_SUCCESS);
-      
-      // 2. Each ALL_COMM rank accumulates the vector sizes and allocates
-      //    a receive buffer, recvcounts, and rdispls
-      
-      size_t recvbuf_size = recvcounts[0];
-      for (int p = 1; p < size; p++)
-        {
-          rdispls[p] = rdispls[p-1] + recvcounts[p-1];
-          recvbuf_size += recvcounts[p];
-        }
 
-      vector<char> recvbuf;
-      recvbuf.resize(recvbuf_size > 0 ? recvbuf_size : 1, 0);
-      
-      // 3. Each ALL_COMM rank participates in the MPI_Alltoallv
-      throw_assert_nomsg(MPI_Alltoallv(&sendbuf[0], &sendcounts[0], &sdispls[0], MPI_CHAR,
-                           &recvbuf[0], &recvcounts[0], &rdispls[0], MPI_CHAR,
-                           all_comm) == MPI_SUCCESS);
-      throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+      throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
+                                                     recvcounts, rdispls, recvbuf) >= 0);
       sendbuf.clear();
+      sendbuf.shrink_to_fit();
       sendcounts.clear();
       sdispls.clear();
 
       size_t num_unpacked_edges = 0, num_unpacked_nodes = 0;
       edge_map_t prj_edge_map;
-      if (recvbuf_size > 0)
+      if (recvbuf.size() > 0)
         {
           data::deserialize_rank_edge_map (size, recvbuf, recvcounts, rdispls, 
                                            prj_edge_map, num_unpacked_nodes,
                                            num_unpacked_edges);
         }
+
+      recvbuf.clear();
+      recvcounts.clear();
+      rdispls.clear();
 
       if ((rank_t)rank < io_size)
         {

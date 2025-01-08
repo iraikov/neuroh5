@@ -35,8 +35,12 @@ class CMakeExtension(Extension):
 class cmake_build_ext(build_ext.build_ext):
     def build_extensions(self):
         # Ensure that CMake is present and working
+        cmake_path = "cmake"
+        if os.environ.get("CMAKE_PATH", False):
+            cmake_path = os.environ.get("CMAKE_PATH", False)
+            
         try:
-            out = subprocess.check_output(["cmake", "--version"])
+            out = subprocess.check_output([cmake_path, "--version"])
         except OSError:
             raise RuntimeError("Cannot find CMake executable")
 
@@ -137,7 +141,7 @@ setup(
     name="NeuroH5",
     package_dir={"": "python"},
     packages=["neuroh5"],
-    version="0.1.11",
+    version="0.1.14",
     maintainer="Ivan Raikov",
     maintainer_email="ivan.g.raikov@gmail.com",
     description="A parallel HDF5-based library for storage and processing of large-scale graphs and neural cell model attributes.",
@@ -145,14 +149,14 @@ setup(
     long_description_content_type='text/markdown',
     url="http://github.com/iraikov/neuroh5",
     include_package_data=True,
-    entry_points={
-        "console_scripts": [
-            'initrange=neuroh5.initrange:cli',
-            'initprj=neuroh5.initprj:cli',
-            'importdbs=neuroh5.importdbs:cli',
-            'importcoords=neuroh5.importcoords:cli',
-        ]
-    },
+#    entry_points={
+#        "console_scripts": [
+#            'initrange=neuroh5.initrange:cli',
+#            'initprj=neuroh5.initprj:cli',
+#            'importdbs=neuroh5.importdbs:cli',
+#            'importcoords=neuroh5.importcoords:cli',
+#        ]
+#    },
     cmdclass={"build_ext": cmake_build_ext},
     ext_modules=[CMakeExtension("neuroh5.io", target="python_neuroh5_io")],
 )
