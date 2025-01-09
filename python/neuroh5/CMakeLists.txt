@@ -1,6 +1,6 @@
 
 set(NEUROH5_IO_SRCS
-    "iomodule.cc"
+  "iomodule.cc"
 )
 
 include_directories(${MPI_C_INCLUDE_DIRS})

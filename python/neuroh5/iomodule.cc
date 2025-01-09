@@ -67,6 +67,7 @@
 #include "edge_attributes.hh"
 #include "serialize_data.hh"
 #include "split_intervals.hh"
+#include "shared_array.hh"
 
 #if PY_MAJOR_VERSION >= 3
 #define Py_TPFLAGS_HAVE_ITER ((Py_ssize_t)0)
@@ -1074,7 +1075,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
       npy_intp dims[1];
       dims[0] = num_nodes;
       py_section_topology = PyDict_New();
-      py_section_vector = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
+      py_section_vector = create_typed_shared_array<uint16_t>(dims[0]);
       SECTION_IDX_T *section_vector_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_vector, &ind);
       size_t sections_ptr=0;
       SECTION_IDX_T section_idx = 0;
@@ -1091,7 +1092,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           npy_intp nodes_dims[1], nodes_ind = 0;
           nodes_dims[0]    = num_section_nodes;
           py_section_key   = PyLong_FromLong((long)section_idx);
-          py_section_nodes = (PyObject *)PyArray_SimpleNew(1, nodes_dims, NPY_UINT32);
+          py_section_nodes = create_typed_shared_array<uint32_t>(nodes_dims[0]);
           NODE_IDX_T *py_section_nodes_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_nodes, &nodes_ind);
           sections_ptr++;
           for (size_t p = 0; p < num_section_nodes; p++)
@@ -1120,16 +1121,14 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
 
       npy_intp topology_dims[1];
       topology_dims[0] = src_vector.size();
-      py_section_src = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
-      SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
-      py_section_dst = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
-      SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
-      py_section_loc = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT32);
+
+      py_section_src = create_shared_array_from_deque<SECTION_IDX_T>(std::move(src_vector));
+      py_section_dst = create_shared_array_from_deque<SECTION_IDX_T>(std::move(dst_vector));
+      
+      py_section_loc = create_typed_shared_array<uint32_t>(topology_dims[0]);
       NODE_IDX_T *section_loc_ptr = (NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_loc, &ind);
       for (size_t s = 0; s < src_vector.size(); s++)
         {
-          section_src_ptr[s] = src_vector[s];
-          section_dst_ptr[s] = dst_vector[s];
           auto node_map_it = section_node_map.find(src_vector[s]);
           throw_assert (node_map_it != section_node_map.end(),
                         "py_build_tree_value: invalid section index in tree source vector");
@@ -1186,25 +1185,14 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
     {
       npy_intp topology_dims[1];
       topology_dims[0] = src_vector.size();
-      py_section_src = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
-      SECTION_IDX_T *section_src_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_src, &ind);
-      py_section_dst = (PyObject *)PyArray_SimpleNew(1, topology_dims, NPY_UINT16);
-      SECTION_IDX_T *section_dst_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_section_dst, &ind);
-      for (size_t s = 0; s < src_vector.size(); s++)
-        {
-          section_src_ptr[s] = src_vector[s];
-          section_dst_ptr[s] = dst_vector[s];
-        }
-
       
+      py_section_src = create_shared_array_from_deque<SECTION_IDX_T>(std::move(src_vector));
+      py_section_dst = create_shared_array_from_deque<SECTION_IDX_T>(std::move(dst_vector));
+
       npy_intp sections_dims[1];
       sections_dims[0] = sections.size();
-      py_sections = (PyObject *)PyArray_SimpleNew(1, sections_dims, NPY_UINT16);
-      SECTION_IDX_T *sections_ptr = (SECTION_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_sections, &ind);
-      for (size_t p = 0; p < sections.size(); p++)
-        {
-          sections_ptr[p] = sections[p];
-        }
+      
+      py_sections = create_shared_array_from_deque<SECTION_IDX_T>(std::move(sections));
     }
   
                            
@@ -1212,31 +1200,14 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
   npy_intp dims[1];
   dims[0] = num_nodes;
 
-  PyObject *py_xcoords = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-  float *xcoords_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_xcoords, &ind);
-  PyObject *py_ycoords = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-  float *ycoords_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_ycoords, &ind);
-  PyObject *py_zcoords = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-  float *zcoords_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_zcoords, &ind);
-  PyObject *py_radiuses = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-  float *radiuses_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_radiuses, &ind);
-  PyObject *py_layers = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-  LAYER_IDX_T *layers_ptr = (LAYER_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_layers, &ind);
-  PyObject *py_parents = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-  PARENT_NODE_IDX_T *parents_ptr = (PARENT_NODE_IDX_T *)PyArray_GetPtr((PyArrayObject *)py_parents, &ind);
-  PyObject *py_swc_types = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-  SWC_TYPE_T *swc_types_ptr = (SWC_TYPE_T *)PyArray_GetPtr((PyArrayObject *)py_swc_types, &ind);
-  for (size_t j = 0; j < xcoords.size(); j++)
-    {
-      xcoords_ptr[j]   = xcoords[j];
-      ycoords_ptr[j]   = ycoords[j];
-      zcoords_ptr[j]   = zcoords[j];
-      radiuses_ptr[j]  = radiuses[j];
-      layers_ptr[j]    = layers[j];
-      parents_ptr[j]   = parents[j];
-      swc_types_ptr[j] = swc_types[j];
-    }
-                           
+  PyObject *py_xcoords = create_shared_array_from_deque<COORD_T>(std::move(xcoords));
+  PyObject *py_ycoords = create_shared_array_from_deque<COORD_T>(std::move(ycoords));
+  PyObject *py_zcoords = create_shared_array_from_deque<COORD_T>(std::move(zcoords));
+  PyObject *py_radiuses = create_shared_array_from_deque<REALVAL_T>(std::move(radiuses));
+  PyObject *py_layers = create_shared_array_from_deque<LAYER_IDX_T>(std::move(layers));
+  PyObject *py_parents = create_shared_array_from_deque<PARENT_NODE_IDX_T>(std::move(parents));
+  PyObject *py_swc_types = create_shared_array_from_deque<SWC_TYPE_T>(std::move(swc_types));
+  
   PyObject *py_treeval = PyDict_New();
   PyDict_SetItemString(py_treeval, "x", py_xcoords);
   Py_DECREF(py_xcoords);
@@ -1310,12 +1281,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         {
           const deque<float> &attr_value = float_attrs[i];
           dims[0] = attr_value.size();
-          PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-          float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-          for (size_t j = 0; j < attr_value.size(); j++)
-            {
-              py_value_ptr[j]   = attr_value[j];
-            }
+          PyObject *py_value = create_shared_array_from_deque<float>(std::move(attr_value));
                                    
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_float][i]).c_str(),
@@ -1327,12 +1293,7 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         {
           const deque<uint8_t> &attr_value = uint8_attrs[i];
           dims[0] = attr_value.size();
-          PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-          uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-          for (size_t j = 0; j < attr_value.size(); j++)
-            {
-              py_value_ptr[j]   = attr_value[j];
-            }
+          PyObject *py_value = create_shared_array_from_deque<uint8_t>(std::move(attr_value));
                                    
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_uint8][i]).c_str(),
@@ -1343,13 +1304,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         {
           const deque<int8_t> &attr_value = int8_attrs[i];
           dims[0] = attr_value.size();
-          PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-          int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-          for (size_t j = 0; j < attr_value.size(); j++)
-            {
-              py_value_ptr[j]   = attr_value[j];
-            }
                                    
+          PyObject *py_value = create_shared_array_from_deque<int8_t>(std::move(attr_value));
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_int8][i]).c_str(),
                                py_value);
@@ -1359,13 +1315,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         {
           const deque<uint16_t> &attr_value = uint16_attrs[i];
           dims[0] = attr_value.size();
-          PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-          uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-          for (size_t j = 0; j < attr_value.size(); j++)
-            {
-              py_value_ptr[j]   = attr_value[j];
-            }
-                                   
+          
+          PyObject *py_value = create_shared_array_from_deque<uint16_t>(std::move(attr_value));                                   
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_uint16][i]).c_str(),
                                py_value);
@@ -1375,13 +1326,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         {
           const deque<uint32_t> &attr_value = uint32_attrs[i];
           dims[0] = attr_value.size();
-          PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-          uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-          for (size_t j = 0; j < attr_value.size(); j++)
-            {
-              py_value_ptr[j]   = attr_value[j];
-            }
                                    
+          PyObject *py_value = create_shared_array_from_deque<uint32_t>(std::move(attr_value));                                   
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_uint32][i]).c_str(),
                                py_value);
@@ -1391,13 +1337,8 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
         {
           const deque<int32_t> &attr_value = int32_attrs[i];
           dims[0] = attr_value.size();
-          PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-          int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-          for (size_t j = 0; j < attr_value.size(); j++)
-            {
-              py_value_ptr[j]   = attr_value[j];
-            }
                                    
+          PyObject *py_value = create_shared_array_from_deque<int32_t>(std::move(attr_value));                                   
           PyDict_SetItemString(py_namespace_dict,
                                (attr_names[AttrMap::attr_index_int32][i]).c_str(),
                                py_value);
@@ -1593,12 +1534,8 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
     {
       const deque<float> &attr_value = float_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-      float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<float>(std::move(attr_value));                                   
                                    
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_float][i]).c_str(),
@@ -1610,12 +1547,8 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
     {
       const deque<uint8_t> &attr_value = uint8_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-      uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<uint8_t>(std::move(attr_value));                                   
                                
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_uint8][i]).c_str(),
@@ -1627,12 +1560,8 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
     {
       const deque<int8_t> &attr_value = int8_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-      int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<int8_t>(std::move(attr_value));                                   
                                
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_int8][i]).c_str(),
@@ -1645,13 +1574,9 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
     {
       const deque<uint16_t> &attr_value = uint16_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-      uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
-                               
+
+      PyObject *py_value = create_shared_array_from_deque<uint16_t>(std::move(attr_value));                                   
+      
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_uint16][i]).c_str(),
                            py_value);
@@ -1664,12 +1589,8 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
     {
       const deque<int16_t> &attr_value = int16_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
-      int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<int16_t>(std::move(attr_value));                                   
                                
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_int16][i]).c_str(),
@@ -1682,12 +1603,8 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
     {
       const deque<uint32_t> &attr_value = uint32_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-      uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<uint32_t>(std::move(attr_value));                                   
                                
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_uint32][i]).c_str(),
@@ -1700,12 +1617,8 @@ PyObject* py_build_cell_attr_values_dict(const CELL_IDX_T key,
     {
       const deque<int32_t> &attr_value = int32_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-      int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<int32_t>(std::move(attr_value));                                   
                                
       PyDict_SetItemString(py_attrval,
                            (attr_names[AttrMap::attr_index_int32][i]).c_str(),
@@ -1819,12 +1732,8 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
     {
       const deque<float> &attr_value = float_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-      float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<float>(std::move(attr_value));                                   
 
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -1833,12 +1742,8 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
     {
       const deque<uint8_t> &attr_value = uint8_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-      uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<uint8_t>(std::move(attr_value));                                   
                                
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -1846,13 +1751,8 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
   for (size_t i=0; i<int8_attrs.size(); i++)
     {
       const deque<int8_t> &attr_value = int8_attrs[i];
-      dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-      int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<int8_t>(std::move(attr_value));                                   
                                
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -1861,12 +1761,8 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
     {
       const deque<uint16_t> &attr_value = uint16_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-      uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<uint16_t>(std::move(attr_value));                                   
                                
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -1875,12 +1771,8 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
     {
       const deque<int16_t> &attr_value = int16_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
-      int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+      
+      PyObject *py_value = create_shared_array_from_deque<int16_t>(std::move(attr_value));                                   
                                
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -1889,12 +1781,8 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
     {
       const deque<uint32_t> &attr_value = uint32_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-      uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<uint32_t>(std::move(attr_value));                                   
                                
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -1903,13 +1791,9 @@ PyObject* py_build_cell_attr_values_tuple(const CELL_IDX_T key,
     {
       const deque<int32_t> &attr_value = int32_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-      int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
                                
+      PyObject *py_value = create_shared_array_from_deque<int32_t>(std::move(attr_value));
+      
       PyTuple_SetItem(py_attrval, attr_pos++, py_value);
     }
 
@@ -2025,12 +1909,8 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
     {
       const deque<float> &attr_value = float_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-      float *py_value_ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<float>(std::move(attr_value));                                   
 
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -2039,12 +1919,8 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
     {
       const deque<uint8_t> &attr_value = uint8_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-      uint8_t *py_value_ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+      
+      PyObject *py_value = create_shared_array_from_deque<uint8_t>(std::move(attr_value));                                   
                                
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -2053,12 +1929,8 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
     {
       const deque<int8_t> &attr_value = int8_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-      int8_t *py_value_ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<int8_t>(std::move(attr_value));                                   
                                
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -2067,12 +1939,8 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
     {
       const deque<uint16_t> &attr_value = uint16_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-      uint16_t *py_value_ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<uint16_t>(std::move(attr_value));                                   
                                
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -2081,12 +1949,8 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
     {
       const deque<int16_t> &attr_value = int16_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
-      int16_t *py_value_ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<int16_t>(std::move(attr_value));                                   
                                
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -2095,12 +1959,8 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
     {
       const deque<uint32_t> &attr_value = uint32_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-      uint32_t *py_value_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<uint32_t>(std::move(attr_value));                                   
                                
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -2109,12 +1969,8 @@ PyObject* py_build_cell_attr_values_struct(const CELL_IDX_T key,
     {
       const deque<int32_t> &attr_value = int32_attrs[i];
       dims[0] = attr_value.size();
-      PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-      int32_t *py_value_ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-      for (size_t j = 0; j < attr_value.size(); j++)
-        {
-          py_value_ptr[j]   = attr_value[j];
-        }
+
+      PyObject *py_value = create_shared_array_from_deque<int32_t>(std::move(attr_value));                                   
                                
       PyStructSequence_SetItem(py_attrval, attr_pos++, py_value);
     }
@@ -2368,7 +2224,7 @@ void build_edge_attr_vec (const AttrVal& attr_val,
                                
                                
 template <class T>
-void py_build_edge_attr_value (const vector < vector<T> >& edge_attr_values,
+void py_build_edge_attr_value (vector < vector<T> >& edge_attr_values,
                                const NPY_TYPES numpy_type,
                                const size_t attr_index,
                                const vector <vector <string> >& attr_names,
@@ -2381,12 +2237,8 @@ void py_build_edge_attr_value (const vector < vector<T> >& edge_attr_values,
           npy_intp dims[1]; npy_intp ind = 0;
           const vector<T> &attr_value = edge_attr_values[i];
           dims[0] = attr_value.size();
-          PyObject *py_value = (PyObject *)PyArray_SimpleNew(1, dims, numpy_type);
-          T *py_value_ptr = (T *)PyArray_GetPtr((PyArrayObject *)py_value, &ind);
-          for (size_t j = 0; j < attr_value.size(); j++)
-            {
-              py_value_ptr[j]   = attr_value[j];
-            }
+
+          PyObject *py_value = create_shared_array_from_vector<T>(attr_value);
                                    
           PyDict_SetItemString(py_attrval,
                                (attr_names[attr_index][i]).c_str(),
@@ -2477,13 +2329,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
   npy_intp dims[1], ind = 0;
   dims[0] = adj_vector.size();
                 
-  PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
-  uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
-  
-  for (size_t j = 0; j < adj_vector.size(); j++)
-    {
-      adj_ptr[j] = adj_vector[j];
-    }
+  PyObject *adj_arr = create_shared_array_from_vector<uint32_t>(adj_vector);                                   
   
   PyObject *py_attrmap  = PyDict_New();
   size_t namespace_index=0;
@@ -2493,12 +2339,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
           
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<float>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-          float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<float>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<float>(edge_attr_values.const_attr_vec<float>(i));   
           status = PyList_Append(py_attrval, py_arr);
           throw_assert(status == 0,
                        "py_build_edge_tuple_value: unable to append to list");
@@ -2507,12 +2348,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint8_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-          uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<uint8_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<uint8_t>(edge_attr_values.const_attr_vec<uint8_t>(i));   
           status = PyList_Append(py_attrval, py_arr);
           throw_assert(status == 0,
                    "py_build_edge_tuple_value: unable to append to list");
@@ -2520,12 +2356,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint16_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-          uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<uint16_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<uint16_t>(edge_attr_values.const_attr_vec<uint16_t>(i));   
           status = PyList_Append(py_attrval, py_arr);
           throw_assert(status == 0,
                    "py_build_edge_tuple_value: unable to append to list");
@@ -2533,12 +2364,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint32_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-          uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<uint32_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<uint32_t>(edge_attr_values.const_attr_vec<uint32_t>(i));   
           status = PyList_Append(py_attrval, py_arr);
           throw_assert(status == 0,
                    "py_build_edge_tuple_value: unable to append to list");
@@ -2546,12 +2372,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int8_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-          int8_t *ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<int8_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<int8_t>(edge_attr_values.const_attr_vec<int8_t>(i));   
           status = PyList_Append(py_attrval, py_arr);
           throw_assert(status == 0,
                    "py_build_edge_tuple_value: unable to append to list");
@@ -2559,12 +2380,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int16_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
-          int16_t *ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<int16_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<int16_t>(edge_attr_values.const_attr_vec<int16_t>(i));   
           status = PyList_Append(py_attrval, py_arr);
           throw_assert(status == 0,
                    "py_build_edge_tuple_value: unable to append to list");
@@ -2572,12 +2388,7 @@ PyObject* py_build_edge_tuple_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int32_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-          int32_t *ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<int32_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<int32_t>(edge_attr_values.const_attr_vec<int32_t>(i));   
           status = PyList_Append(py_attrval, py_arr);
           throw_assert(status == 0,
                    "py_build_edge_tuple_value: unable to append to list");
@@ -2611,14 +2422,8 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
   npy_intp dims[1], ind = 0;
   dims[0] = adj_vector.size();
                 
-  PyObject *adj_arr = PyArray_SimpleNew(1, dims, NPY_UINT32);
-  uint32_t *adj_ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)adj_arr, &ind);
-  
-  for (size_t j = 0; j < adj_vector.size(); j++)
-    {
-      adj_ptr[j] = adj_vector[j];
-    }
-  
+  PyObject *adj_arr = create_shared_array_from_vector<uint32_t>(adj_vector);                                   
+
   PyObject *py_attrmap  = PyDict_New();
   size_t namespace_index=0;
   for (auto const & edge_attr_values : edge_attr_vector)
@@ -2628,12 +2433,7 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
       
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<float>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
-          float *ptr = (float *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<float>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<float>(edge_attr_values.const_attr_vec<float>(i));   
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_float][i].c_str(), py_arr);
           throw_assert(status == 0,
                    "py_build_edge_array_dict_value: unable to set dictionary item");
@@ -2641,12 +2441,7 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint8_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT8);
-          uint8_t *ptr = (uint8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<uint8_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<uint8_t>(edge_attr_values.const_attr_vec<uint8_t>(i));   
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint8][i].c_str(), py_arr);
           throw_assert(status == 0,
                    "py_build_edge_array_dict_value: unable to set dictionary item");
@@ -2654,12 +2449,7 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint16_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT16);
-          uint16_t *ptr = (uint16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<uint16_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<uint16_t>(edge_attr_values.const_attr_vec<uint16_t>(i));   
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint16][i].c_str(), py_arr);
           throw_assert(status == 0,
                    "py_build_edge_array_dict_value: unable to set dictionary item");
@@ -2667,12 +2457,7 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<uint32_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_UINT32);
-          uint32_t *ptr = (uint32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<uint32_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<uint32_t>(edge_attr_values.const_attr_vec<uint32_t>(i));   
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_uint32][i].c_str(), py_arr);
           throw_assert(status == 0,
                    "py_build_edge_array_dict_value: unable to set dictionary item");
@@ -2680,12 +2465,7 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int8_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT8);
-          int8_t *ptr = (int8_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<int8_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<int8_t>(edge_attr_values.const_attr_vec<int8_t>(i));   
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int8][i].c_str(), py_arr);
           throw_assert(status == 0,
                    "py_build_edge_array_dict_value: unable to set dictionary item");
@@ -2693,12 +2473,7 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int16_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT16);
-          int16_t *ptr = (int16_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<int16_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<int16_t>(edge_attr_values.const_attr_vec<int16_t>(i));   
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int16][i].c_str(), py_arr);
           throw_assert(status == 0,
                    "py_build_edge_array_dict_value: unable to set dictionary item");
@@ -2706,12 +2481,7 @@ PyObject* py_build_edge_array_dict_value (const NODE_IDX_T key,
         }
       for (size_t i = 0; i < edge_attr_values.size_attr_vec<int32_t>(); i++)
         {
-          PyObject *py_arr = (PyObject *)PyArray_SimpleNew(1, dims, NPY_INT32);
-          int32_t *ptr = (int32_t *)PyArray_GetPtr((PyArrayObject *)py_arr, &ind);
-          for (size_t j = 0; j < adj_vector.size(); j++)
-            {
-              ptr[j] = edge_attr_values.at<int32_t>(i,j); 
-            }
+          PyObject *py_arr = create_shared_array_from_vector<int32_t>(edge_attr_values.const_attr_vec<int32_t>(i));   
           status = PyDict_SetItemString(py_attrvalmap, attr_names.at(attr_namespace)[AttrVal::attr_index_int32][i].c_str(), py_arr);
           throw_assert(status == 0,
                    "py_build_edge_array_dict_value: unable to set dictionary item");
@@ -2773,7 +2543,7 @@ PyObject* NeuroH5EdgeIter_iternext(PyObject *self)
   if (py_state->state->it_edge != py_state->state->edge_map.cend())
     {
       const NODE_IDX_T key      = py_state->state->it_edge->first;
-      const edge_tuple_t& et    = py_state->state->it_edge->second;
+      edge_tuple_t& et    = py_state->state->it_edge->second;
 
       PyObject* py_edge_tuple_value = py_build_edge_tuple_value (key, et, py_state->state->edge_attr_name_spaces);
       throw_assert(py_edge_tuple_value != NULL,
@@ -2849,7 +2619,7 @@ NeuroH5EdgeIter_FromMap(const edge_map_t& prj_edge_map,
   p->state->count         = prj_edge_map.size();
   p->state->edge_map      = std::move(prj_edge_map);
   p->state->edge_attr_name_spaces = edge_attr_name_spaces;
-  p->state->it_edge       = p->state->edge_map.cbegin();
+  p->state->it_edge       = p->state->edge_map.begin();
 
   return (PyObject *)p;
 }
@@ -3262,10 +3032,10 @@ extern "C"
         
         if (prj_edge_map.size() > 0)
           {
-            for (auto const& it : prj_edge_map)
+            for (auto & it : prj_edge_map)
               {
                 const NODE_IDX_T key_node = it.first;
-                const edge_tuple_t& et    = it.second;
+                edge_tuple_t& et    = it.second;
 
                 PyObject* py_edge_tuple_value = py_build_edge_tuple_value (key_node, et, edge_attr_name_spaces);
 
@@ -7449,7 +7219,7 @@ extern "C"
     py_ngg->state->pop_search_ranges  = pop_search_ranges;
     py_ngg->state->pop_pairs       = pop_pairs;
     py_ngg->state->pop_labels      = pop_labels;
-    py_ngg->state->edge_map_iter   = py_ngg->state->edge_map.cbegin();
+    py_ngg->state->edge_map_iter   = py_ngg->state->edge_map.begin();
     py_ngg->state->edge_map_type   = edge_map_type;
     py_ngg->state->edge_attr_name_spaces = attr_name_spaces;
     py_ngg->state->total_num_nodes = total_num_nodes;
@@ -8253,7 +8023,7 @@ extern "C"
     
     py_ngg->state->edge_map = prj_vector[0];
     //throw_assert(py_ngg->state->edge_map.size() > 0);
-    py_ngg->state->edge_map_iter = py_ngg->state->edge_map.cbegin();
+    py_ngg->state->edge_map_iter = py_ngg->state->edge_map.begin();
     
     py_ngg->state->block_index += py_ngg->state->total_read_blocks;
     status = MPI_Barrier(py_ngg->state->comm);

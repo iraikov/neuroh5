@@ -8,8 +8,9 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 path = "/scratch1/03320/iraikov/striped2/MiV/Microcircuit/MiV_Cells_Microcircuit_20220412.h5"
+path = "./data/DGC_forest_append_test_20180116.h5"
 
-(g,n)  = scatter_read_trees(path, "PYR", io_size=12, comm=comm)
+(g,n)  = scatter_read_trees(path, "GC", io_size=1, comm=comm)
 
 for (gid, tree) in g:
     print (f"rank {rank}: gid {gid} = {np.sum(tree['section'])}")
