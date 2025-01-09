@@ -250,40 +250,79 @@ namespace neuroh5
       }
     
     template<>
-    const std::vector<float>& AttrVal::attr_vec (size_t i)  const
+    const std::vector<float>& AttrVal::const_attr_vec (size_t i)  const
     {
       return this->float_values[i];
     }
     
     template<>
-    const std::vector<uint8_t>& AttrVal::attr_vec (size_t i)  const
+    const std::vector<uint8_t>& AttrVal::const_attr_vec (size_t i)  const
     {
       return this->uint8_values[i];
     }
     template<>
-    const std::vector<int8_t>& AttrVal::attr_vec (size_t i)  const
+    const std::vector<int8_t>& AttrVal::const_attr_vec (size_t i)  const
     {
       return this->int8_values[i];
     }
     
     template<>
-    const std::vector<uint16_t>& AttrVal::attr_vec (size_t i)  const
+    const std::vector<uint16_t>& AttrVal::const_attr_vec (size_t i)  const
     {
       return this->uint16_values[i];
     }
     template<>
-    const std::vector<int16_t>& AttrVal::attr_vec (size_t i)  const
+    const std::vector<int16_t>& AttrVal::const_attr_vec (size_t i)  const
     {
       return this->int16_values[i];
     }
 
     template<>
-    const std::vector<uint32_t>& AttrVal::attr_vec (size_t i)  const
+    const std::vector<uint32_t>& AttrVal::const_attr_vec (size_t i)  const
     {
       return this->uint32_values[i];
     }
     template<>
-    const std::vector<int32_t>& AttrVal::attr_vec (size_t i)  const
+    const std::vector<int32_t>& AttrVal::const_attr_vec (size_t i)  const
+    {
+      return this->int32_values[i];
+    }
+
+    template<>
+    std::vector<float>& AttrVal::attr_vec (size_t i)
+    {
+      return this->float_values[i];
+    }
+    
+    template<>
+    std::vector<uint8_t>& AttrVal::attr_vec (size_t i)
+    {
+      return this->uint8_values[i];
+    }
+    template<>
+    std::vector<int8_t>& AttrVal::attr_vec (size_t i)
+    {
+      return this->int8_values[i];
+    }
+    
+    template<>
+    std::vector<uint16_t>& AttrVal::attr_vec (size_t i)
+    {
+      return this->uint16_values[i];
+    }
+    template<>
+    std::vector<int16_t>& AttrVal::attr_vec (size_t i)
+    {
+      return this->int16_values[i];
+    }
+
+    template<>
+    std::vector<uint32_t>& AttrVal::attr_vec (size_t i)
+    {
+      return this->uint32_values[i];
+    }
+    template<>
+    std::vector<int32_t>& AttrVal::attr_vec (size_t i)
     {
       return this->int32_values[i];
     }

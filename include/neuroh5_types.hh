@@ -205,8 +205,10 @@ namespace neuroh5
 
   typedef std::map<NODE_IDX_T, edge_tuple_t> edge_map_t;
   
-  typedef edge_map_t::const_iterator edge_map_iter_t;
-  
+  typedef edge_map_t::const_iterator edge_map_const_iter_t;
+
+  typedef edge_map_t::iterator edge_map_iter_t;
+
   typedef std::map<rank_t, edge_map_t> rank_edge_map_t;
   
   typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;

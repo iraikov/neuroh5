@@ -283,7 +283,7 @@ namespace neuroh5
                 {
                   size_t i = attr_index.attr_index<T>(attr_name);
                   string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
-                  graph::write_edge_attribute<T>(comm, file, path, edge_attr_values.attr_vec<T>(i));
+                  graph::write_edge_attribute<T>(comm, file, path, edge_attr_values.const_attr_vec<T>(i));
                 }
             }
           else
@@ -368,7 +368,7 @@ namespace neuroh5
                   size_t i = attr_index.attr_index<T>(attr_name);
                   graph::append_edge_attribute<T>(comm, file, src_pop_name, dst_pop_name,
                                                   attr_namespace, attr_name,
-                                                  edge_attr_values.attr_vec<T>(i),
+                                                  edge_attr_values.const_attr_vec<T>(i),
 						  chunk_size);
                 }
             }

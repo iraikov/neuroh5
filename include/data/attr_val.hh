@@ -72,7 +72,10 @@ namespace neuroh5
       void resize (size_t size);
       
       template<class T>
-      const std::vector<T>& attr_vec (size_t i) const; 
+      const std::vector<T>& const_attr_vec (size_t i) const; 
+
+      template<class T>
+      std::vector<T>& attr_vec (size_t i); 
 
       template<class T>
       size_t size_attr (size_t i) const;
