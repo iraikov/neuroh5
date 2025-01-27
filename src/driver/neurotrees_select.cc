@@ -4,7 +4,7 @@
 ///
 ///  Program for selecting tree subsets.
 ///
-///  Copyright (C) 2016-2021 Project Neurotrees.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 
@@ -540,14 +540,14 @@ int main(int argc, char** argv)
 
   // Created packed representation of the tree subset arranged per rank
   vector<char> sendbuf; 
-  vector<int> sendcounts, sdispls;
+  vector<size_t> sendcounts, sdispls;
   data::serialize_rank_tree_map (size, rank, tree_subset_rank_map,
                                  sendcounts, sendbuf, sdispls);
   tree_subset_rank_map.clear();
   
   // Send packed representation of the tree subset to the respective ranks
   vector<char> recvbuf; 
-  vector<int> recvcounts, rdispls;
+  vector<size_t> recvcounts, rdispls;
   throw_assert(mpi::alltoallv_vector(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                      recvcounts, rdispls, recvbuf) >= 0,
                "neurotrees_select: error while sending tree subset to assigned ranks"); 

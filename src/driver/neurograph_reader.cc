@@ -1,10 +1,10 @@
 // -*- mode: c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //==============================================================================
-///  @file reader.cc
+///  @file neurograph_reader.cc
 ///
 ///  Driver program for read_graph function.
 ///
-///  Copyright (C) 2016-2020 Project NeuroH5.
+///  Copyright (C) 2016-2024 Project NeuroH5.
 //==============================================================================
 
 
@@ -63,7 +63,7 @@ void print_usage_full(char** argv)
  *****************************************************************************/
 
 void output_projection(string outfilename,
-                       const edge_map_t& projection)
+                       edge_map_t& projection)
 {
   DEBUG("output_projection: outfilename is ",outfilename,"\n");
 
@@ -71,7 +71,7 @@ void output_projection(string outfilename,
   ofstream outfile;
   outfile.open(outfilename.c_str());
 
-  for (edge_map_iter_t iter = projection.cbegin(); iter != projection.cend(); iter++)
+  for (edge_map_iter_t iter = projection.begin(); iter != projection.end(); iter++)
     {
       const NODE_IDX_T& dst = iter->first;
       const edge_tuple_t& tup = iter->second;

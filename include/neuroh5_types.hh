@@ -211,7 +211,9 @@ namespace neuroh5
 
   typedef std::map<rank_t, edge_map_t> rank_edge_map_t;
   
-  typedef rank_edge_map_t::const_iterator rank_edge_map_iter_t;
+  typedef rank_edge_map_t::const_iterator rank_edge_map_const_iter_t;
+
+  typedef rank_edge_map_t::iterator rank_edge_map_iter_t;
 
   typedef map<CELL_IDX_T, set<rank_t> > node_rank_map_t;
   
