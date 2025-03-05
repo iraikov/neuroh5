@@ -5,7 +5,7 @@
 ///  Top-level functions for appending edge information to graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2024 Project NeuroH5.
+///  Copyright (C) 2016-2025 Project NeuroH5.
 //==============================================================================
 
 
@@ -20,6 +20,7 @@
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
 #include "range_sample.hh"
+#include "node_rank_map.hh"
 #include "debug.hh"
 #include "mpi_debug.hh"
 #include "throw_assert.hh"
@@ -107,77 +108,27 @@ namespace neuroh5
       src_start = pop_ranges[src_pop_idx].start;
       src_end   = src_start + pop_ranges[src_pop_idx].count;
       
-      vector< NODE_IDX_T > node_index;
-
-      { // Determine the destination node indices present in the input
-        // edge map across all ranks
-        MPI_Request request;
-        size_t num_nodes = input_edge_map.size();
-        vector<size_t> sendbuf_num_nodes(size, num_nodes);
-        vector<size_t> recvbuf_num_nodes(size);
-        vector<int> recvcounts(size, 0);
-        vector<int> displs(size+1, 0);
-        throw_assert(MPI_Iallgather(&sendbuf_num_nodes[0], 1, MPI_SIZE_T,
-                                    &recvbuf_num_nodes[0], 1, MPI_SIZE_T,
-                                    all_comm,
-                                    &request) == MPI_SUCCESS,
-                     "append_graph: error in MPI_Iallgather");
-        throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
-                     "append_graph: error in MPI_Wait");
-
-        for (size_t p=0; p<size; p++)
-          {
-            total_num_nodes = total_num_nodes + recvbuf_num_nodes[p];
-            displs[p+1] = displs[p] + recvbuf_num_nodes[p];
-            recvcounts[p] = recvbuf_num_nodes[p];
-          }
-        
-        vector< NODE_IDX_T > local_node_index;
-        for (auto iter: input_edge_map)
-          {
-            NODE_IDX_T dst          = iter.first;
-            local_node_index.push_back(dst);
-          }
-        
-        node_index.resize(total_num_nodes,0);
-        throw_assert(MPI_Iallgatherv(&local_node_index[0], num_nodes, MPI_NODE_IDX_T,
-                                     &node_index[0], &recvcounts[0], &displs[0], MPI_NODE_IDX_T,
-                                     all_comm,
-                                     &request) == MPI_SUCCESS,
-                     "append_graph: error in MPI_Iallgatherv");
-        throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
-                     "append_graph: error in MPI_Wait");
-                     
-        vector<size_t> p = sort_permutation(node_index, compare_nodes);
-        apply_permutation_in_place(node_index, p);
-      }
-
-      throw_assert_nomsg(node_index.size() == total_num_nodes);
-
-      if (total_num_nodes == 0)
+      vector< NODE_IDX_T > local_node_index;
+      for (auto iter: input_edge_map)
         {
-          throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-          return 0;
+          NODE_IDX_T dst = iter.first;
+          local_node_index.push_back(dst);
         }
       
       set<size_t> io_rank_set;
       data::range_sample(size, io_size, io_rank_set);
       bool is_io_rank = (io_rank_set.find(rank) != io_rank_set.end());
 
-      // A vector that maps nodes to compute ranks
+      // Map nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
-      {
-        rank_t r=0; 
-        for (size_t i = 0; i < node_index.size(); i++)
-          {
-            while (io_rank_set.count(r) == 0)
-              {
-                r++;
-                if ((unsigned int)size <= r) r=0;
-              }
-            node_rank_map.insert(make_pair(node_index[i], r++));
-          }
-      }
+      compute_node_rank_map(comm, io_rank_set, local_node_index,
+                            total_num_nodes, node_rank_map);
+      if (total_num_nodes == 0)
+        {
+          throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
+          return 0;
+        }
+
       rank_edge_map_t rank_edge_map;
       mpi::MPI_DEBUG(all_comm, "append_graph: ", src_pop_name, " -> ", dst_pop_name, ": ",
                      " total_num_nodes = ", total_num_nodes);
