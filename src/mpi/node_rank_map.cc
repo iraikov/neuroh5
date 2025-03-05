@@ -18,6 +18,7 @@
 #include "throw_assert.hh"
 #include "neuroh5_types.hh"
 #include "node_rank_map.hh"
+#include "sort_permutation.hh"
 
 using namespace std;
 
@@ -32,7 +33,7 @@ namespace neuroh5
     void compute_node_rank_map
     (
      MPI_Comm comm,
-     set<rank_t> &rank_set,
+     set<size_t> &rank_set,
      vector< NODE_IDX_T > &local_node_index,
      size_t &total_num_nodes,
      map<NODE_IDX_T, rank_t> &node_rank_map
@@ -48,7 +49,7 @@ namespace neuroh5
       // Step 1: Gather all nodes from all ranks to create a global list
       MPI_Request request;
       size_t local_num_nodes = local_node_index.size();
-      vector<size_t> sendbuf_num_nodes(size, num_nodes);
+      vector<size_t> sendbuf_num_nodes(size, local_num_nodes);
       vector<size_t> recvbuf_num_nodes(size);
       vector<int> recvcounts(size, 0);
       vector<int> displs(size+1, 0);
@@ -82,8 +83,8 @@ namespace neuroh5
       throw_assert(MPI_Wait(&request, MPI_STATUS_IGNORE) == MPI_SUCCESS,
                    "compute_node_rank_map: error in MPI_Wait");
 
-      vector<size_t> p = sort_permutation(node_index, compare_nodes);
-      apply_permutation_in_place(node_index, p);
+      vector<size_t> p = data::sort_permutation(node_index, compare_nodes);
+      data::apply_permutation_in_place(node_index, p);
       
       // Verify we have the expected number of nodes
       throw_assert(node_index.size() == total_num_nodes,
@@ -96,7 +97,7 @@ namespace neuroh5
       rank_t r=0; 
       for (size_t i = 0; i < node_index.size(); i++)
         {
-          while (io_rank_set.count(r) == 0)
+          while (rank_set.count(r) == 0)
             {
               r++;
               if ((unsigned int)size <= r) r=0;

@@ -19,6 +19,7 @@
 #include "path_names.hh"
 #include "sort_permutation.hh"
 #include "serialize_edge.hh"
+#include "range_sample.hh"
 #include "node_rank_map.hh"
 #include "throw_assert.hh"
 #include "debug.hh"
@@ -99,7 +100,7 @@ namespace neuroh5
       vector< NODE_IDX_T > local_node_index;
       for (auto iter: input_edge_map)
         {
-          NODE_IDX_T dst          = iter.first;
+          NODE_IDX_T dst = iter.first;
           local_node_index.push_back(dst);
         }
       
@@ -110,8 +111,8 @@ namespace neuroh5
       // Map nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
       total_num_nodes = 0;
-      compute_node_rank_map(comm, io_rank_set, local_node_index,
-                            total_num_nodes, node_rank_map);
+      mpi::compute_node_rank_map(all_comm, io_rank_set, local_node_index,
+                                 total_num_nodes, node_rank_map);
       
       if (total_num_nodes == 0)
         {

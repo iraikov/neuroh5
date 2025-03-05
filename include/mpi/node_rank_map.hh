@@ -31,8 +31,9 @@ namespace neuroh5
 
     void compute_node_rank_map
     (
-     size_t num_ranks,
-     size_t num_nodes,
+     MPI_Comm comm,
+     set<size_t> &rank_set,
+     vector< NODE_IDX_T > &local_node_index,
      size_t &total_num_nodes,
      map<NODE_IDX_T, rank_t> &node_rank_map
      );

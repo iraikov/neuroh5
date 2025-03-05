@@ -121,8 +121,8 @@ namespace neuroh5
 
       // Map nodes to compute ranks
       map< NODE_IDX_T, rank_t > node_rank_map;
-      compute_node_rank_map(comm, io_rank_set, local_node_index,
-                            total_num_nodes, node_rank_map);
+      mpi::compute_node_rank_map(all_comm, io_rank_set, local_node_index,
+                                 total_num_nodes, node_rank_map);
       if (total_num_nodes == 0)
         {
           throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
