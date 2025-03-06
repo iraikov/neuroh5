@@ -82,24 +82,71 @@ connected). In the next section, we present the Destination Block
 Sparse format, and present details of the implementation and initial
 performance metrics.
 
-## Destination Block Sparse connectivity format
+## Destination Block Sparse (DBS) Format
 
-In the Destination Block Sparse format the destination indices are
-stored in blocks (of destinations). The following invariants hold:
+The Destination Block Sparse (DBS) format is a memory-efficient graph
+representation designed for parallel processing of large-scale neural
+network connectivity. This format optimizes for the common case where
+each destination (target neuron) connects to a relatively small subset
+of sources (input neurons).
 
-1. The destination indices in a block are contiguous. 
-2. The number of destinations per block may vary from block to block.
+### Core Data Structures
 
-The Destination Block Sparse format consists of the following datasets:
+The DBS format consists of four primary arrays:
 
-- Source Index : This array holds the indices of all source vertices in the projection. It's length is equal to the number of edges in the projection.
-- Destination Index : This array holds the first destination index in each block. Its length is equal to the number of blocks.
-- Destination Block Pointer : This array holds offsets into the Destination Pointer array. Its length is equal to the number of blocks plus one. The number of destinations in block i equals:
-  Destination Block Pointer[i + 1] – Destination Block Pointer[i]
-The destination index of destination j in block i is Destination Index[i] + j.
-- Destination Pointer : This array holds offsets into the Source Index and edge attribute datasets. Its length is equal to the sum of the destination counts in all blocks plus one. For each destination block, Destination Pointer stores one offset per destination in the block. The number of source entries for destination j of block i equals:
+1. **Source Index Array (`src_idx`)**: 
+   - Contains the indices of all source vertices in the projection
+   - Length equals the total number of edges (connections) in the projection
+   - Stores the actual connectivity information
 
-  Destination Pointer[Destination Block Pointer[i] + j + 1] - estination Pointer[Destination Block Pointer[i] + j]
+2. **Destination Block Pointer Array (`dst_blk_ptr`)**: 
+   - Contains offsets into the Destination Pointer array
+   - Length equals the number of blocks plus one (includes a sentinel value)
+   - The difference between consecutive elements indicates the number of destinations in each block
+
+3. **Destination Index Array (`dst_idx`)**: 
+   - Contains the first destination index in each block
+   - Length equals the number of blocks
+   - Destinations within a block have contiguous indices
+
+4. **Destination Pointer Array (`dst_ptr`)**: 
+   - Contains offsets into the Source Index array
+   - Length equals the total number of destinations plus one (includes a sentinel value)
+   - Indicates where each destination's source connections begin and end
+
+### Key Properties and Relationships
+
+- **Block Structure**: Destinations are organized into blocks where each block contains contiguous destination indices
+- **Variable Block Size**: The number of destinations per block can vary
+- **Contiguous Destinations**: All destinations within a block have contiguous indices
+- **Efficient Edge Lookup**: To find all sources connected to a specific destination:
+   1. Locate the block containing the destination
+   2. Calculate the destination's offset within the block
+   3. Use the offset to find the appropriate pointers in `dst_ptr`
+   4. Access the source indices from `src_idx`
+
+### Formal Relationships
+
+For a given block index `i`:
+- Number of destinations in block `i` = `dst_blk_ptr[i+1] - dst_blk_ptr[i]`
+- Destination index of the j-th destination in block `i` = `dst_idx[i] + j`
+- For the j-th destination in block `i`:
+  - Offset into `dst_ptr` = `dst_blk_ptr[i] + j`
+  - Source index range starts at `src_idx[dst_ptr[dst_blk_ptr[i] + j]]`
+  - Source index range ends at `src_idx[dst_ptr[dst_blk_ptr[i] + j + 1] - 1]`
+  - Number of sources = `dst_ptr[dst_blk_ptr[i] + j + 1] - dst_ptr[dst_blk_ptr[i] + j]`
+
+## Benefits for Parallel Processing
+
+This format is particularly well-suited for parallel processing because:
+1. It clusters related destinations into blocks, improving cache locality
+2. It allows for balanced distribution of computational load across processors
+3. It minimizes communication overhead when distributing graph data
+4. It provides efficient access patterns for both forward and backward traversals
+
+The format achieves memory efficiency by using index arrays and offset
+pointers rather than storing a full adjacency matrix, making it ideal
+for sparse connectivity patterns typical in neural networks.
 
 ## Edge Attributes
 
