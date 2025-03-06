@@ -5,7 +5,7 @@
 ///
 ///  Populates a mapping between node indices and edge values.
 ///
-///  Copyright (C) 2016-2018 Project NeuroH5.
+///  Copyright (C) 2016-2025 Project NeuroH5.
 //==============================================================================
 
 #include <vector>
@@ -41,11 +41,17 @@ namespace neuroh5
      )
     {
       int ierr = 0; size_t dst_ptr_size;
+      
+      // Ensure we have data to process
+      if (dst_blk_ptr.empty() || dst_idx.empty() || dst_ptr.empty() || src_idx.empty())
+        {
+          return ierr;
+        };
 
       if (dst_blk_ptr.size() > 0)
         {
           dst_ptr_size = dst_ptr.size();
-          for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+          for (size_t b = 0; b < dst_idx.size(); ++b)
             {
               size_t low_dst_ptr = dst_blk_ptr[b],
                 high_dst_ptr = dst_blk_ptr[b+1];
@@ -57,6 +63,7 @@ namespace neuroh5
                     {
                       NODE_IDX_T dst = dst_base + ii + dst_start;
                       size_t low = dst_ptr[i], high = dst_ptr[i+1];
+                      
                       if (high > low)
                         {
                           switch (edge_map_type)

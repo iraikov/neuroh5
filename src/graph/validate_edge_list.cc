@@ -40,11 +40,10 @@ namespace neuroh5
       pair<pop_t,pop_t> pp;
 
       // loop over all edges, look up the node populations, and validate the pairs
-
-      if (dst_blk_ptr.size() > 0)
+      if (dst_idx.size() > 0)
         {
           size_t dst_ptr_size = dst_ptr.size();
-          for (size_t b = 0; b < dst_blk_ptr.size()-1; ++b)
+          for (size_t b = 0; b < dst_idx.size(); ++b)
             {
               size_t low_dst_ptr = dst_blk_ptr[b],
                 high_dst_ptr = dst_blk_ptr[b+1];
