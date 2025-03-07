@@ -710,7 +710,7 @@ namespace neuroh5
       // Step 5: Distribute assignments to all ranks
       distribute_assignments(comm, rank_assignments);
       block_base = rank_assignments.dst_block_start[rank];
-      edge_base = rank_assignments.dst_ptr_start[rank];
+      edge_base = rank_assignments.src_idx_start[rank];
 
       
       // Step 6: Each rank reads its portion of src_idx based on its assignment
