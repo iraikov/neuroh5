@@ -123,6 +123,11 @@ namespace neuroh5
                    "read_projection: error in append_edge_map");
       local_num_nodes = prj_edge_map.size();
       
+      mpi::MPI_DEBUG(comm, "read_projection: local_num_nodes = ", 
+                     local_num_nodes, 
+                     " local_prj_num_edges = ", local_prj_num_edges,
+                     " edge_count = ", edge_count);
+
       // ensure that all edges in the projection have been read and
       // appended to edge_list
       throw_assert(local_prj_num_edges == edge_count,

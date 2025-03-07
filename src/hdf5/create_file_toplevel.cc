@@ -1,4 +1,5 @@
 
+#include <mpi.h>
 #include <hdf5.h>
 
 #include <string>
