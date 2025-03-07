@@ -124,11 +124,12 @@ namespace neuroh5
               hsize_t local_read_blocks;
 
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: reading projection ", src_pop_name, " -> ", dst_pop_name);
-              throw_assert_nomsg(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
-                                                                block_base, edge_base,
-                                                                dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                                total_num_edges, total_read_blocks, local_read_blocks,
-                                                                offset, numitems * size) >= 0);
+              throw_assert(hdf5::read_projection_datasets(io_comm, file_name, src_pop_name, dst_pop_name,
+                                                          block_base, edge_base,
+                                                          dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                          total_num_edges, total_read_blocks, local_read_blocks,
+                                                          offset, numitems * size) >= 0,
+                           "error in read_projection_datasets");
           
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: validating projection ", src_pop_name, " -> ", dst_pop_name);
               // validate the edges
@@ -153,9 +154,10 @@ namespace neuroh5
 
               
               // append to the edge map
-              throw_assert_nomsg(data::append_rank_edge_map(rank, size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
-                                                            attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
-                                                            edge_map_type) >= 0);
+              throw_assert(data::append_rank_edge_map(rank, size, dst_start, src_start, dst_blk_ptr, dst_idx, dst_ptr, src_idx,
+                                                      attr_namespaces, edge_attr_map, node_rank_map, num_edges, prj_rank_edge_map,
+                                                      edge_map_type) >= 0,
+                           "error in append_rank_edge_map");
               
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection: read ", num_edges,
                              " edges from projection ", src_pop_name, " -> ", dst_pop_name);
@@ -180,7 +182,13 @@ namespace neuroh5
 
           
           MPI_Comm_free(&io_comm);
-          throw_assert_nomsg(MPI_Bcast(&total_read_blocks, 1, MPI_SIZE_T, io_rank_root, all_comm) == MPI_SUCCESS);
+          MPI_Request bcast_req;
+          throw_assert(MPI_Ibcast(&total_read_blocks, 1, MPI_SIZE_T, io_rank_root, all_comm,
+                                  &bcast_req) == MPI_SUCCESS,
+                       "error in MPI_Ibcast");
+          throw_assert(MPI_Wait(&bcast_req, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                       "error in MPI_Wait");
+
           throw_assert_nomsg(mpi::alltoallv_vector<char>(all_comm, MPI_CHAR, sendcounts, sdispls, sendbuf,
                                                          recvcounts, rdispls, recvbuf) >= 0);
         }
@@ -203,11 +211,23 @@ namespace neuroh5
                 data::serialize_data(edge_attr_names, sendbuf);
                 sendbuf_size = sendbuf.size();
               }
+            
+            MPI_Request bcast_req;
 
             throw_assert_nomsg(MPI_Barrier(all_comm) == MPI_SUCCESS);
-            throw_assert_nomsg(MPI_Bcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm) == MPI_SUCCESS);
+            throw_assert(MPI_Ibcast(&sendbuf_size, 1, MPI_UINT32_T, 0, all_comm,
+                                    &bcast_req) == MPI_SUCCESS,
+                         "error in MPI_Ibcast");
+            throw_assert(MPI_Wait(&bcast_req, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                         "error in MPI_Wait");
             sendbuf.resize(sendbuf_size);
-            throw_assert_nomsg(MPI_Bcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm) == MPI_SUCCESS);
+            throw_assert(MPI_Ibcast(&sendbuf[0], sendbuf_size, MPI_CHAR, 0, all_comm,
+                                    &bcast_req) == MPI_SUCCESS,
+                         "error in MPI_Ibcast");
+            throw_assert(MPI_Wait(&bcast_req, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                         "error in MPI_Wait");
+
+            mpi::MPI_DEBUG(all_comm, "scatter_read_projection: sendbuf size is ", sendbuf_size);
             
             if (rank != 0)
               {
@@ -215,6 +235,7 @@ namespace neuroh5
               }
             edge_attr_names_vector.push_back(edge_attr_names);
             
+            mpi::MPI_DEBUG(all_comm, "scatter_read_projection: deserialized edge attr names");
           }
       }
 
