@@ -77,67 +77,68 @@ namespace neuroh5
       MPI_Comm_rank(comm, (int*)&rank);
       
       // Only rank 0 prints
-      if (rank == 0) {
-        os << "\n";
-        os << "==========================================================\n";
-        os << "                   RANK ASSIGNMENT TABLE                  \n";
-        os << "==========================================================\n";
-        
-        // Table header
-        os << std::left << std::setw(6) << "Rank" 
-           << std::setw(14) << "Dst Block Start" 
-           << std::setw(14) << "Dst Block Count" 
-           << std::setw(14) << "Src Idx Start" 
-           << std::setw(14) << "Src Idx Count" 
-           << std::setw(14) << "Dst Ptr Start" 
-           << std::setw(14) << "Dst Ptr Count" 
-           << "Dst Indices\n";
-        os << std::string(100, '-') << "\n";
-        
-        // Print information for each rank
-        for (unsigned int r = 0; r < size; r++)
-          {
-            os << std::left << std::setw(6) << r
-               << std::setw(14) << assignments.dst_block_start[r]
-               << std::setw(14) << assignments.dst_block_count[r]
-               << std::setw(14) << assignments.src_idx_start[r]
-               << std::setw(14) << assignments.src_idx_count[r]
-               << std::setw(14) << assignments.dst_ptr_start[r]
-               << std::setw(14) << assignments.dst_ptr_count[r];
-            
-            // Print destination indices (limit to first 5 if there are many)
-            os << "[";
-            size_t num_indices = assignments.local_dst_indices[r].size();
-            size_t display_count = std::min(num_indices, static_cast<size_t>(5));
-            
-            for (size_t i = 0; i < display_count; i++)
-              {
-                if (i > 0) os << ", ";
-                os << assignments.local_dst_indices[r][i];
-              }
-            
-            if (num_indices > display_count)
-              {
-                os << ", ... (" << (num_indices - display_count) << " more)";
-              }
-            os << "]\n";
+      if (rank == 0) 
+        {
+          os << "\n";
+          os << "==========================================================\n";
+          os << "                   RANK ASSIGNMENT TABLE                  \n";
+          os << "==========================================================\n";
+          
+          // Table header
+          os << std::left << std::setw(6) << "Rank" 
+             << std::setw(14) << "Dst Blk Start" 
+             << std::setw(14) << "Dst Blk Count" 
+             << std::setw(14) << "Src Idx Start" 
+             << std::setw(14) << "Src Idx Count" 
+             << std::setw(14) << "Dst Ptr Start" 
+             << std::setw(14) << "Dst Ptr Count" 
+             << "Dst Indices\n";
+          os << std::string(100, '-') << "\n";
+          
+          // Print information for each rank
+          for (unsigned int r = 0; r < size; r++)
+            {
+              os << std::left << std::setw(6) << r
+                 << std::setw(14) << assignments.dst_block_start[r]
+                 << std::setw(14) << assignments.dst_block_count[r]
+                 << std::setw(14) << assignments.src_idx_start[r]
+                 << std::setw(14) << assignments.src_idx_count[r]
+                 << std::setw(14) << assignments.dst_ptr_start[r]
+                 << std::setw(14) << assignments.dst_ptr_count[r];
+              
+              // Print destination indices (limit to first 5 if there are many)
+              os << "[";
+              size_t num_indices = assignments.local_dst_indices[r].size();
+              size_t display_count = std::min(num_indices, static_cast<size_t>(5));
+              
+              for (size_t i = 0; i < display_count; i++)
+                {
+                  if (i > 0) os << ", ";
+                  os << assignments.local_dst_indices[r][i];
+                }
+              
+              if (num_indices > display_count)
+                {
+                  os << ", ... (" << (num_indices - display_count) << " more)";
+                }
+              os << "]\n";
+            }
+          
+          // Print summary statistics
+          hsize_t total_blocks = 0;
+          hsize_t total_edges = 0;
+          
+          for (unsigned int r = 0; r < size; r++)
+            {
+              total_blocks += assignments.dst_block_count[r];
+              total_edges += assignments.src_idx_count[r];
+            }
+          
+          os << std::string(100, '-') << "\n";
+          os << "Total Blocks: " << total_blocks << "\n";
+          os << "Total Edges: " << total_edges << "\n";
+          os << "==========================================================\n\n";
         }
-        
-        // Print summary statistics
-        hsize_t total_blocks = 0;
-        hsize_t total_edges = 0;
-        
-        for (unsigned int r = 0; r < size; r++)
-          {
-            total_blocks += assignments.dst_block_count[r];
-            total_edges += assignments.src_idx_count[r];
-          }
-        
-        os << std::string(100, '-') << "\n";
-        os << "Total Blocks: " << total_blocks << "\n";
-        os << "Total Edges: " << total_edges << "\n";
-        os << "==========================================================\n\n";
-      }
     
       // Make sure all ranks wait until printing is done
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS,
@@ -228,19 +229,26 @@ namespace neuroh5
       MPI_Comm_size(comm, (int*)&size);
       MPI_Comm_rank(comm, (int*)&rank);
 
+      MPI_Request bcast_req[6];
+      int bcast_req_count = 0;
+
       // Broadcast simple members
-      throw_assert(MPI_Bcast(rank_assignments.dst_block_start.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
-      throw_assert(MPI_Bcast(rank_assignments.dst_block_count.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
-      throw_assert(MPI_Bcast(rank_assignments.src_idx_start.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
-      throw_assert(MPI_Bcast(rank_assignments.src_idx_count.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
-      throw_assert(MPI_Bcast(rank_assignments.dst_ptr_start.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
-      throw_assert(MPI_Bcast(rank_assignments.dst_ptr_count.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
+      throw_assert(MPI_Ibcast(rank_assignments.dst_block_start.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+      throw_assert(MPI_Ibcast(rank_assignments.dst_block_count.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+      throw_assert(MPI_Ibcast(rank_assignments.src_idx_start.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+      throw_assert(MPI_Ibcast(rank_assignments.src_idx_count.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+      throw_assert(MPI_Ibcast(rank_assignments.dst_ptr_start.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+      throw_assert(MPI_Ibcast(rank_assignments.dst_ptr_count.data(), size, MPI_UNSIGNED_LONG_LONG, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+
+      // Wait for broadcasts to complete
+      throw_assert(MPI_Waitall(bcast_req_count, bcast_req, MPI_STATUSES_IGNORE) == MPI_SUCCESS,
+                   "error in MPI_Waitall");
 
       // For the destination indices, we'll create a flattened array and index structure
       vector<int> indices_counts(size, 0);
@@ -278,10 +286,17 @@ namespace neuroh5
         }
     
       // Broadcast the counts and displacements
-      throw_assert(MPI_Bcast(indices_counts.data(), size, MPI_INT, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
-      throw_assert(MPI_Bcast(indices_displs.data(), size, MPI_INT, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
+      bcast_req_count = 0;
+      throw_assert(MPI_Ibcast(indices_counts.data(), size, MPI_INT, 0, comm,
+                              &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+      throw_assert(MPI_Ibcast(indices_displs.data(), size, MPI_INT, 0, comm,
+                              &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+
+      // Wait for count and displacement broadcasts to complete
+      throw_assert(MPI_Waitall(bcast_req_count, bcast_req, MPI_STATUSES_IGNORE) == MPI_SUCCESS,
+                   "error in MPI_Waitall");
     
       // Resize the local destination indices for this rank
       if (rank != 0)
@@ -295,12 +310,17 @@ namespace neuroh5
         rank_assignments.local_dst_indices[rank].data() : 
         nullptr;
       
-      throw_assert(MPI_Scatterv(rank == 0 ? all_indices.data() : nullptr,
+      MPI_Request scatter_req;
+
+      throw_assert(MPI_Iscatterv(rank == 0 ? all_indices.data() : nullptr,
                                 indices_counts.data(), indices_displs.data(), MPI_NODE_IDX_T,
                                 recv_buffer, indices_counts[rank], MPI_NODE_IDX_T,
-                                0, comm
+                                0, comm, &scatter_req
                                 ) == MPI_SUCCESS,
                    "error in MPI_Scatterv");
+      throw_assert(MPI_Wait(&scatter_req, MPI_STATUS_IGNORE) == MPI_SUCCESS,
+                   "error in MPI_Wait");
+
     }
 
     // Function to assign destination blocks to ranks
@@ -653,13 +673,9 @@ namespace neuroh5
                                      full_dst_blk_ptr, full_dst_idx, full_dst_ptr, 
                                      total_num_edges, total_read_blocks);
 
+
           // Step 2: Assign destination blocks to ranks
           assign_blocks_to_ranks(full_dst_blk_ptr, full_dst_idx, full_dst_ptr, rank_assignments, size);
-
-          if (debug_enabled)
-            {
-              print_rank_assignments(comm, rank_assignments);
-            }
 
           // Step 3: Distribute appropriate parts of pointer arrays to all ranks
           distribute_ptr_arrays(comm, rank, rank_assignments, dst_blk_ptr, dst_idx, dst_ptr, 
@@ -672,15 +688,30 @@ namespace neuroh5
           distribute_ptr_arrays(comm, rank, rank_assignments, dst_blk_ptr, dst_idx, dst_ptr, 
                                 vector<DST_BLK_PTR_T>(), vector<NODE_IDX_T>(), vector<DST_PTR_T>());
         }
+
+      if (debug_enabled)
+        {
+          print_rank_assignments(comm, rank_assignments);
+        }
       
       // Step 4: Broadcast total edges and blocks to all ranks
-      throw_assert(MPI_Bcast(&total_num_edges, 1, MPI_SIZE_T, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
-      throw_assert(MPI_Bcast(&total_read_blocks, 1, MPI_UNSIGNED_LONG_LONG, 0, comm) == MPI_SUCCESS,
-                   "error in MPI_Bcast");
+      MPI_Request bcast_req[2];
+      int bcast_req_count = 0;
+
+      throw_assert(MPI_Ibcast(&total_num_edges, 1, MPI_SIZE_T, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+      throw_assert(MPI_Ibcast(&total_read_blocks, 1, MPI_UNSIGNED_LONG_LONG, 0, comm, &bcast_req[bcast_req_count++]) == MPI_SUCCESS,
+                   "error in MPI_Ibcast");
+
+      // Wait for broadcasts to complete
+      throw_assert(MPI_Waitall(bcast_req_count, bcast_req, MPI_STATUSES_IGNORE) == MPI_SUCCESS,
+                   "error in MPI_Waitall");
 
       // Step 5: Distribute assignments to all ranks
       distribute_assignments(comm, rank_assignments);
+      block_base = rank_assignments.dst_block_start[rank];
+      edge_base = rank_assignments.dst_ptr_start[rank];
+
       
       // Step 6: Each rank reads its portion of src_idx based on its assignment
       ierr = read_projection_src_idx(comm, file_name, src_pop_name, dst_pop_name, 

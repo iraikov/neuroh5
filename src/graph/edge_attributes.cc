@@ -15,6 +15,7 @@
 #include "path_names.hh"
 #include "serialize_data.hh"
 #include "read_template.hh"
+#include "mpi_debug.hh"
 #include "throw_assert.hh"
 
 #include <iostream>
@@ -379,6 +380,10 @@ namespace neuroh5
                        "read_edge_attributes: error in H5Pset_dxpl_mpio");
         }
 #endif
+      mpi::MPI_DEBUG(comm, "read_edge_attributes: reading attributes for ", 
+                     src_pop_name, " -> ", dst_pop_name, 
+                     " namespace ", name_space, " attribute ", attr_name, 
+                     " edge_base: ", edge_base, " edge count: ", edge_count);
       
       string dset_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, name_space, attr_name);
       ierr = hdf5::exists_dataset (file, dset_path.c_str());
