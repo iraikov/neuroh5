@@ -273,7 +273,7 @@ int main(int argc, char** argv)
     {"namespace", required_argument, &optflag_namespace,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "ar:i:n:oh",
                            long_options, &option_index)) != -1)

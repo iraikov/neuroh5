@@ -326,7 +326,7 @@ int main(int argc, char** argv)
     {"attributes",    required_argument, &optflag_attr_names,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "a:d:f:hi:s:", long_options, &option_index)) != -1)
     {

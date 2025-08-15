@@ -167,7 +167,7 @@ int main(int argc, char** argv)
     {"verbose",  no_argument, &optflag_verbose,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "h",
                            long_options, &option_index)) != -1)

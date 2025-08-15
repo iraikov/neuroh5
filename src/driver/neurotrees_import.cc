@@ -120,7 +120,7 @@ int main(int argc, char** argv)
   static struct option long_options[] = {
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "hd:e:i:o:r:t:l:n:sy:", long_options, &option_index)) != -1)
     {

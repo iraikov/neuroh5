@@ -108,7 +108,7 @@ int main(int argc, char** argv)
     {"edgemap",   required_argument, &optflag_edgemap,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "a:be:o:r:i:h",
                            long_options, &option_index)) != -1)

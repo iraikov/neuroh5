@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     {"value-chunk-size",  required_argument, &optflag_value_chunk_size,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "haow:", long_options, &option_index)) != -1)
     {
