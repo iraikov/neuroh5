@@ -120,7 +120,7 @@ int main(int argc, char** argv)
     {"outdegree", no_argument, &optflag_outdegree,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "hi:o:",
                            long_options, &option_index)) != -1)

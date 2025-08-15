@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     {"iosize",    required_argument, &optflag_iosize,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "hi:n:o:",
 			   long_options, &option_index)) != -1)

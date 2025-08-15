@@ -155,7 +155,7 @@ int main(int argc, char** argv)
     {"cachesize", required_argument, &optflag_cachesize,  1 },
     {0,         0,                 0,  0 }
   };
-  char c;
+  int c;
   int option_index = 0;
   while ((c = getopt_long (argc, argv, "ai:p:r:n:oh",
                            long_options, &option_index)) != -1)
