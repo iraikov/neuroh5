@@ -21,7 +21,7 @@ set_target_properties(
     PROPERTIES
         PREFIX ""
         OUTPUT_NAME ${NEUROH5_IO_PYTHON_C_MODULE_NAME}
-        LINKER_LANGUAGE CXX
+        LINKER_LANGUAGE C
 )
 
 
