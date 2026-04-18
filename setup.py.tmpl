@@ -2,8 +2,9 @@
 import os, sys, subprocess, platform
 import mpi4py
 import numpy as np
-from distutils.core import setup, Extension
-from distutils.command import build_ext
+from setuptools import setup
+from setuptools.extension import Extension
+from setuptools.command import build_ext
 from os.path import exists, abspath, dirname, join
 
 cmake_cmd_args = []
