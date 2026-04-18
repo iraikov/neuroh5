@@ -3,7 +3,7 @@ import os, sys, math, subprocess, platform, sysconfig
 import multiprocessing
 from setuptools import setup
 from setuptools.extension import Extension
-from distutils.command import build_ext
+from setuptools.command import build_ext
 
 cmake_cmd_args = []
 for f in sys.argv:
