@@ -3,6 +3,8 @@
 
 #include <set>
 #include <algorithm>
+#include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
@@ -11,8 +13,20 @@ namespace neuroh5
   namespace data
   {
 
-    // Constants for chunking
-    constexpr size_t CHUNK_SIZE = 1ULL << 30; // 1GB chunks for safety margin
+    // Default chunk size: 1GB.  Override via NEUROH5_CHUNK_SIZE env var (bytes).
+    // On systems where the MPI intra-node SHM CMA (process_vm_readv) path
+    // crashes for large messages, set NEUROH5_CHUNK_SIZE to a small value
+    // (e.g. 65536) so each MPI_Alltoallv call stays in the POSIX-SHM eager
+    // window and avoids the CMA rendezvous protocol entirely.
+    inline size_t get_chunk_size() {
+      const char* env = std::getenv("NEUROH5_CHUNK_SIZE");
+      if (env != nullptr) {
+        size_t v = std::strtoull(env, nullptr, 10);
+        if (v > 0) return v;
+      }
+      return 1ULL << 30;
+    }
+    const size_t CHUNK_SIZE = get_chunk_size();
 
     template<typename T>
     struct ChunkInfo {
