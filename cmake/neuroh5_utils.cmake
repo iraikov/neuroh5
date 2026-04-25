@@ -48,7 +48,7 @@ macro(find_hdf5)
     set( HDF5_IS_PARALLEL FALSE )
     foreach( _dir ${HDF5_INCLUDE_DIRS} )
         if( EXISTS "${_dir}/H5pubconf.h" )
-            file( STRINGS "${_dir}/H5pubconf.h" 
+            file( STRINGS "${_dir}/H5pubconf.h"
                 HDF5_HAVE_PARALLEL_DEFINE
                 REGEX "HAVE_PARALLEL 1" )
             if( HDF5_HAVE_PARALLEL_DEFINE )
@@ -56,8 +56,37 @@ macro(find_hdf5)
             endif()
         endif()
     endforeach()
+    # Fallback: on systems where find_package(HDF5) takes the compiler-
+    # wrapper "no interrogate" path (e.g. the Cray PE `cc`/`CC` wrappers),
+    # HDF5_INCLUDE_DIRS is left empty, so the scan above cannot determine
+    # whether HDF5 was built with MPI support. Probe H5pubconf.h directly
+    # under HDF5_ROOT / HDF5_DIR / HDF5_INCLUDEDIR as a backstop.
+    if( NOT HDF5_IS_PARALLEL )
+        set( _hdf5_probe_paths
+            "$ENV{HDF5_INCLUDEDIR}/H5pubconf.h"
+            "$ENV{HDF5_ROOT}/include/H5pubconf.h"
+            "$ENV{HDF5_DIR}/include/H5pubconf.h"
+            "${HDF5_ROOT}/include/H5pubconf.h"
+            "${HDF5_DIR}/include/H5pubconf.h" )
+        foreach( _hdr ${_hdf5_probe_paths} )
+            if( _hdr AND EXISTS "${_hdr}" )
+                file( STRINGS "${_hdr}"
+                    HDF5_HAVE_PARALLEL_DEFINE
+                    REGEX "HAVE_PARALLEL 1" )
+                if( HDF5_HAVE_PARALLEL_DEFINE )
+                    set( HDF5_IS_PARALLEL TRUE )
+                    break()
+                endif()
+            endif()
+        endforeach()
+    endif()
+    # Allow a build-time override (e.g. -DHDF5_IS_PARALLEL=TRUE or via the
+    # environment) to win over auto-detection.
+    if( DEFINED ENV{HDF5_IS_PARALLEL} )
+        set( HDF5_IS_PARALLEL "$ENV{HDF5_IS_PARALLEL}" )
+    endif()
     set( HDF5_IS_PARALLEL ${HDF5_IS_PARALLEL} CACHE BOOL
-        "HDF5 library compiled with parallel IO support" )
+        "HDF5 library compiled with parallel IO support" FORCE )
     mark_as_advanced( HDF5_IS_PARALLEL )
 endmacro(find_hdf5)
   
