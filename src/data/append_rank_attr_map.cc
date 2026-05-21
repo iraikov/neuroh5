@@ -49,8 +49,7 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const deque<float> &v = element.second;
               auto it = node_rank_map.find(index);
-              throw_assert(it != node_rank_map.end(),
-                           "append_rank_attr_map: index not found in node rank map");
+              if (it == node_rank_map.end()) continue; // gid not in local partition
 	      for (const rank_t& dst_rank : it->second)
 		{
 		  data::AttrMap &attr_map = rank_attr_map[dst_rank];
@@ -67,8 +66,7 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const deque<uint8_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              throw_assert(it != node_rank_map.end(),
-                           "append_rank_attr_map: index not found in node rank map");
+              if (it == node_rank_map.end()) continue; // gid not in local partition
 	      for (const rank_t& dst_rank : it->second)
 		{
 		  data::AttrMap &attr_map = rank_attr_map[dst_rank];
@@ -85,8 +83,7 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const deque<int8_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              throw_assert(it != node_rank_map.end(),
-                           "append_rank_attr_map: index not found in node rank map");
+              if (it == node_rank_map.end()) continue; // gid not in local partition
 	      for (const rank_t& dst_rank : it->second)
 		{
 		  data::AttrMap &attr_map = rank_attr_map[dst_rank];
@@ -103,8 +100,7 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const deque<uint16_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              throw_assert(it != node_rank_map.end(),
-                           "append_rank_attr_map: index not found in node rank map");
+              if (it == node_rank_map.end()) continue; // gid not in local partition
 	      for (const rank_t& dst_rank : it->second)
 		{
 		  data::AttrMap &attr_map = rank_attr_map[dst_rank];
@@ -121,8 +117,7 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const deque<int16_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              throw_assert(it != node_rank_map.end(),
-                           "append_rank_attr_map: index not found in node rank map");
+              if (it == node_rank_map.end()) continue; // gid not in local partition
 	      for (const rank_t& dst_rank : it->second)
 		{
 		  data::AttrMap &attr_map = rank_attr_map[dst_rank];
@@ -139,8 +134,7 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const deque<uint32_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              throw_assert(it != node_rank_map.end(),
-                           "append_rank_attr_map: index not found in node rank map");
+              if (it == node_rank_map.end()) continue; // gid not in local partition
 	      for (const rank_t& dst_rank : it->second)
 		{
 		  data::AttrMap &attr_map = rank_attr_map[dst_rank];
@@ -157,8 +151,7 @@ namespace neuroh5
               const CELL_IDX_T index = element.first;
               const deque<int32_t> &v = element.second;
               auto it = node_rank_map.find(index);
-              throw_assert(it != node_rank_map.end(),
-                           "append_rank_attr_map: index not found in node rank map");
+              if (it == node_rank_map.end()) continue; // gid not in local partition
 	      for (const rank_t& dst_rank : it->second)
 		{
 		  data::AttrMap &attr_map = rank_attr_map[dst_rank];
