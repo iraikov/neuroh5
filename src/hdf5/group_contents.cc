@@ -28,7 +28,7 @@ namespace neuroh5
       (
        hid_t             grp,
        const char*       name,
-       const H5L_info_t* info,
+       const H5L_info2_t* info,
        void*             op_data
        )
       {
@@ -69,7 +69,7 @@ namespace neuroh5
                          "hdf5::group_contents: unable to get number of objects in group " << path);
             hsize_t idx = 0;
             vector<string> op_data;
-            throw_assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+            throw_assert(H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                                     &iterate_cb, (void*)&op_data ) >= 0,
                          "hdf5::group_contents: unable to iterate over objects in group " << path);
 

@@ -37,7 +37,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const H5L_info2_t* info,
      void*             op_data
      )
     {
@@ -80,7 +80,7 @@ namespace neuroh5
               
               hsize_t idx = 0;
               vector<string> op_data;
-              throw_assert_nomsg(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+              throw_assert_nomsg(H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                                             &iterate_cb, (void*)&op_data ) >= 0);
               
               throw_assert_nomsg(op_data.size() == num_populations);

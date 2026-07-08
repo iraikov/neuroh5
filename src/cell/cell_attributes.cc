@@ -99,7 +99,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const H5L_info2_t* info,
      void*             op_data
      )
     {
@@ -134,7 +134,7 @@ namespace neuroh5
                        "get_cell_attribute_name_spaces: unable to open group " << path);
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &name_space_iterate_cb, (void*) &out_name_spaces);
           
           throw_assert(H5Gclose(grp) >= 0,
@@ -151,7 +151,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const H5L_info2_t* info,
      void*             op_data
      )
     {
@@ -200,7 +200,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const H5L_info2_t* info,
      void*             op_data
      )
     {
@@ -259,7 +259,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const H5L_info2_t* info,
      void*             op_data
      )
     {
@@ -338,7 +338,7 @@ namespace neuroh5
 
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &cell_attribute_cb, (void*) &out_attributes);
           
           ierr = H5Gclose(grp);
@@ -377,7 +377,7 @@ namespace neuroh5
 
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &cell_attribute_index_cb, (void*) &out_attributes);
 
           for (size_t i=0; i<out_attributes.size(); i++)
@@ -426,7 +426,7 @@ namespace neuroh5
 
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &cell_attribute_index_ptr_cb, (void*) &out_attributes);
 
           for (size_t i=0; i<out_attributes.size(); i++)

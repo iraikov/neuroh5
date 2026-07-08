@@ -20,7 +20,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const H5L_info2_t* info,
      void*             op_data
      )
     {
@@ -61,7 +61,7 @@ namespace neuroh5
           num_links = info.nlinks;
 
           hsize_t idx = 0;
-          throw_assert(H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          throw_assert(H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                                   &link_iterate_cb, (void*)&names ) >= 0,
                        "hdf5::read_link_names: unable to iterate over objects of group " << path);
           throw_assert(num_links == names.size(),
