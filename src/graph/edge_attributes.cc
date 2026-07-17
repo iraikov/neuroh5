@@ -45,35 +45,52 @@ namespace neuroh5
     
     void create_projection_groups
     (
+     MPI_Comm       comm,
      const hid_t&   file,
      const string&  src_pop_name,
      const string&  dst_pop_name
      )
     {
-      string path = "/" + hdf5::PROJECTIONS;
-      if (!(hdf5::exists_dataset (file, path) > 0))
-        {
-          hdf5::create_group(file, path.c_str());
-        }
-      
-      path = "/" + hdf5::PROJECTIONS + "/" + dst_pop_name;
-            
-      if (!(hdf5::exists_dataset (file, path) > 0))
-        {
-          hdf5::create_group(file, path.c_str());
-        }
+      // Parallel HDF5 requires structural metadata operations (group /
+      // dataset creation) on a collectively-opened file to be called by
+      // every rank, in the same order. Letting each rank independently
+      // exists-check-then-create risks ranks disagreeing (races /
+      // stale cached results) and issuing mismatched sequences of
+      // collective calls, which corrupts/truncates the file. Instead,
+      // rank 0 alone decides what needs creating and broadcasts that
+      // decision, so every rank then issues the identical sequence of
+      // collective create_group calls.
+      int rank;
+      throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
-      path = hdf5::projection_prefix(src_pop_name, dst_pop_name);
+      string paths[3] = {
+        "/" + hdf5::PROJECTIONS,
+        "/" + hdf5::PROJECTIONS + "/" + dst_pop_name,
+        hdf5::projection_prefix(src_pop_name, dst_pop_name)
+      };
 
-      if (!(hdf5::exists_dataset (file, path) > 0))
+      int needs_create[3] = {0, 0, 0};
+      if (rank == 0)
         {
-          hdf5::create_group(file, path.c_str());
+          for (int i = 0; i < 3; i++)
+            {
+              needs_create[i] = !(hdf5::exists_dataset(file, paths[i]) > 0);
+            }
         }
-    
+      throw_assert_nomsg(MPI_Bcast(needs_create, 3, MPI_INT, 0, comm) == MPI_SUCCESS);
+
+      for (int i = 0; i < 3; i++)
+        {
+          if (needs_create[i])
+            {
+              hdf5::create_group(file, paths[i].c_str());
+            }
+        }
     }
 
     void create_edge_attribute_datasets
     (
+     MPI_Comm       comm,
      const hid_t&   file,
      const string&  src_pop_name,
      const string&  dst_pop_name,
@@ -85,9 +102,9 @@ namespace neuroh5
     {
       herr_t status;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
-      hsize_t cdims[1]   = {chunk_size}; /* chunking dimensions */		
+      hsize_t cdims[1]   = {chunk_size}; /* chunking dimensions */
       hsize_t initial_size = 0;
-    
+
       hid_t plist  = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(plist, 1, cdims);
       throw_assert_nomsg(status == 0);
@@ -95,12 +112,12 @@ namespace neuroh5
       status = H5Pset_deflate(plist, 9);
       throw_assert_nomsg(status == 0);
 #endif
-      
+
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
       throw_assert_nomsg(lcpl >= 0);
       throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
-      create_projection_groups(file, src_pop_name, dst_pop_name);
+      create_projection_groups(comm, file, src_pop_name, dst_pop_name);
 
       string attr_path = hdf5::edge_attribute_path(src_pop_name,
                                                    dst_pop_name,

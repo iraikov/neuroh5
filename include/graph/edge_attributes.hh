@@ -339,10 +339,25 @@ namespace neuroh5
                                                        attr_namespace);
       string attr_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
                                                    attr_namespace, attr_name);
-      
-      if (!(hdf5::exists_dataset (file, attr_path) > 0))
+
+      // Rank 0 alone decides whether the dataset needs creating and
+      // broadcasts that decision, rather than each rank independently
+      // exists-checking: independent checks can race/disagree, causing
+      // some ranks to call the collective create_edge_attribute_datasets
+      // (and its nested collective H5Gcreate/H5Dcreate2 calls) while
+      // others skip it, which corrupts/truncates the file.
+      int rrank;
+      throw_assert(MPI_Comm_rank(comm, &rrank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      int needs_create = 0;
+      if (rrank == 0)
         {
-          hdf5::create_edge_attribute_datasets(file, src_pop_name, dst_pop_name,
+          needs_create = !(hdf5::exists_dataset (file, attr_path) > 0);
+        }
+      throw_assert(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS,
+                   "error in MPI_Bcast");
+      if (needs_create)
+        {
+          hdf5::create_edge_attribute_datasets(comm, file, src_pop_name, dst_pop_name,
                                                attr_namespace, attr_name,
                                                ftype, chunk_size);
 	  throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");

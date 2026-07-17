@@ -38,14 +38,10 @@ def run_mpi_worker(worker_name, nranks, args, timeout=120):
 
     out_path = Path(args[args.index("--out") + 1]) if "--out" in args else None
 
-    cmd = ["mpirun", "-n", str(nranks), sys.executable, str(worker_path), *args]
+    # Enable Open MPI oversubscription
+    mpirun_extra_args = ["--oversubscribe"] if os.environ.get("NEUROH5_MPIRUN_OVERSUBSCRIBE") else []
+    cmd = ["mpirun", *mpirun_extra_args, "-n", str(nranks), sys.executable, str(worker_path), *args]
 
-    # mpirun is launched in its own process group (start_new_session=True)
-    # so that on timeout we can kill the whole group -- mpirun's actual
-    # per-rank MPI processes are children/grandchildren of it, and killing
-    # only the immediate mpirun process (subprocess.run's own timeout
-    # handling) can leave those orphaned and still running/holding the
-    # HDF5 file open.
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         start_new_session=True,

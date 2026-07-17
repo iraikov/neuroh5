@@ -277,7 +277,7 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           throw_assert_nomsg(file >= 0);
 
-          hdf5::create_projection_groups(file, src_pop_name, dst_pop_name);
+          hdf5::create_projection_groups(io_comm, file, src_pop_name, dst_pop_name);
           
           throw_assert_nomsg(H5Fclose(file) >= 0);
           
