@@ -9,6 +9,16 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  # h5py ships its own bundled HDF5 build, separate from the parallel HDF5
+  # neuroh5 links against; on GitHub Actions macOS runners specifically,
+  # having both touch the same file (as tests/unit's fixtures do, using
+  # h5py to lay down the initial file skeleton before neuroh5 opens it)
+  # is a well-documented trigger for HDF5's file-locking to hard-abort the
+  # process instead of raising a catchable error. This is the standard
+  # mitigation.
+  HDF5_USE_FILE_LOCKING: FALSE
+
 jobs:
   build-macos:
     runs-on: macOS-latest

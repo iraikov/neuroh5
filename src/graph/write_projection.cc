@@ -111,14 +111,16 @@ namespace neuroh5
              == MPI_SUCCESS);
 
       // determine last rank that has data
-      size_t last_rank = size-1;
-
-      for (size_t r=last_rank; r >= 0; r--)
+      // (a backward-counting unsigned loop here previously underflowed
+      // when no lower-numbered rank had data, reading past the start of
+      // recvbuf_num_blocks; walking forward avoids that entirely -- see
+      // the identical fix in append_projection.cc)
+      size_t last_rank = 0;
+      for (size_t r = 0; r < size; ++r)
 	{
 	  if (recvbuf_num_blocks[r] > 0)
 	    {
 	      last_rank = r;
-	      break;
 	    }
 	}
       

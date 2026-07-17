@@ -308,17 +308,18 @@ namespace neuroh5
 #endif
 
       // Determine last rank that has data
-      size_t last_rank = size-1;
-
-      for (size_t r=last_rank; r >= 0; r--)
+      // (a backward-counting unsigned loop here previously underflowed
+      // when no lower-numbered rank had data, reading past the start of
+      // index_size_vector; walking forward avoids that entirely)
+      size_t last_rank = 0;
+      for (size_t r = 0; r < size; ++r)
 	{
 	  if (index_size_vector[r] > 0)
 	    {
 	      last_rank = r;
-	      break;
 	    }
 	}
-      
+
       // Determine the total number of ptrs, add 1 to ptr of last rank
       hsize_t local_ptr_size=0;
 
@@ -513,17 +514,18 @@ namespace neuroh5
 #endif
 
       // Determine last rank that has data
-      size_t last_rank = size-1;
-
-      for (size_t r=last_rank; r >= 0; r--)
+      // (a backward-counting unsigned loop here previously underflowed
+      // when no lower-numbered rank had data, reading past the start of
+      // index_size_vector; walking forward avoids that entirely)
+      size_t last_rank = 0;
+      for (size_t r = 0; r < size; ++r)
 	{
 	  if (index_size_vector[r] > 0)
 	    {
 	      last_rank = r;
-	      break;
 	    }
 	}
-      
+
       // Determine the total number of ptrs, add 1 to ptr of last rank
       hsize_t local_ptr_size=0;
 

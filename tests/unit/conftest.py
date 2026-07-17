@@ -1,4 +1,6 @@
 import json
+import os
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -23,6 +25,13 @@ def run_mpi_worker(worker_name, nranks, args, timeout=120):
     worker are reported as an ordinary test failure rather than taking
     down the whole pytest session -- each MPI scenario runs in its own
     subprocess.
+
+    A hang (MPI collective deadlock) is reported as a distinct, explicit
+    TIMED OUT AssertionError rather than letting subprocess.run raise an
+    uncaught TimeoutExpired: that alternative produces a bare "process did
+    not return exit code 0"-style failure with none of the diagnostic
+    stdout/stderr this function otherwise attaches, making a hang
+    indistinguishable from a crash in the pytest report.
     """
     worker_path = WORKERS_DIR / f"{worker_name}.py"
     assert worker_path.exists(), f"no such worker script: {worker_path}"
@@ -30,16 +39,40 @@ def run_mpi_worker(worker_name, nranks, args, timeout=120):
     out_path = Path(args[args.index("--out") + 1]) if "--out" in args else None
 
     cmd = ["mpirun", "-n", str(nranks), sys.executable, str(worker_path), *args]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+    # mpirun is launched in its own process group (start_new_session=True)
+    # so that on timeout we can kill the whole group -- mpirun's actual
+    # per-rank MPI processes are children/grandchildren of it, and killing
+    # only the immediate mpirun process (subprocess.run's own timeout
+    # handling) can leave those orphaned and still running/holding the
+    # HDF5 file open.
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        stdout, stderr = proc.communicate()
+        raise AssertionError(
+            f"mpi worker {worker_name} (n={nranks}) TIMED OUT after {timeout}s "
+            "-- this is a hang (likely an MPI collective deadlock), not a crash\n"
+            f"cmd: {' '.join(cmd)}\n--- stdout so far ---\n{stdout}\n"
+            f"--- stderr so far ---\n{stderr}"
+        )
 
     assert proc.returncode == 0, (
         f"mpi worker {worker_name} (n={nranks}) exited {proc.returncode}\n"
-        f"cmd: {' '.join(cmd)}\n--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}"
+        f"cmd: {' '.join(cmd)}\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}"
     )
 
     assert out_path is not None and out_path.exists(), (
         f"mpi worker {worker_name} did not produce a result file\n"
-        f"--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}"
+        f"--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}"
     )
     return json.loads(out_path.read_text())
 

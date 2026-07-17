@@ -429,17 +429,27 @@ namespace neuroh5
       mpi::rank_ranges(size, io_size, ranges);
 
       // Determine I/O ranks to which to send the values
-      vector <size_t> io_dests(size); 
+      // (find the last/highest-index range whose start is <= r; ranges is
+      // sorted ascending by .first, so a forward scan that keeps the most
+      // recent match and stops once a range starts beyond r is equivalent
+      // to the "floor" search a backward-counting unsigned loop would do,
+      // without that loop's risk of underflowing past index 0)
+      vector <size_t> io_dests(size);
       for (size_t r=0; r<size; r++)
         {
-          for (size_t i=ranges.size()-1; i>=0; i--)
+          size_t best = 0;
+          for (size_t i = 0; i < ranges.size(); ++i)
             {
               if (ranges[i].first <= r)
                 {
-                  io_dests[r] = *std::next(io_rank_set.begin(), i);
+                  best = i;
+                }
+              else
+                {
                   break;
                 }
             }
+          io_dests[r] = *std::next(io_rank_set.begin(), best);
         }
 
       // Determine number of values for each rank
@@ -864,17 +874,27 @@ namespace neuroh5
       mpi::rank_ranges(size, io_size_value, ranges);
 
       // Determine I/O ranks to which to send the values
-      vector <size_t> io_dests(size); 
+      // (find the last/highest-index range whose start is <= r; ranges is
+      // sorted ascending by .first, so a forward scan that keeps the most
+      // recent match and stops once a range starts beyond r is equivalent
+      // to the "floor" search a backward-counting unsigned loop would do,
+      // without that loop's risk of underflowing past index 0)
+      vector <size_t> io_dests(size);
       for (size_t r=0; r<size; r++)
         {
-          for (size_t i=ranges.size()-1; i>=0; i--)
+          size_t best = 0;
+          for (size_t i = 0; i < ranges.size(); ++i)
             {
               if (ranges[i].first <= r)
                 {
-                  io_dests[r] = *std::next(io_rank_set.begin(), i);
+                  best = i;
+                }
+              else
+                {
                   break;
                 }
             }
+          io_dests[r] = *std::next(io_rank_set.begin(), best);
         }
 
 

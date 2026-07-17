@@ -319,14 +319,26 @@ namespace neuroh5
 
       for (rank_t r=0; r<size; r++)
         {
-          for (size_t i=ranges.size()-1; i>=0; i--)
+          // Find the last (highest-index) range whose start is <= r --
+          // ranges is sorted ascending by .first, so a forward scan that
+          // keeps the most recent match and stops once a range starts
+          // beyond r finds the same "floor" range the original
+          // backward-counting unsigned loop searched for, without that
+          // loop's risk of underflowing past index 0 when ranges is empty
+          // or no range matches.
+          size_t best = 0;
+          for (size_t i = 0; i < ranges.size(); ++i)
             {
               if (ranges[i].first <= r)
                 {
-                  io_dests[r] = *std::next(io_rank_set.begin(), i);
+                  best = i;
+                }
+              else
+                {
                   break;
                 }
             }
+          io_dests[r] = *std::next(io_rank_set.begin(), best);
         }
 
       std::forward_list<neurotree_t> local_tree_list;

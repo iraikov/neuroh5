@@ -63,15 +63,21 @@ namespace neuroh5
       throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      // Independent (non-collective), uncompressed I/O: since this
+      // dataset is gathered onto rank 0 and only rank 0 ever writes real
+      // data (see the Gatherv below), collective I/O buys nothing here --
+      // every other rank's H5Dwrite call is an empty no-op selection --
+      // while it does cost something: collective I/O where all but one
+      // rank participate with a zero-size selection is a known-fragile
+      // edge case in HDF5's parallel two-phase I/O aggregation. Dropping
+      // both collective mode and compression (parallel HDF5 forbids
+      // independent writes to filtered/compressed datasets) sidesteps
+      // that risk entirely for this single-writer pattern. `collective`
+      // is intentionally unused here now -- kept for signature parity
+      // with append_src_idx below, which is genuinely multi-writer and
+      // does still need it.
+      (void)collective;
       hid_t wapl = H5P_DEFAULT;
-#ifdef HDF5_IS_PARALLEL
-      if (collective)
-	{
-	  wapl = H5Pcreate(H5P_DATASET_XFER);
-	  throw_assert_nomsg(wapl >= 0);
-	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
-	}
-#endif
 
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
@@ -109,9 +115,6 @@ namespace neuroh5
           fspace = H5Screate_simple(1, zerodims, maxdims);
           throw_assert_nomsg(fspace >= 0);
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-#ifdef H5_HAS_PARALLEL_DEFLATE
-          throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
-#endif
 
           dset = H5Dcreate2(file, path.c_str(), NODE_IDX_H5_FILE_T, fspace,
                             lcpl, dcpl, H5P_DEFAULT);
@@ -164,7 +167,9 @@ namespace neuroh5
 
       throw_assert_nomsg(H5Pclose(lcpl) >= 0);
       throw_assert_nomsg(H5Pclose(dcpl) >= 0);
-      throw_assert_nomsg(H5Pclose(wapl) >= 0);
+      // wapl is always H5P_DEFAULT here (see above) -- H5P_DEFAULT is a
+      // predefined constant, not a property list this function created,
+      // so it must not be passed to H5Pclose.
 
     }
 
@@ -196,15 +201,13 @@ namespace neuroh5
       throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      // Independent (non-collective), uncompressed I/O -- see the
+      // identical rationale in append_dst_blk_idx above: this dataset is
+      // gathered onto rank 0 and only rank 0 ever writes real data, so
+      // collective I/O (fragile here: all but one rank participate with a
+      // zero-size selection) buys nothing.
+      (void)collective;
       hid_t wapl = H5P_DEFAULT;
-#ifdef HDF5_IS_PARALLEL
-      if (collective)
-	{
-	  wapl = H5Pcreate(H5P_DATASET_XFER);
-	  throw_assert_nomsg(wapl >= 0);
-	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
-	}
-#endif
 
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
@@ -247,9 +250,6 @@ namespace neuroh5
           throw_assert_nomsg(fspace >= 0);
 
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-#ifdef H5_HAS_PARALLEL_DEFLATE
-          throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
-#endif
           dset = H5Dcreate2 (file, path.c_str(), DST_BLK_PTR_H5_FILE_T,
                              fspace, lcpl, dcpl, H5P_DEFAULT);
           throw_assert_nomsg(H5Sclose(fspace) >= 0);
@@ -295,7 +295,7 @@ namespace neuroh5
 
       throw_assert_nomsg(H5Pclose(lcpl) >= 0);
       throw_assert_nomsg(H5Pclose(dcpl) >= 0);
-      throw_assert_nomsg(H5Pclose(wapl) >= 0);
+      // wapl is always H5P_DEFAULT here (see above); must not be closed.
     }
 
 
@@ -326,15 +326,13 @@ namespace neuroh5
       throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
       hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
       throw_assert_nomsg(H5Pset_layout(dcpl, H5D_CHUNKED) >= 0);
+      // Independent (non-collective), uncompressed I/O -- see the
+      // identical rationale in append_dst_blk_idx above: this dataset is
+      // gathered onto rank 0 and only rank 0 ever writes real data, so
+      // collective I/O (fragile here: all but one rank participate with a
+      // zero-size selection) buys nothing.
+      (void)collective;
       hid_t wapl = H5P_DEFAULT;
-#ifdef HDF5_IS_PARALLEL
-      if (collective)
-	{
-	  wapl = H5Pcreate(H5P_DATASET_XFER);
-	  throw_assert_nomsg(wapl >= 0);
-	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
-	}
-#endif
 
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
@@ -370,9 +368,6 @@ namespace neuroh5
           throw_assert_nomsg(fspace >= 0);
 
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
-#ifdef H5_HAS_PARALLEL_DEFLATE
-          throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
-#endif
           dset = H5Dcreate2 (file, path.c_str(), DST_PTR_H5_FILE_T,
                              fspace, lcpl, dcpl, H5P_DEFAULT);
           throw_assert_nomsg(dset >= 0);
@@ -431,7 +426,7 @@ namespace neuroh5
 
       throw_assert_nomsg(H5Pclose(lcpl) >= 0);
       throw_assert_nomsg(H5Pclose(dcpl) >= 0);
-      throw_assert_nomsg(H5Pclose(wapl) >= 0);
+      // wapl is always H5P_DEFAULT here (see above); must not be closed.
 
     }
 
