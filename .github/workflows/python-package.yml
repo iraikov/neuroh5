@@ -48,6 +48,9 @@ jobs:
       - name: Test read and write
         run: |
           python ./tests/test_write_cell_attr.py
+      - name: Run pytest unit test suite
+        run: |
+          pytest -v
 
  
   build-linux:
@@ -82,3 +85,6 @@ jobs:
     - name: Test read and write
       run: |
         python ./tests/test_write_cell_attr.py
+    - name: Run pytest unit test suite
+      run: |
+        pytest -v
