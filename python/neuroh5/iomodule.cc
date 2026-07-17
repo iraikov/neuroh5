@@ -1098,14 +1098,16 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           for (size_t p = 0; p < num_section_nodes; p++)
             {
               NODE_IDX_T node_idx = sections[sections_ptr];
-              throw_assert(node_idx <= num_nodes,
+              throw_assert(node_idx >= 1 && node_idx <= num_nodes,
                            "py_build_tree_value: invalid node index in tree");
 
               py_section_nodes_ptr[p] = node_idx;
               section_nodes.push_back(node_idx);
               if (marked_nodes.find(node_idx) == marked_nodes.end())
                 {
-                  section_vector_ptr[node_idx] = section_idx;
+                  // node_idx is 1-based but section_vector_ptr is a plain
+                  // 0-based buffer of size num_nodes.
+                  section_vector_ptr[node_idx - 1] = section_idx;
                   marked_nodes.insert(node_idx);
                 }
               sections_ptr++;
