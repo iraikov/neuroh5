@@ -24,9 +24,23 @@ namespace neuroh5
   namespace graph
   {
 
+    // dst_blk_idx, dst_blk_ptr, and dst_ptr are small (block/pointer
+    // metadata, O(num destinations)), so rather than have every I/O
+    // rank independently extend and collectively write its own
+    // hyperslab.  these three gather to rank 0 (of comm) via
+    // MPI_Gatherv and are written by rank 0 alone, in a single
+    // hyperslab.  All ranks still participate in the collective
+    // create/open/extend calls (required when the file is opened via
+    // H5Pset_fapl_mpio), but only rank 0 contributes a real
+    // (non-empty) write selection.  src_idx (and edge attributes),
+    // which can be large, use per-rank distributed collective
+    // write. Each rank's hyperslab there is non-overlapping, which is
+    // what collective I/O requires.
     void append_dst_blk_idx
     (
+     MPI_Comm                  comm,
      size_t                    rank,
+     size_t                    size,
      hid_t                     file,
      const string&             src_pop_name,
      const string&             dst_pop_name,
@@ -58,7 +72,7 @@ namespace neuroh5
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
 #endif
-      
+
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
@@ -67,12 +81,29 @@ namespace neuroh5
       throw_assert_nomsg(src_start < src_end);
       throw_assert_nomsg(dst_start < dst_end);
 
-      
+      // Gather every rank's (already globally-offset) local dst_blk_idx
+      // values onto rank 0.
+      vector<int> counts(size, 0), displs(size + 1, 0);
+      for (size_t p = 0; p < size; ++p)
+        {
+          counts[p] = (int)recvbuf_num_blocks[p];
+          displs[p + 1] = displs[p] + counts[p];
+        }
+      vector<NODE_IDX_T> gathered;
+      if (rank == 0)
+        {
+          gathered.resize(displs[size]);
+        }
+      throw_assert_nomsg(MPI_Gatherv(dst_blk_idx.data(), (int)dst_blk_idx.size(), MPI_NODE_IDX_T,
+                                     rank == 0 ? gathered.data() : NULL,
+                                     &counts[0], &displs[0], MPI_NODE_IDX_T,
+                                     0, comm) == MPI_SUCCESS);
+
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_IDX);
       hsize_t dst_blk_idx_dims = total_num_blocks, one=1;
 
       hid_t dset, fspace;
-      
+
       if (!(hdf5::exists_dataset (file, path) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
@@ -90,11 +121,11 @@ namespace neuroh5
         {
           dset = H5Dopen2 (file, path.c_str(), H5P_DEFAULT);
           throw_assert_nomsg(dset >= 0);
-      
+
           fspace = H5Dget_space(dset);
           throw_assert_nomsg(fspace >= 0);
         }
-                                                            
+
       hsize_t dst_blk_idx_start = dst_blk_idx_size;
       hsize_t dst_blk_idx_newsize = dst_blk_idx_start + dst_blk_idx_dims;
       if (dst_blk_idx_newsize > 0)
@@ -104,21 +135,17 @@ namespace neuroh5
         }
       throw_assert_nomsg(H5Sclose(fspace) >= 0);
 
-      hsize_t block = num_blocks;
-      
+      hsize_t block = (rank == 0) ? (hsize_t)gathered.size() : 0;
+
       hid_t mspace  = H5Screate_simple(1, &block, &block);
       throw_assert_nomsg(mspace >= 0);
       throw_assert_nomsg(H5Sselect_all(mspace) >= 0);
-      hsize_t start = dst_blk_idx_start;
-      for (size_t p = 0; p < rank; ++p)
-        {
-          start += recvbuf_num_blocks[p];
-        }
-        
+
       fspace = H5Dget_space(dset);
       throw_assert_nomsg(fspace >= 0);
       if (block > 0)
 	{
+	  hsize_t start = dst_blk_idx_start;
 	  throw_assert_nomsg(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
 				     &one, &block) >= 0);
 	}
@@ -126,8 +153,9 @@ namespace neuroh5
 	{
           throw_assert_nomsg(H5Sselect_none(fspace) >= 0);
 	}
+      NODE_IDX_T dummy = 0;
       throw_assert_nomsg(H5Dwrite(dset, NODE_IDX_H5_NATIVE_T, mspace, fspace,
-		      wapl, &dst_blk_idx[0]) >= 0);
+		      wapl, block > 0 ? &gathered[0] : &dummy) >= 0);
 
       // clean-up
       throw_assert_nomsg(H5Dclose(dset) >= 0);
@@ -143,7 +171,9 @@ namespace neuroh5
 
     void append_dst_blk_ptr
     (
+     MPI_Comm                  comm,
      size_t                    rank,
+     size_t                    size,
      hid_t                     file,
      const string&             src_pop_name,
      const string&             dst_pop_name,
@@ -157,7 +187,7 @@ namespace neuroh5
      const hsize_t             chunk_size,
      const hsize_t             block_size,
      const bool                collective,
-     vector<size_t>&           recvbuf_num_blocks,
+     vector<size_t>&           recvbuf_num_blocks_padded,
      vector<DST_BLK_PTR_T>&    dst_blk_ptr
      )
     {
@@ -175,7 +205,7 @@ namespace neuroh5
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
 #endif
-      
+
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
@@ -186,7 +216,26 @@ namespace neuroh5
         {
           dst_blk_ptr_start = dst_blk_ptr_size - 1;
         }
-      
+
+      // Gather every rank's (already globally-offset) local dst_blk_ptr
+      // values onto rank 0. recvbuf_num_blocks_padded already includes the
+      // +1 sentinel element on whichever rank contributed it.
+      vector<int> counts(size, 0), displs(size + 1, 0);
+      for (size_t p = 0; p < size; ++p)
+        {
+          counts[p] = (int)recvbuf_num_blocks_padded[p];
+          displs[p + 1] = displs[p] + counts[p];
+        }
+      vector<DST_BLK_PTR_T> gathered;
+      if (rank == 0)
+        {
+          gathered.resize(displs[size]);
+        }
+      throw_assert_nomsg(MPI_Gatherv(dst_blk_ptr.data(), (int)dst_blk_ptr.size(), MPI_UINT64_T,
+                                     rank == 0 ? gathered.data() : NULL,
+                                     &counts[0], &displs[0], MPI_UINT64_T,
+                                     0, comm) == MPI_SUCCESS);
+
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_BLK_PTR);
 
       hid_t dset, fspace;
@@ -218,22 +267,17 @@ namespace neuroh5
           throw_assert_nomsg(ierr >= 0);
         }
 
-      hsize_t block = dst_blk_ptr.size();
+      hsize_t block = (rank == 0) ? (hsize_t)gathered.size() : 0;
 
       hid_t mspace  = H5Screate_simple(1, &block, &block);
       throw_assert_nomsg(mspace >= 0);
       throw_assert_nomsg(H5Sselect_all(mspace) >= 0);
 
-      hsize_t start = dst_blk_ptr_start;
-      for (size_t p = 0; p < rank; ++p)
-        {
-          start += recvbuf_num_blocks[p];
-        }
-
       fspace = H5Dget_space(dset);
       throw_assert_nomsg(fspace >= 0);
       if (block > 0)
         {
+          hsize_t start = dst_blk_ptr_start;
           throw_assert_nomsg(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
@@ -241,8 +285,9 @@ namespace neuroh5
         {
           throw_assert_nomsg(H5Sselect_none(fspace) >= 0);
         }
+      DST_BLK_PTR_T dummy = 0;
       throw_assert_nomsg(H5Dwrite(dset, DST_BLK_PTR_H5_NATIVE_T, mspace, fspace,
-                      wapl, &dst_blk_ptr[0]) >= 0);
+                      wapl, block > 0 ? &gathered[0] : &dummy) >= 0);
 
       throw_assert_nomsg(H5Dclose(dset) >= 0);
       throw_assert_nomsg(H5Sclose(mspace) >= 0);
@@ -256,7 +301,9 @@ namespace neuroh5
 
     void append_dst_ptr
     (
+     MPI_Comm                  comm,
      size_t                    rank,
+     size_t                    size,
      hid_t                     file,
      const string&             src_pop_name,
      const string&             dst_pop_name,
@@ -269,7 +316,7 @@ namespace neuroh5
      const hsize_t             chunk_size,
      const hsize_t             block_size,
      const bool                collective,
-     vector<size_t>&           recvbuf_num_dest,
+     vector<size_t>&           recvbuf_num_dest_padded,
      vector<DST_PTR_T>&    dst_ptr
      )
     {
@@ -288,16 +335,35 @@ namespace neuroh5
 	  throw_assert_nomsg(H5Pset_dxpl_mpio(wapl, H5FD_MPIO_COLLECTIVE) >= 0);
 	}
 #endif
-      
+
       hsize_t chunk = chunk_size;
       hsize_t maxdims[1] = {H5S_UNLIMITED};
       hsize_t zerodims[1] = {0};
+
+      // Gather every rank's (already globally-offset) local dst_ptr values
+      // onto rank 0. recvbuf_num_dest_padded already includes the +1
+      // sentinel element on whichever rank contributed it.
+      vector<int> counts(size, 0), displs(size + 1, 0);
+      for (size_t p = 0; p < size; ++p)
+        {
+          counts[p] = (int)recvbuf_num_dest_padded[p];
+          displs[p + 1] = displs[p] + counts[p];
+        }
+      vector<DST_PTR_T> gathered;
+      if (rank == 0)
+        {
+          gathered.resize(displs[size]);
+        }
+      throw_assert_nomsg(MPI_Gatherv(dst_ptr.data(), (int)dst_ptr.size(), MPI_UINT64_T,
+                                     rank == 0 ? gathered.data() : NULL,
+                                     &counts[0], &displs[0], MPI_UINT64_T,
+                                     0, comm) == MPI_SUCCESS);
 
       string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, hdf5::EDGES, hdf5::DST_PTR);
       hsize_t dst_ptr_dims = total_num_dests+1, one=1;
 
       hid_t dset, fspace;
-      
+
       if (!(hdf5::exists_dataset (file, path) > 0))
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
@@ -326,7 +392,7 @@ namespace neuroh5
         {
           dst_ptr_start = dst_ptr_size-1;
         }
-      
+
       throw_assert_nomsg(H5Sclose(fspace) >= 0);
 
       hsize_t dst_ptr_newsize = dst_ptr_start + dst_ptr_dims;
@@ -336,23 +402,17 @@ namespace neuroh5
           throw_assert_nomsg(ierr >= 0);
         }
 
-      hsize_t block = (hsize_t) dst_ptr.size();
+      hsize_t block = (rank == 0) ? (hsize_t)gathered.size() : 0;
       hid_t mspace = H5Screate_simple(1, &block, &block);
       throw_assert_nomsg(mspace >= 0);
       throw_assert_nomsg(H5Sselect_all(mspace) >= 0);
-      
+
       fspace = H5Dget_space(dset);
       throw_assert_nomsg(fspace >= 0);
 
-      hsize_t start=0;
       if (block > 0)
         {
-          start = dst_ptr_start;
-          for (size_t p = 0; p < rank; ++p)
-            {
-              start += recvbuf_num_dest[p];
-            }
-
+          hsize_t start = dst_ptr_start;
           throw_assert_nomsg(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                      &one, &block) >= 0);
         }
@@ -361,8 +421,9 @@ namespace neuroh5
           throw_assert_nomsg(H5Sselect_none(fspace) >= 0);
         }
 
+      DST_PTR_T dummy = 0;
       throw_assert_nomsg(H5Dwrite(dset, DST_PTR_H5_NATIVE_T, mspace, fspace,
-                      wapl, &dst_ptr[0]) >= 0);
+                      wapl, block > 0 ? &gathered[0] : &dummy) >= 0);
 
       throw_assert_nomsg(H5Dclose(dset) >= 0);
       throw_assert_nomsg(H5Sclose(mspace) >= 0);
@@ -637,14 +698,15 @@ namespace neuroh5
                    "append_projection: error in MPI_Wait");
 
       // determine last rank that has data
-      size_t last_rank = size-1;
-
-      for (size_t r=last_rank; r >= 0; r--)
+      // (a backward-counting unsigned loop here previously underflowed
+      // when no lower-numbered rank had data, reading past the start of
+      // recvbuf_num_blocks; walking forward avoids that entirely)
+      size_t last_rank = 0;
+      for (size_t p = 0; p < size; ++p)
 	{
-	  if (recvbuf_num_blocks[r] > 0)
+	  if (recvbuf_num_blocks[p] > 0)
 	    {
-	      last_rank = r;
-	      break;
+	      last_rank = p;
 	    }
 	}
 
@@ -705,10 +767,17 @@ namespace neuroh5
       mpi::MPI_DEBUG(comm, "append_projection: ", src_pop_name, " -> ", dst_pop_name, ": ",
                      " total_num_dests = ", total_num_dests);
 
+      // dst_blk_ptr and dst_ptr each carry one extra (+1 sentinel) element
+      // on last_rank; pad the corresponding per-rank counts so the Gatherv
+      // in append_dst_blk_ptr/append_dst_ptr accounts for it.
+      vector<size_t> recvbuf_num_blocks_padded(recvbuf_num_blocks);
+      recvbuf_num_blocks_padded[last_rank] += 1;
+      vector<size_t> recvbuf_num_dest_padded(recvbuf_num_dest);
+      recvbuf_num_dest_padded[last_rank] += 1;
 
       append_dst_blk_idx
         (
-         rank, file,
+         comm, rank, size, file,
          src_pop_name, dst_pop_name,
          src_start, src_end, dst_start, dst_end,
          num_blocks, total_num_blocks, dst_blk_idx_size,
@@ -718,34 +787,34 @@ namespace neuroh5
          );
 
       /*
-        vector<NODE_IDX_T> v_dst_start(1, dst_start);         
+        vector<NODE_IDX_T> v_dst_start(1, dst_start);
         write(file, path, NODE_IDX_H5_FILE_T, v_dst_start);
       */
 
       append_dst_blk_ptr
         (
-         rank, file,
+         comm, rank, size, file,
          src_pop_name, dst_pop_name,
          src_start, src_end, dst_start, dst_end,
          num_blocks, total_num_blocks, dst_blk_ptr_size,
          chunk_size, block_size, collective,
-         recvbuf_num_blocks,
+         recvbuf_num_blocks_padded,
          dst_blk_ptr
          );
-      
+
 
       // write destination pointers
       // # dest. pointers = number of destinations + 1
       append_dst_ptr
         (
-         rank, file,
+         comm, rank, size, file,
          src_pop_name, dst_pop_name,
          src_start, src_end,
          dst_start, dst_end,
          total_num_dests, dst_ptr_size,
-         chunk_size, block_size, 
+         chunk_size, block_size,
          collective,
-         recvbuf_num_dest,
+         recvbuf_num_dest_padded,
          dst_ptr
          );
 

@@ -37,6 +37,7 @@ namespace neuroh5
      const map<string, NamedAttrVal>&  edge_attr_map,
      const node_rank_map_t&            node_rank_map,
      size_t&                           num_edges,
+     size_t&                           num_packed_edges,
      rank_edge_map_t &                 rank_edge_map,
      EdgeMapType                       edge_map_type
      )
@@ -67,21 +68,31 @@ namespace neuroh5
                     else
                       { dst_rank_set = it->second; }
 
+                    // Count each edge read from disk exactly once, regardless
+                    // of how many ranks it ends up replicated to below (a
+                    // destination's node_rank_map entry can name more than
+                    // one rank, e.g. when several ranks include the same gid
+                    // in their selection).
+                    num_edges += (high - low);
+
                     for (auto dst_rank : dst_rank_set)
                       {
                         edge_tuple_t& et = rank_edge_map[dst_rank][dst];
                         vector<NODE_IDX_T> &my_srcs = get<0>(et);
-                    
+
                         vector <AttrVal> &edge_attr_vec = get<1>(et);
                         edge_attr_vec.resize(edge_attr_map.size());
-                        
+
                         for (size_t j = low; j < high; ++j)
                           {
                             NODE_IDX_T src = src_idx[j] + src_start;
                             my_srcs.push_back (src);
-                            num_edges++;
+                            // Total copies actually placed into rank_edge_map
+                            // (one per destination rank), i.e. what ends up
+                            // packed for the alltoallv exchange.
+                            num_packed_edges++;
                           }
-                        
+
                         fill_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
                         fill_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
                         fill_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, low, high);
@@ -107,14 +118,14 @@ namespace neuroh5
                         for (auto dst_rank : dst_rank_set)
                           {
                             edge_tuple_t& et = rank_edge_map[dst_rank][src];
-                            
+
                             vector<NODE_IDX_T> &my_dsts = get<0>(et);
-                            
+
                             vector <AttrVal> &edge_attr_vec = get<1>(et);
                             edge_attr_vec.resize(edge_attr_map.size());
-                            
+
                             my_dsts.push_back(dst);
-                        
+
                             set_attr_vec<float>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
                             set_attr_vec<uint8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
                             set_attr_vec<uint16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
@@ -122,8 +133,9 @@ namespace neuroh5
                             set_attr_vec<int8_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
                             set_attr_vec<int16_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
                             set_attr_vec<int32_t>(edge_attr_map, attr_namespaces, edge_attr_vec, j);
+                            num_packed_edges++;
                           }
-                        
+
                         num_edges++;
                       }
                     

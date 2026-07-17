@@ -8,6 +8,8 @@
 ///  Copyright (C) 2016-2021 Project NeuroH5.
 //==============================================================================
 
+#include <algorithm>
+
 #include "mpi_debug.hh"
 #include "edge_attributes.hh"
 #include "cell_populations.hh"
@@ -97,6 +99,9 @@ namespace neuroh5
             throw_assert_nomsg(MPI_Barrier(data_comm) == MPI_SUCCESS);
 #endif
             // Construct node rank map based on selection information.
+            // (Built from the raw, possibly-duplicated all_selections: a
+            // set naturally de-duplicates the ranks associated with each
+            // gid even when several ranks include the same gid.)
             for (rank_t p=0; p<data_size; p++)
               {
                 for (size_t i = displs[p]; i<displs[p+1]; i++)
@@ -105,7 +110,20 @@ namespace neuroh5
                   }
 
               }
-            
+
+            // De-duplicate all_selections itself before it drives the disk
+            // read below: different ranks could submit overlapping or
+            // identical selections, and each gid must be read from disk
+            // exactly once regardless of how many ranks asked for it --
+            // node_rank_map above already records the full set of
+            // interested ranks, and downstream replication to each of
+            // those ranks is handled separately by
+            // append_rank_edge_map_selection. Without this, a gid
+            // requested by N ranks would be read and appended N times,
+            // silently multiplying its edges by N.
+            sort(all_selections.begin(), all_selections.end());
+            all_selections.erase(unique(all_selections.begin(), all_selections.end()),
+                                 all_selections.end());
           }
           
           // read the population info
