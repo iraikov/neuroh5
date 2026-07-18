@@ -62,7 +62,7 @@ jobs:
  
   build-linux:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
@@ -76,10 +76,13 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt update -y && sudo apt upgrade 
-        sudo apt install build-essential cmake mpich libhdf5-mpich-dev 
+        sudo apt update -y && sudo apt upgrade
+        sudo apt install build-essential cmake mpich libhdf5-mpich-dev
         python -m pip install --upgrade pip setuptools wheel
-        python -m pip install --upgrade numpy mpi4py h5py
+        python -m pip install --upgrade numpy h5py
+        # Build mpi4py from source against the system mpich just
+        # installed above.
+        python -m pip install --no-binary mpi4py --upgrade mpi4py
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Build
