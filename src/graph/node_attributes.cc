@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a graph node.
 ///
-///  Copyright (C) 2016-2024 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -80,7 +80,7 @@ namespace neuroh5
       throw_assert_nomsg(status == 0);
 #endif
 
-      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
+      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(value_plist, 1, value_cdims);
       throw_assert_nomsg(status == 0);
@@ -112,7 +112,7 @@ namespace neuroh5
               needs_create[i] = !(hdf5::exists_dataset(file, paths[i]) > 0);
             }
         }
-      throw_assert_nomsg(MPI_Bcast(needs_create, 2, MPI_INT, 0, comm) == MPI_SUCCESS);
+
 
       for (int i = 0; i < 2; i++)
         {

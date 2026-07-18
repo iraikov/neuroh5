@@ -531,6 +531,19 @@ namespace neuroh5
           throw_assert_nomsg(fspace >= 0);
 
 	  throw_assert_nomsg(H5Pset_chunk(dcpl, 1, &chunk ) >= 0);
+          // H5_HAS_PARALLEL_DEFLATE gates on HDF5 >= 1.14 (see
+          // neuroh5_types.hh). src_idx is written collectively with each
+          // rank contributing its own non-overlapping hyperslab (the
+          // "genuinely large, multi-writer" case per the original design
+          // -- unlike dst_blk_idx/dst_blk_ptr/dst_ptr above, which are
+          // gathered to rank 0 and written by it alone). For small/
+          // single-chunk edge counts (common in tests, and not impossible
+          // in production for a small projection), multiple ranks end up
+          // collectively writing disjoint sub-chunk regions of the same
+          // chunk -- HDF5's collective-filtered-chunk I/O path had real
+          // correctness issues for exactly this pattern through (at
+          // least) 1.10.10, root-caused from a CI failure showing each
+          // edge's src array duplicated once per I/O rank.
 #ifdef H5_HAS_PARALLEL_DEFLATE
           throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
 #endif

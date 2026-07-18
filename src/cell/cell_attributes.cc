@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a cell id.
 ///
-///  Copyright (C) 2016-2023 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -552,14 +552,19 @@ namespace neuroh5
       status = H5Pset_alloc_time(plist, H5D_ALLOC_TIME_EARLY);
       throw_assert(status == 0,
                    "create_cell_attribute_datasets: unable to set allocation time");
+      // H5_HAS_PARALLEL_DEFLATE gates on HDF5 >= 1.14 (see neuroh5_types.hh):
+      // append_cell_attribute (hdf5_cell_attributes.hh) writes
+      // CELL_INDEX/ATTR_PTR/ATTR_VAL collectively (H5FD_MPIO_COLLECTIVE)
+      // with each I/O rank's disjoint slice as its own hyperslab, and for
+      // small populations these datasets are typically only one or a few
+      // chunks.
 #ifdef H5_HAS_PARALLEL_DEFLATE
       status = H5Pset_deflate(plist, 9);
       throw_assert(status == 0,
                    "create_cell_attribute_datasets: unable to add deflate filter");
 #endif
 
-      
-      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
+      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_layout(value_plist, H5D_CHUNKED);
       throw_assert(status == 0,

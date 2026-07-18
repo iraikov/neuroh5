@@ -4,7 +4,7 @@
 ///
 ///  Type definitions for the fundamental datatypes used in the API
 ///
-///  Copyright (C) 2016-2021 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 #ifndef NEUROH5_TYPES_HH
 #define NEUROH5_TYPES_HH
@@ -38,8 +38,9 @@
 
 #define MAX_ATTR_NAME_LEN 128
 
-#if H5_VERSION_GE(1,10,5)
-#define H5_HAS_PARALLEL_DEFLATE 
+// Enable compression on 1.14 and later versions for better stability.
+#if H5_VERSION_GE(1,14,0)
+#define H5_HAS_PARALLEL_DEFLATE
 #endif
 
 using namespace NGraph;
