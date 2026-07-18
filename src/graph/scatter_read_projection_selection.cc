@@ -164,27 +164,35 @@ namespace neuroh5
                 }
               
               size_t local_num_prj_edges=0;
+              // Expected total number of (edge, destination-rank) pairs:
+              // a destination whose node_rank_map entry names more than one
+              // rank (e.g. because several ranks included the same gid in
+              // their selection) is legitimately replicated into more than
+              // one rank bucket below, so this can exceed edge_count.
+              size_t expected_num_packed_edges = 0;
 
               // append to the vectors representing a projection (sources,
               // destinations, edge attributes)
               throw_assert(data::append_rank_edge_map_selection(size, dst_start, src_start, selection_dst_idx, selection_dst_ptr,
                                                                 src_idx, attr_namespaces, edge_attr_map, node_rank_map,
-                                                                local_num_prj_edges, prj_rank_edge_map,
-                                                                EdgeMapDst) >= 0,
+                                                                local_num_prj_edges, expected_num_packed_edges,
+                                                                prj_rank_edge_map, EdgeMapDst) >= 0,
                            "error in append_edge_map_selection");
 
               // ensure that all edges in the projection have been read and
               // appended to edge_list
               throw_assert(local_num_prj_edges == edge_count,
                            "mismatch in projection edge count");
-              
+
               size_t num_packed_edges = 0;
-          
-              data::serialize_rank_edge_map (size, rank, prj_rank_edge_map, 
+
+              data::serialize_rank_edge_map (size, rank, prj_rank_edge_map,
                                              num_packed_edges, sendcounts, sendbuf, sdispls);
 
-              // ensure the correct number of edges is being packed
-              throw_assert(num_packed_edges == edge_count, "mismatch in packed projection edge count");
+              // ensure the correct number of (edge, destination-rank) pairs
+              // is being packed, accounting for any replication above
+              throw_assert(num_packed_edges == expected_num_packed_edges,
+                           "mismatch in packed projection edge count");
               
               mpi::MPI_DEBUG(io_comm, "scatter_read_projection_selection: packed ", num_packed_edges,
                         " edges from projection ", src_pop_name, " -> ", dst_pop_name);

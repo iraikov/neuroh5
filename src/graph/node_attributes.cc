@@ -4,7 +4,7 @@
 ///
 ///  Routines for manipulation of scalar and vector attributes associated with a graph node.
 ///
-///  Copyright (C) 2016-2024 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 
 #include "neuroh5_types.hh"
@@ -58,6 +58,7 @@ namespace neuroh5
 
     void create_node_attribute_datasets
     (
+     MPI_Comm       comm,
      const hid_t&   file,
      const string&  attr_namespace,
      const string&  attr_name,
@@ -79,7 +80,7 @@ namespace neuroh5
       throw_assert_nomsg(status == 0);
 #endif
 
-      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */		
+      hsize_t value_cdims[1]   = {value_chunk_size}; /* chunking dimensions for value dataset */
       hid_t value_plist = H5Pcreate (H5P_DATASET_CREATE);
       status = H5Pset_chunk(value_plist, 1, value_cdims);
       throw_assert_nomsg(status == 0);
@@ -92,15 +93,33 @@ namespace neuroh5
       throw_assert_nomsg(lcpl >= 0);
       throw_assert_nomsg(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
     
-      if (!(hdf5::exists_dataset (file, ("/" + hdf5::NODES)) > 0))
-        {
-          hdf5::create_group(file, ("/" + hdf5::NODES).c_str());
-        }
+      // Rank 0 alone decides which groups need creating and broadcasts
+      // that decision, rather than each rank independently
+      // exists-checking: independent per-rank checks can race/disagree,
+      // causing ranks to issue a mismatched sequence of collective
+      // H5Gcreate calls, which corrupts/truncates the file (see the
+      // identical fix in edge_attributes.cc's create_projection_groups).
+      int rank;
+      throw_assert_nomsg(MPI_Comm_rank(comm, &rank) == MPI_SUCCESS);
 
       string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
-      if (!(hdf5::exists_dataset (file, attr_prefix) > 0))
+      string paths[2] = { "/" + hdf5::NODES, attr_prefix };
+      int needs_create[2] = {0, 0};
+      if (rank == 0)
         {
-          hdf5::create_group(file, attr_prefix);
+          for (int i = 0; i < 2; i++)
+            {
+              needs_create[i] = !(hdf5::exists_dataset(file, paths[i]) > 0);
+            }
+        }
+
+
+      for (int i = 0; i < 2; i++)
+        {
+          if (needs_create[i])
+            {
+              hdf5::create_group(file, paths[i].c_str());
+            }
         }
 
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);

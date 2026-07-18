@@ -108,9 +108,22 @@ namespace neuroh5
 
       string attr_prefix = hdf5::node_attribute_prefix(attr_namespace);
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
-      if (!(hdf5::exists_dataset (file, attr_path) > 0))
+
+      // Rank 0 alone decides whether the dataset needs creating and
+      // broadcasts that decision, rather than each rank independently
+      // exists-checking: independent checks can race/disagree, causing
+      // some ranks to call the collective create_node_attribute_datasets
+      // while others skip it, which corrupts/truncates the file.
+      int needs_create = 0;
+      if (rank == 0)
         {
-          hdf5::create_node_attribute_datasets(file, attr_namespace, attr_name,
+          needs_create = !(hdf5::exists_dataset (file, attr_path) > 0);
+        }
+      throw_assert(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS,
+                   "error in MPI_Bcast");
+      if (needs_create)
+        {
+          hdf5::create_node_attribute_datasets(comm, file, attr_namespace, attr_name,
                                                ftype, chunk_size, value_chunk_size);
           throw_assert(H5Fclose(file) >= 0, "error in H5Fclose");
           file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
@@ -155,17 +168,27 @@ namespace neuroh5
       mpi::rank_ranges(size, io_size, ranges);
 
       // Determine I/O ranks to which to send the values
-      vector <size_t> io_dests(size); 
+      // (find the last/highest-index range whose start is <= r; ranges is
+      // sorted ascending by .first, so a forward scan that keeps the most
+      // recent match and stops once a range starts beyond r is equivalent
+      // to the "floor" search a backward-counting unsigned loop would do,
+      // without that loop's risk of underflowing past index 0)
+      vector <size_t> io_dests(size);
       for (size_t r=0; r<size; r++)
         {
-          for (size_t i=ranges.size()-1; i>=0; i--)
+          size_t best = 0;
+          for (size_t i = 0; i < ranges.size(); ++i)
             {
               if (ranges[i].first <= r)
                 {
-                  io_dests[r] = i;
+                  best = i;
+                }
+              else
+                {
                   break;
                 }
             }
+          io_dests[r] = best;
         }
 
       // Determine number of values for each rank
@@ -411,9 +434,9 @@ namespace neuroh5
 
       string attr_path = hdf5::node_attribute_path(attr_namespace, attr_name);
 
-      hdf5::create_node_attribute_datasets(file, attr_namespace, attr_name,
+      hdf5::create_node_attribute_datasets(comm, file, attr_namespace, attr_name,
                                            ftype, chunk_size, value_chunk_size);
-    
+
       hdf5::write_node_attribute<T> (comm, file, attr_path,
                                      index_vector, attr_ptr, value);
 

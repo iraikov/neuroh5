@@ -5,7 +5,7 @@
 ///  Top-level functions for appending edge information to graphs in
 ///  DBS (Destination Block Sparse) format.
 ///
-///  Copyright (C) 2016-2025 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 
 
@@ -277,12 +277,14 @@ namespace neuroh5
           hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
           throw_assert_nomsg(file >= 0);
 
-          hdf5::create_projection_groups(file, src_pop_name, dst_pop_name);
-          
-          throw_assert_nomsg(H5Fclose(file) >= 0);
-          
-          file = H5Fopen(file_name.c_str(), H5F_ACC_RDWR, fapl);
-          throw_assert_nomsg(file >= 0);
+          hdf5::create_projection_groups(io_comm, file, src_pop_name, dst_pop_name);
+
+          // Previously closed and immediately reopened the file here,
+          // in order to force a "flush" of the newly created groups
+          // before continuing. That's unnecessary now that
+          // create_projection_groups is itself properly collective (rank
+          // 0 decides + MPI_Bcast, all ranks issue the same H5Gcreate
+          // sequence).
 
           append_projection (io_comm, file, src_pop_name, dst_pop_name,
                              src_start, src_end, dst_start, dst_end,

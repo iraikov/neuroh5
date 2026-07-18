@@ -31,8 +31,16 @@ namespace neuroh5
   {
         
   
+    // comm scopes the ranks that will call this function collectively on
+    // an already-open, collectively-opened parallel file (needed so its
+    // internal exists-check-then-H5Gcreate decisions can be made once and
+    // broadcast rather than raced). Callers where only a single process
+    // touches the file at all (e.g. rank 0 alone, on a serially-reopened
+    // non-parallel handle) should pass MPI_COMM_SELF, for which the
+    // broadcast is a same-process no-op.
     void create_cell_attribute_datasets
     (
+     MPI_Comm         comm,
      const hid_t&     file,
      const string&    attr_namespace,
      const string&    pop_name,
@@ -235,9 +243,22 @@ namespace neuroh5
                    "append_cell_attribute: error in H5Pclose");
 
       
-      if (!(hdf5::exists_dataset (file, attr_path) > 0))
+      // file here is already collectively open (comm derived from its
+      // fapl above) and every rank in comm reaches this call, so rank 0
+      // decides whether the dataset needs creating and broadcasts that
+      // decision -- independent per-rank exists-checking can race/
+      // disagree, causing a mismatched sequence of collective
+      // H5Gcreate/H5Dcreate2 calls across ranks, which corrupts the file.
+      int needs_create = 0;
+      if (rank == 0)
         {
-          create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
+          needs_create = !(hdf5::exists_dataset (file, attr_path) > 0);
+        }
+      throw_assert(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS,
+                   "append_cell_attribute: error in MPI_Bcast");
+      if (needs_create)
+        {
+          create_cell_attribute_datasets(comm, file, attr_namespace, pop_name, attr_name,
                                          ftype, index_type, ptr_type,
                                          chunk_size, value_chunk_size
                                          );
@@ -336,7 +357,11 @@ namespace neuroh5
           
           if (!(hdf5::exists_dataset (file, attr_path) > 0))
             {
-              create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
+              // Only rank 0 executes this branch, on a freshly
+              // (serially, non-parallel) reopened file handle -- no other
+              // rank touches the file at this point, so MPI_COMM_SELF
+              // (single-process) is the correct scope here, not comm.
+              create_cell_attribute_datasets(MPI_COMM_SELF, file, attr_namespace, pop_name, attr_name,
                                              ftype, index_type, ptr_type,
                                              chunk_size, value_chunk_size
                                              );
@@ -429,17 +454,27 @@ namespace neuroh5
       mpi::rank_ranges(size, io_size, ranges);
 
       // Determine I/O ranks to which to send the values
-      vector <size_t> io_dests(size); 
+      // (find the last/highest-index range whose start is <= r; ranges is
+      // sorted ascending by .first, so a forward scan that keeps the most
+      // recent match and stops once a range starts beyond r is equivalent
+      // to the "floor" search a backward-counting unsigned loop would do,
+      // without that loop's risk of underflowing past index 0)
+      vector <size_t> io_dests(size);
       for (size_t r=0; r<size; r++)
         {
-          for (size_t i=ranges.size()-1; i>=0; i--)
+          size_t best = 0;
+          for (size_t i = 0; i < ranges.size(); ++i)
             {
               if (ranges[i].first <= r)
                 {
-                  io_dests[r] = *std::next(io_rank_set.begin(), i);
+                  best = i;
+                }
+              else
+                {
                   break;
                 }
             }
+          io_dests[r] = *std::next(io_rank_set.begin(), best);
         }
 
       // Determine number of values for each rank
@@ -655,7 +690,11 @@ namespace neuroh5
           
           if (!(hdf5::exists_dataset (file, attr_path) > 0))
             {
-              create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
+              // Only rank 0 executes this branch, on a freshly
+              // (serially, non-parallel) reopened file handle -- no other
+              // rank touches the file at this point, so MPI_COMM_SELF
+              // (single-process) is the correct scope here, not comm.
+              create_cell_attribute_datasets(MPI_COMM_SELF, file, attr_namespace, pop_name, attr_name,
                                              ftype, index_type, ptr_type,
                                              chunk_size, value_chunk_size
                                              );
@@ -783,7 +822,11 @@ namespace neuroh5
           
           if (!(hdf5::exists_dataset (file, attr_path) > 0))
             {
-              create_cell_attribute_datasets(file, attr_namespace, pop_name, attr_name,
+              // Only rank 0 executes this branch, on a freshly
+              // (serially, non-parallel) reopened file handle -- no other
+              // rank touches the file at this point, so MPI_COMM_SELF
+              // (single-process) is the correct scope here, not comm.
+              create_cell_attribute_datasets(MPI_COMM_SELF, file, attr_namespace, pop_name, attr_name,
                                              ftype, index_type, ptr_type,
                                              chunk_size, value_chunk_size
                                              );
@@ -864,17 +907,27 @@ namespace neuroh5
       mpi::rank_ranges(size, io_size_value, ranges);
 
       // Determine I/O ranks to which to send the values
-      vector <size_t> io_dests(size); 
+      // (find the last/highest-index range whose start is <= r; ranges is
+      // sorted ascending by .first, so a forward scan that keeps the most
+      // recent match and stops once a range starts beyond r is equivalent
+      // to the "floor" search a backward-counting unsigned loop would do,
+      // without that loop's risk of underflowing past index 0)
+      vector <size_t> io_dests(size);
       for (size_t r=0; r<size; r++)
         {
-          for (size_t i=ranges.size()-1; i>=0; i--)
+          size_t best = 0;
+          for (size_t i = 0; i < ranges.size(); ++i)
             {
               if (ranges[i].first <= r)
                 {
-                  io_dests[r] = *std::next(io_rank_set.begin(), i);
+                  best = i;
+                }
+              else
+                {
                   break;
                 }
             }
+          io_dests[r] = *std::next(io_rank_set.begin(), best);
         }
 
 

@@ -37,13 +37,15 @@ namespace neuroh5
 
     void create_projection_groups
     (
+     MPI_Comm       comm,
      const hid_t&   file,
      const string&  src_pop_name,
      const string&  dst_pop_name
      );
-    
+
     void create_edge_attribute_datasets
     (
+     MPI_Comm       comm,
      const hid_t&   file,
      const string&  src_pop_name,
      const string&  dst_pop_name,

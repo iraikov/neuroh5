@@ -175,6 +175,7 @@ namespace neuroh5
      hid_t                    loc,
      const std::string&       path,
      const std::vector<T>&    value,
+     const size_t             chunk_size = 4000,
      const bool collective = true
      )
     {
@@ -219,7 +220,13 @@ namespace neuroh5
       hid_t mspace = H5Screate_simple(1, &block, &block);
       throw_assert(mspace >= 0, "error in H5Screate_simple");
       throw_assert(H5Sselect_all(mspace) >= 0, "error in H5Sselect_all");
-      hid_t fspace = H5Screate_simple(1, &total, &total);
+      // Unlimited maxdims (with a chunked dataset creation property list
+      // below) so that a later append_graph call on this projection can
+      // H5Dset_extent this dataset instead of aborting -- matches
+      // hdf5::create_edge_attribute_datasets, the analogous dataset
+      // creation used by the append path.
+      hsize_t maxdims[1] = {H5S_UNLIMITED};
+      hid_t fspace = H5Screate_simple(1, &total, maxdims);
       throw_assert(fspace >= 0, "error in H5Screate_simple");
       throw_assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, NULL,
                                        &count, &block) >= 0,
@@ -236,12 +243,20 @@ namespace neuroh5
 
       hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
       throw_assert(lcpl >= 0, "error in H5Pcreate");
-      throw_assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0, 
+      throw_assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0,
                    "error in H5Pset_create_intermediate_group");
 
-      hid_t dset = H5Dcreate(loc, path.c_str(), ftype, fspace,
-                             lcpl, H5P_DEFAULT, H5P_DEFAULT);
-      throw_assert(dset >= 0, "error in H5Dcreate");
+      hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+      throw_assert(dcpl >= 0, "error in H5Pcreate");
+      hsize_t cdims[1] = {(hsize_t)chunk_size};
+      throw_assert(H5Pset_chunk(dcpl, 1, cdims) >= 0, "error in H5Pset_chunk");
+#ifdef H5_HAS_PARALLEL_DEFLATE
+      throw_assert(H5Pset_deflate(dcpl, 9) >= 0, "error in H5Pset_deflate");
+#endif
+
+      hid_t dset = H5Dcreate2(loc, path.c_str(), ftype, fspace,
+                              lcpl, dcpl, H5P_DEFAULT);
+      throw_assert(dset >= 0, "error in H5Dcreate2");
       throw_assert(H5Dwrite(dset, mtype, mspace, fspace, wapl, &value[0])
                    >= 0, "error in H5Dwrite");
 
@@ -250,6 +265,7 @@ namespace neuroh5
       throw_assert(H5Sclose(fspace) >= 0, "error in H5Sclose");
       throw_assert(H5Sclose(mspace) >= 0, "error in H5Sclose");
       throw_assert(H5Pclose(lcpl) >= 0, "error in H5Pclose");
+      throw_assert(H5Pclose(dcpl) >= 0, "error in H5Pclose");
       throw_assert(H5Pclose(wapl) >= 0, "error in H5Pclose");
 
       throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");
@@ -264,7 +280,8 @@ namespace neuroh5
                                    const string &src_pop_name,
                                    const string &dst_pop_name,
                                    const map <string, data::NamedAttrVal>& edge_attr_map,
-                                   const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index)
+                                   const std::map <std::string, std::pair <size_t, data::AttrIndex > >& edge_attr_index,
+                                   const size_t chunk_size = 4000)
 
 
     {
@@ -278,12 +295,12 @@ namespace neuroh5
             {
               const data::AttrIndex& attr_index = ns_it->second.second;
               const std::vector<std::string>& attr_names = attr_index.attr_names<T>();
-              
+
               for (const std::string& attr_name: attr_names)
                 {
                   size_t i = attr_index.attr_index<T>(attr_name);
                   string path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name, attr_namespace, attr_name);
-                  graph::write_edge_attribute<T>(comm, file, path, edge_attr_values.const_attr_vec<T>(i));
+                  graph::write_edge_attribute<T>(comm, file, path, edge_attr_values.const_attr_vec<T>(i), chunk_size);
                 }
             }
           else
@@ -322,10 +339,25 @@ namespace neuroh5
                                                        attr_namespace);
       string attr_path = hdf5::edge_attribute_path(src_pop_name, dst_pop_name,
                                                    attr_namespace, attr_name);
-      
-      if (!(hdf5::exists_dataset (file, attr_path) > 0))
+
+      // Rank 0 alone decides whether the dataset needs creating and
+      // broadcasts that decision, rather than each rank independently
+      // exists-checking: independent checks can race/disagree, causing
+      // some ranks to call the collective create_edge_attribute_datasets
+      // (and its nested collective H5Gcreate/H5Dcreate2 calls) while
+      // others skip it, which corrupts/truncates the file.
+      int rrank;
+      throw_assert(MPI_Comm_rank(comm, &rrank) == MPI_SUCCESS, "error in MPI_Comm_rank");
+      int needs_create = 0;
+      if (rrank == 0)
         {
-          hdf5::create_edge_attribute_datasets(file, src_pop_name, dst_pop_name,
+          needs_create = !(hdf5::exists_dataset (file, attr_path) > 0);
+        }
+      throw_assert(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS,
+                   "error in MPI_Bcast");
+      if (needs_create)
+        {
+          hdf5::create_edge_attribute_datasets(comm, file, src_pop_name, dst_pop_name,
                                                attr_namespace, attr_name,
                                                ftype, chunk_size);
 	  throw_assert(MPI_Barrier(comm) == MPI_SUCCESS, "error in MPI_Barrier");

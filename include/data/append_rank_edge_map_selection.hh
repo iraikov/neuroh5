@@ -33,6 +33,7 @@ namespace neuroh5
      const map<string, data::NamedAttrVal>&  edge_attr_map,
      const node_rank_map_t&                  node_rank_map,
      size_t&                                 num_edges,
+     size_t&                                 num_packed_edges,
      rank_edge_map_t &                       rank_edge_map,
      EdgeMapType                             edge_map_type
      );

@@ -4,7 +4,7 @@
 ///
 ///  Python module for reading and writing neuronal connectivity and morphological information.
 ///
-///  Copyright (C) 2016-2022 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 
 #include "debug.hh"
@@ -1098,14 +1098,16 @@ PyObject* py_build_tree_value(const CELL_IDX_T key, const neurotree_t &tree,
           for (size_t p = 0; p < num_section_nodes; p++)
             {
               NODE_IDX_T node_idx = sections[sections_ptr];
-              throw_assert(node_idx <= num_nodes,
+              throw_assert(node_idx >= 1 && node_idx <= num_nodes,
                            "py_build_tree_value: invalid node index in tree");
 
               py_section_nodes_ptr[p] = node_idx;
               section_nodes.push_back(node_idx);
               if (marked_nodes.find(node_idx) == marked_nodes.end())
                 {
-                  section_vector_ptr[node_idx] = section_idx;
+                  // node_idx is 1-based but section_vector_ptr is a plain
+                  // 0-based buffer of size num_nodes.
+                  section_vector_ptr[node_idx - 1] = section_idx;
                   marked_nodes.insert(node_idx);
                 }
               sections_ptr++;
@@ -4199,9 +4201,12 @@ extern "C"
                                      &input_file_name, &py_edge_attr_name_spaces, &read_node_index_flag, &py_comm))
       return NULL;
 
-    status = PyList_Check(py_edge_attr_name_spaces);
-    throw_assert(status > 0,
-                 "py_read_graph_info: invalid attribute namespace list");
+    if ((py_edge_attr_name_spaces != NULL) && (py_edge_attr_name_spaces != Py_None))
+      {
+        status = PyList_Check(py_edge_attr_name_spaces);
+        throw_assert(status > 0,
+                     "py_read_graph_info: invalid attribute namespace list");
+      }
 
     read_node_index = read_node_index_flag>0;
 
@@ -4237,7 +4242,7 @@ extern "C"
     rank = srank;
     
     vector <string> edge_attr_name_spaces;
-    if (py_edge_attr_name_spaces != NULL)
+    if ((py_edge_attr_name_spaces != NULL) && (py_edge_attr_name_spaces != Py_None))
       {
         for (size_t i = 0; (Py_ssize_t)i < PyList_Size(py_edge_attr_name_spaces); i++)
           {
@@ -4960,8 +4965,8 @@ extern "C"
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssO|OOOii", (char **)kwlist,
                                      &file_name, &pop_name,
-                                     &py_selection, &py_comm, 
-                                     &py_attr_name_spaces, &py_mask,
+                                     &py_selection, &py_comm,
+                                     &py_mask, &py_attr_name_spaces,
                                      &topology_flag, &validate_flag))
       return NULL;
     throw_assert(PyList_Check(py_selection) > 0,
@@ -8305,54 +8310,120 @@ extern "C"
   };
 
   
+  // Converts a C++ exception escaping a py_* entry point into a proper
+  // Python exception, instead of letting it unwind into CPython's C
+  // frames, which is undefined behavior that in practice manifests as
+  // std::terminate()/SIGABRT or a straight segfault. One NEUROH5_PY_GUARD
+  // invocation per module_methods[] entry below; none of the py_*
+  // function bodies change. (A single template wrapper would have been
+  // less repetitive, but this file's py_* functions have C linkage, and
+  // templates cannot have C linkage, hence one generated function per
+  // entry point instead.)
+  //
+  // Caveat: this only stops the segfault. On the throwing rank, an in-flight
+  // MPI_Comm_dup'd communicator or open HDF5 handle inside the throwing
+  // function is not released (the C++ exception unwinds past its normal
+  // cleanup code), and other ranks in the same collective operation are
+  // not informed, so continuing on the same communicator after catching
+  // the resulting Python exception can leave ranks inconsistent. For
+  // failures that are genuinely collective (not per-rank input
+  // validation), prefer aborting over catching and continuing
+  // individually per rank.
+#define NEUROH5_PY_GUARD(NAME) \
+  static PyObject* NAME##_guarded (PyObject *self, PyObject *args, PyObject *kwds) \
+  { \
+    try \
+      { \
+        return NAME(self, args, kwds); \
+      } \
+    catch (const std::exception& e) \
+      { \
+        if (!PyErr_Occurred()) \
+          { \
+            PyErr_SetString(PyExc_RuntimeError, e.what()); \
+          } \
+        return NULL; \
+      } \
+    catch (...) \
+      { \
+        PyErr_SetString(PyExc_RuntimeError, "neuroh5.io: unknown C++ exception"); \
+        return NULL; \
+      } \
+  }
+
+  NEUROH5_PY_GUARD(py_append_cell_attributes)
+  NEUROH5_PY_GUARD(py_append_cell_trees)
+  NEUROH5_PY_GUARD(py_append_graph)
+  NEUROH5_PY_GUARD(py_bcast_cell_attributes)
+  NEUROH5_PY_GUARD(py_bcast_graph)
+  NEUROH5_PY_GUARD(py_read_cell_attribute_info)
+  NEUROH5_PY_GUARD(py_read_cell_attribute_selection)
+  NEUROH5_PY_GUARD(py_read_cell_attributes)
+  NEUROH5_PY_GUARD(py_read_graph)
+  NEUROH5_PY_GUARD(py_read_graph_info)
+  NEUROH5_PY_GUARD(py_read_graph_selection)
+  NEUROH5_PY_GUARD(py_read_population_names)
+  NEUROH5_PY_GUARD(py_read_population_ranges)
+  NEUROH5_PY_GUARD(py_read_projection_names)
+  NEUROH5_PY_GUARD(py_read_tree_selection)
+  NEUROH5_PY_GUARD(py_read_trees)
+  NEUROH5_PY_GUARD(py_scatter_read_cell_attribute_selection)
+  NEUROH5_PY_GUARD(py_scatter_read_cell_attributes)
+  NEUROH5_PY_GUARD(py_scatter_read_graph)
+  NEUROH5_PY_GUARD(py_scatter_read_graph_selection)
+  NEUROH5_PY_GUARD(py_scatter_read_tree_selection)
+  NEUROH5_PY_GUARD(py_scatter_read_trees)
+  NEUROH5_PY_GUARD(py_write_cell_attributes)
+  NEUROH5_PY_GUARD(py_write_graph)
+
   static PyMethodDef module_methods[] = {
-    { "read_population_ranges", (PyCFunction)py_read_population_ranges, METH_VARARGS | METH_KEYWORDS,
+    { "read_population_ranges", (PyCFunction)py_read_population_ranges_guarded, METH_VARARGS | METH_KEYWORDS,
        read_population_ranges_doc },
-    { "read_population_names", (PyCFunction)py_read_population_names, METH_VARARGS | METH_KEYWORDS,
+    { "read_population_names", (PyCFunction)py_read_population_names_guarded, METH_VARARGS | METH_KEYWORDS,
       read_population_names_doc },
-    { "read_projection_names", (PyCFunction)py_read_projection_names, METH_VARARGS | METH_KEYWORDS,
+    { "read_projection_names", (PyCFunction)py_read_projection_names_guarded, METH_VARARGS | METH_KEYWORDS,
       read_projection_names_doc },
-    { "read_graph_info", (PyCFunction)py_read_graph_info, METH_VARARGS | METH_KEYWORDS,
+    { "read_graph_info", (PyCFunction)py_read_graph_info_guarded, METH_VARARGS | METH_KEYWORDS,
       read_graph_info_doc },
-    { "read_trees", (PyCFunction)py_read_trees, METH_VARARGS | METH_KEYWORDS,
+    { "read_trees", (PyCFunction)py_read_trees_guarded, METH_VARARGS | METH_KEYWORDS,
       read_trees_doc },
-    { "read_tree_selection", (PyCFunction)py_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
+    { "read_tree_selection", (PyCFunction)py_read_tree_selection_guarded, METH_VARARGS | METH_KEYWORDS,
       read_tree_selection_doc },
-    { "scatter_read_trees", (PyCFunction)py_scatter_read_trees, METH_VARARGS | METH_KEYWORDS,
+    { "scatter_read_trees", (PyCFunction)py_scatter_read_trees_guarded, METH_VARARGS | METH_KEYWORDS,
       scatter_read_trees_doc },
-    { "scatter_read_tree_selection", (PyCFunction)py_scatter_read_tree_selection, METH_VARARGS | METH_KEYWORDS,
+    { "scatter_read_tree_selection", (PyCFunction)py_scatter_read_tree_selection_guarded, METH_VARARGS | METH_KEYWORDS,
       scatter_read_trees_doc },
-    { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info, METH_VARARGS | METH_KEYWORDS,
+    { "read_cell_attribute_info", (PyCFunction)py_read_cell_attribute_info_guarded, METH_VARARGS | METH_KEYWORDS,
       read_cell_attribute_info_doc },
-    { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
+    { "read_cell_attribute_selection", (PyCFunction)py_read_cell_attribute_selection_guarded, METH_VARARGS | METH_KEYWORDS,
        read_cell_attribute_selection_doc },
-    { "scatter_read_cell_attribute_selection", (PyCFunction)py_scatter_read_cell_attribute_selection, METH_VARARGS | METH_KEYWORDS,
+    { "scatter_read_cell_attribute_selection", (PyCFunction)py_scatter_read_cell_attribute_selection_guarded, METH_VARARGS | METH_KEYWORDS,
        scatter_read_cell_attribute_selection_doc },
-    { "read_cell_attributes", (PyCFunction)py_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
+    { "read_cell_attributes", (PyCFunction)py_read_cell_attributes_guarded, METH_VARARGS | METH_KEYWORDS,
       read_cell_attributes_doc },
-    { "scatter_read_cell_attributes", (PyCFunction)py_scatter_read_cell_attributes, METH_VARARGS | METH_KEYWORDS,
+    { "scatter_read_cell_attributes", (PyCFunction)py_scatter_read_cell_attributes_guarded, METH_VARARGS | METH_KEYWORDS,
       scatter_read_cell_attributes_doc },
-    { "bcast_cell_attributes", (PyCFunction)py_bcast_cell_attributes, METH_VARARGS | METH_KEYWORDS,
+    { "bcast_cell_attributes", (PyCFunction)py_bcast_cell_attributes_guarded, METH_VARARGS | METH_KEYWORDS,
       "Reads attributes for the given range of cells and broadcasts to all ranks." },
-    { "write_cell_attributes", (PyCFunction)py_write_cell_attributes, METH_VARARGS | METH_KEYWORDS,
+    { "write_cell_attributes", (PyCFunction)py_write_cell_attributes_guarded, METH_VARARGS | METH_KEYWORDS,
       "Writes attributes for the given range of cells." },
-    { "append_cell_attributes", (PyCFunction)py_append_cell_attributes, METH_VARARGS | METH_KEYWORDS,
+    { "append_cell_attributes", (PyCFunction)py_append_cell_attributes_guarded, METH_VARARGS | METH_KEYWORDS,
       "Appends additional attributes for the given range of cells." },
-    { "append_cell_trees", (PyCFunction)py_append_cell_trees, METH_VARARGS | METH_KEYWORDS,
+    { "append_cell_trees", (PyCFunction)py_append_cell_trees_guarded, METH_VARARGS | METH_KEYWORDS,
       "Appends tree morphologies." },
-    { "read_graph", (PyCFunction)py_read_graph, METH_VARARGS | METH_KEYWORDS,
+    { "read_graph", (PyCFunction)py_read_graph_guarded, METH_VARARGS | METH_KEYWORDS,
       "Reads graph connectivity in Destination Block Sparse format." },
-    { "scatter_read_graph", (PyCFunction)py_scatter_read_graph, METH_VARARGS | METH_KEYWORDS,
+    { "scatter_read_graph", (PyCFunction)py_scatter_read_graph_guarded, METH_VARARGS | METH_KEYWORDS,
       "Reads and scatters graph connectivity in Destination Block Sparse format." },
-    { "bcast_graph", (PyCFunction)py_bcast_graph, METH_VARARGS | METH_KEYWORDS,
+    { "bcast_graph", (PyCFunction)py_bcast_graph_guarded, METH_VARARGS | METH_KEYWORDS,
       "Reads and broadcasts graph connectivity in Destination Block Sparse format." },
-    { "read_graph_selection", (PyCFunction)py_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
+    { "read_graph_selection", (PyCFunction)py_read_graph_selection_guarded, METH_VARARGS | METH_KEYWORDS,
       "Reads subset of graph connectivity in Destination Block Sparse format." },
-    { "scatter_read_graph_selection", (PyCFunction)py_scatter_read_graph_selection, METH_VARARGS | METH_KEYWORDS,
+    { "scatter_read_graph_selection", (PyCFunction)py_scatter_read_graph_selection_guarded, METH_VARARGS | METH_KEYWORDS,
       "Reads subset of graph connectivity in Destination Block Sparse format." },
-    { "write_graph", (PyCFunction)py_write_graph, METH_VARARGS | METH_KEYWORDS,
+    { "write_graph", (PyCFunction)py_write_graph_guarded, METH_VARARGS | METH_KEYWORDS,
       "Writes graph connectivity in Destination Block Sparse format." },
-    { "append_graph", (PyCFunction)py_append_graph, METH_VARARGS | METH_KEYWORDS,
+    { "append_graph", (PyCFunction)py_append_graph_guarded, METH_VARARGS | METH_KEYWORDS,
       "Appends graph connectivity in Destination Block Sparse format." },
     { NULL, NULL, 0, NULL }
   };

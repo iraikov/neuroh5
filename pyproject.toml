@@ -12,3 +12,9 @@ no-binary-package = ["mpi4py"]
 
 [tool.uv.pip]
 no-binary = ["mpi4py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+markers = [
+    "mpi: exercises multi-rank behavior by shelling out to mpirun (see tests/unit/mpi_workers/)",
+]
