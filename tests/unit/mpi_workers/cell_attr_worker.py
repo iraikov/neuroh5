@@ -93,9 +93,27 @@ def main():
         merged = {}
         for d in comm.allgather(got_local):
             merged.update(d)
-        result.check(cell_attrs_equal(merged, expected),
-                     f"append mismatch: got {sorted(merged.keys())} "
-                     f"expected {sorted(expected.keys())}")
+        ok = cell_attrs_equal(merged, expected)
+        if not ok:
+            import numpy as np
+            missing = sorted(set(expected) - set(merged))
+            extra = sorted(set(merged) - set(expected))
+            value_diffs = []
+            for gid in sorted(set(merged) & set(expected)):
+                for name in expected[gid]:
+                    va = np.asarray(merged.get(gid, {}).get(name))
+                    vb = np.asarray(expected[gid][name])
+                    same = (va.shape == vb.shape) and (
+                        np.allclose(va, vb) if vb.dtype.kind == "f" else np.array_equal(va, vb)
+                    )
+                    if not same:
+                        value_diffs.append(f"gid={gid} attr={name} got={va.tolist()} expected={vb.tolist()}")
+            result.check(False,
+                         f"append mismatch: missing_gids={missing} extra_gids={extra} "
+                         f"value_diffs={value_diffs[:5]}"
+                         + (f" (+{len(value_diffs) - 5} more)" if len(value_diffs) > 5 else ""))
+        else:
+            result.check(True, "")
         result.info["local_contributed"] = len(local_attrs)
         result.info["merged_total"] = len(merged)
 
