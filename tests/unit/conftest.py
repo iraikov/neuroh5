@@ -61,10 +61,18 @@ def run_mpi_worker(worker_name, nranks, args, timeout=120):
             f"--- stderr so far ---\n{stderr}"
         )
 
-    assert proc.returncode == 0, (
-        f"mpi worker {worker_name} (n={nranks}) exited {proc.returncode}\n"
-        f"cmd: {' '.join(cmd)}\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}"
-    )
+    if proc.returncode != 0:
+        result_json = None
+        if out_path is not None and out_path.exists():
+            try:
+                result_json = out_path.read_text()
+            except OSError:
+                pass
+        raise AssertionError(
+            f"mpi worker {worker_name} (n={nranks}) exited {proc.returncode}\n"
+            f"cmd: {' '.join(cmd)}\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}\n"
+            f"--- result json ({out_path}) ---\n{result_json}"
+        )
 
     assert out_path is not None and out_path.exists(), (
         f"mpi worker {worker_name} did not produce a result file\n"
