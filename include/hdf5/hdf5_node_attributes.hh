@@ -33,6 +33,7 @@ namespace neuroh5
 
     void create_node_attribute_datasets
     (
+     MPI_Comm       comm,
      const hid_t&   file,
      const string&  attr_namespace,
      const string&  attr_name,

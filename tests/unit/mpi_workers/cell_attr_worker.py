@@ -1,7 +1,9 @@
 #!/usr/bin/env python
-"""MPI worker exercising neuroh5 cell attribute scatter/bcast/selection reads.
+"""MPI worker exercising neuroh5 cell attribute scatter/bcast/selection reads,
+and multi-rank append_cell_attributes.
 
-Usage: mpirun -n N python cell_attr_worker.py --scenario {scatter,bcast,scatter_selection}
+Usage: mpirun -n N python cell_attr_worker.py
+           --scenario {scatter,bcast,scatter_selection,append}
            --path FILE --pop-start I --pop-count I --seed I --out FILE
 """
 import argparse
@@ -16,13 +18,14 @@ from neuroh5.io import (  # noqa: E402
     scatter_read_cell_attributes,
     scatter_read_cell_attribute_selection,
     bcast_cell_attributes,
+    append_cell_attributes,
 )
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--scenario", required=True,
-                    choices=["scatter", "bcast", "scatter_selection"])
+                    choices=["scatter", "bcast", "scatter_selection", "append"])
     p.add_argument("--path", required=True)
     p.add_argument("--pop-start", type=int, required=True)
     p.add_argument("--pop-count", type=int, required=True)
@@ -64,6 +67,37 @@ def main():
                      f"scatter_selection mismatch: got {sorted(got.keys())} "
                      f"expected {sorted(expected_local.keys())}")
         result.info["local_selection_count"] = len(local_selection)
+
+    elif args.scenario == "append":
+        # Regression test for a race condition: append_cell_attributes
+        # (via create_cell_attribute_datasets/create_cell_index) used to
+        # have every I/O rank independently call hdf5::exists_dataset to
+        # decide whether to create the attribute namespace's groups/
+        # datasets -- when ranks disagreed (metadata cache lag on a fresh
+        # target), they issued a mismatched sequence of collective
+        # H5Gcreate/H5Dcreate2 calls, corrupting the file. Fixed by having
+        # rank 0 alone decide and MPI_Bcast the decision. This scenario
+        # targets a freshly created file (no "Test" namespace group yet)
+        # with every rank acting as an I/O rank (io_size defaults to
+        # nranks), the configuration that used to race.
+        local_attrs = {
+            gid: v for i, (gid, v) in enumerate(sorted(expected.items()))
+            if i % comm.size == comm.rank
+        }
+        append_cell_attributes(args.path, "GC", local_attrs, namespace="Test", comm=comm)
+        comm.barrier()
+
+        d = scatter_read_cell_attributes(args.path, "GC", namespaces=["Test"],
+                                         comm=comm, io_size=1)
+        got_local = dict(d["Test"])
+        merged = {}
+        for d in comm.allgather(got_local):
+            merged.update(d)
+        result.check(cell_attrs_equal(merged, expected),
+                     f"append mismatch: got {sorted(merged.keys())} "
+                     f"expected {sorted(expected.keys())}")
+        result.info["local_contributed"] = len(local_attrs)
+        result.info["merged_total"] = len(merged)
 
     result.finalize(args.out)
 

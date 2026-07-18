@@ -138,24 +138,32 @@ namespace neuroh5
       string attr_prefix = hdf5::cell_attribute_prefix(attr_name_space, pop_name);
       string attr_path   = hdf5::cell_attribute_path(attr_name_space, pop_name, hdf5::CELL_INDEX);
 
-      bool has_group=false, has_index=false;
-
       hid_t file = H5Iget_file_id(loc);
       throw_assert(file >= 0,
                    "create_cell_index: invalid file handle");
-      
-      has_group = hdf5::exists_dataset (file, attr_prefix) > 0;
-      if (!has_group)
+
+      // This function operates on an already collectively-open file and
+      // is called identically by every rank in comm, so rank 0 alone
+      // decides whether the group/dataset need creating and broadcasts
+      // that decision -- independent per-rank exists-checking can race/
+      // disagree, causing a mismatched sequence of collective
+      // H5Gcreate/H5Dcreate2 calls across ranks, which corrupts the file.
+      int needs_create[2] = {0, 0}; // [0] = group, [1] = index dataset
+      if (rank == 0)
+        {
+          bool has_group = hdf5::exists_dataset (file, attr_prefix) > 0;
+          needs_create[0] = !has_group;
+          needs_create[1] = has_group ? !(hdf5::exists_dataset (file, attr_path) > 0) : 1;
+        }
+      throw_assert_nomsg(MPI_Bcast(needs_create, 2, MPI_INT, 0, comm) == MPI_SUCCESS);
+
+      if (needs_create[0])
         {
           ierr = hdf5::create_group (file, attr_prefix);
           throw_assert_nomsg(ierr == 0);
         }
-      else
-        {
-          has_index = hdf5::exists_dataset (file, attr_path) > 0;
-        }
-      
-      if (!has_index)
+
+      if (needs_create[1])
         {
           
           hsize_t maxdims[1] = {H5S_UNLIMITED};

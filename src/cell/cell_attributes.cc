@@ -526,6 +526,7 @@ namespace neuroh5
 
     void create_cell_attribute_datasets
     (
+     MPI_Comm         comm,
      const hid_t&     file,
      const string&    attr_namespace,
      const string&    pop_name,
@@ -581,26 +582,43 @@ namespace neuroh5
       throw_assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0,
                    "create_cell_attribute_datasets: unable to set create intermediate group property");
     
-      if (!(hdf5::exists_dataset (file, ("/" + hdf5::POPULATIONS)) > 0))
-        {
-          hdf5::create_group(file, ("/" + hdf5::POPULATIONS).c_str());
-        }
-
-      if (!(hdf5::exists_dataset (file, hdf5::population_path(pop_name)) > 0))
-        {
-          hdf5::create_group(file, hdf5::population_path(pop_name));
-        }
+      // Rank 0 (of comm) alone decides which groups need creating and
+      // broadcasts that decision, rather than each rank independently
+      // exists-checking: independent per-rank checks can race/disagree,
+      // causing ranks to issue a mismatched sequence of collective
+      // H5Gcreate calls, which corrupts/truncates the file (see the
+      // identical fix in edge_attributes.cc's create_projection_groups).
+      // Callers where this function runs on a single process pass
+      // MPI_COMM_SELF, for which this is a same-process no-op.
+      int comm_rank;
+      throw_assert(MPI_Comm_rank(comm, &comm_rank) == MPI_SUCCESS,
+                   "create_cell_attribute_datasets: error in MPI_Comm_rank");
 
       string attr_prefix = hdf5::cell_attribute_prefix(attr_namespace, pop_name);
-      if (!(hdf5::exists_dataset (file, attr_prefix) > 0))
-        {
-          hdf5::create_group(file, attr_prefix);
-        }
-
       string attr_path = hdf5::cell_attribute_path(attr_namespace, pop_name, attr_name);
-      if (!(hdf5::exists_dataset (file, attr_path) > 0))
+      string paths[4] = {
+        "/" + hdf5::POPULATIONS,
+        hdf5::population_path(pop_name),
+        attr_prefix,
+        attr_path
+      };
+      int needs_create[4] = {0, 0, 0, 0};
+      if (comm_rank == 0)
         {
-          hdf5::create_group(file, attr_path);
+          for (int i = 0; i < 4; i++)
+            {
+              needs_create[i] = !(hdf5::exists_dataset(file, paths[i]) > 0);
+            }
+        }
+      throw_assert(MPI_Bcast(needs_create, 4, MPI_INT, 0, comm) == MPI_SUCCESS,
+                   "create_cell_attribute_datasets: error in MPI_Bcast");
+
+      for (int i = 0; i < 4; i++)
+        {
+          if (needs_create[i])
+            {
+              hdf5::create_group(file, paths[i].c_str());
+            }
         }
 
       hid_t mspace, dset;

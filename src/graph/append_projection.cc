@@ -110,7 +110,21 @@ namespace neuroh5
 
       hid_t dset, fspace;
 
-      if (!(hdf5::exists_dataset (file, path) > 0))
+      // Rank 0 alone decides whether the dataset needs creating and
+      // broadcasts that decision, rather than each rank independently
+      // exists-checking: independent per-rank checks can race/disagree
+      // (e.g. metadata cache lag), causing some ranks to take the
+      // H5Dcreate2 branch (a collective metadata operation) while others
+      // take H5Dopen2 -- a mismatched sequence of collective calls across
+      // ranks, which corrupts/truncates the file.
+      int needs_create = 0;
+      if (rank == 0)
+        {
+          needs_create = !(hdf5::exists_dataset (file, path) > 0);
+        }
+      throw_assert_nomsg(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS);
+
+      if (needs_create)
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           throw_assert_nomsg(fspace >= 0);
@@ -244,7 +258,19 @@ namespace neuroh5
       hid_t dset, fspace;
 
       hsize_t dst_blk_ptr_dims = (hsize_t)total_num_blocks+1, one=1;
-      if (!(hdf5::exists_dataset (file, path) > 0))
+
+      // See the identical rationale in append_dst_blk_idx above: rank 0
+      // decides and broadcasts, rather than each rank independently
+      // exists-checking, to avoid ranks disagreeing and issuing a
+      // mismatched sequence of collective H5Dcreate2/H5Dopen2 calls.
+      int needs_create = 0;
+      if (rank == 0)
+        {
+          needs_create = !(hdf5::exists_dataset (file, path) > 0);
+        }
+      throw_assert_nomsg(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS);
+
+      if (needs_create)
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           throw_assert_nomsg(fspace >= 0);
@@ -362,7 +388,18 @@ namespace neuroh5
 
       hid_t dset, fspace;
 
-      if (!(hdf5::exists_dataset (file, path) > 0))
+      // See the identical rationale in append_dst_blk_idx above: rank 0
+      // decides and broadcasts, rather than each rank independently
+      // exists-checking, to avoid ranks disagreeing and issuing a
+      // mismatched sequence of collective H5Dcreate2/H5Dopen2 calls.
+      int needs_create = 0;
+      if (rank == 0)
+        {
+          needs_create = !(hdf5::exists_dataset (file, path) > 0);
+        }
+      throw_assert_nomsg(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS);
+
+      if (needs_create)
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           throw_assert_nomsg(fspace >= 0);
@@ -433,6 +470,7 @@ namespace neuroh5
 
     void append_src_idx
     (
+     MPI_Comm                  comm,
      size_t                    rank,
      hid_t                     file,
      const string&             src_pop_name,
@@ -475,8 +513,19 @@ namespace neuroh5
       hsize_t src_idx_dims = total_num_edges, one=1;
 
       hid_t dset, fspace;
-      
-      if (!(hdf5::exists_dataset (file, path) > 0))
+
+      // See the identical rationale in append_dst_blk_idx above: rank 0
+      // decides and broadcasts, rather than each rank independently
+      // exists-checking, to avoid ranks disagreeing and issuing a
+      // mismatched sequence of collective H5Dcreate2/H5Dopen2 calls.
+      int needs_create = 0;
+      if (rank == 0)
+        {
+          needs_create = !(hdf5::exists_dataset (file, path) > 0);
+        }
+      throw_assert_nomsg(MPI_Bcast(&needs_create, 1, MPI_INT, 0, comm) == MPI_SUCCESS);
+
+      if (needs_create)
         {
           fspace = H5Screate_simple(1, zerodims, maxdims);
           throw_assert_nomsg(fspace >= 0);
@@ -485,7 +534,7 @@ namespace neuroh5
 #ifdef H5_HAS_PARALLEL_DEFLATE
           throw_assert_nomsg(H5Pset_deflate(dcpl, 9) >= 0);
 #endif
-          
+
           dset = H5Dcreate2 (file, path.c_str(), NODE_IDX_H5_FILE_T,
                              fspace, lcpl, dcpl, H5P_DEFAULT);
           throw_assert_nomsg(dset >= 0);
@@ -818,7 +867,7 @@ namespace neuroh5
 
       append_src_idx
         (
-         rank, file,
+         comm, rank, file,
          src_pop_name, dst_pop_name,
          src_start, src_end,
          dst_start, dst_end,
