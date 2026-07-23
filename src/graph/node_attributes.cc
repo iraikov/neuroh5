@@ -9,6 +9,7 @@
 
 #include "neuroh5_types.hh"
 #include "path_names.hh"
+#include "h5literate_compat.hh"
 #include "read_template.hh"
 #include "write_template.hh"
 #include "hdf5_node_attributes.hh"
@@ -142,7 +143,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info2_t* info,
+     const neuroh5_h5l_info_t* info,
      void*             op_data
      )
     {
@@ -186,7 +187,7 @@ namespace neuroh5
         {
     
           hsize_t idx = 0;
-          ierr = H5Literate2(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = NEUROH5_H5LITERATE(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &node_attribute_cb, (void*) &out_attributes);
           
           throw_assert_nomsg(H5Gclose(grp) >= 0);
