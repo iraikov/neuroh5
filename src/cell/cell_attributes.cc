@@ -9,6 +9,7 @@
 
 #include "neuroh5_types.hh"
 #include "path_names.hh"
+#include "h5literate_compat.hh"
 #include "read_template.hh"
 #include "write_template.hh"
 #include "file_access.hh"
@@ -99,7 +100,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const neuroh5_h5l_info_t* info,
      void*             op_data
      )
     {
@@ -134,7 +135,7 @@ namespace neuroh5
                        "get_cell_attribute_name_spaces: unable to open group " << path);
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = NEUROH5_H5LITERATE(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &name_space_iterate_cb, (void*) &out_name_spaces);
           
           throw_assert(H5Gclose(grp) >= 0,
@@ -151,7 +152,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const neuroh5_h5l_info_t* info,
      void*             op_data
      )
     {
@@ -165,7 +166,12 @@ namespace neuroh5
       /* Turn off error handling */
       H5Eset_auto(H5E_DEFAULT, NULL, NULL);
  
-      ierr = H5Gget_objinfo (grp, name, 0, NULL);
+      // H5Gget_objinfo is a deprecated H5G API that HDF5 routes only to the
+      // native VOL connector; through a non-native VOL (e.g. the clio HDF5 VOL
+      // pass-through) it fails, so the attribute-enumeration block below was
+      // silently skipped and read_cell_attribute_info returned an empty dict.
+      // H5Lexists is VOL-neutral and gives the same guard (link present?).
+      ierr = (H5Lexists (grp, name, H5P_DEFAULT) > 0) ? 0 : -1;
       if (ierr == 0)
         {
           string value_path = string(name) + "/" + hdf5::ATTR_VAL;
@@ -200,7 +206,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const neuroh5_h5l_info_t* info,
      void*             op_data
      )
     {
@@ -214,7 +220,12 @@ namespace neuroh5
       /* Turn off error handling */
       H5Eset_auto(H5E_DEFAULT, NULL, NULL);
  
-      ierr = H5Gget_objinfo (grp, name, 0, NULL);
+      // H5Gget_objinfo is a deprecated H5G API that HDF5 routes only to the
+      // native VOL connector; through a non-native VOL (e.g. the clio HDF5 VOL
+      // pass-through) it fails, so the attribute-enumeration block below was
+      // silently skipped and read_cell_attribute_info returned an empty dict.
+      // H5Lexists is VOL-neutral and gives the same guard (link present?).
+      ierr = (H5Lexists (grp, name, H5P_DEFAULT) > 0) ? 0 : -1;
       if (ierr == 0)
         {
           string value_path = string(name) + "/" + hdf5::ATTR_VAL;
@@ -259,7 +270,7 @@ namespace neuroh5
     (
      hid_t             grp,
      const char*       name,
-     const H5L_info_t* info,
+     const neuroh5_h5l_info_t* info,
      void*             op_data
      )
     {
@@ -273,7 +284,12 @@ namespace neuroh5
       /* Turn off error handling */
       H5Eset_auto(H5E_DEFAULT, NULL, NULL);
  
-      ierr = H5Gget_objinfo (grp, name, 0, NULL);
+      // H5Gget_objinfo is a deprecated H5G API that HDF5 routes only to the
+      // native VOL connector; through a non-native VOL (e.g. the clio HDF5 VOL
+      // pass-through) it fails, so the attribute-enumeration block below was
+      // silently skipped and read_cell_attribute_info returned an empty dict.
+      // H5Lexists is VOL-neutral and gives the same guard (link present?).
+      ierr = (H5Lexists (grp, name, H5P_DEFAULT) > 0) ? 0 : -1;
       if (ierr == 0)
         {
           string value_path = string(name) + "/" + hdf5::ATTR_VAL;
@@ -338,7 +354,7 @@ namespace neuroh5
 
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = NEUROH5_H5LITERATE(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &cell_attribute_cb, (void*) &out_attributes);
           
           ierr = H5Gclose(grp);
@@ -377,7 +393,7 @@ namespace neuroh5
 
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = NEUROH5_H5LITERATE(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &cell_attribute_index_cb, (void*) &out_attributes);
 
           for (size_t i=0; i<out_attributes.size(); i++)
@@ -426,7 +442,7 @@ namespace neuroh5
 
           
           hsize_t idx = 0;
-          ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+          ierr = NEUROH5_H5LITERATE(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                             &cell_attribute_index_ptr_cb, (void*) &out_attributes);
 
           for (size_t i=0; i<out_attributes.size(); i++)

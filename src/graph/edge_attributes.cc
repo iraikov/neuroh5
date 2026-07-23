@@ -13,6 +13,7 @@
 #include "exists_dataset.hh"
 #include "exists_group.hh"
 #include "path_names.hh"
+#include "h5literate_compat.hh"
 #include "serialize_data.hh"
 #include "read_template.hh"
 #include "mpi_debug.hh"
@@ -147,7 +148,7 @@ namespace neuroh5
     (
      hid_t             group_id,
      const char*       name,
-     const H5L_info_t* info,
+     const neuroh5_h5l_info_t* info,
      void*             op_data
      )
     {
@@ -253,7 +254,7 @@ namespace neuroh5
               if (grp >= 0)
                 {
                   hsize_t idx = 0;
-                  ierr = H5Literate(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
+                  ierr = NEUROH5_H5LITERATE(grp, H5_INDEX_NAME, H5_ITER_NATIVE, &idx,
                                     &edge_attribute_cb, (void*) &out_attributes);
                   
                   throw_assert_nomsg(H5Gclose(grp) >= 0);
