@@ -2753,7 +2753,7 @@ extern "C"
     pop_range_map_t pop_ranges;
     vector<pair<string,string> > prj_names;
     PyObject *py_prj_dict = PyDict_New();
-    unsigned long io_size; int size;
+    unsigned long io_size = 0; int size;
     PyObject *py_comm = NULL;
     MPI_Comm *comm_ptr = NULL;
     
@@ -7975,69 +7975,77 @@ extern "C"
   }
 
   
+  /* Reads the next cache_size blocks of the projection and scatters their
+   * edges to the ranks of the communicator.
+   *
+   * Destination nodes (or source nodes, for EdgeMapSrc) are assigned
+   * to ranks by scatter_read_projection with an empty node_rank_map,
+   * by default rank (gid % comm_size).
+   * Therefore, every generator delivers a given gid to the same rank.
+   *
+   */
   static int neuroh5_prj_gen_next_block(PyNeuroH5ProjectionGenState *py_ngg)
   {
     int status = 0;
-    int size, rank;
+    size_t max_local_num_nodes = 0;
 
-    throw_assert(MPI_Comm_size(py_ngg->state->comm, &size) == MPI_SUCCESS,
-                 "NeuroH5ProjectionGen: invalid MPI communicator");
-    throw_assert(MPI_Comm_rank(py_ngg->state->comm, &rank) == MPI_SUCCESS,
-                 "NeuroH5ProjectionGen: invalid MPI communicator");
-    
-    if (!(py_ngg->state->block_index < py_ngg->state->block_count))
-      return 0;
-
-    // If the end of the current edge map has been reached,
-    // read the next block
-    py_ngg->state->edge_map.clear();
-
-    vector < map <string, vector < vector<string> > > > edge_attr_name_vector;
-    vector <edge_map_t> prj_vector;
-
-    status = MPI_Barrier(py_ngg->state->comm);
-    
-    status = graph::scatter_read_projection(py_ngg->state->comm,
-                                            py_ngg->state->io_size,
-                                            py_ngg->state->edge_map_type,
-                                            py_ngg->state->file_name,
-                                            py_ngg->state->src_pop_name,
-                                            py_ngg->state->dst_pop_name,
-                                            py_ngg->state->src_start,
-                                            py_ngg->state->dst_start,
-                                            py_ngg->state->edge_attr_name_spaces,
-                                            py_ngg->state->node_rank_map,
-                                            py_ngg->state->pop_search_ranges,
-                                            py_ngg->state->pop_pairs,
-                                            prj_vector,
-                                            edge_attr_name_vector,
-                                            py_ngg->state->local_num_nodes,
-                                            py_ngg->state->local_num_edges,
-                                            py_ngg->state->total_num_edges,
-                                            py_ngg->state->total_read_blocks,
-                                            py_ngg->state->block_index,
-                                            py_ngg->state->cache_size);
-
-    throw_assert (status >= 0, "NeuroH5ProjectionGen: read_projection error");
-    throw_assert(prj_vector.size() > 0, "NeuroH5ProjectionGen: empty projection");
-
-    if (edge_attr_name_vector.size() > 0)
+    while ((max_local_num_nodes == 0) &&
+           (py_ngg->state->block_index < py_ngg->state->block_count))
       {
-        py_ngg->state->edge_attr_names = edge_attr_name_vector[0];
-      }
-    
-    py_ngg->state->edge_map = prj_vector[0];
-    //throw_assert(py_ngg->state->edge_map.size() > 0);
-    py_ngg->state->edge_map_iter = py_ngg->state->edge_map.begin();
-    
-    py_ngg->state->block_index += py_ngg->state->total_read_blocks;
-    status = MPI_Barrier(py_ngg->state->comm);
-    throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+        py_ngg->state->edge_map.clear();
 
-    size_t max_local_num_nodes=0;
-    status = MPI_Allreduce(&(py_ngg->state->local_num_nodes), &max_local_num_nodes, 1,
-                           MPI_SIZE_T, MPI_MAX, py_ngg->state->comm);
-    throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Allreduce error");
+        vector < map <string, vector < vector<string> > > > edge_attr_name_vector;
+        vector <edge_map_t> prj_vector;
+
+        status = MPI_Barrier(py_ngg->state->comm);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Barrier error");
+
+        status = graph::scatter_read_projection(py_ngg->state->comm,
+                                                py_ngg->state->io_size,
+                                                py_ngg->state->edge_map_type,
+                                                py_ngg->state->file_name,
+                                                py_ngg->state->src_pop_name,
+                                                py_ngg->state->dst_pop_name,
+                                                py_ngg->state->src_start,
+                                                py_ngg->state->dst_start,
+                                                py_ngg->state->edge_attr_name_spaces,
+                                                py_ngg->state->node_rank_map,
+                                                py_ngg->state->pop_search_ranges,
+                                                py_ngg->state->pop_pairs,
+                                                prj_vector,
+                                                edge_attr_name_vector,
+                                                py_ngg->state->local_num_nodes,
+                                                py_ngg->state->local_num_edges,
+                                                py_ngg->state->total_num_edges,
+                                                py_ngg->state->total_read_blocks,
+                                                py_ngg->state->block_index,
+                                                py_ngg->state->cache_size);
+
+        throw_assert (status >= 0, "NeuroH5ProjectionGen: read_projection error");
+        throw_assert(prj_vector.size() > 0, "NeuroH5ProjectionGen: empty projection");
+        throw_assert(py_ngg->state->total_read_blocks > 0,
+                     "NeuroH5ProjectionGen: no blocks read before end of projection");
+
+        if (edge_attr_name_vector.size() > 0)
+          {
+            py_ngg->state->edge_attr_names = edge_attr_name_vector[0];
+          }
+
+        py_ngg->state->edge_map = prj_vector[0];
+        py_ngg->state->edge_map_iter = py_ngg->state->edge_map.begin();
+
+        py_ngg->state->block_index += py_ngg->state->total_read_blocks;
+
+        status = MPI_Allreduce(&(py_ngg->state->local_num_nodes), &max_local_num_nodes, 1,
+                               MPI_SIZE_T, MPI_MAX, py_ngg->state->comm);
+        throw_assert(status == MPI_SUCCESS, "NeuroH5ProjectionGen: MPI_Allreduce error");
+      }
+
+    /*
+     * node_count grows by the largest per-rank node count of the refill, so
+     * that every rank yields the same number of items and pads the remainder
+     * with (None, None). 
+     */
     py_ngg->state->node_count += max_local_num_nodes;
 
     status = MPI_Barrier(py_ngg->state->comm);
