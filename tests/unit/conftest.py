@@ -38,9 +38,14 @@ def run_mpi_worker(worker_name, nranks, args, timeout=120):
 
     out_path = Path(args[args.index("--out") + 1]) if "--out" in args else None
 
+    # The MPI launcher binary: some systems (dual MPICH + Open MPI installs)
+    # have an mpirun alternative whose PMI flavor doesn't match the MPI
+    # library the Python extension loads, leaving every rank a singleton;
+    # set NEUROH5_MPIRUN to e.g. mpirun.openmpi to force a working launcher.
+    mpirun = os.environ.get("NEUROH5_MPIRUN", "mpirun")
     # Enable Open MPI oversubscription
     mpirun_extra_args = ["--oversubscribe"] if os.environ.get("NEUROH5_MPIRUN_OVERSUBSCRIBE") else []
-    cmd = ["mpirun", *mpirun_extra_args, "-n", str(nranks), sys.executable, str(worker_path), *args]
+    cmd = [mpirun, *mpirun_extra_args, "-n", str(nranks), sys.executable, str(worker_path), *args]
 
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,

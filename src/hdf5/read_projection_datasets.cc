@@ -5,7 +5,7 @@
 ///  Functions for reading edge information in DBS (Destination Block Sparse)
 ///  format.
 ///
-///  Copyright (C) 2016-2024 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 
 #include <iostream>
@@ -48,9 +48,6 @@ namespace neuroh5
       
       // For each rank, the relevant destination indices
       vector<vector<NODE_IDX_T>> local_dst_indices;
-
-      // The last rank that has non-zero assignment
-      rank_t last_rank;
       
       // Constructor to initialize with proper size
       RankAssignments(int size) : 
@@ -60,7 +57,6 @@ namespace neuroh5
         src_idx_count(size, 0),
         dst_ptr_start(size, 0),
         dst_ptr_count(size, 0),
-        last_rank(0),
         local_dst_indices(size) {}
     };
 
@@ -323,8 +319,12 @@ namespace neuroh5
 
     }
 
-    // Function to assign destination blocks to ranks
-    void assign_blocks_to_ranks
+    // Assigns a window of destination blocks to ranks. The window starts
+    // at block offset and holds numitems blocks, or fewer at the end of the
+    // projection; numitems = 0 selects all blocks. The blocks of the window
+    // are divided into contiguous, nearly equal ranges, one per rank.
+    // Returns the number of blocks in the window.
+    hsize_t assign_blocks_to_ranks
     (
      const vector<DST_BLK_PTR_T>& dst_blk_ptr,
      const vector<NODE_IDX_T>&    dst_idx,
@@ -371,12 +371,12 @@ namespace neuroh5
             rank_assignments.dst_ptr_count[i] = 0;
             rank_assignments.local_dst_indices[i].clear();
           }
-        return;
+        return 0;
     }
 
-      // Simple approach: distribute blocks evenly
-      hsize_t blocks_per_rank = total_blocks / size;
-      hsize_t remainder = total_blocks % size;
+      // Distribute the blocks of the window evenly
+      hsize_t blocks_per_rank = read_blocks / size;
+      hsize_t remainder = read_blocks % size;
 
       // Calculate the end of the destination block pointer range
       hsize_t last_block = offset + read_blocks - 1;
@@ -421,7 +421,6 @@ namespace neuroh5
                 {
                   rank_assignments.local_dst_indices[i].push_back(dst_idx[j]);
                 }
-              rank_assignments.last_rank = i;
             } else
             {
               // This rank gets no blocks
@@ -434,6 +433,8 @@ namespace neuroh5
           
           current_block += rank_block_count;
         }
+
+      return read_blocks;
     }
 
     // Function for each rank to read its portion of src_idx
@@ -507,6 +508,9 @@ namespace neuroh5
     {
       unsigned int size;
       MPI_Comm_size(comm, (int*)&size);
+
+      // Number of blocks in the projection (known on rank 0 only)
+      hsize_t total_blocks = full_dst_blk_ptr.empty() ? 0 : full_dst_blk_ptr.size() - 1;
     
       // Arrays to gather the count and displacement data for the collective operations
       vector<int> blk_ptr_counts(size);
@@ -534,7 +538,13 @@ namespace neuroh5
               // Set counts for the scatter operations and add 1 for the sentinel value in dst_blk_ptr
               blk_ptr_counts[r] = r_dst_block_count > 0 ? r_dst_block_count + 1 : 0;
               dst_idx_counts[r] = r_dst_block_count;     // One dst_idx per block
-              dst_ptr_counts[r] = ((r_dst_ptr_count > 0) && (r < assignments.last_rank)) ?
+              // The last block of the projection already ends with the
+              // file's sentinel pointer; a range that ends before it also
+              // receives the first pointer of the following block, which
+              // marks the end of its last destination's edges.
+              bool ends_before_last_block =
+                (assignments.dst_block_start[r] + r_dst_block_count) < total_blocks;
+              dst_ptr_counts[r] = ((r_dst_ptr_count > 0) && ends_before_last_block) ?
                 r_dst_ptr_count + 1 : r_dst_ptr_count;
               
               // Calculate displacements for the scatter operations
@@ -687,6 +697,14 @@ namespace neuroh5
     
     /**************************************************************************
      * Read the basic DBS graph structure
+     *
+     * Reads a window of destination blocks that starts at block offset and
+     * holds numitems blocks, or fewer at the end of the projection;
+     * numitems = 0 reads all blocks. The blocks of the window are divided
+     * among the ranks of comm. On return, total_read_blocks is the number of
+     * blocks in the window (the same on all ranks), local_read_blocks the
+     * number read by this rank, and edge_base the index of this rank's first
+     * edge in the projection, which locates its edge attributes.
      *************************************************************************/
 
     herr_t read_projection_datasets
@@ -733,8 +751,9 @@ namespace neuroh5
                                      total_num_edges, total_read_blocks);
 
 
-          // Step 2: Assign destination blocks to ranks
-          assign_blocks_to_ranks(full_dst_blk_ptr, full_dst_idx, full_dst_ptr, rank_assignments, size);
+          // Step 2: Assign the requested window of destination blocks to ranks
+          total_read_blocks = assign_blocks_to_ranks(full_dst_blk_ptr, full_dst_idx, full_dst_ptr,
+                                                     rank_assignments, size, offset, numitems);
 
           // Step 3: Distribute appropriate parts of pointer arrays to all ranks
           distribute_ptr_arrays(comm, rank, rank_assignments, dst_blk_ptr, dst_idx, dst_ptr, 
@@ -770,6 +789,7 @@ namespace neuroh5
       distribute_assignments(comm, rank_assignments);
       block_base = rank_assignments.dst_block_start[rank];
       edge_base = rank_assignments.src_idx_start[rank];
+      local_read_blocks = rank_assignments.dst_block_count[rank];
 
       
       // Step 6: Each rank reads its portion of src_idx based on its assignment

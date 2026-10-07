@@ -4,7 +4,7 @@
 ///
 ///  Populates a mapping between ranks and edge values.
 ///
-///  Copyright (C) 2016-2024 Project NeuroH5.
+///  Copyright (C) 2016-2026 Project NeuroH5.
 //==============================================================================
 
 #include <vector>
@@ -26,6 +26,13 @@ namespace neuroh5
     
     /**************************************************************************
      * Append src/dst node pairs to a map of ranks and edges
+     *
+     * Each node (destination for EdgeMapDst, source for EdgeMapSrc)
+     * is sent to the ranks listed for it in node_rank_map. A node
+     * absent from node_rank_map is sent to rank (node % num_ranks),
+     * the round-robin rule used to build the default
+     * node_rank_map. Because the rank depends only on the node index,
+     * a node receives all of its edges on one rank.
      **************************************************************************/
     int append_rank_edge_map
     (
@@ -51,7 +58,6 @@ namespace neuroh5
       if (dst_blk_ptr.size() > 0)
         {
           dst_ptr_size = dst_ptr.size();
-          size_t num_dst = 0;
           for (size_t b = 0; b < dst_blk_ptr.size(); ++b)
             {
               size_t low_dst_ptr = dst_blk_ptr[b], high_dst_ptr = 0;
@@ -81,7 +87,7 @@ namespace neuroh5
                                 set<rank_t> dst_rank_set;
                                 auto it = node_rank_map.find(dst);
                                 if (it == node_rank_map.end())
-                                  { dst_rank_set.insert((initial_rank + num_dst) % num_ranks); }
+                                  { dst_rank_set.insert(dst % num_ranks); }
                                 else
                                   { dst_rank_set = it->second; }
 
@@ -117,7 +123,7 @@ namespace neuroh5
                                     set <rank_t> dst_rank_set;
                                     auto it = node_rank_map.find(src);
                                     if (it == node_rank_map.end())
-                                      { dst_rank_set.insert(j % num_ranks); }
+                                      { dst_rank_set.insert(src % num_ranks); }
                                     else
                                       { dst_rank_set = it->second; }
 
@@ -147,7 +153,6 @@ namespace neuroh5
                             }
                         }
                     }
-                  num_dst++;
                 }
             }
         }
